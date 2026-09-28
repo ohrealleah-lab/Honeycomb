@@ -469,8 +469,13 @@ public final class BlackjackViewModel {
             state.dealerCards[1] = Card(id: c.id, suit: c.suit, rank: c.rank, faceUp: true)
         }
 
-        // Dealer hits until 17+
-        while BlackjackState.handValue(state.dealerCards) < 17 {
+        // Dealer hits until 17+ — but only while a player hand is still live, like a real
+        // casino: if every hand busted, or the player has a natural (dealer blackjack was
+        // already ruled out at deal), the dealer just turns the hole card over. Matches
+        // Windows' AdvanceHand/natural-blackjack paths.
+        let playerHasNatural = state.playerHands.count == 1 && state.playerHands[0].isBlackjack
+        let allPlayerHandsBust = state.playerHands.allSatisfy { $0.isBust }
+        while !playerHasNatural && !allPlayerHandsBust && BlackjackState.handValue(state.dealerCards) < 17 {
             if let card = popCard(faceUp: true) {
                 state.dealerCards.append(card)
                 playSound(named: "snap")

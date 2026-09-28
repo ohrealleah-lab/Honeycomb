@@ -499,7 +499,13 @@ class BlackjackViewModel(
         viewModelScope.launch {
             delay(600)
             if (handGeneration != generation) return@launch
-            while (BlackjackState.handValue(_state.value.dealerCards) < 17) {
+            // Dealer only draws while a player hand is still live, like a real casino: if
+            // every hand busted, or the player has a natural (dealer blackjack was ruled
+            // out at deal), the hole card is just turned over. Matches Mac/Windows.
+            val hands = _state.value.playerHands
+            val playerHasNatural = hands.size == 1 && hands[0].isBlackjack
+            val allPlayerHandsBust = hands.all { it.isBust }
+            while (!playerHasNatural && !allPlayerHandsBust && BlackjackState.handValue(_state.value.dealerCards) < 17) {
                 delay(500)
                 if (handGeneration != generation) return@launch
                 val card = popCard(faceUp = true) ?: break
