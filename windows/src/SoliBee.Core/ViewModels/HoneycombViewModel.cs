@@ -131,7 +131,11 @@ public partial class HoneycombViewModel : ObservableObject
 
     // The toolbar's "Opponent" label reads the opponent's actual difficulty name (e.g.
     // "Baby Bee") instead of the literal word "Opponent" — matches the Swift port.
-    public string OpponentNameDisplay => HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, SettingsService.LoadOptions().Language);
+    public string OpponentNameDisplay => HoneycombRuleLocalization.LocalizedDifficultyName(DisplayedDifficulty, SettingsService.LoadOptions().Language);
+
+    // The locked match difficulty while a match exists, the picker's value before one
+    // starts — mirrors Swift's displayedDifficulty.
+    public HoneycombDifficulty DisplayedDifficulty => State.Phase == HoneycombPhase.PreMatch ? Options.Difficulty : State.MatchDifficulty;
 
     // Optional flavor subtitle shown alongside the win/lose overlay title (e.g.
     // "Flawless victory!") — set alongside the result in SettleMatch(), never reset
@@ -238,7 +242,7 @@ public partial class HoneycombViewModel : ObservableObject
         }
         
         
-        if (Options.Difficulty == HoneycombDifficulty.Easy)
+        if (State.MatchDifficulty == HoneycombDifficulty.Easy)
         {
             pool.Remove(HoneycombRule.Ascension);
             pool.Remove(HoneycombRule.Descension);
@@ -268,7 +272,7 @@ public partial class HoneycombViewModel : ObservableObject
         int maxSlots = 2;
         bool forceMustPickAll = false;
         
-        if (Options.Difficulty == HoneycombDifficulty.UltraHard)
+        if (State.MatchDifficulty == HoneycombDifficulty.UltraHard)
         {
             double roll = Random.Shared.NextDouble();
             if (roll < 0.25) maxSlots = 4;
@@ -280,7 +284,7 @@ public partial class HoneycombViewModel : ObservableObject
             if (maxSlots == 0 && normalBanned) maxSlots = 1;
             forceMustPickAll = true;
         }
-        else if (Options.Difficulty == HoneycombDifficulty.Hard)
+        else if (State.MatchDifficulty == HoneycombDifficulty.Hard)
         {
             double hardRoll = Random.Shared.NextDouble();
             if (hardRoll < 0.01)
@@ -340,6 +344,7 @@ public partial class HoneycombViewModel : ObservableObject
 
     public void StartNewMatch()
     {
+        State.MatchDifficulty = Options.Difficulty; // locked for this match — see HoneycombState.MatchDifficulty
         // Invalidates every pending continuation from the previous match, exactly like
         // QuitMatch — Start/Rematch are clickable the moment Phase flips to Result, so the
         // finished match's ShowPostGamePromptAfterDelay (1.5s) could otherwise land on the
@@ -540,7 +545,7 @@ public partial class HoneycombViewModel : ObservableObject
     private List<HoneycombCardData> RollOpponentDeck()
     {
         bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
-        var comp = reverse ? ReverseComposition(Options.Difficulty) : NormalComposition(Options.Difficulty);
+        var comp = reverse ? ReverseComposition(State.MatchDifficulty) : NormalComposition(State.MatchDifficulty);
 
         var deck = new List<HoneycombCardData>();
         foreach (var (stars, count) in comp)
@@ -595,7 +600,7 @@ public partial class HoneycombViewModel : ObservableObject
     private List<HoneycombCardData> EnsureAscensionCoverage(List<HoneycombCardData> deck)
     {
         var suits = State.Board.AscensionDescensionSuits;
-        if (Options.Difficulty != HoneycombDifficulty.UltraHard ||
+        if (State.MatchDifficulty != HoneycombDifficulty.UltraHard ||
             !State.ActiveRules.Contains(HoneycombRule.Ascension) ||
             suits.Count == 0)
         {
@@ -779,7 +784,7 @@ public partial class HoneycombViewModel : ObservableObject
         string firstMoveLine = starter == 1
             ? Strings.Get(StringKey.FirstMovePlayer, language)
             : Strings.Get(StringKey.FirstMoveOpponentFmt, language)
-                .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, language));
+                .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(State.MatchDifficulty, language));
         var bannerLines = new List<string> { firstMoveLine };
         foreach (var rule in State.ActiveRules)
         {
@@ -1029,7 +1034,7 @@ public partial class HoneycombViewModel : ObservableObject
             var rules = new HashSet<HoneycombRule>(State.ActiveRules);
             move = await Task.Run(() => HoneycombAI.FindMove(
                 boardSnapshot, opponentHandSnapshot, visiblePlayerCards, unknownPlayerCardCount,
-                rules, Options.Difficulty, -1, 1, State.OpponentChaosIndex));
+                rules, State.MatchDifficulty, -1, 1, State.OpponentChaosIndex));
         }
 
         // The match may have been quit/reset while the above was computing — bail
@@ -1642,7 +1647,7 @@ public partial class HoneycombViewModel : ObservableObject
             return Strings.Get(PlayerSwarmRevealPhraseKeys[index], language);
         }
         return Strings.Get(OpponentSwarmRevealPhraseKeys[index], language)
-            .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(Options.Difficulty, language));
+            .Replace("%@", HoneycombRuleLocalization.LocalizedDifficultyName(State.MatchDifficulty, language));
     }
 
     // How long to hold before even announcing a Hive Swarm reveal — this fires from
@@ -1796,13 +1801,13 @@ public partial class HoneycombViewModel : ObservableObject
             _lastPlayedDifficulty = null;
             return;
         }
-        if (Options.Difficulty == _lastPlayedDifficulty)
+        if (State.MatchDifficulty == _lastPlayedDifficulty)
         {
             _consecutiveSameDifficultyCount++;
         }
         else
         {
-            _lastPlayedDifficulty = Options.Difficulty;
+            _lastPlayedDifficulty = State.MatchDifficulty;
             _consecutiveSameDifficultyCount = 1;
         }
         if (_consecutiveSameDifficultyCount == 5)
@@ -1856,7 +1861,7 @@ public partial class HoneycombViewModel : ObservableObject
         bool drawn = State.PlayerScore == State.OpponentScore;
         bool flawless = State.OpponentScore == 0;
 
-        Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, Options.Difficulty, State.Board.SessionFallenAceCaptures);
+        Stats.RecordGame(won, drawn, State.CardsCapturedThisMatch, State.Board.SessionSamePlusTriggers, flawless, State.MatchDifficulty, State.Board.SessionFallenAceCaptures);
         SaveStats();
         if (won)
         {
@@ -2007,7 +2012,7 @@ public partial class HoneycombViewModel : ObservableObject
     // search matching what that side would actually use when the move is needed:
     // FindHintMove's 5-ply UltraHard-caliber search for a player Hint (FindHint always
     // searches at that caliber regardless of match difficulty), or the match's own
-    // Options.Difficulty for the AI's own opening move. Nothing's been revealed by
+    // match difficulty (State.MatchDifficulty) for the AI's own opening move. Nothing's been revealed by
     // either side yet this early in the match, so both snapshots pass an empty
     // "known" hand for the other side.
     private void PrefetchFirstMove(int generation)
@@ -2028,7 +2033,7 @@ public partial class HoneycombViewModel : ObservableObject
             var opponentHandSnapshot = new List<HoneycombCard>(State.OpponentHand);
             _prefetchedFirstMoveTask = Task.Run(() => HoneycombAI.FindMove(
                 boardSnapshot, opponentHandSnapshot, new List<HoneycombCard>(), State.PlayerHand.Count,
-                rules, Options.Difficulty, -1, 1, State.OpponentChaosIndex));
+                rules, State.MatchDifficulty, -1, 1, State.OpponentChaosIndex));
         }
         _prefetchedFirstMoveGeneration = generation;
     }

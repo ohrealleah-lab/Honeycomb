@@ -337,7 +337,7 @@ struct HoneycombTouchView: View {
                 .disabled(!viewModel.canUndo)
                 .opacity(viewModel.canUndo ? 1 : 0.35)
 
-                if !coordinator.hideHintButton, viewModel.options.difficulty != .ultraHard, viewModel.isPlayerTurn {
+                if !coordinator.hideHintButton, viewModel.displayedDifficulty != .ultraHard, viewModel.isPlayerTurn {
                     topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
                         if viewModel.hasHintsAvailable {
                             viewModel.findHint()
@@ -515,7 +515,7 @@ struct HoneycombTouchView: View {
                 VStack(spacing: 6) {
                     // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
                     // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
-                    handLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
+                    handLabel(honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language))
                     pyramidHand(cards: opponentDisplayHand, size: landscapeHandCardSize) { i, card in
                         HoneycombFlipContainer(isRevealed: viewModel.isCardRevealed(card.id)) {
                             HoneycombCardView(card: card, size: landscapeHandCardSize, isFlipped: true)
@@ -718,7 +718,7 @@ struct HoneycombTouchView: View {
             // every Honeycomb match (the %@ tried to message the Int score as if it
             // were an object).
             Text(coordinator.L(.scoreDealerFmt,
-                                honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language),
+                                honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language),
                                 viewModel.board.opponentScore + viewModel.opponentHand.count))
         }
         .opacity(viewModel.gameState != .setup ? 1 : 0)
@@ -1021,7 +1021,7 @@ struct HoneycombTouchView: View {
                         .font(.footnote).foregroundColor(.white)
                         .multilineTextAlignment(.center)
                     } else if viewModel.hasObtainedAllOpponentCards {
-                        Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
+                        Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language)))
                             .font(.footnote).foregroundColor(.white)
                             .multilineTextAlignment(.center)
                     } else if viewModel.hasStolenThisMatch {

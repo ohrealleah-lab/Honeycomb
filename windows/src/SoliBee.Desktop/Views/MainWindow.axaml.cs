@@ -1745,7 +1745,7 @@ public partial class MainWindow : Window
             if (HoneycombManageDecksButton != null) HoneycombManageDecksButton.IsVisible = (isPreMatch || isResult) && !noStressMode;
             // Hidden if the player opted out, or on Ultra Hard (where a hint would trivialize
             // the hardest difficulty) — matches Mac's HoneycombView hint-button condition.
-            if (HintButton != null) HintButton.IsVisible = isPlaying && !hVm.Options.HideHintButton && hVm.Options.Difficulty != HoneycombDifficulty.UltraHard;
+            if (HintButton != null) HintButton.IsVisible = isPlaying && !hVm.Options.HideHintButton && hVm.State.MatchDifficulty != HoneycombDifficulty.UltraHard;
             if (UndoButton != null) UndoButton.IsVisible = isPlaying;
             if (HoneycombQuitMatchButton != null) 
             {

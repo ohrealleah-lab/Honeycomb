@@ -208,7 +208,7 @@ public struct HoneycombView: View {
                     if viewModel.gameState == .playing || viewModel.gameState == .suddenDeath {
                         // Never shown on Ultra Hard — that difficulty is meant to stay
                         // fully self-directed, no optimal-move assistance.
-                        if !coordinator.hideHintButton && viewModel.options.difficulty != .ultraHard {
+                        if !coordinator.hideHintButton && viewModel.displayedDifficulty != .ultraHard {
                         GameToolbarButton(
                             label: coordinator.L(.hint), systemImage: "lightbulb",
                             isCompact: toolbarWidth < compactToolbarWidthThreshold,
@@ -249,7 +249,7 @@ public struct HoneycombView: View {
                                 cardsCollected: HoneycombProfileManager.shared.unlockedCardIds.count,
                                 totalCards: HoneycombDatabase.shared.allCards.count,
                                 language: coordinator.language), value: "\(viewModel.board.playerScore + viewModel.playerHand.count)")
-                            StatusItemView(label: honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language), value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
+                            StatusItemView(label: honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language), value: "\(viewModel.board.opponentScore + viewModel.opponentHand.count)")
                         }
                     }
                 }
@@ -414,7 +414,7 @@ public struct HoneycombView: View {
                     VStack(spacing: 6) {
                         // Not "Dealer" — Honeycomb's opponent is a named AI difficulty
                         // (e.g. "Baby Bee"), not a card-game dealer role like Blackjack's.
-                        handSideLabel(honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language))
+                        handSideLabel(honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language))
                         handGrid(hand: opponentDisplayHand) { i, card in
                             HoneycombFlipContainer(isRevealed: viewModel.isCardRevealed(card.id)) {
                                 HoneycombCardView(card: card, size: Self.handCardSize, isFlipped: true)
@@ -521,7 +521,7 @@ public struct HoneycombView: View {
                             .foregroundColor(.white).padding()
                         } else if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && viewModel.hasObtainedAllOpponentCards {
-                            Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.options.difficulty, language: coordinator.language)))
+                            Text(coordinator.L(.obtainedAllCardsFmt, honeycombLocalizedDifficultyName(viewModel.displayedDifficulty, language: coordinator.language)))
                                 .foregroundColor(.white).padding()
                         } else if viewModel.matchOutcome == .win && !viewModel.noStressModeThisMatch
                             && viewModel.hasStolenThisMatch {

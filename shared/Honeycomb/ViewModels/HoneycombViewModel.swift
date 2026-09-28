@@ -62,6 +62,21 @@ public final class HoneycombViewModel {
         }
     }
 
+    // The opponent difficulty this match was dealt at, locked until the next
+    // startNewGame() — options.difficulty is editable mid-match from the Rules sheet, and
+    // reading it live let a player face Easy's AI/deck and then switch to Ultra Hard
+    // before the last card so the win recorded as an Ultra Hard win (or weaken the AI
+    // mid-match). The AI, stats, banners and on-screen opponent name all use this; a
+    // Rematch keeps it, since it replays this same opponent's deck. Same per-match lock
+    // as No Stress Mode (noStressModeThisMatch).
+    public private(set) var matchDifficulty: HoneycombDifficulty = .easy
+
+    // What the UI should call the opponent: the locked match difficulty while a match
+    // exists, the picker's value on the setup screen.
+    public var displayedDifficulty: HoneycombDifficulty {
+        gameState == .setup ? options.difficulty : matchDifficulty
+    }
+
     public var debugBannerRequest: DebugBannerKind? = nil {
         didSet {
             if let kind = debugBannerRequest {
@@ -483,6 +498,9 @@ public final class HoneycombViewModel {
     public private(set) var noStressModeThisMatch: Bool = false
 
     public func startNewGame() {
+        // Difficulty is locked for the match (and its rematches, which reuse this
+        // opponent's deck) — see matchDifficulty.
+        matchDifficulty = options.difficulty
         // Invalidates any AI move computation still in flight on a background queue from
         // the match/round this is resetting (e.g. Surrender calling straight into this
         // without going through aiPlayTurn again first).
@@ -651,7 +669,7 @@ public final class HoneycombViewModel {
     // reads very differently from the player coming out ahead.
     private func formatSwapRuleForBanner(_ swapResult: SwapResult) -> String {
         let defaultText = honeycombLocalizedRuleName(HoneycombRule.swap.rawValue, language: BannerCatalog.currentLanguage)
-        let tokens = ["OpponentName": options.difficulty.displayName]
+        let tokens = ["OpponentName": matchDifficulty.displayName]
         if swapResult.preSwapPlayerCard.data.stars == 5 {
             return Self.bannerCatalogText(for: .ruleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, existingDefaultText: defaultText, tokens: tokens)
         }
@@ -718,7 +736,7 @@ public final class HoneycombViewModel {
         let firstMoveLanguage = BannerCatalog.currentLanguage
         let firstMoveLine = isPlayerTurn
             ? L(.firstMovePlayer, language: firstMoveLanguage)
-            : L(.firstMoveOpponentFmt, language: firstMoveLanguage, honeycombLocalizedDifficultyName(options.difficulty, language: firstMoveLanguage))
+            : L(.firstMoveOpponentFmt, language: firstMoveLanguage, honeycombLocalizedDifficultyName(matchDifficulty, language: firstMoveLanguage))
         var ruleLines = activeRules.map { rule -> String in
             if rule == .swap, let swapResult {
                 return formatSwapRuleForBanner(swapResult)
@@ -944,7 +962,7 @@ public final class HoneycombViewModel {
         // Remove banned rules from pool
         pool.removeAll { options.bannedRules.contains($0.rawValue) }
 
-        if options.difficulty == .easy {
+        if matchDifficulty == .easy {
             // Ascension/Descension and Fallen Ace punish misreads of the board in
             // ways that are especially brutal for a new player — keep Easy's
             // roulette pool to rules that don't compound an opponent-favoring swing.
@@ -974,7 +992,7 @@ public final class HoneycombViewModel {
         var maxSlots = 2
         var forceMustPickAll = false
 
-        if options.difficulty == .ultraHard {
+        if matchDifficulty == .ultraHard {
             let roll = Double.random(in: 0..<1)
             if roll < 0.25 { maxSlots = 4 }
             else if roll < 0.70 { maxSlots = 3 }
@@ -984,7 +1002,7 @@ public final class HoneycombViewModel {
 
             if maxSlots == 0 && normalBanned { maxSlots = 1 }
             forceMustPickAll = true
-        } else if options.difficulty == .hard {
+        } else if matchDifficulty == .hard {
             let hardRoll = Double.random(in: 0..<1)
             if hardRoll < 0.01 {
                 maxSlots = 4
@@ -1145,8 +1163,8 @@ public final class HoneycombViewModel {
         // high-star cards from a match that was actually easy.
         let preferLowStats = activeRules.contains(.reverse)
         let composition = preferLowStats
-            ? reverseComposition(for: options.difficulty)
-            : normalComposition(for: options.difficulty)
+            ? reverseComposition(for: matchDifficulty)
+            : normalComposition(for: matchDifficulty)
 
         var deck: [HoneycombCardData] = []
         for (stars, count) in composition {
@@ -1197,7 +1215,7 @@ public final class HoneycombViewModel {
     // Descension-suited cards into the AI's hand would only hurt it, not balance
     // anything.
     private func ensureAscensionCoverage(_ deck: [HoneycombCardData]) -> [HoneycombCardData] {
-        guard options.difficulty == .ultraHard,
+        guard matchDifficulty == .ultraHard,
               activeRules.contains(.ascension),
               !ascensionDescensionSuits.isEmpty else { return deck }
 
@@ -2068,7 +2086,7 @@ public final class HoneycombViewModel {
         let playerDeckData = visiblePlayerCards.map { $0.data }
         let unknownPlayerCardCount = playerHand.count - visiblePlayerCards.count
         let rules = activeRules
-        let difficulty = options.difficulty
+        let difficulty = matchDifficulty
         let eligibleHands = eligibleOpponentHandIndices()
         let empties = HoneycombAI.emptyBoardIndices(board: boardSnapshot)
 
@@ -2078,7 +2096,7 @@ public final class HoneycombViewModel {
         let preMovePScore = boardSnapshot.playerScore + playerHand.count
         let preMoveOScore = boardSnapshot.opponentScore + opponentHand.count
         if empties.count == 1, preMoveOScore - preMovePScore == 2,
-           case .message(let text) = BannerCatalog.shared.fire(.gameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe, tokens: ["OpponentName": options.difficulty.displayName]) {
+           case .message(let text) = BannerCatalog.shared.fire(.gameplayOpponentIsWinningByTwoCardsAndIsAboutToPlaceThe, tokens: ["OpponentName": matchDifficulty.displayName]) {
             enqueueBanner(text)
         }
 
@@ -2217,7 +2235,7 @@ public final class HoneycombViewModel {
         if owner == .player {
             return L(Self.playerSwarmRevealPhraseKeys[index], language: language)
         } else {
-            return L(Self.opponentSwarmRevealPhraseKeys[index], language: language, honeycombLocalizedDifficultyName(options.difficulty, language: language))
+            return L(Self.opponentSwarmRevealPhraseKeys[index], language: language, honeycombLocalizedDifficultyName(matchDifficulty, language: language))
         }
     }
 
@@ -2330,10 +2348,10 @@ public final class HoneycombViewModel {
             lastPlayedDifficulty = nil
             return
         }
-        if options.difficulty == lastPlayedDifficulty {
+        if matchDifficulty == lastPlayedDifficulty {
             consecutiveSameDifficultyCount += 1
         } else {
-            lastPlayedDifficulty = options.difficulty
+            lastPlayedDifficulty = matchDifficulty
             consecutiveSameDifficultyCount = 1
         }
         if consecutiveSameDifficultyCount == 5, case .message(let text) = BannerCatalog.shared.fire(.gameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow) {
@@ -2371,7 +2389,7 @@ public final class HoneycombViewModel {
                 gameState = .gameOver
                 if sharedOptions.isSoundEnabled { UISound.play(named: "victory", enabled: true) }
                 let flawless = oScore == 0
-                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: flawless, difficulty: options.difficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
+                stats.recordGame(won: true, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: flawless, difficulty: matchDifficulty, fallenAceCaptures: board.sessionFallenAceCaptures)
                 checkWinMilestones()
                 var winFlavorParts: [String] = []
                 if flawless, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerWinsFlawlessOpponentScore0) {
@@ -2391,7 +2409,7 @@ public final class HoneycombViewModel {
                 applyStealProtection()
                 consecutiveRematchLosses = 0
                 consecutiveRematchWins += 1
-                if consecutiveRematchWins == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchWinsInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
+                if consecutiveRematchWins == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchWinsInARowAgainstTheSameOpponent, tokens: ["OpponentName": matchDifficulty.displayName]) {
                     enqueueBanner(text, longDuration: true)
                 }
             } else if oScore > pScore {
@@ -2399,14 +2417,14 @@ public final class HoneycombViewModel {
                 matchOutcome = .loss
                 gameState = .gameOver
                 stats.recordGame(won: false, drawn: false, captures: sessionCardsCaptured, sessionCombos: board.sessionSamePlusTriggers, flawless: false, fallenAceCaptures: board.sessionFallenAceCaptures)
-                if pScore == 0, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerLosesFlawless0Captures, tokens: ["OpponentName": options.difficulty.displayName]) {
+                if pScore == 0, case .message(let text) = BannerCatalog.shared.fire(.ruleSpecificPlayerLosesFlawless0Captures, tokens: ["OpponentName": matchDifficulty.displayName]) {
                     matchResultFlavorText = text
                 } else {
                     matchResultFlavorText = nil
                 }
                 consecutiveRematchWins = 0
                 consecutiveRematchLosses += 1
-                if consecutiveRematchLosses == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchLossesInARowAgainstTheSameOpponent, tokens: ["OpponentName": options.difficulty.displayName]) {
+                if consecutiveRematchLosses == 3, case .message(let text) = BannerCatalog.shared.fire(.gameplay3RematchLossesInARowAgainstTheSameOpponent, tokens: ["OpponentName": matchDifficulty.displayName]) {
                     enqueueBanner(text, longDuration: true)
                 }
             } else if activeRules.contains(.suddenDeath) {

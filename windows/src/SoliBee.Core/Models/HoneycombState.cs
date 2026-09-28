@@ -45,6 +45,13 @@ public class HoneycombState
     // so flipping it mid-match only takes effect at the next Start/Rematch.
     public bool NoStressModeThisMatch { get; set; } = false;
 
+    // Opponent difficulty this match was dealt at, locked like NoStressModeThisMatch —
+    // Options.Difficulty is editable mid-match from the Rules panel, and reading it live
+    // let a player face Easy's AI/deck then switch to Ultra Hard before the last card so
+    // the win recorded as an Ultra Hard win. A Rematch keeps it (same opponent deck).
+    // Mirrors Swift's HoneycombViewModel.matchDifficulty.
+    public HoneycombDifficulty MatchDifficulty { get; set; } = HoneycombDifficulty.Easy;
+
     // Steal Protection: once a stuck rematch chain trips this (see
     // HoneycombViewModel.ApplyStealProtection), ANY not-yet-unlocked card left on the
     // board becomes stealable for this win, not just one actually captured from the

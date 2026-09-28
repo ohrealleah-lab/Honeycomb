@@ -161,6 +161,9 @@ fun HoneycombMatchUI(
     val totalCards = viewModel.database.allCards.size
 
     val isMidMatch = state.gameState == HoneycombGameState.Playing || state.gameState == HoneycombGameState.SuddenDeath
+    // The locked match difficulty while a match exists, the picker's value on the setup
+    // screen — mirrors Swift's displayedDifficulty.
+    val displayedDifficulty = if (state.gameState == HoneycombGameState.Setup) options.difficulty else state.matchDifficulty
 
     var showQuitConfirm by remember { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = isMidMatch) { showQuitConfirm = true }
@@ -312,7 +315,7 @@ fun HoneycombMatchUI(
                                 IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
                                     Icon(Icons.Default.Undo, contentDescription = "Undo", tint = Color.White)
                                 }
-                                if (!hideHintButton && options.difficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
+                                if (!hideHintButton && displayedDifficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
                                     IconButton(onClick = { viewModel.findHint() }) {
                                         Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
                                     }
@@ -404,7 +407,7 @@ fun HoneycombMatchUI(
                                 BoardGrid(animatedVisibilityScope = animatedVisibilityScope, state = state, cardWidth = landscapeCardWidth, hintMove = hintMove, isStealingCard = isStealingCard, viewModel = viewModel, dropTargets = dropTargets)
 
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-                                    HandLabel(options.difficulty.displayName)
+                                    HandLabel(displayedDifficulty.displayName)
                                     OpponentHandPyramid(animatedVisibilityScope = animatedVisibilityScope, state = state, cardWidth = landscapeCardWidth)
                                 }
                             }
@@ -688,7 +691,7 @@ private fun ScoreRow(
             color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = if (isDense) 13.sp else 16.sp
         )
         Text(
-            scoreDealerText(language, options.difficulty.displayName, opponentScore),
+            scoreDealerText(language, (if (state.gameState == HoneycombGameState.Setup) options.difficulty else state.matchDifficulty).displayName, opponentScore),
             color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = if (isDense) 13.sp else 16.sp
         )
     }

@@ -72,7 +72,13 @@ data class HoneycombState(
     // (deck composition and steal eligibility both read this, never the live toggle),
     // so flipping the global setting mid-match only takes effect at the next deal.
     // Persisted with the rest of the state so a restored match keeps its lock.
-    val noStressModeThisMatch: Boolean = false
+    val noStressModeThisMatch: Boolean = false,
+    // Opponent difficulty this match was dealt at, locked like noStressModeThisMatch —
+    // options.difficulty is editable mid-match, and reading it live let a player face
+    // Easy's AI/deck then switch to Ultra Hard before the last card so the win recorded
+    // as an Ultra Hard win. AI, stats, banners and the on-screen opponent name use this;
+    // a Rematch keeps it (same opponent deck). Mirrors Swift's matchDifficulty.
+    val matchDifficulty: HoneycombDifficulty = HoneycombDifficulty.Easy
 ) {
     val mandatedPlayerHandIndex: Int?
         get() {
@@ -364,7 +370,8 @@ class HoneycombViewModel(
             ascensionDescensionSuits = rolledSuits,
             opponentHand = opponentHand,
             gameState = HoneycombGameState.Playing,
-            noStressModeThisMatch = noStressModeThisMatch
+            noStressModeThisMatch = noStressModeThisMatch,
+            matchDifficulty = opts.difficulty
         )
         setupPlayerHand()
         finishMatchSetup()
@@ -393,7 +400,8 @@ class HoneycombViewModel(
             ascensionDescensionSuits = rematchAscensionDescensionSuits,
             opponentHand = opponentHand,
             gameState = HoneycombGameState.Playing,
-            noStressModeThisMatch = sharedOptions.noStressMode.value
+            noStressModeThisMatch = sharedOptions.noStressMode.value,
+            matchDifficulty = _state.value.matchDifficulty
         )
         setupPlayerHand()
         finishMatchSetup(forceAlternateStarter = true)
@@ -609,7 +617,7 @@ class HoneycombViewModel(
         val firstMoveLine = if (playerStarts) {
             com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.FirstMovePlayer, language)
         } else {
-            com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.FirstMoveOpponentFmt, language, _options.value.difficulty.displayName)
+            com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.FirstMoveOpponentFmt, language, _state.value.matchDifficulty.displayName)
         }
         val ruleLines = st.activeRules.filter { it != HoneycombRule.Swap }.map { formatRuleForBanner(it) }.toMutableList()
         // A ruleless match has no per-rule line to (20% of the time) swap for flavor
@@ -771,7 +779,7 @@ class HoneycombViewModel(
     // formatSwapRuleForBanner.
     private fun formatSwapRuleForBanner(swappedAwayPlayerFiveStar: Boolean, tradedUpForPlayer: Boolean): String {
         val defaultText = HoneycombRule.Swap.displayName
-        val tokens = mapOf("OpponentName" to _options.value.difficulty.displayName)
+        val tokens = mapOf("OpponentName" to _state.value.matchDifficulty.displayName)
         if (swappedAwayPlayerFiveStar) {
             return bannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText, tokens)
         }
@@ -922,7 +930,7 @@ class HoneycombViewModel(
             lastPlayedDifficulty = null
             return
         }
-        val difficulty = _options.value.difficulty
+        val difficulty = _state.value.matchDifficulty
         if (difficulty == lastPlayedDifficulty) {
             consecutiveSameDifficultyCount++
         } else {
@@ -1194,7 +1202,7 @@ class HoneycombViewModel(
         if (st.gameState != HoneycombGameState.Playing || st.isPlayerTurn) return
 
         val gen = ++aiMoveGeneration
-        val difficulty = _options.value.difficulty
+        val difficulty = _state.value.matchDifficulty
         val board = st.board
         val opponentDeckData = st.opponentHand.map { it.data }
         val playerDeckData = st.playerHand.filter { st.openPlayerCardIds.contains(it.id) }.map { it.data }
@@ -1347,7 +1355,7 @@ class HoneycombViewModel(
                     captures = sessionCardsCaptured,
                     sessionCombos = st.board.sessionSamePlusTriggers,
                     flawless = oScore == 0,
-                    difficulty = _options.value.difficulty,
+                    difficulty = _state.value.matchDifficulty,
                     fallenAceCaptures = st.board.sessionFallenAceCaptures
                 )
             }
@@ -1376,7 +1384,7 @@ class HoneycombViewModel(
             if (consecutiveRematchWins == 3) {
                 val result = bannerCatalog.fire(
                     BannerId.Gameplay3RematchWinsInARowAgainstTheSameOpponent,
-                    mapOf("OpponentName" to _options.value.difficulty.displayName)
+                    mapOf("OpponentName" to _state.value.matchDifficulty.displayName)
                 )
                 if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
             }
@@ -1399,7 +1407,7 @@ class HoneycombViewModel(
                 )
             }
             if (pScore == 0) {
-                val result = bannerCatalog.fire(BannerId.RuleSpecificPlayerLosesFlawless0Captures, mapOf("OpponentName" to _options.value.difficulty.displayName))
+                val result = bannerCatalog.fire(BannerId.RuleSpecificPlayerLosesFlawless0Captures, mapOf("OpponentName" to _state.value.matchDifficulty.displayName))
                 if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
             }
             consecutiveRematchWins = 0
@@ -1407,7 +1415,7 @@ class HoneycombViewModel(
             if (consecutiveRematchLosses == 3) {
                 val result = bannerCatalog.fire(
                     BannerId.Gameplay3RematchLossesInARowAgainstTheSameOpponent,
-                    mapOf("OpponentName" to _options.value.difficulty.displayName)
+                    mapOf("OpponentName" to _state.value.matchDifficulty.displayName)
                 )
                 if (result is BannerFireResult.Message) enqueueBanner(result.text, longDuration = true)
             }
