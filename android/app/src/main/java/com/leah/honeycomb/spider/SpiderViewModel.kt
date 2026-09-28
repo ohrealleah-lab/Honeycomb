@@ -378,6 +378,24 @@ class SpiderViewModel(
         )
     }
 
+    // Background pause/resume for the board's lifecycle observer. The "was running" flag
+    // lives here, not in the composable, because a rotation destroys and recreates the
+    // board: ON_STOP (pause) fires on the old one and ON_START on the new one, and a
+    // flag held in composition would be lost in between, leaving the clock paused until
+    // the next move.
+    private var resumeTimerOnForeground = false
+
+    fun pauseTimerForBackground() {
+        resumeTimerOnForeground = _state.value.isTimerActive
+        stopTimer()
+    }
+
+    fun resumeTimerAfterBackground() {
+        if (!resumeTimerOnForeground) return
+        resumeTimerOnForeground = false
+        startTimerIfNeeded()
+    }
+
     fun stopTimer() {
         gameTimer.stop(onSetActive = { active -> _state.update { it.copy(isTimerActive = active) } })
     }

@@ -121,17 +121,16 @@ fun BeecellBoard(
         // The game timer lives in the app-scoped ViewModel, so without pausing it here it
         // kept counting while the app was backgrounded and after switching to another game
         // (Mac/Windows pause it on a game switch, iOS is suspended in the background).
-        // Backgrounding resumes it automatically on return; leaving the board resumes it
-        // on the next move, like Mac.
-        var timerWasRunning = false
+        // Backgrounding (and rotation) resumes it automatically; leaving the board resumes
+        // it on the next move, like Mac.
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) {
                 dragState = DragState()
-                timerWasRunning = viewModel.state.value.isTimerActive
-                viewModel.stopTimer()
-            } else if (event == Lifecycle.Event.ON_START && timerWasRunning) {
-                timerWasRunning = false
-                viewModel.startTimerIfNeeded()
+                viewModel.pauseTimerForBackground()
+            } else if (event == Lifecycle.Event.ON_START) {
+                // Also delivered when a recreated board (e.g. after rotation) attaches
+                // this observer — the VM remembers whether to resume.
+                viewModel.resumeTimerAfterBackground()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)

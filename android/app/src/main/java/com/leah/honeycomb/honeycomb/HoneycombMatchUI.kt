@@ -170,7 +170,8 @@ fun HoneycombMatchUI(
     var showQuitConfirm by remember { mutableStateOf(false) }
     androidx.activity.compose.BackHandler(enabled = isMidMatch) { showQuitConfirm = true }
 
-    var isStealingCard by remember { mutableStateOf(false) }
+    // Saveable so a rotation mid-steal doesn't silently drop the player out of steal mode.
+    var isStealingCard by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(state.showPostGamePrompt) {
         if (!state.showPostGamePrompt) isStealingCard = false
     }
