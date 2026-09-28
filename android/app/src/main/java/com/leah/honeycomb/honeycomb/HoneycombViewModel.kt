@@ -94,6 +94,23 @@ data class HoneycombState(
         }
 }
 
+// Match bookkeeping the ViewModel keeps outside HoneycombState, saved next to it so a
+// match restored after the app was closed keeps its capture count (stats), Steal
+// Protection, rematch chain and rematch opponent — all were silently lost before.
+@kotlinx.serialization.Serializable
+private data class HoneycombMatchExtras(
+    val sessionCardsCaptured: Int = 0,
+    val hasStolenThisMatch: Boolean = false,
+    val isRematchMatch: Boolean = false,
+    val consecutiveNoStealWins: Int = 0,
+    val stealProtectionActive: Boolean = false,
+    val consecutiveRematchWins: Int = 0,
+    val consecutiveRematchLosses: Int = 0,
+    val rematchOpponentDeck: List<HoneycombCardData> = emptyList(),
+    val rematchActiveRules: List<HoneycombRule> = emptyList(),
+    val rematchAscensionDescensionSuits: Set<String> = emptySet()
+)
+
 @OptIn(kotlinx.coroutines.FlowPreview::class)
 class HoneycombViewModel(
     val sharedOptions: SharedGameOptions,
@@ -290,6 +307,19 @@ class HoneycombViewModel(
                 pointHighlightStatIndices = emptySet(),
                 swapHighlightCardIds = emptySet()
             )
+            val extras = PreferencesHelper.getObjectSync(
+                dataStore, "honeycomb_saved_match_extras", HoneycombMatchExtras.serializer(), HoneycombMatchExtras()
+            )
+            sessionCardsCaptured = extras.sessionCardsCaptured
+            hasStolenThisMatch = extras.hasStolenThisMatch
+            isRematchMatch = extras.isRematchMatch
+            consecutiveNoStealWins = extras.consecutiveNoStealWins
+            stealProtectionActive = extras.stealProtectionActive
+            consecutiveRematchWins = extras.consecutiveRematchWins
+            consecutiveRematchLosses = extras.consecutiveRematchLosses
+            rematchOpponentDeck = extras.rematchOpponentDeck
+            rematchActiveRules = extras.rematchActiveRules
+            rematchAscensionDescensionSuits = extras.rematchAscensionDescensionSuits
             if (!savedState.isPlayerTurn && savedState.gameState == HoneycombGameState.Playing) {
                 scheduleAiTurn(1000)
             } else if (savedState.gameState == HoneycombGameState.SuddenDeath) {
@@ -304,7 +334,16 @@ class HoneycombViewModel(
 
         viewModelScope.launch {
             _state.debounce(500).collect { currentState ->
-                val toSave = if (currentState.gameState == HoneycombGameState.GameOver || currentState.gameState == HoneycombGameState.Setup) defaultState else currentState
+                val matchOver = currentState.gameState == HoneycombGameState.GameOver || currentState.gameState == HoneycombGameState.Setup
+                val toSave = if (matchOver) defaultState else currentState
+                val extras = if (matchOver) HoneycombMatchExtras() else HoneycombMatchExtras(
+                    sessionCardsCaptured, hasStolenThisMatch, isRematchMatch, consecutiveNoStealWins,
+                    stealProtectionActive, consecutiveRematchWins, consecutiveRematchLosses,
+                    rematchOpponentDeck, rematchActiveRules, rematchAscensionDescensionSuits
+                )
+                PreferencesHelper.setObject(
+                    dataStore, "honeycomb_saved_match_extras", HoneycombMatchExtras.serializer(), extras
+                )
                 PreferencesHelper.setObject(
                     dataStore, "honeycomb_saved_state", HoneycombState.serializer(), toSave
                 )
