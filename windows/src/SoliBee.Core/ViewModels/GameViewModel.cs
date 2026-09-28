@@ -160,9 +160,10 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     private bool _timerPausedForSwitch;
 
     // Bankroll immediately before this deal's buy-in was subtracted, captured in
-    // InitializeGame. RestartGame (replay the same deal) restores to this instead of
-    // to the post-buy-in starting score, so replaying a deal is free — only playing
-    // a genuinely new deal (InitializeGame) costs a fresh buy-in.
+    // InitializeGame. RestartGame (replay the same deal) restores to this minus the
+    // buy-in — the deal's buy-in stays paid, but in-game gains are rolled back and no
+    // second buy-in is charged (Mac's restartCurrentGame). Replaying a WON deal charges
+    // a fresh buy-in instead, on top of the winnings kept.
     private int _vegasBalanceBeforeDeal;
 
     // Running total of every standard-mode "-2 every 8 seconds" time penalty applied so
@@ -420,13 +421,20 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         _untimedThisGame = false;
         if (!_initialDeck.Any()) return;
 
-        // Restart refunds this deal's Vegas buy-in (see the comment below) on the theory
-        // that the player already paid for and engaged with this exact deal, so retrying
-        // it from scratch isn't a fresh charge. Without this guard, New Game (charge the
-        // buy-in) immediately followed by Restart (refund it) — before making even one
-        // move — hands back the identical freshly-dealt board at zero net cost, letting
-        // a player "reroll" for a nicer deal, or simply play any deal, entirely for free.
+        // Nothing to replay yet — the board is already at the start of this deal.
         if (State.MovesCount == 0) return;
+
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
+        // In Vegas that also means a fresh buy-in, charged on the bankroll including the
+        // won game's winnings (which are kept, not rolled back below).
+        if (State.HasWon)
+        {
+            Stats.GamesPlayed++;
+            StatsService.SaveStats(Stats);
+            if (Options.IsVegasScoring) _vegasBalanceBeforeDeal = State.Score;
+        }
 
         _lastMoveSourcePileId = null;
         _lastMoveTargetPileId = null;
@@ -442,10 +450,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         foreach (var t in Tableaus) t.Cards.Clear();
         _undoStack.Clear();
 
-        // Restart replays the same deal for free — restore the bankroll to what it
-        // was before this deal's buy-in, reversing both the buy-in and any in-game
-        // foundation gains, rather than charging a fresh buy-in like a new deal would.
-        State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal : 0;
+        // Back to this deal's starting bankroll: its buy-in stays paid, in-game foundation
+        // gains are rolled back (see _vegasBalanceBeforeDeal).
+        State.Score = Options.IsVegasScoring ? _vegasBalanceBeforeDeal - 5200 : 0;
         _vegasGameStartScore = State.Score;
         SyncVegasScore();
         State.MovesCount = 0;

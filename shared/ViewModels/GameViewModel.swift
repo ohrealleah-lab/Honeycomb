@@ -479,8 +479,21 @@ public final class GameViewModel {
         guard let initial = initialState else { return }
         stopTimer()
         undoStack.removeAll()
-        // Restore bankroll to pre-game value — restart replays the same deal, no re-deal charge
-        if options.isVegasScoring { vegasBankroll = vegasBankrollAtGameStart }
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%.
+        // In Vegas that also means a fresh buy-in, and the won game's winnings are kept
+        // rather than rolled back below.
+        if state.hasWon {
+            gamesPlayed += 1
+            if options.isVegasScoring {
+                vegasBankroll += -5200
+                vegasBankrollAtGameStart = vegasBankroll
+            }
+        } else if options.isVegasScoring {
+            // Restore bankroll to pre-game value — restart replays the same deal, no re-deal charge
+            vegasBankroll = vegasBankrollAtGameStart
+        }
         state = initial
         isAutocompleteAvailable = false
         isAutoplayRunning = false

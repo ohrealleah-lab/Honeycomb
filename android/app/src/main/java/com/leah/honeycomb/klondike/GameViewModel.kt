@@ -664,7 +664,19 @@ class GameViewModel(
         stopTimer()
         clearHint()
         undoStack.clear()
-        if (_options.value.isVegasScoring) {
+
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
+        // In Vegas that also means a fresh buy-in, and the won game's winnings are kept
+        // rather than rolled back.
+        if (_state.value.hasWon) {
+            updateStatistics { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+            if (_options.value.isVegasScoring) {
+                _vegasBankroll.value += -5200
+                vegasBankrollAtGameStart = _vegasBankroll.value
+            }
+        } else if (_options.value.isVegasScoring) {
             _vegasBankroll.value = vegasBankrollAtGameStart
         }
         _state.value = initial

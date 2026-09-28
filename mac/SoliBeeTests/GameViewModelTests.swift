@@ -18,6 +18,7 @@ struct GameViewModelTests {
         testFoundationSuitRestrictions()
         testResetStatistics()
         testRestartCurrentGame()
+        testRestartAfterWinCountsAsNewGame()
         testHighScorePersistence()
         testKeyboardNavigation()
     }
@@ -354,6 +355,26 @@ struct GameViewModelTests {
         assert(!viewModel.canUndo, "Undo stack should be cleared on restart")
     }
     
+    // Replaying a won deal is a new game for the stats — otherwise each re-win adds a
+    // win with no game played and the win rate climbs past 100%.
+    static func testRestartAfterWinCountsAsNewGame() {
+        let savedPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
+        let viewModel = GameViewModel()
+        viewModel.drawCard()
+        let playedBefore = viewModel.gamesPlayed
+
+        viewModel.restartCurrentGame()
+        assert(viewModel.gamesPlayed == playedBefore, "Restarting an unfinished game must not count as a new game")
+
+        viewModel.drawCard()
+        viewModel.state.hasWon = true
+        viewModel.restartCurrentGame()
+        assert(viewModel.gamesPlayed == playedBefore + 1, "Restarting a won game must count as a new game played")
+        assert(!viewModel.state.hasWon, "Restart should replay the deal from the start")
+
+        UserDefaults.standard.set(savedPlayed, forKey: "gamesPlayed")
+    }
+
     static func testHighScorePersistence() {
         let savedHighScore = UserDefaults.standard.integer(forKey: "highScore")
         let savedVegasHighScore = UserDefaults.standard.integer(forKey: "highScoreVegas")

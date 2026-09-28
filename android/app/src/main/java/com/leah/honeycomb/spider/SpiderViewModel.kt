@@ -515,6 +515,10 @@ class SpiderViewModel(
 
     fun restartCurrentGame() {
         val initial = initialState ?: return
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
+        if (_state.value.hasWon) updateModeStats(_options.value.suitCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
         stopTimer()
         clearHint()
         undoStack.clear()

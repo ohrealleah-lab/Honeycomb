@@ -373,6 +373,16 @@ public final class BeecellViewModel {
 
     public func restartCurrentGame() {
         guard let initial = initialState else { return }
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%.
+        if state.hasWon {
+            var stats = statistics
+            var modeStats = stats.statsByMode[currentModeKey] ?? ModeStats()
+            modeStats.gamesPlayed += 1
+            stats.statsByMode[currentModeKey] = modeStats
+            statistics = stats
+        }
         stopTimer()
         undoStack.removeAll()
         state = initial

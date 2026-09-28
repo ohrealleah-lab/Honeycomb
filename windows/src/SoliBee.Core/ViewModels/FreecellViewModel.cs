@@ -395,6 +395,18 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     {
         _untimedThisGame = false;
         if (_initialSnapshot == null) return;
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
+        if (State.HasWon)
+        {
+            var stats = StatsService.LoadStats();
+            if (!stats.FreecellStatsByMode.ContainsKey(ModeKey))
+                stats.FreecellStatsByMode[ModeKey] = new ModeStats();
+            stats.FreecellStatsByMode[ModeKey].GamesPlayed++;
+            StatsService.SaveStats(stats);
+            Stats = stats;
+        }
         _gameTimer?.Dispose();
         _undoStack.Clear();
         RestoreSnapshot(_initialSnapshot);

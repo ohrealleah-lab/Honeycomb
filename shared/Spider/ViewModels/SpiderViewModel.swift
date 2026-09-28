@@ -416,6 +416,10 @@ public final class SpiderViewModel {
 
     public func restartCurrentGame() {
         guard let initial = initialState else { return }
+        // A won game is over, so replaying its deal is a new game on the same deal: it
+        // counts as played. Otherwise re-winning it adds another win (and streak) with no
+        // game played, and repeating that pushes the win rate past 100%.
+        if state.hasWon { gamesPlayed += 1 }
         stopTimer()
         undoStack.removeAll()
         state = initial
