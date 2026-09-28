@@ -40,7 +40,7 @@ fun HoneycombOptionsScreen(
                 ),
                 selectedItem = options.difficulty,
                 onItemSelection = { viewModel.updateOptions(options.copy(difficulty = it)) },
-                itemLabel = { it.displayName }
+                itemLabel = { it.localizedName(language) }
             )
         }
     )

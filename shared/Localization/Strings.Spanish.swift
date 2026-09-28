@@ -723,5 +723,13 @@ enum StringsSpanish {
         .colorChannelGreen: "Verde",
         .colorChannelBlue: "Azul",
         .colorChannelAlpha: "Opacidad",
+        .deckSelectedCountFmt: "%d / 5 cartas seleccionadas",
+        .deckCardCountFmt: "%d / 5 cartas",
+        .hintFillEmptyColumns: "Llena todas las columnas vacías antes de repartir cartas.",
+        .cardShadowLabel: "Sombra",
+        .deleteTargetCustomCardBack: "este reverso personalizado",
+        .deleteTargetCustomBackground: "este fondo personalizado",
+        .selectImageFirstMessage: "Primero selecciona una imagen.",
+        .importSuccessfulMessage: "¡Importación completada!",
     ]
 }

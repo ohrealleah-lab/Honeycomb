@@ -326,7 +326,7 @@ fun VideoPokerBoard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.CreditsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                    Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else "FREE", fontWeight = FontWeight.Bold, color = Color.Yellow)
+                    Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else com.leah.honeycomb.Strings.get(StringKey.FreePlayLabel, language).uppercase(), fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.BetLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
@@ -347,13 +347,13 @@ fun VideoPokerBoard(
             ) {
                 Row {
                     IconButton(onClick = { if (state.phase == VideoPokerPhase.Holding) showQuitDialog = true else onMenuTap() }) {
-                        Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                        Icon(Icons.Default.GridView, contentDescription = com.leah.honeycomb.tr(StringKey.MenuHeaderTitle), tint = Color.White)
                     }
                     IconButton(onClick = onOptions) {
-                        Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                        Icon(Icons.Default.Settings, contentDescription = com.leah.honeycomb.tr(StringKey.Options), tint = Color.White)
                     }
                     IconButton(onClick = onThemes) {
-                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                        Icon(Icons.Default.Palette, contentDescription = com.leah.honeycomb.tr(StringKey.ThemesPanelTitle), tint = Color.White)
                     }
                 }
             }
@@ -447,11 +447,9 @@ fun VideoPokerBoard(
                                 animationSpec = tween(150, easing = FastOutSlowInEasing)
                             )
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                if (isHeld) {
-                                    Text("HELD", color = Color.Yellow, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                } else {
-                                    Text(" ", fontSize = 12.sp)
-                                }
+                                // No "HELD" text — matches Mac/iOS, which show a held card by
+                                // its lift alone. The blank line keeps the row's height as-is.
+                                Text(" ", fontSize = 12.sp)
                                 Box(
                                     modifier = Modifier
                                         .clickable(enabled = state.phase == VideoPokerPhase.Holding) {

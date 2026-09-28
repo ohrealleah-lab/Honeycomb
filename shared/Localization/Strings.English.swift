@@ -723,5 +723,13 @@ enum StringsEnglish {
         .colorChannelGreen: "Green",
         .colorChannelBlue: "Blue",
         .colorChannelAlpha: "Alpha",
+        .deckSelectedCountFmt: "%d / 5 cards selected",
+        .deckCardCountFmt: "%d / 5 cards",
+        .hintFillEmptyColumns: "Fill all empty columns before dealing cards.",
+        .cardShadowLabel: "Shadow",
+        .deleteTargetCustomCardBack: "this custom card back",
+        .deleteTargetCustomBackground: "this custom background",
+        .selectImageFirstMessage: "Please select an image first.",
+        .importSuccessfulMessage: "Import successful!",
     ]
 }

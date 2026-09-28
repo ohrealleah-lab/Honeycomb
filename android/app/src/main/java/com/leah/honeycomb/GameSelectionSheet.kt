@@ -23,8 +23,10 @@ import androidx.compose.foundation.verticalScroll
 
 data class GameInfo(
     val route: String,
-    val title: String,
-    val description: String,
+    // Localized at display time — same keys iOS's GameSelectionFullScreenView uses
+    // (GameMode.localizedDisplayName + the Help guide's help*Subtitle one-liners).
+    val title: StringKey,
+    val description: StringKey,
     val iconResId: Int? = null,
     val textIcon: String? = null
 )
@@ -32,38 +34,38 @@ data class GameInfo(
 val gamesList = listOf(
     GameInfo(
         route = AppRoute.Klondike.Board.route,
-        title = "Klondike Solibee",
-        description = "Classic single-deck solitaire with Draw 1, Draw 3, and Vegas scoring options.",
+        title = StringKey.GamemodeKlondikeDisplay,
+        description = StringKey.HelpKlondikeSubtitle,
         textIcon = "♠"
     ),
     GameInfo(
         route = AppRoute.Beecell.Board.route,
-        title = "Beecell",
-        description = "The ultimate strategic solitaire game—99.9% of all deals are solvable.",
+        title = StringKey.GamemodeBeecellDisplay,
+        description = StringKey.HelpBeecellSubtitle,
         textIcon = "♥"
     ),
     GameInfo(
         route = AppRoute.Spider.Board.route,
-        title = "Spider Solibee",
-        description = "A deep, two-deck game of sequence building across 1, 2, or 4 suits.",
+        title = StringKey.GamemodeSpiderDisplay,
+        description = StringKey.HelpSpiderSubtitle,
         textIcon = "♣"
     ),
     GameInfo(
         route = AppRoute.VideoPoker.Board.route,
-        title = "Video Poker",
-        description = "Classic casino poker with Jacks or Better, Deuces Wild, and Bonus Poker pay tables.",
+        title = StringKey.HelpVideopokerTitle,
+        description = StringKey.HelpVideopokerSubtitle,
         textIcon = "♦"
     ),
     GameInfo(
         route = AppRoute.Blackjack.Board.route,
-        title = "Video Blackjack",
-        description = "Beat the dealer by getting closer to 21 without going over.",
+        title = StringKey.HelpBlackjackTitle,
+        description = StringKey.HelpBlackjackSubtitle,
         textIcon = "21"
     ),
     GameInfo(
         route = AppRoute.Honeycomb.Board.route,
-        title = "Honeycomb",
-        description = "A tactical 3x3 grid card battle inspired by Triple Triad.",
+        title = StringKey.AppName,
+        description = StringKey.HelpHoneycombSubtitle,
         textIcon = "⬢"
     )
 )
@@ -95,7 +97,7 @@ fun GameSelectionSheet(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Game Selection",
+                    text = tr(StringKey.MenuTabGameSelection),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
@@ -112,7 +114,7 @@ fun GameSelectionSheet(
             
             Spacer(modifier = Modifier.height(24.dp))
             Text(
-                text = "Game",
+                text = tr(StringKey.MenuSectionGame),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.Black
@@ -184,14 +186,14 @@ fun GameSelectionRow(game: GameInfo, isSelected: Boolean, onClick: () -> Unit) {
         
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = game.title,
+                text = tr(game.title),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = titleColor
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = game.description,
+                text = tr(game.description),
                 fontSize = 14.sp,
                 color = descColor,
                 lineHeight = 18.sp
@@ -202,7 +204,7 @@ fun GameSelectionRow(game: GameInfo, isSelected: Boolean, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(16.dp))
             Icon(
                 imageVector = Icons.Default.Check,
-                contentDescription = "Selected",
+                contentDescription = null, // decorative: the row's highlight already marks the selection
                 tint = Color(0xFF007AFF),
                 modifier = Modifier.size(24.dp)
             )

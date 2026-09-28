@@ -32,6 +32,17 @@ import com.leah.honeycomb.LocalAppContainer
 // previously duplicated (and had drifted from CardView.kt's actual bundled card-back set).
 val builtinFeltNames = listOf("Green Felt", "Crimson", "Royal Blue", "Charcoal", "Desert Felt")
 
+// On-screen name for a built-in felt (the English names above stay the saved IDs) —
+// the same labels Mac's BackgroundSelectorView shows.
+@Composable
+fun feltDisplayName(name: String): String = com.leah.honeycomb.tr(when (name) {
+    "Crimson" -> StringKey.FeltCrimson
+    "Royal Blue" -> StringKey.FeltRoyalBlue
+    "Charcoal" -> StringKey.FeltCharcoal
+    "Desert Felt" -> StringKey.FeltDesert
+    else -> StringKey.FeltGreen
+})
+
 fun feltColorForName(name: String): FeltColorType = when (name) {
     "Green Felt" -> FeltColorType.FeltGreen
     "Crimson" -> FeltColorType.Crimson
@@ -66,6 +77,8 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
     // Deleting is destructive (any theme using this art falls back to a default) and was
     // previously unreachable from any UI — confirm before actually calling the manager.
     var pendingDeleteLabel by remember { mutableStateOf<String?>(null) }
+    val deleteTargetCardBack = com.leah.honeycomb.tr(StringKey.DeleteTargetCustomCardBack)
+    val deleteTargetBackground = com.leah.honeycomb.tr(StringKey.DeleteTargetCustomBackground)
     var pendingDeleteAction by remember { mutableStateOf<(() -> Unit)?>(null) }
     if (pendingDeleteLabel != null) {
         AlertDialog(
@@ -91,7 +104,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                 title = { Text(tr(StringKey.ThemesPanelTitle)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.leah.honeycomb.tr(StringKey.Back))
                     }
                 },
                 actions = {
@@ -99,7 +112,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                         Text(tr(StringKey.ImportArtButton))
                     }
                     IconButton(onClick = onAbout) {
-                        Icon(Icons.Default.Info, contentDescription = "About")
+                        Icon(Icons.Default.Info, contentDescription = com.leah.honeycomb.tr(StringKey.AboutHoneycomb))
                     }
                 }
             )
@@ -142,7 +155,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                         label = null,
                         onClick = { themeManager.updateActiveThemeCardBack(custom.id) },
                         onDelete = {
-                            pendingDeleteLabel = "this custom card back"
+                            pendingDeleteLabel = deleteTargetCardBack
                             pendingDeleteAction = { appContainer.customCardBackManager.deleteCardBack(custom.id) }
                         }
                     )
@@ -154,7 +167,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
             LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 items(builtinFeltNames) { bgName ->
                     BackgroundSelectorItem(
-                        label = bgName,
+                        label = feltDisplayName(bgName),
                         feltColor = feltColorForName(bgName),
                         customBackgroundId = null,
                         onClick = { themeManager.updateActiveThemeBackground(feltColorForName(bgName), null) }
@@ -167,7 +180,7 @@ fun ThemesScreen(onBack: () -> Unit, onAbout: () -> Unit = {}, onImportArt: () -
                         customBackgroundId = custom.id,
                         onClick = { themeManager.updateActiveThemeBackground(FeltColorType.Custom, custom.id) },
                         onDelete = {
-                            pendingDeleteLabel = "this custom background"
+                            pendingDeleteLabel = deleteTargetBackground
                             pendingDeleteAction = { appContainer.customBackgroundManager.deleteBackground(custom.id) }
                         }
                     )
@@ -289,21 +302,21 @@ fun BackgroundSelectorItem(label: String?, feltColor: FeltColorType, customBackg
 // into a single data-driven list, so adding a 6th editable color is one list entry
 // instead of a new branch in two separate places.
 private data class ColorFieldSpec(
-    val label: String,
+    val label: StringKey,
     val get: (CustomCardColorGroup) -> List<Double>,
     val set: (CustomCardColorGroup, Double, Double, Double, Double) -> CustomCardColorGroup
 )
 
 private val colorFieldSpecs = listOf(
-    ColorFieldSpec("Background", { listOf(it.bgRed, it.bgGreen, it.bgBlue, it.bgAlpha) },
+    ColorFieldSpec(StringKey.CardBackgroundLabel, { listOf(it.bgRed, it.bgGreen, it.bgBlue, it.bgAlpha) },
         { c, r, g, b, a -> c.copy(bgRed = r, bgGreen = g, bgBlue = b, bgAlpha = a) }),
-    ColorFieldSpec("Outline", { listOf(it.outlineRed, it.outlineGreen, it.outlineBlue, it.outlineAlpha) },
+    ColorFieldSpec(StringKey.CardOutlineLabel, { listOf(it.outlineRed, it.outlineGreen, it.outlineBlue, it.outlineAlpha) },
         { c, r, g, b, a -> c.copy(outlineRed = r, outlineGreen = g, outlineBlue = b, outlineAlpha = a) }),
-    ColorFieldSpec("Black Suit", { listOf(it.blackSuitRed, it.blackSuitGreen, it.blackSuitBlue, it.blackSuitAlpha) },
+    ColorFieldSpec(StringKey.BlackSuitTextLabel, { listOf(it.blackSuitRed, it.blackSuitGreen, it.blackSuitBlue, it.blackSuitAlpha) },
         { c, r, g, b, a -> c.copy(blackSuitRed = r, blackSuitGreen = g, blackSuitBlue = b, blackSuitAlpha = a) }),
-    ColorFieldSpec("Red Suit", { listOf(it.redSuitRed, it.redSuitGreen, it.redSuitBlue, it.redSuitAlpha) },
+    ColorFieldSpec(StringKey.RedSuitTextLabel, { listOf(it.redSuitRed, it.redSuitGreen, it.redSuitBlue, it.redSuitAlpha) },
         { c, r, g, b, a -> c.copy(redSuitRed = r, redSuitGreen = g, redSuitBlue = b, redSuitAlpha = a) }),
-    ColorFieldSpec("Shadow", { listOf(it.shadowRed, it.shadowGreen, it.shadowBlue, it.shadowAlpha) },
+    ColorFieldSpec(StringKey.CardShadowLabel, { listOf(it.shadowRed, it.shadowGreen, it.shadowBlue, it.shadowAlpha) },
         { c, r, g, b, a -> c.copy(shadowRed = r, shadowGreen = g, shadowBlue = b, shadowAlpha = a) })
 )
 
@@ -315,13 +328,13 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
     val activeTheme = themes.find { it.id == activeThemeId }
     val colors = activeTheme?.customCardColors ?: CustomCardColorGroup()
 
-    var colorToEdit by remember { mutableStateOf<String?>(null) }
+    var colorToEdit by remember { mutableStateOf<StringKey?>(null) }
     var currentRed by remember { mutableStateOf(0.0) }
     var currentGreen by remember { mutableStateOf(0.0) }
     var currentBlue by remember { mutableStateOf(0.0) }
     var currentAlpha by remember { mutableStateOf(1.0) }
 
-    val openDialog = { name: String, r: Double, g: Double, b: Double, a: Double ->
+    val openDialog = { name: StringKey, r: Double, g: Double, b: Double, a: Double ->
         colorToEdit = name
         currentRed = r
         currentGreen = g
@@ -346,7 +359,8 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
         ) {
             colorFieldSpecs.forEach { field ->
                 val (r, g, b, a) = field.get(colors)
-                ColorSwatch(field.label, r, g, b, a) { openDialog(field.label, r, g, b, a) }
+                val fieldLabel = com.leah.honeycomb.tr(field.label)
+                ColorSwatch(fieldLabel, r, g, b, a) { openDialog(field.label, r, g, b, a) }
             }
         }
     }
@@ -354,7 +368,7 @@ fun CustomCardColorSection(themeManager: ThemeManager) {
     if (colorToEdit != null) {
         AlertDialog(
             onDismissRequest = { colorToEdit = null },
-            title = { Text(trf(StringKey.EditItemFmt, colorToEdit ?: "")) },
+            title = { Text(trf(StringKey.EditItemFmt, colorToEdit?.let { tr(it) } ?: "")) },
             text = {
                 Column {
                     Text(tr(StringKey.ColorChannelRed))

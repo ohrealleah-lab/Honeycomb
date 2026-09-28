@@ -98,15 +98,15 @@ private fun rulesBannerLines(
         return state.activeRules.map { rule ->
             if ((rule == HoneycombRule.Ascension || rule == HoneycombRule.Descension) && state.ascensionDescensionSuits.isNotEmpty()) {
                 val suitNames = state.ascensionDescensionSuits.sorted().map { HoneycombCardData.localizedSuitName(it, language) }
-                Strings.format(StringKey.RuleLineSuitFmt, language, rule.displayName, suitNames.joinToString(", "))
+                Strings.format(StringKey.RuleLineSuitFmt, language, rule.localizedName(language), suitNames.joinToString(", "))
             } else {
-                rule.displayName
+                rule.localizedName(language)
             }
         }
     }
     if (options.forceNormalMode) return listOf(Strings.get(StringKey.RuleLineNormal, language))
     if (options.selectedRules.isNotEmpty()) {
-        return HoneycombRule.entries.filter { options.selectedRules.contains(it) }.map { it.displayName }
+        return HoneycombRule.entries.filter { options.selectedRules.contains(it) }.map { it.localizedName(language) }
     }
     return listOf(Strings.get(StringKey.RuleLineRoulette, language))
 }
@@ -234,8 +234,8 @@ fun HoneycombMatchUI(
                         Text(Strings.get(StringKey.RuleLineNormal, language))
                     } else {
                         rulesToExplain.forEach { rule ->
-                            Text(rule.displayName, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
-                            Text(rule.explanation(state.ascensionDescensionSuits), style = MaterialTheme.typography.bodySmall)
+                            Text(rule.localizedName(language), fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 8.dp))
+                            Text(rule.localizedExplanation(state.ascensionDescensionSuits, language), style = MaterialTheme.typography.bodySmall)
                         }
                     }
                 }
@@ -290,13 +290,13 @@ fun HoneycombMatchUI(
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             IconButton(onClick = onMenuTap) {
-                                Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.White)
+                                Icon(Icons.Default.Menu, contentDescription = com.leah.honeycomb.tr(StringKey.MenuHeaderTitle), tint = Color.White)
                             }
                             IconButton(onClick = onOptionsTap) {
-                                Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                                Icon(Icons.Default.Settings, contentDescription = com.leah.honeycomb.tr(StringKey.Options), tint = Color.White)
                             }
                             IconButton(onClick = onThemesTap) {
-                                Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                                Icon(Icons.Default.Palette, contentDescription = com.leah.honeycomb.tr(StringKey.ThemesPanelTitle), tint = Color.White)
                             }
                             if (!isMidMatch) {
                                 // Manage Decks edits the player's saved deck — meaningless under
@@ -304,11 +304,11 @@ fun HoneycombMatchUI(
                                 // iOS/Mac/Windows hiding it in the same case.
                                 if (!noStressMode) {
                                     IconButton(onClick = onManageDecksTap) {
-                                        Icon(Icons.Default.Style, contentDescription = "Manage Decks", tint = Color.White)
+                                        Icon(Icons.Default.Style, contentDescription = com.leah.honeycomb.tr(StringKey.ManageDecks), tint = Color.White)
                                     }
                                 }
                                 IconButton(onClick = onRulesTap) {
-                                    Icon(Icons.Default.Hexagon, contentDescription = "Rules", tint = Color.White)
+                                    Icon(Icons.Default.Hexagon, contentDescription = com.leah.honeycomb.tr(StringKey.ToolbarRules), tint = Color.White)
                                 }
                             }
                         }
@@ -316,11 +316,11 @@ fun HoneycombMatchUI(
                         if (isMidMatch) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 IconButton(onClick = { viewModel.undoLastAction() }, enabled = viewModel.canUndo) {
-                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = Color.White)
+                                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = com.leah.honeycomb.tr(StringKey.Undo), tint = Color.White)
                                 }
                                 if (!hideHintButton && displayedDifficulty != HoneycombDifficulty.UltraHard && state.isPlayerTurn) {
                                     IconButton(onClick = { viewModel.findHint() }) {
-                                        Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                                        Icon(Icons.Default.Lightbulb, contentDescription = com.leah.honeycomb.tr(StringKey.Hint), tint = Color.White)
                                     }
                                 }
                                 TextButton(onClick = { showQuitConfirm = true }) {
@@ -331,7 +331,7 @@ fun HoneycombMatchUI(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (state.gameState == HoneycombGameState.GameOver && viewModel.canRematch) {
                                     IconButton(onClick = { viewModel.rematch() }) {
-                                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = "Rematch", tint = Color.White)
+                                        Icon(Icons.AutoMirrored.Filled.Redo, contentDescription = com.leah.honeycomb.tr(StringKey.Rematch), tint = Color.White)
                                     }
                                 }
                                 Button(onClick = { viewModel.startNewGame() }) {
@@ -410,7 +410,7 @@ fun HoneycombMatchUI(
                                 BoardGrid(animatedVisibilityScope = animatedVisibilityScope, state = state, cardWidth = landscapeCardWidth, hintMove = hintMove, isStealingCard = isStealingCard, viewModel = viewModel, dropTargets = dropTargets)
 
                                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(HoneycombLayout.handSpacing)) {
-                                    HandLabel(displayedDifficulty.displayName)
+                                    HandLabel(displayedDifficulty.localizedName(language))
                                     OpponentHandPyramid(animatedVisibilityScope = animatedVisibilityScope, state = state, cardWidth = landscapeCardWidth)
                                 }
                             }
@@ -581,7 +581,7 @@ fun HoneycombMatchUI(
                     ) {
                         Icon(
                             Icons.Default.Close,
-                            contentDescription = "Dismiss",
+                            contentDescription = com.leah.honeycomb.tr(StringKey.DismissA11y),
                             tint = Color.White.copy(alpha = 0.8f)
                         )
                     }
@@ -695,7 +695,7 @@ private fun ScoreRow(
             color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = if (isDense) 13.sp else 16.sp
         )
         Text(
-            scoreDealerText(language, (if (state.gameState == HoneycombGameState.Setup) options.difficulty else state.matchDifficulty).displayName, opponentScore),
+            scoreDealerText(language, (if (state.gameState == HoneycombGameState.Setup) options.difficulty else state.matchDifficulty).localizedName(language), opponentScore),
             color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = if (isDense) 13.sp else 16.sp
         )
     }

@@ -44,7 +44,7 @@ fun GameOverlayCard(
                 onClick = onDismiss,
                 modifier = Modifier.align(Alignment.TopEnd)
             ) {
-                Icon(Icons.Default.Close, contentDescription = "Dismiss", tint = Color.White.copy(alpha = 0.8f))
+                Icon(Icons.Default.Close, contentDescription = com.leah.honeycomb.tr(StringKey.DismissA11y), tint = Color.White.copy(alpha = 0.8f))
             }
         }
     }

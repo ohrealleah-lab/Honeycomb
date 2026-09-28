@@ -8,6 +8,7 @@ using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.Messaging;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
 using SoliBee.Core.ViewModels;
@@ -321,6 +322,12 @@ public partial class FaceCardArtSectionView : UserControl
     private void OnDeleteClick(FaceCardSlot slot)
     {
         _pendingDeleteSlot = slot;
+        // Set on open so it follows a language change made while Preferences is up.
+        var language = SettingsService.LoadOptions().Language;
+        ConfirmDeleteTitle.Text = Strings.Get(StringKey.RemoveArtTitle, language);
+        ConfirmDeleteBody.Text = Strings.Get(StringKey.RemoveArtConfirmBody, language);
+        ConfirmDeleteCancelButton.Content = Strings.Get(StringKey.Cancel, language);
+        ConfirmDeleteRemoveButton.Content = Strings.Get(StringKey.Remove, language);
         ConfirmDeleteOverlay.IsVisible = true;
     }
 

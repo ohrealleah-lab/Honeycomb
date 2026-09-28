@@ -480,7 +480,7 @@ class HoneycombViewModel(
         ) }
 
         if (swapIds.isNotEmpty()) {
-            enqueueBanner(swapBannerText ?: "${HoneycombRule.Swap.displayName}!")
+            enqueueBanner(swapBannerText ?: "${HoneycombRule.Swap.localizedName(bannerCatalog.currentLanguage)}!")
             swapHighlightJob?.cancel()
             swapHighlightJob = viewModelScope.launch {
                 delay(2000)
@@ -620,7 +620,7 @@ class HoneycombViewModel(
         val firstMoveLine = if (playerStarts) {
             com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.FirstMovePlayer, language)
         } else {
-            com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.FirstMoveOpponentFmt, language, _state.value.matchDifficulty.displayName)
+            com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.FirstMoveOpponentFmt, language, _state.value.matchDifficulty.localizedName(language))
         }
         val ruleLines = st.activeRules.filter { it != HoneycombRule.Swap }.map { formatRuleForBanner(it) }.toMutableList()
         // A ruleless match has no per-rule line to (20% of the time) swap for flavor
@@ -772,7 +772,7 @@ class HoneycombViewModel(
     // rule-name capsule already shows the active suits separately (see
     // HoneycombMatchUI.kt's RulesCapsule), so this only needs the plain/flavor name.
     private fun formatRuleForBanner(rule: HoneycombRule): String {
-        val defaultText = rule.displayName
+        val defaultText = rule.localizedName(bannerCatalog.currentLanguage)
         val bannerId = rouletteBannerId(rule) ?: return defaultText
         return bannerCatalogText(bannerId, defaultText)
     }
@@ -781,7 +781,7 @@ class HoneycombViewModel(
     // what the trade actually did, not just that the rule is active. Mirrors Swift's
     // formatSwapRuleForBanner.
     private fun formatSwapRuleForBanner(swappedAwayPlayerFiveStar: Boolean, tradedUpForPlayer: Boolean): String {
-        val defaultText = HoneycombRule.Swap.displayName
+        val defaultText = HoneycombRule.Swap.localizedName(bannerCatalog.currentLanguage)
         val tokens = mapOf("OpponentName" to _state.value.matchDifficulty.displayName)
         if (swappedAwayPlayerFiveStar) {
             return bannerCatalogText(BannerId.RuleSpecificNectarExchangeSwapsAwayThePlayers5StarCard, defaultText, tokens)
@@ -825,7 +825,7 @@ class HoneycombViewModel(
         val placedSuit = placedCard.data.suit
         if (board.isFull || !board.ascensionDescensionSuits.contains(placedSuit)) return null
         if (rules.contains(HoneycombRule.Ascension)) {
-            val defaultText = "${HoneycombRule.Ascension.displayName}!"
+            val defaultText = "${HoneycombRule.Ascension.localizedName(bannerCatalog.currentLanguage)}!"
             return if (hasCardModifierAtLeast(placedSuit, 3, board)) {
                 bannerCatalogText(
                     BannerId.RuleSpecificPollinationPushesACardsModifierTo3OrHigher,
@@ -834,7 +834,7 @@ class HoneycombViewModel(
                 )
             } else defaultText
         } else if (rules.contains(HoneycombRule.Descension)) {
-            val defaultText = "${HoneycombRule.Descension.displayName}!"
+            val defaultText = "${HoneycombRule.Descension.localizedName(bannerCatalog.currentLanguage)}!"
             return if (hasCardClampedToOne(placedSuit, board)) {
                 bannerCatalogText(BannerId.RuleSpecificSmokedOutDropsACardsEffectiveStatTo1, defaultText)
             } else defaultText
@@ -858,15 +858,15 @@ class HoneycombViewModel(
     ) {
         var comboBannerFired = false
         if (board.lastSameTriggered) {
-            enqueueBanner("${HoneycombRule.Same.displayName}!")
+            enqueueBanner("${HoneycombRule.Same.localizedName(bannerCatalog.currentLanguage)}!")
             comboBannerFired = true
         }
         if (board.lastPlusTriggered) {
-            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, "${HoneycombRule.Plus.displayName}!"))
+            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificAPlayerTriggersAPlusComboTheMathMatchesPerfectly, "${HoneycombRule.Plus.localizedName(bannerCatalog.currentLanguage)}!"))
             comboBannerFired = true
         }
         if (board.lastFallenAceTriggered && rules.contains(HoneycombRule.FallenAce)) {
-            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, "${HoneycombRule.FallenAce.displayName}!"))
+            enqueueBanner(bannerCatalogText(BannerId.RuleSpecificFallenAceTriggersA1CapturesA10, "${HoneycombRule.FallenAce.localizedName(bannerCatalog.currentLanguage)}!"))
             comboBannerFired = true
         }
         if (board.lastComboFlipCount >= 4) {
@@ -1425,7 +1425,7 @@ class HoneycombViewModel(
         } else if (st.activeRules.contains(HoneycombRule.SuddenDeath)) {
              _state.update {
                 it.copy(
-                    matchResult = "Sudden Death",
+                    matchResult = com.leah.honeycomb.Strings.format(com.leah.honeycomb.StringKey.DrawSuddenDeathFmt, bannerCatalog.currentLanguage, HoneycombRule.SuddenDeath.localizedName(bannerCatalog.currentLanguage)),
                     matchOutcome = HoneycombMatchOutcome.SuddenDeathPending,
                     gameState = HoneycombGameState.SuddenDeath,
                 )

@@ -32,7 +32,13 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
     var selectedUri by remember { mutableStateOf<Uri?>(null) }
 
     var showDropdown by remember { mutableStateOf(false) }
-    val types = listOf("Background", "Card Back")
+    val types = listOf("Background", "Card Back") // IDs; typeLabel() is what's shown
+    val backgroundLabel = tr(StringKey.MenuSectionBackground)
+    val cardBackLabel = tr(StringKey.MenuSectionCardBack)
+    fun typeLabel(type: String) = if (type == "Card Back") cardBackLabel else backgroundLabel
+    val selectFirstMessage = tr(StringKey.SelectImageFirstMessage)
+    val importSuccessMessage = tr(StringKey.ImportSuccessfulMessage)
+    val errorTitle = tr(StringKey.ErrorTitle)
 
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri: Uri? ->
         selectedUri = uri
@@ -54,7 +60,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 title = { Text(tr(StringKey.ImportCustomArtTitle)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.leah.honeycomb.tr(StringKey.Back))
                     }
                 }
             )
@@ -73,7 +79,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 onExpandedChange = { showDropdown = !showDropdown }
             ) {
                 OutlinedTextField(
-                    value = selectedType,
+                    value = typeLabel(selectedType),
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(tr(StringKey.ArtTypeLabel)) },
@@ -86,7 +92,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 ) {
                     types.forEach { type ->
                         DropdownMenuItem(
-                            text = { Text(type) },
+                            text = { Text(typeLabel(type)) },
                             onClick = {
                                 selectedType = type
                                 showDropdown = false
@@ -100,7 +106,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 onClick = { launcher.launch("image/*") },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(if (selectedUri == null) "Select Image" else "Image Selected")
+                Text(tr(if (selectedUri == null) StringKey.TouchChoosePhoto else StringKey.TouchChooseDifferentPhoto))
             }
 
             Spacer(modifier = Modifier.weight(1f))
@@ -109,7 +115,7 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                 onClick = {
                     val uri = selectedUri
                     if (uri == null) {
-                        snackbarMessage = "Please select an image first."
+                        snackbarMessage = selectFirstMessage
                         return@Button
                     }
 
@@ -121,10 +127,10 @@ fun CustomArtImportScreen(onBack: () -> Unit) {
                         }
 
                         if (result.isSuccess) {
-                            snackbarMessage = "Import successful!"
+                            snackbarMessage = importSuccessMessage
                             selectedUri = null
                         } else {
-                            snackbarMessage = "Error: ${result.exceptionOrNull()?.message}"
+                            snackbarMessage = "$errorTitle: ${result.exceptionOrNull()?.message}"
                         }
                     }
                 },

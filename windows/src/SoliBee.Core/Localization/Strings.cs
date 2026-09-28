@@ -739,6 +739,14 @@ public static class Strings
         [StringKey.ColorChannelGreen] = "Green",
         [StringKey.ColorChannelBlue] = "Blue",
         [StringKey.ColorChannelAlpha] = "Alpha",
+        [StringKey.DeckSelectedCountFmt] = "%d / 5 cards selected",
+        [StringKey.DeckCardCountFmt] = "%d / 5 cards",
+        [StringKey.HintFillEmptyColumns] = "Fill all empty columns before dealing cards.",
+        [StringKey.CardShadowLabel] = "Shadow",
+        [StringKey.DeleteTargetCustomCardBack] = "this custom card back",
+        [StringKey.DeleteTargetCustomBackground] = "this custom background",
+        [StringKey.SelectImageFirstMessage] = "Please select an image first.",
+        [StringKey.ImportSuccessfulMessage] = "Import successful!",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1462,5 +1470,13 @@ public static class Strings
         [StringKey.ColorChannelGreen] = "Verde",
         [StringKey.ColorChannelBlue] = "Azul",
         [StringKey.ColorChannelAlpha] = "Opacidad",
+        [StringKey.DeckSelectedCountFmt] = "%d / 5 cartas seleccionadas",
+        [StringKey.DeckCardCountFmt] = "%d / 5 cartas",
+        [StringKey.HintFillEmptyColumns] = "Llena todas las columnas vacías antes de repartir cartas.",
+        [StringKey.CardShadowLabel] = "Sombra",
+        [StringKey.DeleteTargetCustomCardBack] = "este reverso personalizado",
+        [StringKey.DeleteTargetCustomBackground] = "este fondo personalizado",
+        [StringKey.SelectImageFirstMessage] = "Primero selecciona una imagen.",
+        [StringKey.ImportSuccessfulMessage] = "¡Importación completada!",
     };
 }

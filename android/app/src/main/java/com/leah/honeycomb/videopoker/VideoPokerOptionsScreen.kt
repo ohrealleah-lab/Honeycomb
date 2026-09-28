@@ -43,6 +43,8 @@ fun VideoPokerOptionsScreen(
                     items = VideoPokerVariant.values().toList(),
                     selectedItem = options.variant,
                     onItemSelection = { viewModel.updateVariant(it) },
+                    // Variant names deliberately stay English in every language — they're
+                    // the casino games' actual names (Mac: localizedVariantName).
                     itemLabel = {
                         when (it) {
                             VideoPokerVariant.JacksOrBetter -> "Jacks or Better"
@@ -52,14 +54,14 @@ fun VideoPokerOptionsScreen(
                     }
                 )
                 IntStepperRow(
-                    label = "Starting Credits",
+                    label = Strings.get(StringKey.StartingCreditsFmt, language).substringBefore(":"),
                     value = options.startingCredits,
                     step = 100,
-                    range = 10..10000,
+                    range = 100..10000, // Mac: VideoPokerView options stepper
                     onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
                 )
                 IntStepperRow(
-                    label = "Default Bet",
+                    label = Strings.get(StringKey.PickerDefaultBetLabel, language).trimEnd(':'),
                     value = options.betPerHand,
                     step = 1,
                     range = 1..5,

@@ -53,7 +53,7 @@ fun HoneycombDecksScreen(
                     title = { Text(trf(StringKey.EditItemFmt, deck.name.ifBlank { trf(StringKey.DeckSlotDefaultNameFmt, idx + 1) })) },
                     navigationIcon = {
                         IconButton(onClick = { editingDeckIndex = null }) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.leah.honeycomb.tr(StringKey.Back))
                         }
                     },
                     actions = {
@@ -70,7 +70,7 @@ fun HoneycombDecksScreen(
         ) { padding ->
             Column(modifier = Modifier.fillMaxSize().padding(padding)) {
                 Text(
-                    "${selectedCardIds.size} / 5 cards selected",
+                    com.leah.honeycomb.trf(StringKey.DeckSelectedCountFmt, selectedCardIds.size),
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -118,7 +118,7 @@ fun HoneycombDecksScreen(
                 title = { Text(tr(StringKey.SheetTitleMac)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.leah.honeycomb.tr(StringKey.Back))
                     }
                 }
             )
@@ -126,7 +126,7 @@ fun HoneycombDecksScreen(
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp)) {
             Text(
-                "${unlockedIds.size} / ${database.allCards.size} cards unlocked",
+                com.leah.honeycomb.trf(StringKey.CardBankCountFmt, unlockedIds.size, database.allCards.size),
                 style = MaterialTheme.typography.bodyMedium
             )
             Spacer(modifier = Modifier.height(16.dp))
@@ -150,13 +150,13 @@ fun HoneycombDecksScreen(
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                "${deck.cardIds.size} / 5 cards",
+                                com.leah.honeycomb.trf(StringKey.DeckCardCountFmt, deck.cardIds.size),
                                 style = MaterialTheme.typography.bodySmall
                             )
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (options.activeDeckIndex == index) {
-                                Icon(Icons.Filled.Star, contentDescription = "Active deck", tint = Color(0xFFDDA75B))
+                                Icon(Icons.Filled.Star, contentDescription = com.leah.honeycomb.tr(StringKey.DeckActiveBadge), tint = Color(0xFFDDA75B))
                                 Spacer(modifier = Modifier.width(8.dp))
                             }
                             OutlinedButton(onClick = { editingDeckIndex = index }) { Text(tr(StringKey.Edit)) }

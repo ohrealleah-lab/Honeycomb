@@ -35,9 +35,9 @@ fun BlackjackOptionsScreen(
         gameSettings = {
             Column(modifier = Modifier.padding(vertical = 8.dp)) {
                 IntStepperRow(
-                    label = "Starting Credits",
+                    label = Strings.get(StringKey.StartingCreditsFmt, language).substringBefore(":"),
                     value = options.startingCredits,
-                    step = 100,
+                    step = 10, // Mac: BlackjackView options stepper
                     range = 10..10000,
                     onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
                 )

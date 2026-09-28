@@ -180,11 +180,11 @@ fun BeecellBoard(
                     .padding(horizontal = 24.dp, vertical = 2.dp)
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text("SCORE", fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.tr(StringKey.ScoreLabel), fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text("${state.score}", fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(0.dp)) {
-                    Text("TIME", fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
+                    Text(com.leah.honeycomb.tr(StringKey.TimeLabel), fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
                     Text(com.leah.honeycomb.formatSeconds(state.timerSeconds, zeroPlaceholder = "00:00"), fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }
             }
@@ -200,13 +200,13 @@ fun BeecellBoard(
                 ) {
                     Row {
                         IconButton(onClick = onMenuTap) {
-                            Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                            Icon(Icons.Default.GridView, contentDescription = com.leah.honeycomb.tr(StringKey.MenuHeaderTitle), tint = Color.White)
                         }
                         IconButton(onClick = onOptions) {
-                            Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                            Icon(Icons.Default.Settings, contentDescription = com.leah.honeycomb.tr(StringKey.Options), tint = Color.White)
                         }
                         IconButton(onClick = onThemes) {
-                            Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                            Icon(Icons.Default.Palette, contentDescription = com.leah.honeycomb.tr(StringKey.ThemesPanelTitle), tint = Color.White)
                         }
                     }
 
@@ -217,10 +217,10 @@ fun BeecellBoard(
                             onClick = { viewModel.undoLastAction() },
                             enabled = viewModel.canUndo
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Undo", tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
+                            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = com.leah.honeycomb.tr(StringKey.Undo), tint = if (viewModel.canUndo) Color.White else Color.White.copy(alpha=0.3f))
                         }
                         IconButton(onClick = { viewModel.findHint() }) {
-                            Icon(Icons.Default.Lightbulb, contentDescription = "Hint", tint = Color.White)
+                            Icon(Icons.Default.Lightbulb, contentDescription = com.leah.honeycomb.tr(StringKey.Hint), tint = Color.White)
                         }
                         Spacer(modifier = Modifier.width(4.dp))
                         Row(
@@ -233,7 +233,7 @@ fun BeecellBoard(
                                 }
                                 .padding(horizontal = 12.dp, vertical = 6.dp)
                         ) {
-                            Icon(Icons.Default.PlayArrow, contentDescription = "New", tint = Color.White, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.PlayArrow, contentDescription = com.leah.honeycomb.tr(StringKey.TouchNewDealLabel), tint = Color.White, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(tr(StringKey.TouchNewDealLabel), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
@@ -461,7 +461,8 @@ fun BeecellBoard(
                             .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(8.dp))
                             .padding(horizontal = 16.dp, vertical = 8.dp)
                     ) {
-                        Text(hint.description, color = Color.White)
+                        // Only the no-hints fallback has no source pile here — same text Mac shows.
+                        Text(com.leah.honeycomb.tr(StringKey.NoHintsAvailable), color = Color.White)
                     }
                 }
             }

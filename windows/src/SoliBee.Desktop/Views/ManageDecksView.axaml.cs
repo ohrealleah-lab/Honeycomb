@@ -49,6 +49,7 @@ public partial class ManageDecksView : UserControl
     {
         var language = SettingsService.LoadOptions().Language;
 
+        SavedDecksHeaderText.Text = Strings.Get(StringKey.SavedDecksHeader, language);
         StartOverBodyText.Text = Strings.Get(StringKey.StartOverBody, language);
         StartOverButton.Content = Strings.Get(StringKey.StartOver, language);
 

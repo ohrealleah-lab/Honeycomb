@@ -24,7 +24,7 @@ fun AboutScreen(onBack: () -> Unit) {
                 title = { Text(tr(StringKey.AboutHoneycomb)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = com.leah.honeycomb.tr(StringKey.Back))
                     }
                 }
             )

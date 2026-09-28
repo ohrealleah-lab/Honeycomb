@@ -233,7 +233,7 @@ fun BlackjackBoard(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.CreditsLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
-                    Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else "FREE", fontWeight = FontWeight.Bold, color = Color.Yellow)
+                    Text(if (!viewModel.isFreePlay) "${state.sessionCredits}" else com.leah.honeycomb.Strings.get(StringKey.FreePlayLabel, language).uppercase(), fontWeight = FontWeight.Bold, color = Color.Yellow)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(com.leah.honeycomb.Strings.get(StringKey.BetLabel, language), fontSize = 9.sp, fontWeight = FontWeight.Bold, color = Color.White.copy(alpha = 0.7f))
@@ -254,13 +254,13 @@ fun BlackjackBoard(
             ) {
                 Row {
                     IconButton(onClick = { if (!viewModel.canOpenOptions) showQuitDialog = true else onMenuTap() }) {
-                        Icon(Icons.Default.GridView, contentDescription = "Menu", tint = Color.White)
+                        Icon(Icons.Default.GridView, contentDescription = com.leah.honeycomb.tr(StringKey.MenuHeaderTitle), tint = Color.White)
                     }
                     IconButton(onClick = onOptions) {
-                        Icon(Icons.Default.Settings, contentDescription = "Options", tint = Color.White)
+                        Icon(Icons.Default.Settings, contentDescription = com.leah.honeycomb.tr(StringKey.Options), tint = Color.White)
                     }
                     IconButton(onClick = onThemes) {
-                        Icon(Icons.Default.Palette, contentDescription = "Themes", tint = Color.White)
+                        Icon(Icons.Default.Palette, contentDescription = com.leah.honeycomb.tr(StringKey.ThemesPanelTitle), tint = Color.White)
                     }
                 }
                 Text(tr(StringKey.TouchBlackjackTitle), color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp))
@@ -269,7 +269,8 @@ fun BlackjackBoard(
 
         val dealerArea = @Composable {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                val dealerText = if (state.phase == BlackjackPhase.Betting) "DEALER" else "DEALER ${state.dealerVisibleValue}"
+                val dealerLabel = com.leah.honeycomb.Strings.get(StringKey.DealerLabel, language)
+                val dealerText = if (state.phase == BlackjackPhase.Betting) dealerLabel else "$dealerLabel ${state.dealerVisibleValue}"
                 Text(dealerText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(
@@ -399,7 +400,9 @@ fun BlackjackBoard(
         val playerArea = @Composable {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 val activeHand = state.playerHands.getOrNull(state.activeHandIndex)
-                val playerText = if (state.phase == BlackjackPhase.Betting || activeHand == null) "YOU" else "YOU ${activeHand.value}" + (if (activeHand.isBust) " (Bust)" else "")
+                val youLabel = com.leah.honeycomb.Strings.get(StringKey.TouchYouLabel, language)
+                val bustLabel = com.leah.honeycomb.Strings.get(StringKey.ResultHeadlineBust, language).trimEnd('!')
+                val playerText = if (state.phase == BlackjackPhase.Betting || activeHand == null) youLabel else "$youLabel ${activeHand.value}" + (if (activeHand.isBust) " ($bustLabel)" else "")
                 Text(playerText, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(

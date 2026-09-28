@@ -1444,4 +1444,20 @@ public enum StringKey: String, CaseIterable {
     case colorChannelBlue = "color_channel_blue"
     /// Color editor opacity slider label (Android)
     case colorChannelAlpha = "color_channel_alpha"
+    /// Deck builder: cards picked so far (Android)
+    case deckSelectedCountFmt = "deck_selected_count_fmt"
+    /// Saved deck row: card count (Android)
+    case deckCardCountFmt = "deck_card_count_fmt"
+    /// Spider hint when the stock can't be dealt yet (Android shows it as a toast)
+    case hintFillEmptyColumns = "hint_fill_empty_columns"
+    /// Custom card colors: shadow swatch (Android)
+    case cardShadowLabel = "card_shadow_label"
+    /// Fills Delete %@? for an imported card back (Android)
+    case deleteTargetCustomCardBack = "delete_target_custom_card_back"
+    /// Fills Delete %@? for an imported background (Android)
+    case deleteTargetCustomBackground = "delete_target_custom_background"
+    /// Import screen: Import tapped with no image chosen (Android)
+    case selectImageFirstMessage = "select_image_first_message"
+    /// Import screen: success snackbar (Android)
+    case importSuccessfulMessage = "import_successful_message"
 }

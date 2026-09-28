@@ -40,11 +40,11 @@ fun HoneycombRulesScreen(viewModel: HoneycombViewModel, onBack: () -> Unit) {
             items(HoneycombRuleRowID.allCases, key = { it.banName }) { id ->
                 val label = when (id) {
                     is HoneycombRuleRowID.NormalMode -> Strings.get(StringKey.ForceNormalRulesToggle, language)
-                    is HoneycombRuleRowID.Rule -> id.rule.displayName
+                    is HoneycombRuleRowID.Rule -> id.rule.localizedName(language)
                 }
                 val description = when (id) {
                     is HoneycombRuleRowID.NormalMode -> Strings.get(StringKey.NormalModeBanListTooltip, language)
-                    is HoneycombRuleRowID.Rule -> id.rule.explanation(emptySet())
+                    is HoneycombRuleRowID.Rule -> id.rule.localizedExplanation(emptySet(), language)
                 }
                 val state = HoneycombRuleSelection.state(
                     id, options.selectedRules, options.forceNormalMode, options.bannedRules

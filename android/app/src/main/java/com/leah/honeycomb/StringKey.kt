@@ -724,4 +724,12 @@ enum class StringKey {
     ColorChannelGreen,
     ColorChannelBlue,
     ColorChannelAlpha,
+    DeckSelectedCountFmt,
+    DeckCardCountFmt,
+    HintFillEmptyColumns,
+    CardShadowLabel,
+    DeleteTargetCustomCardBack,
+    DeleteTargetCustomBackground,
+    SelectImageFirstMessage,
+    ImportSuccessfulMessage,
 }

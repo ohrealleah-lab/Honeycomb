@@ -752,6 +752,14 @@ object Strings {
         StringKey.ColorChannelGreen to "Green",
         StringKey.ColorChannelBlue to "Blue",
         StringKey.ColorChannelAlpha to "Alpha",
+        StringKey.DeckSelectedCountFmt to "%d / 5 cards selected",
+        StringKey.DeckCardCountFmt to "%d / 5 cards",
+        StringKey.HintFillEmptyColumns to "Fill all empty columns before dealing cards.",
+        StringKey.CardShadowLabel to "Shadow",
+        StringKey.DeleteTargetCustomCardBack to "this custom card back",
+        StringKey.DeleteTargetCustomBackground to "this custom background",
+        StringKey.SelectImageFirstMessage to "Please select an image first.",
+        StringKey.ImportSuccessfulMessage to "Import successful!",
     )
 
     private val Spanish = mapOf(
@@ -1474,5 +1482,13 @@ object Strings {
         StringKey.ColorChannelGreen to "Verde",
         StringKey.ColorChannelBlue to "Azul",
         StringKey.ColorChannelAlpha to "Opacidad",
+        StringKey.DeckSelectedCountFmt to "%d / 5 cartas seleccionadas",
+        StringKey.DeckCardCountFmt to "%d / 5 cartas",
+        StringKey.HintFillEmptyColumns to "Llena todas las columnas vacías antes de repartir cartas.",
+        StringKey.CardShadowLabel to "Sombra",
+        StringKey.DeleteTargetCustomCardBack to "este reverso personalizado",
+        StringKey.DeleteTargetCustomBackground to "este fondo personalizado",
+        StringKey.SelectImageFirstMessage to "Primero selecciona una imagen.",
+        StringKey.ImportSuccessfulMessage to "¡Importación completada!",
     )
 }

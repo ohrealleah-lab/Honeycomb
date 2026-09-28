@@ -144,7 +144,7 @@ class SpiderViewModel(
                 collectHints = { collectHints() },
                 label = { hint, index, total -> labeled(hint, index, total) },
                 noHintFallback = {
-                    HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "No moves available. Replay or deal a new game!")
+                    HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.NoHintsAvailable, bannerCatalog.currentLanguage))
                 }
             )
             if (generation != hintGeneration) return@launch
@@ -257,7 +257,7 @@ class SpiderViewModel(
 
         if (!st.stock.isEmpty) {
             if (st.tableau.any { it.isEmpty }) {
-                scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", "Fill all empty columns before dealing cards.") to 25)
+                scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), "", "", com.leah.honeycomb.Strings.get(com.leah.honeycomb.StringKey.HintFillEmptyColumns, bannerCatalog.currentLanguage)) to 25)
             } else {
                 scored.add(HintMove(Card(suit = Suit.Spades, rank = 1, faceUp = false), st.stock.id, "", "Deal cards from the Stock pile.") to 50)
             }
