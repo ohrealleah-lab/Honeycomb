@@ -767,6 +767,9 @@ public partial class MainWindow : Window
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatPushes, _language),        s.HandsPushed.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBlackjacks, _language),    s.Blackjacks.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),      $"{winRate:0.0}%"));
+        // Streak rows, as on Mac/iOS/Android.
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCurStreakShort, _language), s.CurrentStreak.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBestStreak, _language),     s.LongestStreak.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language), s.TotalCreditsWagered.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),    s.TotalCreditsWon.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),   s.BiggestPay.ToString()));
@@ -791,6 +794,9 @@ public partial class MainWindow : Window
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsPlayed, _language),   s.TotalHands.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.HandsWon, _language),      s.WinningHands.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.WinRate, _language),       $"{winRate:0.0}%"));
+        // Streak rows, as on Mac/iOS/Android.
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatCurStreakShort, _language), s.CurrentStreak.ToString()));
+        StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.StatBestStreak, _language),     s.LongestStreak.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.BiggestPay, _language),    s.BiggestPay.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalWagered, _language),  s.TotalCreditsWagered.ToString()));
         StatsDynamicRowsCol1.Children.Add(BuildStatRow(Strings.Get(StringKey.TotalPaid, _language),     s.TotalCreditsWon.ToString()));
@@ -985,11 +991,13 @@ public partial class MainWindow : Window
         StatsGamesWonText.Text     = gamesWon.ToString();
         StatsHighScoreText.Text    = highScoreText;
         double winPct = gamesPlayed > 0 ? 100.0 * gamesWon / gamesPlayed : 0.0;
-        StatsWinPctText.Text       = $"{winPct:0.0}%";
+        // Whole-number percent and mm:ss times, as on Mac/iOS/Android.
+        StatsWinPctText.Text       = $"{winPct:0}%";
         StatsCurrentStreakText.Text = currentStreak.ToString();
         StatsLongestStreakText.Text = longestStreak.ToString();
-        StatsAvgWinTimeText.Text   = timedGamesWon > 0 ? $"{totalWinSec / timedGamesWon}s" : Strings.Get(StringKey.NoTimePlaceholder, _language);
-        StatsFastestWinText.Text  = timedGamesWon > 0 ? $"{fastestWinSec}s" : Strings.Get(StringKey.NoTimePlaceholder, _language);
+        static string Mmss(int sec) => $"{sec / 60:00}:{sec % 60:00}";
+        StatsAvgWinTimeText.Text   = timedGamesWon > 0 ? Mmss(totalWinSec / timedGamesWon) : Strings.Get(StringKey.NoTimePlaceholder, _language);
+        StatsFastestWinText.Text  = timedGamesWon > 0 ? Mmss(fastestWinSec) : Strings.Get(StringKey.NoTimePlaceholder, _language);
     }
 
     private void SetupHoneycombMode()

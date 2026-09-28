@@ -17,7 +17,7 @@ fun BeecellStatsScreen(viewModel: BeecellViewModel, onBack: () -> Unit) {
     val language by LocalAppContainer.current.language.collectAsState()
     val stats = statistics.statsByFreeCells[4] ?: BeecellModeStats()
 
-    StatisticsFullScreenView(title = "Beecell Statistics", onDismiss = onBack) {
+    StatisticsFullScreenView(title = Strings.get(StringKey.BeecellStatisticsTitle, language), onDismiss = onBack) {
         StatsBlock(listOf(
             StatRowSpec.Row(Strings.get(StringKey.GamesPlayed, language), "${stats.gamesPlayed}"),
             StatRowSpec.Row(Strings.get(StringKey.GamesWon, language), "${stats.gamesWon}"),

@@ -19,7 +19,7 @@ fun BlackjackStatsScreen(viewModel: BlackjackViewModel, onBack: () -> Unit) {
         StatsBlock(listOf(
             StatRowSpec.Row(Strings.get(StringKey.HandsPlayed, language), "${stats.handsPlayed}"),
             StatRowSpec.Row(Strings.get(StringKey.HandsWon, language), "${stats.handsWon}"),
-            StatRowSpec.Row(Strings.get(StringKey.WinPercentage, language), "%.0f%%".format(stats.winRate * 100.0)),
+            StatRowSpec.Row(Strings.get(StringKey.WinPercentage, language), "%.1f%%".format(stats.winRate * 100.0)),
             StatRowSpec.Row(Strings.get(StringKey.StatHandsLost, language), "${stats.handsLost}"),
             StatRowSpec.Row(Strings.get(StringKey.StatPushes, language), "${stats.pushes}"),
             StatRowSpec.Row(Strings.get(StringKey.StatBlackjacks, language), "${stats.blackjacks}"),

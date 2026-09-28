@@ -1133,8 +1133,11 @@ public final class BeecellViewModel {
         checkStuckState()
     }
 
+    // Resets only the deck mode on screen — the stats panel shows one mode at a time,
+    // so wiping both silently cleared the other mode's record too. Matches Spider's
+    // per-suit-count reset and Windows.
     public func resetStatistics() {
-        statistics = BeecellStatistics()
+        statistics.statsByMode[currentModeKey] = ModeStats()
     }
 
     // MARK: - Keyboard Navigation

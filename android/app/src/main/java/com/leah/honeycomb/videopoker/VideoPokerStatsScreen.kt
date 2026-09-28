@@ -19,7 +19,7 @@ fun VideoPokerStatsScreen(viewModel: VideoPokerViewModel, onBack: () -> Unit) {
         StatsBlock(listOf(
             StatRowSpec.Row(Strings.get(StringKey.HandsPlayed, language), "${stats.handsPlayed}"),
             StatRowSpec.Row(Strings.get(StringKey.HandsWon, language), "${stats.handsWon}"),
-            StatRowSpec.Row(Strings.get(StringKey.WinRate, language), "%.0f%%".format(stats.winRate * 100.0)),
+            StatRowSpec.Row(Strings.get(StringKey.WinRate, language), "%.1f%%".format(stats.winRate * 100.0)),
             StatRowSpec.Row(Strings.get(StringKey.StatBiggestPayout, language), "${stats.biggestPayout}"),
             StatRowSpec.Row(Strings.get(StringKey.TotalWagered, language), "${stats.totalWagered}"),
             StatRowSpec.Row(Strings.get(StringKey.StatTotalPaidOut, language), "${stats.totalPaidOut}"),
