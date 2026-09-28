@@ -2112,7 +2112,7 @@ public partial class HoneycombViewModel : ObservableObject
             // under Frenzy could suggest a card the player wasn't actually allowed to
             // play this turn.
             // FindHintMove (not FindMove(..., UltraHard, ...)) — same UltraHard-caliber
-            // evaluation at 5 plies (Mac/Android use 6) — deliberate, for speed; see FindHintMove.
+            // evaluation at 5 plies, same as Mac/Android; see FindHintMove.
             move = await Task.Run(() => HoneycombAI.FindHintMove(
                 boardSnapshot, playerHandSnapshot, knownOpponent, unknownOpponentCardCount,
                 rules, 1, -1, State.PlayerChaosIndex));

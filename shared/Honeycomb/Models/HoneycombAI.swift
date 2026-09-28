@@ -37,7 +37,13 @@ enum HoneycombAI {
         case .hard:
             return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: simulatedPlayerDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 5, weighFallenAce: false)
         case .ultraHard:
-            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: simulatedPlayerDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 6, weighFallenAce: true)
+        // Ultra Hard searches 6 plies, except its opening move on an empty board, which
+        // searches 5: that one position is ~5x the cost of any other (measured ~7-10s at 6
+        // plies with All Open + Same/Plus, ~1.5s at 5; one card down, 6 plies is ~1.3s).
+        // A fixed rule rather than a time limit, so strength doesn't depend on the device's
+        // speed and stays identical across platforms. Product decision 2026-09-28.
+            let plies = empties.count == 9 ? 5 : 6
+            return minimaxMove(board: board, opponentDeck: opponentDeck, playerDeck: simulatedPlayerDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: plies, weighFallenAce: true)
         }
     }
 
@@ -129,7 +135,9 @@ enum HoneycombAI {
             eligibleHands: eligibleHands,
             empties: empties,
             rules: rules,
-            lookaheadPlies: 6,
+            // 5 plies (Ultra Hard's own is 6): a 6-ply opening-move hint measured up to
+            // ~10s. Same depth on every platform. Product decision 2026-09-28.
+            lookaheadPlies: Self.hintPlies,
             weighFallenAce: true
         )
     }
@@ -137,8 +145,10 @@ enum HoneycombAI {
     // Root score of the hint search (same search computeHint runs, from the player's
     // side) — for the cross-platform AI vectors (HoneycombAIVectorTests).
     static func hintSearchScore(board: HoneycombBoard, playerDeck: [HoneycombCardData], opponentDeck: [HoneycombCardData], eligibleHands: [Int], empties: [Int], rules: [HoneycombRule]) -> Int {
-        minimaxSearch(board: mirroredOwnership(board), opponentDeck: playerDeck, playerDeck: opponentDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: 6, weighFallenAce: true).score
+        minimaxSearch(board: mirroredOwnership(board), opponentDeck: playerDeck, playerDeck: opponentDeck, unknownPlayerCardCount: 0, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: hintPlies, weighFallenAce: true).score
     }
+
+    static let hintPlies = 5
 
     // Easy: naive random play — no evaluation at all, matches spec's "Naive random play."
     // Still respects Order/Chaos: if either is active there's only one legal card, so

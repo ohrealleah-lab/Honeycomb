@@ -73,18 +73,18 @@ public static class HoneycombAI
         // Only safe now that unknown cards are simulated above rather than truncating
         // the player's ply outright, so the deeper search doesn't "cheat" by exhausting
         // hidden hand slots the AI was never shown.
-        int depth = difficulty == HoneycombDifficulty.Hard ? 5 : 6;
+        // Ultra Hard: 6 plies, except its opening move on an empty board (5) — see Swift's
+        // computeMove for the measurements behind this.
+        int openCellCount = Enumerable.Range(0, 9).Count(i => board.Cells[i].IsEmpty);
+        int depth = difficulty == HoneycombDifficulty.Hard ? 5 : (openCellCount == 9 ? 5 : 6);
         bool useFallenAceWeight = difficulty == HoneycombDifficulty.UltraHard;
 
         return FindMinimaxMove(board, aiHand, simulatedPlayerHand, rules, depth, useFallenAceWeight, aiOwner, playerOwner, mandatedHandIndex);
     }
 
     // Player Hint uses this instead of FindMove(..., HoneycombDifficulty.UltraHard, ...)
-    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) but 5 plies
-    // instead of Mac/Android's 6, for speed: at 6 plies an opening-move hint with All Open
-    // + Same/Plus measured ~10s. Deliberate, product-approved difference (2026-09-28).
-    // HoneycombAIVectorTests still checks the hint evaluation at 6 plies against Mac, so
-    // only the depth differs, not the scoring. Deliberately a separate entry point rather than
+    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) at 5 plies, the
+    // same hint depth as Mac/Android (6 measured up to ~10s for an opening-move hint). Deliberately a separate entry point rather than
     // adding a "hint mode" branch to FindMove/depth's difficulty switch, so Killer
     // Bee's own actual opponent-AI moves keep searching at the full 6 plies — only
     // Hint gets the shallower, faster search.

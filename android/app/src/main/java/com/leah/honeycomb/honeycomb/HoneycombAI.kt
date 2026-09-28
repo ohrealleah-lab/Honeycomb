@@ -43,7 +43,8 @@ object HoneycombAI {
             }
             HoneycombDifficulty.Medium -> greedyMove(board, opponentDeck, eligibleHands, empties, rules)
             HoneycombDifficulty.Hard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, eligibleHands, empties, rules, 5, false)
-            HoneycombDifficulty.UltraHard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, eligibleHands, empties, rules, 6, true)
+            // 6 plies, except the opening move on an empty board (5) — see Swift's computeMove.
+            HoneycombDifficulty.UltraHard -> minimaxMove(board, opponentDeck, simulatedPlayerDeck, eligibleHands, empties, rules, if (empties.size == 9) 5 else 6, true)
         }
     }
 
@@ -104,7 +105,7 @@ object HoneycombAI {
             eligibleHands = eligibleHands,
             empties = empties,
             rules = rules,
-            lookaheadPlies = 6,
+            lookaheadPlies = HINT_PLIES, // 5: see Swift's computeHint
             weighFallenAce = true
         )
     }
@@ -213,7 +214,9 @@ object HoneycombAI {
     // Root score of the hint search (same search computeHint runs, from the player's
     // side) — for the cross-platform AI vectors. Mirrors Swift's hintSearchScore.
     internal fun hintSearchScore(board: HoneycombBoard, playerDeck: List<HoneycombCardData>, opponentDeck: List<HoneycombCardData>, eligibleHands: List<Int>, empties: List<Int>, rules: List<HoneycombRule>): Int =
-        minimaxSearch(mirroredOwnership(board), playerDeck, opponentDeck, eligibleHands, empties, rules, 6, true).first
+        minimaxSearch(mirroredOwnership(board), playerDeck, opponentDeck, eligibleHands, empties, rules, HINT_PLIES, true).first
+
+    internal const val HINT_PLIES = 5
 
     data class OrderedCandidate(val h: Int, val b: Int, val captures: Int, val board: HoneycombBoard)
 

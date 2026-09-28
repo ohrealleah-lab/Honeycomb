@@ -13,7 +13,7 @@ namespace SoliBee.Tests.Core;
 // generated from the Mac (Swift) HoneycombAI — the source of truth — by
 // mac/SoliBeeTests/HoneycombAIVectorTests.swift. Compares Medium's best capture count and
 // full tie set, and the Hard/Ultra Hard/Hint root minimax scores (see that file for why
-// the minimax tie set itself isn't compared). Hint is checked at Mac's 6 plies.
+// the minimax tie set itself isn't compared). Hint is checked at 5 plies, the hint depth on every platform.
 public class HoneycombAIVectorTests
 {
     private const int Player = 1;
@@ -78,7 +78,7 @@ public class HoneycombAIVectorTests
         var greedy = HoneycombAI.GreedySearch(board, aiHand, rules, Opponent, null);
         var hard = HoneycombAI.MinimaxSearch(board, aiHand, playerHand, rules, 5, false, Opponent, Player, null);
         var ultra = HoneycombAI.MinimaxSearch(board, aiHand, playerHand, rules, 6, true, Opponent, Player, null);
-        var hint = HoneycombAI.MinimaxSearch(board, playerHand, aiHand, rules, 6, true, Player, Opponent, null);
+        var hint = HoneycombAI.MinimaxSearch(board, playerHand, aiHand, rules, 5, true, Player, Opponent, null);
 
         var moves = greedy.Moves.OrderBy(m => m.HandIndex).ThenBy(m => m.CellIndex)
             .Select(m => (JsonNode)new JsonArray(JsonValue.Create(m.HandIndex), JsonValue.Create(m.CellIndex))).ToArray();
