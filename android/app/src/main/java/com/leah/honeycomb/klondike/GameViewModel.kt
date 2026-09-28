@@ -638,7 +638,8 @@ class GameViewModel(
         
         _state.value = newState
         initialState = newState
-        bannerQueue.clear()
+        // No bannerQueue.clear() here (Mac parity): it wiped the first-launch banner
+        // queued just above, and any win-milestone banner still waiting from the last game.
         scheduleIdleActionCheck()
 
         val toSaveInitial = newState.copy(

@@ -439,7 +439,8 @@ class SpiderViewModel(
             if (result is com.leah.honeycomb.BannerFireResult.Message) enqueueBanner(result.text)
         }
         updateModeStats(_options.value.suitCount) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
-        bannerQueue.clear()
+        // No bannerQueue.clear() here (Mac parity): it wiped the first-launch banner
+        // queued just above, and any win-milestone banner still waiting from the last game.
         scheduleIdleActionCheck()
         // Bumps hintGeneration too, so a background hint search from the abandoned deal
         // can't land on this one. Matches Klondike/Beecell.
