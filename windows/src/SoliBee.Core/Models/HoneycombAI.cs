@@ -80,9 +80,11 @@ public static class HoneycombAI
     }
 
     // Player Hint uses this instead of FindMove(..., HoneycombDifficulty.UltraHard, ...)
-    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) at 6 plies,
-    // matching Mac/Android's computeHint (it was 5 here, purely for speed; aligned so a
-    // hint suggests the same move on every platform — see HoneycombAIVectorTests). Deliberately a separate entry point rather than
+    // — same UltraHard-caliber evaluation (Fallen Ace weighting included) but 5 plies
+    // instead of Mac/Android's 6, for speed: at 6 plies an opening-move hint with All Open
+    // + Same/Plus measured ~10s. Deliberate, product-approved difference (2026-09-28).
+    // HoneycombAIVectorTests still checks the hint evaluation at 6 plies against Mac, so
+    // only the depth differs, not the scoring. Deliberately a separate entry point rather than
     // adding a "hint mode" branch to FindMove/depth's difficulty switch, so Killer
     // Bee's own actual opponent-AI moves keep searching at the full 6 plies — only
     // Hint gets the shallower, faster search.
@@ -97,7 +99,7 @@ public static class HoneycombAI
         int? mandatedHandIndex)
     {
         var simulatedOpponentHand = BuildSimulatedHand(opponentHand, unknownOpponentCardCount, opponentOwner);
-        return FindMinimaxMove(board, playerHand, simulatedOpponentHand, rules, 6, true, playerOwner, opponentOwner, mandatedHandIndex);
+        return FindMinimaxMove(board, playerHand, simulatedOpponentHand, rules, 5, true, playerOwner, opponentOwner, mandatedHandIndex);
     }
 
     private static (int, int) FindGreedyMove(HoneycombBoard board, List<HoneycombCard> hand, HashSet<HoneycombRule> rules, int owner, int? mandatedHandIndex)

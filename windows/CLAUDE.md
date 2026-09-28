@@ -7,7 +7,7 @@ Use the Context7 MCP server automatically for any question involving library or 
 ## Project overview
 Avalonia UI 11.0.10 / .NET 8 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
 
-**Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
+**Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys; the Honeycomb hint searches 5 plies instead of 6 for speed).
 
 ## Build & run
 ```bash
