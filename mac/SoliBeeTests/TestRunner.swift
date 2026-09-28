@@ -70,6 +70,10 @@ struct TestRunner {
         VideoPokerVectorTests.run()
         print("✅ VideoPokerVectorTests passed.")
 
+        print("🧪 Running HoneycombCardDatabaseVectorTests...")
+        HoneycombCardDatabaseVectorTests.run()
+        print("✅ HoneycombCardDatabaseVectorTests passed.")
+
         print("🧪 Running CrossGameRegressionTests...")
         CrossGameRegressionTests.run()
         print("✅ CrossGameRegressionTests passed.")
