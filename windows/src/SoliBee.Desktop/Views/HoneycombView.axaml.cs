@@ -164,6 +164,7 @@ public partial class HoneycombView : UserControl
             {
                 _vm.PropertyChanged += Vm_PropertyChanged;
                 _vm.OnFlashBanner += Vm_OnFlashBanner;
+                _vm.ReplayCurrentBanner(); // show a banner that became current while this view was detached
                 _vm.OnSwapLifting += Vm_OnSwapLifting;
                 _vm.OnSwapLanded += Vm_OnSwapLanded;
                 _vm.CheckLoadingBanner();

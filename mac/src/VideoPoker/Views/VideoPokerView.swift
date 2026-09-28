@@ -374,6 +374,9 @@ public struct VideoPokerView: View {
             guard let text = viewModel.flashBanner else { return }
             flashQueuedBanner(text)
         }
+        // Show whatever banner is current if this board is (re)appearing mid-banner —
+        // see the ViewModel's replayCurrentBanner().
+        .onAppear { viewModel.replayCurrentBanner() }
         // See GameView.swift: the system focus ring recomputes an expensive blurred
         // bitmap on every board redraw, which happens on every state mutation.
         .focusEffectDisabled()

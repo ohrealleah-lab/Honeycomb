@@ -131,6 +131,7 @@ public partial class SpiderView : CardGameView
         {
             vm.PropertyChanged += ViewModel_PropertyChanged;
             vm.OnFlashBanner += Vm_OnFlashBanner;
+            vm.ReplayCurrentBanner(); // show a banner that became current while this view was detached
             ApplyFeltColor(vm.Options);
             BindPiles(vm);
             UpdateStockDisplay(vm);

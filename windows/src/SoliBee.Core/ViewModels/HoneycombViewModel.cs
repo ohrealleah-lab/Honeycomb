@@ -170,6 +170,18 @@ public partial class HoneycombViewModel : ObservableObject
 
     // Called by the view once the currently-shown banner's own dismiss timer/fade
     // completes, revealing whatever's queued behind it.
+    // Re-announces the banner at the head of the queue. Called by the view each time it
+    // (re)attaches: MainWindow swaps game views on a game switch, and a view that wasn't
+    // attached when a banner became current (or that detached mid-banner, dropping its
+    // own dismiss timer's OnDismissed hookup) never showed or dismissed it — so every
+    // later banner for this game queued behind it for the rest of the session.
+    public void ReplayCurrentBanner()
+    {
+        if (_bannerQueue.Count == 0) return;
+        var current = _bannerQueue.Peek();
+        OnFlashBanner?.Invoke(current.Text, current.IsLongDuration);
+    }
+
     public void AdvanceBannerQueue()
     {
         if (_bannerQueue.Count == 0) return;

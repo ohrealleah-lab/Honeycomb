@@ -99,6 +99,7 @@ public partial class BlackjackView : UserControl
         if (DataContext is not BlackjackViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
         vm.OnFlashBanner += Vm_OnFlashBanner;
+        vm.ReplayCurrentBanner(); // show a banner that became current while this view was detached
         MilestoneToast.OnDismissed += MilestoneToast_OnDismissed;
         TopLevel.GetTopLevel(this)?.AddHandler(InputElement.KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         WeakReferenceMessenger.Default.Register<FaceCardArtChangedMessage>(this, (r, m) =>

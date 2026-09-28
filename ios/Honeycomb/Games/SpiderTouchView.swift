@@ -180,6 +180,9 @@ struct SpiderTouchView: View {
             guard newPhase != .active, !draggedCards.isEmpty else { return }
             cancelDrag()
         }
+        // Show whatever banner is current if this board is (re)appearing mid-banner —
+        // see the ViewModel's replayCurrentBanner().
+        .onAppear { viewModel.replayCurrentBanner() }
         .queuedFlashBanner(
             trigger: viewModel.flashBannerTrigger,
             latestMessage: viewModel.flashBanner,

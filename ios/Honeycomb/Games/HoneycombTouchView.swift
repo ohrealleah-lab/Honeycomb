@@ -272,6 +272,9 @@ struct HoneycombTouchView: View {
                 isStealingCard = false
             }
         }
+        // Show whatever banner is current if this board is (re)appearing mid-banner —
+        // see the ViewModel's replayCurrentBanner().
+        .onAppear { viewModel.replayCurrentBanner() }
         .onChange(of: viewModel.flashRuleBannerTrigger) { _, _ in
             guard let text = viewModel.flashRuleBanner else { return }
             flashRuleBanner(text)

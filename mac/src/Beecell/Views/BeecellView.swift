@@ -774,6 +774,9 @@ public struct BeecellView: View {
             guard let text = viewModel.flashBanner else { return }
             flashQueuedBanner(text)
         }
+        // Show whatever banner is current if this board is (re)appearing mid-banner —
+        // see the ViewModel's replayCurrentBanner().
+        .onAppear { viewModel.replayCurrentBanner() }
         .onAppear {
             applyInitialWindowSize()
             viewModel.checkLoadingBanner()

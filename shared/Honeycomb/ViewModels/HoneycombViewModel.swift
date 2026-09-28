@@ -311,6 +311,15 @@ public final class HoneycombViewModel {
     }
 
     // Called by the view once the currently-shown banner's own dismiss timer completes.
+    // Re-announces the banner at the head of the queue. Called when this game's board
+    // (re)appears: a board that wasn't on screen when the trigger last changed (the
+    // player switched games mid-banner) never showed that banner, so it was never
+    // dismissed either — and every later banner for this game queued up behind it,
+    // silently, for the rest of the session.
+    public func replayCurrentBanner() {
+        if !bannerQueue.isEmpty { flashRuleBannerTrigger += 1 }
+    }
+
     public func advanceBannerQueue() {
         guard !bannerQueue.isEmpty else { return }
         bannerQueue.removeFirst()

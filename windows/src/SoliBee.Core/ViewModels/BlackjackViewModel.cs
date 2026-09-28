@@ -51,6 +51,16 @@ public partial class BlackjackViewModel : ObservableObject
     // board itself. Opacity hides it visually while keeping its layout footprint intact.
     public double WatermarkOpacity => HideBee ? 0.0 : 0.15;
 
+    // Re-announces the banner at the head of the queue. Called by the view each time it
+    // (re)attaches: MainWindow swaps game views on a game switch, and a view that wasn't
+    // attached when a banner became current (or that detached mid-banner, dropping its
+    // own dismiss timer's OnDismissed hookup) never showed or dismissed it — so every
+    // later banner for this game queued behind it for the rest of the session.
+    public void ReplayCurrentBanner()
+    {
+        if (_bannerQueue.Count > 0) OnFlashBanner?.Invoke(_bannerQueue.Peek());
+    }
+
     public void AdvanceBannerQueue()
     {
         if (_bannerQueue.Count == 0) return;

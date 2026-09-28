@@ -125,6 +125,7 @@ public partial class VideoPokerView : UserControl
         if (DataContext is not VideoPokerViewModel vm) return;
         vm.PropertyChanged += Vm_PropertyChanged;
         vm.OnFlashBanner += Vm_OnFlashBanner;
+        vm.ReplayCurrentBanner(); // show a banner that became current while this view was detached
         MilestoneToast.OnDismissed += MilestoneToast_OnDismissed;
         vm.CheckLoadingBanner();
 
