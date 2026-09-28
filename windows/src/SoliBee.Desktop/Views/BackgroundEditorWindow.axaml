@@ -14,7 +14,7 @@
         <!-- Name -->
         <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,12">
             <TextBlock x:Name="NameLabelText" Text="Name" Foreground="#1A1A1A" FontSize="12" FontWeight="SemiBold" />
-            <TextBox x:Name="NameTextBox" Watermark="Background name…" BorderBrush="#CCCCCC" Foreground="Black" />
+            <TextBox x:Name="NameTextBox" PlaceholderText="Background name…" BorderBrush="#CCCCCC" Foreground="Black" />
         </StackPanel>
 
         <!-- Mock board preview -->
@@ -25,7 +25,7 @@
                 <Image x:Name="PreviewImage" Width="280" Height="160" Stretch="UniformToFill" RenderOptions.BitmapInterpolationMode="HighQuality" />
                 <Rectangle x:Name="PreviewVignette" Width="280" Height="160" IsHitTestVisible="False" IsVisible="False">
                     <Rectangle.Fill>
-                        <RadialGradientBrush Center="50%,50%" Radius="0.85">
+                        <RadialGradientBrush Center="50%,50%" RadiusX="85%" RadiusY="85%">
                             <GradientStop Color="#00000000" Offset="0.15"/>
                             <GradientStop Color="#57000000" Offset="1.0"/>
                         </RadialGradientBrush>

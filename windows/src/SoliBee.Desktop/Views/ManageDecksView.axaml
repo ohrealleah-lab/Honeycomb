@@ -176,8 +176,7 @@
                                   VerticalContentAlignment="Center"
                                   CornerRadius="8" Background="#F0F0F0" Padding="8,4"
                                   Margin="0,0,0,6"
-                                  Checked="FilterToggle_CheckedChanged"
-                                  Unchecked="FilterToggle_CheckedChanged"/>
+                                  IsCheckedChanged="FilterToggle_CheckedChanged"/>
                 </WrapPanel>
 
                 <ScrollViewer Grid.Row="2" x:Name="BankScrollViewer" ScrollChanged="BankScrollViewer_ScrollChanged">

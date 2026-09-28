@@ -48,7 +48,7 @@ public partial class BackgroundEditorWindow : Window
         var language = SettingsService.LoadOptions().Language;
         Title = Strings.Get(_isNew ? StringKey.AddBackgroundTitle : StringKey.EditBackgroundTitle, language);
         NameLabelText.Text = Strings.Get(StringKey.BackgroundNameLabel, language).TrimEnd(':');
-        NameTextBox.Watermark = Strings.Get(StringKey.BackgroundNamePlaceholder, language);
+        NameTextBox.PlaceholderText = Strings.Get(StringKey.BackgroundNamePlaceholder, language);
         ScaleLabelText.Text = Strings.Get(StringKey.ScaleFactorLabel, language);
         HorizontalOffsetLabelText.Text = Strings.Get(StringKey.HorizontalPositionLabel, language);
         VerticalOffsetLabelText.Text = Strings.Get(StringKey.VerticalPositionLabel, language);

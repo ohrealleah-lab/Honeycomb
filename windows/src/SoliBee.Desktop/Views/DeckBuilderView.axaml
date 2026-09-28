@@ -60,7 +60,7 @@
                      child now, not left with a blank reserved slot above it. -->
                 <StackPanel Grid.Row="0" Spacing="4">
                     <TextBox x:Name="DeckNameTextBox" MaxLength="20" Width="220"
-                             Watermark="Deck Name (Max 20 chars)" FontSize="14" Padding="8"
+                             PlaceholderText="Deck Name (Max 20 chars)" FontSize="14" Padding="8"
                              CornerRadius="8" BorderBrush="#80A0FF" BorderThickness="2"
                              HorizontalAlignment="Left" Margin="0,0,0,6"/>
                     <TextBlock x:Name="CardBankTapToAddText" Text="Card Bank — Tap to Add" FontSize="14" FontWeight="Bold" Foreground="#1A1A1A"/>
@@ -97,8 +97,7 @@
                     <ToggleButton x:Name="FavoritesFilter" Content="♡ Favorites" Classes="favorites-filter" Height="32"
                                   FontSize="11.5" VerticalContentAlignment="Center" CornerRadius="8"
                                   Background="#F0F0F0" Padding="6,4"
-                                  Checked="FilterToggle_CheckedChanged"
-                                  Unchecked="FilterToggle_CheckedChanged"/>
+                                  IsCheckedChanged="FilterToggle_CheckedChanged"/>
                 </StackPanel>
             </Grid>
 

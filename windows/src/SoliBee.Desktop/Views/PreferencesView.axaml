@@ -48,7 +48,7 @@
                               SelectionChanged="GameMode_Changed"/>
                 </StackPanel>
 
-                <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                <CheckBox x:Name="VegasCheckBox" Content="Vegas Scoring" IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
 
                 <Rectangle Height="1" Fill="#DDDDDD" Margin="0,4,0,0"/>
             </StackPanel>
@@ -99,19 +99,19 @@
 
                 <Grid ColumnDefinitions="*,20,*" Margin="0,4,0,0">
                     <StackPanel Grid.Column="0" Spacing="2">
-                        <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                        <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                        <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="SoundCheckBox"        Content="Sound Effects"      IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="NoStressModeCheckBox" Content="No Stress Mode"     IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="HideHintCheckBox"  Content="Hide Hint button"  IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
                         <!-- Banners/toasts stay up until the player clicks the toast or a
                              card, instead of auto-dismissing. -->
-                        <CheckBox x:Name="ManuallyDismissBannersCheckBox" Content="Manually Dismiss Banners" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="ManuallyDismissBannersCheckBox" Content="Manually Dismiss Banners" IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="2">
-                        <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="AlwaysOnTopCheckBox" Content="Always on Top" IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
                         <!-- Controls both the "+N"/"-N" score popups and whether Repeatable
                              Flavor/Ambiance banners fire at all. -->
-                        <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
-                        <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="PointHighlightsCheckBox" Content="Honey Mode (Flavor)" IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
+                        <CheckBox x:Name="HideBeeCheckBox" Content="Hide the Bee" IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
@@ -237,7 +237,7 @@
                                     <ScaleTransform ScaleX="0.8" ScaleY="0.8"/>
                                 </LayoutTransformControl.LayoutTransform>
                                 <CheckBox x:Name="VignetteCheckBox" Content="Felt Vignette" FontSize="11"
-                                          Checked="Option_Changed" Unchecked="Option_Changed" Foreground="#1A1A1A"
+                                          IsCheckedChanged="Option_Changed" Foreground="#1A1A1A"
                                           Padding="4,0,0,0"/>
                             </LayoutTransformControl>
                         </Grid>
@@ -426,7 +426,7 @@
                 <StackPanel Spacing="12" Width="230">
                     <TextBlock x:Name="SaveThemeTitleText" Text="Save New Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
                     <TextBlock x:Name="SaveThemePromptText" Text="Enter a name for this theme:" FontSize="12" Foreground="#1A1A1A"/>
-                    <TextBox x:Name="ThemeNameInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
+                    <TextBox x:Name="ThemeNameInput" PlaceholderText="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelSaveThemeButton" Content="Cancel" Click="CancelSaveTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button x:Name="ConfirmSaveThemeButton" Content="Save"   Click="ConfirmSaveTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>
@@ -440,7 +440,7 @@
             <Border Background="White" CornerRadius="8" Padding="15" VerticalAlignment="Center" HorizontalAlignment="Center" BoxShadow="0 4 15 0 #A0000000">
                 <StackPanel Spacing="12" Width="230">
                     <TextBlock x:Name="RenameThemeTitleText" Text="Rename Theme" FontSize="15" FontWeight="Bold" Foreground="#1A1A1A" HorizontalAlignment="Center"/>
-                    <TextBox x:Name="RenameThemeInput" Watermark="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
+                    <TextBox x:Name="RenameThemeInput" PlaceholderText="Theme name…" BorderBrush="#CCCCCC" Foreground="Black"/>
                     <Grid ColumnDefinitions="*, *" Margin="0,5,0,0">
                         <Button x:Name="CancelRenameThemeButton" Content="Cancel" Click="CancelRenameTheme_Click"  Grid.Column="0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-secondary" Margin="0,0,4,0"/>
                         <Button x:Name="ConfirmRenameThemeButton" Content="Save"   Click="ConfirmRenameTheme_Click" Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Classes="light-primary" Margin="4,0,0,0"/>

@@ -21,6 +21,10 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
 
     <!-- Default Publish Settings to bundle all DLLs into a clean single EXE -->
+    <!-- Avalonia 12 made compiled bindings the default, which requires an x:DataType on
+         every view. The views here were written for runtime (reflection) bindings; keep
+         that behavior. -->
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <PublishSingleFile>true</PublishSingleFile>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
@@ -56,19 +60,14 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Avalonia" Version="11.0.10" />
-    <PackageReference Include="SkiaSharp" Version="2.88.7" />
-    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="11.0.10" />
-    <PackageReference Include="Avalonia.Desktop" Version="11.0.10" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.0.10" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.0.10" />
+    <PackageReference Include="Avalonia" Version="12.1.3" />
+    <PackageReference Include="SkiaSharp" Version="3.119.4" />
+    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.3" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.3" />
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Velopack" Version="1.2.0" />
-    <!-- Transitive via Avalonia.FreeDesktop (Linux-only D-Bus integration; never loaded on
-         Windows). Avalonia 11.0.10 pulls 0.15.0, which has GHSA-xrw6-gwf8-vvr9 (spoofed
-         signals / fd exhaustion DoS); pinned to the first patched version. Drop this pin
-         once Avalonia is upgraded to a release that depends on >= 0.21.3 itself. -->
-    <PackageReference Include="Tmds.DBus.Protocol" Version="0.21.3" />
   </ItemGroup>
 
   <ItemGroup>

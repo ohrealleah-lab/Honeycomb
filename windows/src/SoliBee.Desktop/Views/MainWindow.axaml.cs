@@ -341,7 +341,11 @@ public partial class MainWindow : Window
         if (VignetteOverlay.Fill is Avalonia.Media.RadialGradientBrush rgb)
         {
             double targetRadius = 680.0 * options.VignetteScale;
-            rgb.Radius = targetRadius / diagonal;
+            // Avalonia 12 replaced the single relative Radius with RadiusX/RadiusY. The
+            // overlay is square (diagonal x diagonal), so equal radii draw the same circle.
+            var radius = new Avalonia.RelativeScalar(targetRadius / diagonal, Avalonia.RelativeUnit.Relative);
+            rgb.RadiusX = radius;
+            rgb.RadiusY = radius;
 
             double intensity = 0.45;
             byte alpha = (byte)(intensity * 255);

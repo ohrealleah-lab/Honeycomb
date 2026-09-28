@@ -52,7 +52,7 @@ public partial class DeckBuilderView : UserControl
     {
         var language = SettingsService.LoadOptions().Language;
 
-        DeckNameTextBox.Watermark = Strings.Get(StringKey.DeckNamePlaceholder, language);
+        DeckNameTextBox.PlaceholderText = Strings.Get(StringKey.DeckNamePlaceholder, language);
         CardBankTapToAddText.Text = Strings.Get(StringKey.CardBankTapToAdd, language);
         DeckRulesHintText.Text = Strings.Get(StringKey.DeckRulesHint, language);
 

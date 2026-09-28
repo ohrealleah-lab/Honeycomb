@@ -5,7 +5,7 @@
 Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., Avalonia UI, .NET). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
 
 ## Project overview
-Avalonia UI 11.0.10 / .NET 10 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
+Avalonia UI 12.1.3 / .NET 10 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
 
 **Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
 
@@ -14,7 +14,7 @@ Avalonia UI 11.0.10 / .NET 10 port of the **Honeycomb Card Suite** — all six g
 # Debug build (runs on Mac for development)
 dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj
 
-# Windows release executable (~136 MB self-contained)
+# Windows release executable (~155 MB self-contained)
 dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
 # Output: src/SoliBee.Desktop/bin/publish/win-x64/Honeycomb.exe  (+ Assets/ folder)
 ```
@@ -55,7 +55,7 @@ Everything persisted (settings, stats, card bank, decks, card-database seed, the
 - **MVVM** via `CommunityToolkit.Mvvm`; settings changes broadcast with `WeakReferenceMessenger` (`OptionsChangedMessage`, `FaceCardArtChangedMessage`)
 - **SettingsService** reads/writes `GameOptions` to JSON; call `SettingsService.LoadOptions()` / `SaveOptions()` — loaded fresh each call (no singleton cache)
 - **Static brush pool** in `CardView.axaml.cs` — never create `SolidColorBrush` per-render; add to the `_brush*` static fields instead
-- **SkiaSharp 2.88.7** used for image processing (trim, background removal, scaling)
+- **SkiaSharp 3.119.4** (the version Avalonia 12 is built on) used for image processing (trim, background removal, scaling)
 
 ## Card layout dimensions
 - `CardRoot` Grid: **128 × 181 px**

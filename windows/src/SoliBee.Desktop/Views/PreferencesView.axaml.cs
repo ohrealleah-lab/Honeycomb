@@ -789,8 +789,8 @@ public partial class PreferencesView : UserControl
         SaveThemeTitleText.Text = Strings.Get(StringKey.SaveNewThemeTitle, language);
         SaveThemePromptText.Text = Strings.Get(StringKey.EnterThemeNamePrompt, language);
         var themeNamePlaceholder = Strings.Get(StringKey.ThemeNameFieldPlaceholder, language);
-        ThemeNameInput.Watermark = themeNamePlaceholder;
-        RenameThemeInput.Watermark = themeNamePlaceholder;
+        ThemeNameInput.PlaceholderText = themeNamePlaceholder;
+        RenameThemeInput.PlaceholderText = themeNamePlaceholder;
         RenameThemeTitleText.Text = Strings.Get(StringKey.RenameThemeTitle, language);
         DeleteThemeTitleText.Text = Strings.Get(StringKey.DeleteThemeTitle, language);
     }

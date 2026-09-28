@@ -293,7 +293,7 @@ public partial class CardView : UserControl
         try
         {
             using var bitmap = SKBitmap.Decode(filePath);
-            using var small = bitmap?.Resize(new SKImageInfo(16, 16), SKFilterQuality.Low);
+            using var small = bitmap?.Resize(new SKImageInfo(16, 16), new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.None)) /* ≈ old SKFilterQuality.Low */;
             if (small == null)
             {
                 result = Colors.Gray;
@@ -394,8 +394,9 @@ public partial class CardView : UserControl
             canvas.Scale(uniformScale, uniformScale);
             canvas.Translate(-src.Width / 2f, -src.Height / 2f);
 
-            using var paint = new SKPaint { FilterQuality = SKFilterQuality.Medium, IsAntialias = true };
-            canvas.DrawImage(SKImage.FromBitmap(src), 0, 0, paint);
+            using var paint = new SKPaint { IsAntialias = true };
+            // SkiaSharp 3: sampling moved off SKPaint; Linear + linear mipmaps ≈ old FilterQuality.Medium.
+            canvas.DrawImage(SKImage.FromBitmap(src), 0, 0, new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), paint);
 
             using var snap = surface.Snapshot();
             using var work = SKBitmap.FromImage(snap);
@@ -706,17 +707,16 @@ public partial class CardView : UserControl
         {
             Color = skColor,
             IsAntialias = true,
-            TextSize = fontSize,
-            Typeface = SKTypeface.FromFamilyName("Segoe UI Symbol"),
         };
+        // SkiaSharp 3: text size/typeface/measuring moved from SKPaint to SKFont.
+        using var font = new SKFont(SKTypeface.FromFamilyName("Segoe UI Symbol"), fontSize);
 
-        var bounds = new SKRect();
-        paint.MeasureText(suitChar, ref bounds);
+        font.MeasureText(suitChar, out SKRect bounds, paint);
 
         float x = bitmapSize / 2f - (bounds.Left + bounds.Right) / 2f;
         float y = bitmapSize / 2f - (bounds.Top + bounds.Bottom) / 2f;
 
-        skCanvas.DrawText(suitChar, x, y, paint);
+        skCanvas.DrawText(suitChar, x, y, SKTextAlign.Left, font, paint);
 
         using var skBmp = SKBitmap.FromImage(surface.Snapshot());
         var wb = new WriteableBitmap(
@@ -749,19 +749,18 @@ public partial class CardView : UserControl
         {
             Color = skColor,
             IsAntialias = true,
-            TextSize = fontSize,
-            Typeface = SKTypeface.FromFamilyName("Segoe UI Symbol"),
         };
+        // SkiaSharp 3: text size/typeface/measuring moved from SKPaint to SKFont.
+        using var font = new SKFont(SKTypeface.FromFamilyName("Segoe UI Symbol"), fontSize);
 
         // Measure actual ink bounds relative to the baseline at the origin
-        var bounds = new SKRect();
-        paint.MeasureText(suitChar, ref bounds);
+        font.MeasureText(suitChar, out SKRect bounds, paint);
 
         // Place the baseline so the glyph's ink center lands exactly at the bitmap center
         float x = bitmapSize / 2f - (bounds.Left + bounds.Right) / 2f;
         float y = bitmapSize / 2f - (bounds.Top + bounds.Bottom) / 2f;
 
-        skCanvas.DrawText(suitChar, x, y, paint);
+        skCanvas.DrawText(suitChar, x, y, SKTextAlign.Left, font, paint);
 
         using var skBmp = SKBitmap.FromImage(surface.Snapshot());
         var wb = new WriteableBitmap(
