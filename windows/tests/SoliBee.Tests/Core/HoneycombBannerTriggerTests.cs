@@ -296,6 +296,9 @@ public class HoneycombBannerTriggerTests
         List<string> queued = new();
         for (int i = 0; i < 5; i++)
         {
+            // RematchGame() only runs from a finished match — end each one first.
+            HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
+            vm.State.Phase = HoneycombPhase.Result;
             queued = CaptureBanners(vm, () => vm.RematchGame());
         }
         Assert.True(QueueContainsMessage(queued, BannerId.GameplayPlayerPlaysAgainstTheSameAiDifficulty5TimesInARow));

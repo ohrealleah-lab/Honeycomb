@@ -823,6 +823,9 @@ public final class HoneycombViewModel {
     // drawing from the same opponent pool until startNewGame() rolls a fresh one, which
     // is what lets a player steal their way through an opponent's whole card pool.
     public func rematch() {
+        // Only from a finished match: a fast double-tap on Rematch otherwise ran it twice,
+        // re-dealing the just-started rematch and flipping the alternating starter again.
+        guard gameState == .gameOver else { return }
         guard canRematch else {
             startNewGame()
             return

@@ -444,6 +444,9 @@ class BlackjackViewModel(
     }
 
     fun rebuy() {
+        // Re-checked here, not just in the view: a fast double-tap lands twice before the
+        // button hides, which paid out two rebuys (credits and rebuyCount both doubled).
+        if (!canRebuy) return
         _state.value = _state.value.copy(sessionCredits = _state.value.sessionCredits + _options.value.startingCredits)
         _statistics.value = _statistics.value.copy(rebuyCount = _statistics.value.rebuyCount + 1)
         persistStatistics()

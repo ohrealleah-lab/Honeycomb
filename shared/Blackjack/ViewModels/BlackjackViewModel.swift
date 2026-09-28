@@ -428,6 +428,9 @@ public final class BlackjackViewModel {
     }
 
     public func rebuy() {
+        // Re-checked here, not just in the view: a fast double-tap lands twice before the
+        // button hides, which paid out two rebuys (credits and rebuyCount both doubled).
+        guard canRebuy else { return }
         state.sessionCredits += options.startingCredits
         statistics.rebuyCount += 1
     }

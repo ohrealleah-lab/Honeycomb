@@ -423,6 +423,9 @@ public partial class VideoPokerViewModel : ObservableObject
 
     public void Rebuy()
     {
+        // Re-checked here, not just in the view: a fast double-tap lands twice before the
+        // button hides, which paid out two rebuys (credits and rebuyCount both doubled).
+        if (!NeedsRebuy || State.Phase == VideoPokerPhase.Holding) return;
         State.SessionCredits += Options.StartingCredits;
         if (State.SessionCredits >= _preferredBet) State.CurrentBet = _preferredBet;
         Stats.Rebuys++;

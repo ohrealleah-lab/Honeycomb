@@ -190,6 +190,10 @@ class VideoPokerViewModel(
     fun rebuy() {
         val s = _state.value
         if (s.phase != VideoPokerPhase.Deal && s.phase != VideoPokerPhase.Result) return
+        // Re-checked here, not just in the view: a fast double-tap lands twice before the
+        // button hides, which paid out two rebuys (credits and rebuyCount both doubled).
+        // Mirrors VideoPokerBoard's own show-condition for the Rebuy button.
+        if (isFreePlay || s.sessionCredits >= s.currentBet) return
         _state.value = s.copy(
             sessionCredits = s.sessionCredits + _options.value.startingCredits
         )

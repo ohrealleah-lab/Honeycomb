@@ -331,6 +331,8 @@ struct HoneycombBannerTriggerTests {
         // calls to reach the 5th consecutive same-difficulty match.
         vm.startNewGame()
         for _ in 1...5 {
+            // rematch() only runs from a finished match — end each one first.
+            vm.gameState = .gameOver
             vm.rematch()
         }
         let queued = drainBannerQueue(vm)

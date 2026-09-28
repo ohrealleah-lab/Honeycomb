@@ -378,6 +378,9 @@ class HoneycombViewModel(
     }
 
     fun rematch() {
+        // Only from a finished match: a fast double-tap on Rematch otherwise ran it twice,
+        // re-dealing the just-started rematch and flipping the alternating starter again.
+        if (_state.value.gameState != HoneycombGameState.GameOver) return
         if (rematchOpponentDeck.isEmpty()) {
             startNewGame()
             return

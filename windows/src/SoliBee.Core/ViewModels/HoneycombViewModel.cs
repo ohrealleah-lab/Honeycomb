@@ -1080,6 +1080,9 @@ public partial class HoneycombViewModel : ObservableObject
     // lets a player steal their way through an opponent's whole card pool.
     public void RematchGame()
     {
+        // Only from a finished match: a fast double-tap on Rematch otherwise ran it twice,
+        // re-dealing the just-started rematch and flipping the alternating starter again.
+        if (State.Phase != HoneycombPhase.Result) return;
         // Use the snapshot if available; if not, fall back to a new game (shouldn't happen in normal play)
         if (_rematchOpponentDeck == null)
         {
