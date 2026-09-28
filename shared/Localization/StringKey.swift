@@ -1468,4 +1468,16 @@ public enum StringKey: String, CaseIterable {
     case discardChangesTitle = "discard_changes_title"
     /// Windows Options: cancel with unsaved changes
     case discardChangesBody = "discard_changes_body"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpVideopokerSubtitleIos = "help_videopoker_subtitle_ios"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpVideopokerObjectiveIos = "help_videopoker_objective_ios"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpVideopokerHowToPlayIos = "help_videopoker_how_to_play_ios"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpVideopokerStrategyIos = "help_videopoker_strategy_ios"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpBlackjackRulesIos = "help_blackjack_rules_ios"
+    /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
+    case helpBlackjackStrategyIos = "help_blackjack_strategy_ios"
 }

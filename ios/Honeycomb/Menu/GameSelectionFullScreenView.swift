@@ -86,7 +86,7 @@ struct GameSelectionFullScreenView: View {
         case .klondike:   return coordinator.L(.helpKlondikeSubtitle)
         case .beecell:    return coordinator.L(.helpBeecellSubtitle)
         case .spider:     return coordinator.L(.helpSpiderSubtitle)
-        case .videoPoker: return coordinator.L(.helpVideopokerSubtitle)
+        case .videoPoker: return coordinator.L(.helpVideopokerSubtitleIos) // no "casino"/"pay tables" — betting is off on iOS
         case .blackjack:  return coordinator.L(.helpBlackjackSubtitle)
         case .honeycomb:  return coordinator.L(.helpHoneycombSubtitle)
         }

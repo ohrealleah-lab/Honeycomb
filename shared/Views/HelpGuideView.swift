@@ -202,6 +202,20 @@ struct VideoPokerHelpView: View {
     @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
+        #if os(iOS)
+        // Betting is locked off on iOS (App Store — see VideoPokerViewModel.isFreePlay),
+        // so iOS gets its own guide with no bets, coins, credits, payouts or jackpots,
+        // and no keyboard shortcuts (iOS has none). No Stress Mode section dropped too:
+        // on iOS the game is always the free-play version it describes.
+        HelpShell(title: coordinator.L(.helpVideopokerTitle), subtitle: coordinator.L(.helpVideopokerSubtitleIos)) {
+            RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
+                        text: coordinator.L(.helpVideopokerObjectiveIos))
+            RuleSection(title: coordinator.L(.helpHowToPlayVariantsTitle),
+                        text: coordinator.L(.helpVideopokerHowToPlayIos))
+            RuleSection(title: coordinator.L(.helpStrategyProTipsTitle),
+                        text: coordinator.L(.helpVideopokerStrategyIos))
+        }
+        #else
         HelpShell(title: coordinator.L(.helpVideopokerTitle), subtitle: coordinator.L(.helpVideopokerSubtitle)) {
             RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
                         text: coordinator.L(.helpVideopokerObjective))
@@ -227,6 +241,7 @@ struct VideoPokerHelpView: View {
             RuleSection(title: coordinator.L(.helpNoStressModeTitle),
                         text: coordinator.L(.helpVideopokerNoStress))
         }
+        #endif
     }
 }
 
@@ -236,6 +251,17 @@ struct BlackjackHelpView: View {
     @Environment(AppCoordinator.self) private var coordinator
 
     var body: some View {
+        #if os(iOS)
+        // Betting-free iOS guide — see VideoPokerHelpView above for why.
+        HelpShell(title: coordinator.L(.helpBlackjackTitle), subtitle: coordinator.L(.helpBlackjackSubtitle)) {
+            RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
+                        text: coordinator.L(.helpBlackjackObjective))
+            RuleSection(title: coordinator.L(.helpRulesOptionsTitle),
+                        text: coordinator.L(.helpBlackjackRulesIos))
+            RuleSection(title: coordinator.L(.helpStrategyProTipsTitle),
+                        text: coordinator.L(.helpBlackjackStrategyIos))
+        }
+        #else
         HelpShell(title: coordinator.L(.helpBlackjackTitle), subtitle: coordinator.L(.helpBlackjackSubtitle)) {
             RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
                         text: coordinator.L(.helpBlackjackObjective))
@@ -262,6 +288,7 @@ struct BlackjackHelpView: View {
             RuleSection(title: coordinator.L(.helpNoStressModeTitle),
                         text: coordinator.L(.helpBlackjackNoStress))
         }
+        #endif
     }
 }
 

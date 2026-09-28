@@ -735,5 +735,11 @@ enum StringsEnglish {
         .quitMatchConfirmBody: "It will count as a loss and end your win streak.",
         .discardChangesTitle: "Discard Changes?",
         .discardChangesBody: "You have pending changes which will be lost. Are you sure you want to cancel?",
+        .helpVideopokerSubtitleIos: "Classic draw poker with Jacks or Better, Deuces Wild, and Bonus Poker variants.",
+        .helpVideopokerObjectiveIos: "Draw the best 5-card poker hand you can. Each variant has its own lowest winning hand.",
+        .helpVideopokerHowToPlayIos: "1. Deal: Tap Deal to receive 5 cards.\n2. Hold: Tap the cards you want to keep.\n3. Draw: Tap Draw. Unheld cards are replaced and your final hand is scored.\n\nGame Variants:\n• Jacks or Better: The lowest winning hand is a pair of Jacks, Queens, Kings, or Aces.\n• Deuces Wild: All four 2s are wild cards. The lowest winning hand is Three of a Kind.\n• Bonus Poker: Like Jacks or Better, with extra emphasis on Four of a Kind (Four Aces and Four 2s–4s stand out).",
+        .helpVideopokerStrategyIos: "1. Never Break a Made Hand (Except for 4-to-a-Royal): Only break a Straight or Flush if you are 1 card away from a Royal Flush.\n2. In Deuces Wild, Never Discard a 2: Deuces are wild—always hold every 2 dealt to you!\n3. Nothing Dealt? Hold your high cards (Jack or better) to chase a winning pair.",
+        .helpBlackjackRulesIos: "1. Deal: Tap Deal to start a hand.\n2. Your Turn:\n  – Hit: Take another card.\n  – Stand: Keep your current hand.\n  – Double Down: Take exactly 1 more card and automatically stand. (Available on initial 2 cards with totals of 9, 10, or 11).\n  – Split: If dealt two matching ranks, play them as two separate hands.\n3. Dealer's Turn: Dealer reveals their hidden card and must hit until reaching 17 or higher (stands on all 17s).\n\nResults: Finish closer to 21 than the dealer without going over to win the hand. A tie is a push.",
+        .helpBlackjackStrategyIos: "1. Always Split Aces and 8s: Never split 10s or 5s.\n2. Double Down on 11: Always Double Down when your starting hand totals 11 against a dealer 2 through 10.\n3. Watch the Dealer's Upcard: If the dealer shows a 2 through 6, they have a high chance of busting—stand on hard 12 or higher and let the dealer draw.",
     ]
 }

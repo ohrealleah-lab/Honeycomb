@@ -736,4 +736,10 @@ enum class StringKey {
     QuitMatchConfirmBody,
     DiscardChangesTitle,
     DiscardChangesBody,
+    HelpVideopokerSubtitleIos,
+    HelpVideopokerObjectiveIos,
+    HelpVideopokerHowToPlayIos,
+    HelpVideopokerStrategyIos,
+    HelpBlackjackRulesIos,
+    HelpBlackjackStrategyIos,
 }

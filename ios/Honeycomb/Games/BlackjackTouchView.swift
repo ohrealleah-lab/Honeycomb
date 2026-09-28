@@ -1274,11 +1274,9 @@ struct BlackjackStatsSheet: View {
                 row(coordinator.L(.winRate), String(format: "%.1f%%", viewModel.statistics.winRate * 100))
                 row(coordinator.L(.statCurStreakShort), "\(viewModel.statistics.currentStreak)")
                 row(coordinator.L(.statBestStreak), "\(viewModel.statistics.longestStreak)")
-                row(coordinator.L(.totalWagered), "\(viewModel.statistics.totalWagered)")
-                row(coordinator.L(.totalPaid), "\(viewModel.statistics.totalPaidOut)")
-                row(coordinator.L(.biggestPay), "\(viewModel.statistics.biggestPayout)")
-                row(coordinator.L(.rtpStat), String(format: "%.1f%%", viewModel.statistics.returnToPlayer * 100))
-                row(coordinator.L(.rebuysStat), "\(viewModel.statistics.rebuyCount)")
+                // No money rows (wagered/paid/biggest payout/return-to-player/rebuys):
+                // betting is locked off on iOS (App Store), so they'd only ever read 0
+                // and put gambling terms in front of App Review.
             }
             .navigationTitle(coordinator.L(.blackjackStatistics))
             .navigationBarTitleDisplayMode(.inline)
