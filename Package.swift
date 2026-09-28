@@ -25,7 +25,9 @@ let package = Package(
                 // so SPM never warns about (or slows down on) their contents.
                 "ios",
                 "windows",
-                "venv",
+                "android",
+                "tools",
+                "docs",
                 "README.md",
                 // Resource files living inside the compiled source dirs.
                 "mac/src/Info.plist",

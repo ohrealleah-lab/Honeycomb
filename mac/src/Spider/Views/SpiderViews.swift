@@ -123,7 +123,6 @@ public struct SpiderTableauView: View {
         let cardCount = pile.cards.count
         let compressionRatio = Self.compressionRatio(cardCount: cardCount)
 
-        let isSource = activeHint?.sourcePileId == pile.id
         let isTarget = activeHint?.targetPileId == pile.id
         let hintStartIndex = (activeHint?.sourcePileId == pile.id) ? pile.cards.firstIndex(where: { $0.id == activeHint?.card.id }) : nil
         
