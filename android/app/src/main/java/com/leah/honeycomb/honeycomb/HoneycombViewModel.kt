@@ -405,10 +405,13 @@ class HoneycombViewModel(
             lastRouletteSignature = rouletteSignature(rolledRules, rolledSuits)
         } else {
             rolledRules = opts.selectedRules.toList()
-        }
-
-        if (rolledRules.contains(HoneycombRule.Ascension) || rolledRules.contains(HoneycombRule.Descension)) {
-            rolledSuits = setOf(listOf("S", "H", "D", "C").random())
+            // Picked rules draw their Pollination/Smoked Out suit here. Roulette already
+            // drew one inside rollRouletteOnce — drawing again overwrote it, so the
+            // repeat-protection above compared one suit while the match used another
+            // (Mac/Windows keep the roulette's own suit).
+            if (rolledRules.contains(HoneycombRule.Ascension) || rolledRules.contains(HoneycombRule.Descension)) {
+                rolledSuits = setOf(listOf("S", "H", "D", "C").random())
+            }
         }
         
         val noStressModeThisMatch = sharedOptions.noStressMode.value
