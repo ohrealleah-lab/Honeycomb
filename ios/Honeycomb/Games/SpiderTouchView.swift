@@ -229,6 +229,8 @@ struct SpiderTouchView: View {
                 topBarIconButton(systemImage: "lightbulb", accessibilityLabel: coordinator.L(.hint)) {
                     if !viewModel.findHint() {
                         flashNoHintsBanner()
+                    } else if viewModel.activeHintIsFillEmptyColumns {
+                        flashEmptyStockWarning()
                     }
                 }
             }

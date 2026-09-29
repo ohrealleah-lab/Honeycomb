@@ -127,6 +127,8 @@ public struct SpiderView: View {
                         ) {
                             if !viewModel.findHint() {
                                 flashNoHintsBanner()
+                            } else if viewModel.activeHintIsFillEmptyColumns {
+                                flashEmptyStockWarning()
                             }
                         }
                         .keyboardShortcut("h", modifiers: .command)

@@ -368,6 +368,11 @@ public partial class SpiderView : CardGameView
                 // nothing. Pulse the stock's own slot instead, as Mac highlights its stock.
                 if (vm.ActiveHint?.Card.Id == "deal" && vm.CanDealFromStock)
                     HighlightWholePile(StockCursorPileView);
+                // "Fill every empty column before dealing" has nothing to highlight —
+                // show the same toast as clicking the blocked stock, so Hint explains
+                // why you can't deal instead of appearing to do nothing.
+                else if (vm.ActiveHint?.Card.Id == "deal" && vm.StockPiles.Count > 0 && vm.Tableaus.Any(t => t.Cards.Count == 0))
+                    ShowDealBlockedWarning();
             }
             else if (e.PropertyName == nameof(SpiderViewModel.PointPopup))
             {

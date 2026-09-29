@@ -439,6 +439,15 @@ public final class SpiderViewModel {
     public var hasEmptyTableauColumn: Bool {
         state.tableau.contains(where: { $0.isEmpty })
     }
+
+    // The current hint is "fill every empty column before dealing" — it has no pile to
+    // highlight, so the view shows the same toast as clicking the blocked stock instead
+    // of Hint appearing to do nothing (Android shows its text the same way).
+    public var activeHintIsFillEmptyColumns: Bool {
+        guard let hint = activeHint else { return false }
+        return hint.sourcePileId.isEmpty && hint.targetPileId.isEmpty
+            && !state.stock.isEmpty && hasEmptyTableauColumn
+    }
     
     public func drawFromStock() {
         guard !state.stock.isEmpty else { return }
