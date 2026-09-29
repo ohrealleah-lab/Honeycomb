@@ -180,8 +180,7 @@ public partial class HelpWindow : Window
             Row(StringKey.HelpShortcutHit, "H"),
             Row(StringKey.HelpShortcutStand, "S"),
             Row(StringKey.HelpShortcutDoubleDown, "D"),
-            Row(StringKey.HelpShortcutSplitPairs, "P"),
-            Row(StringKey.HelpShortcutBetMaxDeal, "M"));
+            Row(StringKey.HelpShortcutSplitPairs, "P"));  // Blackjack has no Bet Max key
         BlackjackStrategyHeading.Text = T(StringKey.HelpStrategyProTipsTitle);
         BlackjackStrategyBody.Text = T(StringKey.HelpBlackjackStrategy);
         BlackjackNoStressHeading.Text = T(StringKey.HelpNoStressModeTitle);

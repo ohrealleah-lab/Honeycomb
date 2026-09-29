@@ -950,7 +950,20 @@ public partial class VideoPokerView : UserControl
             case Key.H:
                 if (vm.IsHolding) { vm.HoldAll(); Refresh(vm); } e.Handled = true; break;
             case Key.C:
+            case Key.Q: // C or Q, as the help lists (Mac parity)
                 if (vm.IsHolding) { vm.ClearHolds(); Refresh(vm); } e.Handled = true; break;
+            case Key.M:
+                // Bet Max & Deal — listed in the help and on Mac, but never wired up here.
+                // Same guards as the Deal keys; no bet to max in No Stress Mode's free play.
+                e.Handled = true;
+                if (vm.Options.IsNoStressMode || vm.IsHolding || IsResultRevealPending(vm)) break;
+                if ((DateTime.UtcNow - _lastDealDrawTime).TotalMilliseconds < 400) break;
+                _lastDealDrawTime = DateTime.UtcNow;
+                vm.BetMax();
+                Refresh(vm);
+                SoundService.PlayShuffle();
+                _ = StartDealAnimationAsync(new[] { true, true, true, true, true });
+                break;
             case Key.D1: case Key.NumPad1: HoldByKey(vm, 0); e.Handled = true; break;
             case Key.D2: case Key.NumPad2: HoldByKey(vm, 1); e.Handled = true; break;
             case Key.D3: case Key.NumPad3: HoldByKey(vm, 2); e.Handled = true; break;

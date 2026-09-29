@@ -83,6 +83,14 @@ private struct HelpShell<Content: View>: View {
 struct KlondikeHelpView: View {
     @Environment(AppCoordinator.self) private var coordinator
 
+    private var helpKlondikeRulesKey: StringKey {
+        #if os(iOS)
+        return .helpKlondikeRulesIos
+        #else
+        return .helpKlondikeRules
+        #endif
+    }
+
     var body: some View {
         HelpShell(title: coordinator.L(.helpKlondikeTitle), subtitle: coordinator.L(.helpKlondikeSubtitle)) {
             RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
@@ -92,7 +100,8 @@ struct KlondikeHelpView: View {
                         text: coordinator.L(.helpKlondikeLayout))
 
             RuleSection(title: coordinator.L(.helpRulesHowToPlayTitle),
-                        text: coordinator.L(.helpKlondikeRules))
+                        // iOS has no Vegas scoring (App Store), so its rules page leaves it out.
+                        text: coordinator.L(helpKlondikeRulesKey))
 
             // Keyboard shortcuts exist only on Mac — the iOS app has none.
             #if os(macOS)
@@ -287,7 +296,6 @@ struct BlackjackHelpView: View {
                     ShortcutRow(action: coordinator.L(.helpShortcutStand), shortcut: "S")
                     ShortcutRow(action: coordinator.L(.helpShortcutDoubleDown), shortcut: "D")
                     ShortcutRow(action: coordinator.L(.helpShortcutSplitPairs), shortcut: "P")
-                    ShortcutRow(action: coordinator.L(.helpShortcutBetMaxDeal), shortcut: "M")
                 }
             }
 

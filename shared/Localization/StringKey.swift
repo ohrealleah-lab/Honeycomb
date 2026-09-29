@@ -1480,4 +1480,6 @@ public enum StringKey: String, CaseIterable {
     case helpBlackjackRulesIos = "help_blackjack_rules_ios"
     /// iOS help/game picker — betting is locked off on iOS (App Store), so no bets, coins, credits, payouts or jackpots
     case helpBlackjackStrategyIos = "help_blackjack_strategy_ios"
+    /// iOS Klondike rules — no Vegas scoring (betting-style; removed on iOS for the App Store)
+    case helpKlondikeRulesIos = "help_klondike_rules_ios"
 }
