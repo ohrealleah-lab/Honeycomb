@@ -853,10 +853,15 @@ class SpiderViewModel(
     // column) to answer "does the rest of this game play itself out automatically from
     // here," without mutating any real state. Ported from Swift's
     // canSimulateAutocompleteWin().
+    // A lone card parked on an empty column can move straight back onto the card it
+    // came from, then be parked again, forever — on a board like that this simulation
+    // never ended, freezing the app (it runs after every move). No real Spider finish
+    // needs anywhere near this many moves, so hitting the cap means "no" (not offered).
     private fun canSimulateAutocompleteWin(): Boolean {
         if (!_state.value.stock.isEmpty) return false
         var simTableau = _state.value.tableau.map { it.copy(cards = it.cards.toList()) }
         var didMove = true
+        var movesSimulated = 0
 
         while (didMove) {
             didMove = false
@@ -890,6 +895,8 @@ class SpiderViewModel(
             val move = nextMove ?: fallbackMove
             if (move != null) {
                 didMove = true
+                movesSimulated++
+                if (movesSimulated > 1000) return false // see the comment above
                 val (cards, srcIdx, tgtIdx) = move
                 val cardIds = cards.map { it.id }.toSet()
                 val tableau = simTableau.toMutableList()

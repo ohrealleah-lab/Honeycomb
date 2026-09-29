@@ -800,11 +800,18 @@ public final class SpiderViewModel {
         isAutocompleteAvailable = !state.hasWon && canSimulateAutocompleteWin()
     }
 
+    // A lone card parked on an empty column can move straight back onto the card it
+    // came from, then be parked again, forever — on a board like that this simulation
+    // never ended, freezing the app (it runs after every move). No real Spider finish
+    // needs anywhere near this many moves, so hitting the cap means "no" (not offered).
+    static let maxSimulatedAutocompleteMoves = 1000
+
     private func canSimulateAutocompleteWin() -> Bool {
         guard state.stock.isEmpty else { return false }
         
         var simTableau = state.tableau
         var didMove = true
+        var movesSimulated = 0
         
         while didMove {
             didMove = false
@@ -848,6 +855,8 @@ public final class SpiderViewModel {
 
             if let move = nextMove ?? fallbackMove {
                 didMove = true
+                movesSimulated += 1
+                if movesSimulated > Self.maxSimulatedAutocompleteMoves { return false }
                 let cardIDs = Set(move.cards.map { $0.id })
                 simTableau[move.sourceIdx].cards.removeAll { cardIDs.contains($0.id) }
                 

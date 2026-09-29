@@ -5,6 +5,19 @@ struct SpiderTests {
         testSpiderInitialization()
         testSpiderValidation()
         testSpiderWinState()
+        testAutocompleteCheckEndsOnPingPongBoard()
+    }
+
+    // A lone 8 sitting on a different-suit 9 with one empty column could be parked and
+    // moved back forever — checkAutocompleteState() never returned, freezing the app.
+    static func testAutocompleteCheckEndsOnPingPongBoard() {
+        let vm = SpiderViewModel()
+        vm.state.stock.cards = []
+        for i in 0..<vm.state.tableau.count { vm.state.tableau[i].cards = [Card(suit: .diamonds, rank: 12, faceUp: true)] }
+        vm.state.tableau[0].cards = [Card(suit: .clubs, rank: 2, faceUp: false), Card(suit: .spades, rank: 9, faceUp: true), Card(suit: .hearts, rank: 8, faceUp: true)]
+        vm.state.tableau[1].cards = []
+        vm.checkAutocompleteState()
+        assert(!vm.isAutocompleteAvailable, "An Autocomplete that can only shuttle a card back and forth must not be offered")
     }
     
     static func testSpiderInitialization() {

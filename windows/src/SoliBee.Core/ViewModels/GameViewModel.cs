@@ -152,7 +152,11 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     private List<Card> _initialDeck = new();
     private System.Threading.Timer? _gameTimer;
     private int _vegasGameStartScore;
-    private bool _justRecycled;
+    // Recycle count when "no moves left" was first seen with the deck still cyclable
+    // (standard scoring). The banner waits until the player has recycled past it — i.e.
+    // gone through the whole deck once more — before declaring the game stuck.
+    // Mac/Android's recycleCountAtStuck.
+    private int? _recycleCountAtStuck;
 
     // Set by PauseTimerForSwitch when the timer was actually running at the moment this
     // game was switched away from, so ResumeTimerForSwitch only restarts it if it was
@@ -370,6 +374,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
         IsAutocompletable = false;
         HasNoMoves = false;
+        _recycleCountAtStuck = null;
 
         if (countAsNewGame)
         {
@@ -456,6 +461,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         State.WasteDrawBatchSize = 0;
         IsAutocompletable = false;
         HasNoMoves = false;
+        _recycleCountAtStuck = null;
         ClearHintCycle();
         PointPopup = null;
 
@@ -567,9 +573,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             State.MovesCount++;
             OnPropertyChanged(nameof(MovesCount));
             ScheduleIdleActionCheck();
-            _justRecycled = true;
             CheckDeadlock();
-            _justRecycled = false;
             OnPropertyChanged(nameof(Stock));
             OnPropertyChanged(nameof(Waste));
             OnPropertyChanged(nameof(CanUndo));
@@ -1103,8 +1107,21 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
 
     private void CheckDeadlock()
     {
-        if (State.HasWon || IsAutocompletable) { HasNoMoves = false; return; }
-        HasNoMoves = !HasAnyLegalMoves();
+        if (State.HasWon || IsAutocompletable) { HasNoMoves = false; _recycleCountAtStuck = null; return; }
+        if (HasAnyLegalMoves()) { HasNoMoves = false; _recycleCountAtStuck = null; return; }
+
+        // No progress is possible — when to say so matches Mac/Android's checkStuckState:
+        // straight away once the deck can't be cycled any more; never while Vegas still
+        // allows another pass; otherwise only after the player has recycled past the
+        // point where this was first detected.
+        bool deckExhausted = Stock.Cards.Count == 0 && !CanRecycleStock;
+        if (deckExhausted) HasNoMoves = true;
+        else if (Options.IsVegasScoring) HasNoMoves = false;
+        else
+        {
+            _recycleCountAtStuck ??= State.RecyclesCount;
+            HasNoMoves = State.RecyclesCount > _recycleCountAtStuck;
+        }
     }
 
     private bool HasAnyLegalMoves()
@@ -1158,21 +1175,8 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
             }
         }
 
-        // If we reach here, no legal moves exist. The game is mathematically deadlocked.
-        // We delay the Game Over banner if the user can still physically click through the deck.
-        if (Stock.Cards.Count > 0)
-        {
-            if (_justRecycled && !Options.IsVegasScoring)
-                return false; // In normal mode, flag the banner as they do what will be the final recycle
-            return true; // Delay banner while they can click through the deck
-        }
-        else
-        {
-            if (CanRecycleStock)
-                return true; // Delay banner to let them have the satisfaction of clicking the recycle button
-            else
-                return false; // Out of recycles, let the banner pop
-        }
+        // No progressive move anywhere — CheckDeadlock decides when to announce it.
+        return false;
     }
 
     // A tableau-to-tableau move is "progress" — as opposed to pure reorganization that

@@ -736,13 +736,100 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     private void CheckAutocomplete()
     {
         if (StockPiles.Count != 0 || _foundationCardCount >= WinCards) { IsAutocompletable = false; return; }
-        // Every card must already be revealed before autoplay starts moving things around —
-        // matches GameViewModel's equivalent guard for Klondike.
-        foreach (var t in Tableaus)
+        // Offered only when playing Autocomplete through actually finishes the game (Mac/
+        // Android's canSimulateAutocompleteWin) — "some autocomplete move exists" offered
+        // it on boards where it would just shuttle a card back and forth forever.
+        IsAutocompletable = CanSimulateAutocompleteWin();
+    }
+
+    // No real Spider finish needs anywhere near this many moves; hitting it means the
+    // simulation is cycling (a lone card parked on an empty column and moved back).
+    private const int MaxSimulatedAutocompleteMoves = 1000;
+
+    // Plays FindNextAutocompleteMove's exact choices on copies of the tableau (flipping
+    // newly exposed cards and sweeping completed K→A runs, as MoveSequence does) and
+    // reports whether that empties the board.
+    private bool CanSimulateAutocompleteWin()
+    {
+        var sim = Tableaus.Select(t => t.Cards.ToList()).ToList();
+
+        static int RunLength(List<Card> col)
         {
-            if (t.Cards.Any(c => !c.IsFaceUp)) { IsAutocompletable = false; return; }
+            if (col.Count == 0 || !col[^1].IsFaceUp) return 0;
+            int n = 1;
+            for (int i = col.Count - 2; i >= 0; i--)
+            {
+                var upper = col[i];
+                var lower = col[i + 1];
+                if (upper.IsFaceUp && upper.Suit == lower.Suit && upper.Rank == lower.Rank + 1) n++;
+                else break;
+            }
+            return n;
         }
-        IsAutocompletable = FindNextAutocompleteMove() != null;
+
+        static void FlipTop(List<Card> col)
+        {
+            if (col.Count > 0 && !col[^1].IsFaceUp) col[^1] = col[^1] with { IsFaceUp = true };
+        }
+
+        for (int moves = 0; moves <= MaxSimulatedAutocompleteMoves; moves++)
+        {
+            if (sim.All(c => c.Count == 0)) return true;
+
+            int src = -1, tgt = -1, count = 0;
+            int fallbackSrc = -1, fallbackTgt = -1, fallbackCount = 0;
+            for (int s = 0; s < sim.Count && src < 0; s++)
+            {
+                int n = RunLength(sim[s]);
+                if (n == 0) continue;
+                var first = sim[s][sim[s].Count - n];
+                for (int t = 0; t < sim.Count; t++)
+                {
+                    if (t == s || sim[t].Count == 0) continue;
+                    var top = sim[t][^1];
+                    if (top.IsFaceUp && first.Rank == top.Rank - 1) { src = s; tgt = t; count = n; break; }
+                }
+                if (src < 0 && fallbackSrc < 0 && n < sim[s].Count)
+                {
+                    for (int t = 0; t < sim.Count; t++)
+                    {
+                        if (t != s && sim[t].Count == 0) { fallbackSrc = s; fallbackTgt = t; fallbackCount = n; break; }
+                    }
+                }
+            }
+            if (src < 0)
+            {
+                if (fallbackSrc < 0) return false;
+                (src, tgt, count) = (fallbackSrc, fallbackTgt, fallbackCount);
+            }
+
+            var run = sim[src].GetRange(sim[src].Count - count, count);
+            sim[src].RemoveRange(sim[src].Count - count, count);
+            FlipTop(sim[src]);
+            sim[tgt].AddRange(run);
+
+            bool swept;
+            do
+            {
+                swept = false;
+                foreach (var col in sim)
+                {
+                    if (col.Count < 13) continue;
+                    var last13 = col.GetRange(col.Count - 13, 13);
+                    bool complete = true;
+                    for (int j = 0; j < 13; j++)
+                    {
+                        if (!last13[j].IsFaceUp || last13[j].Suit != last13[0].Suit || last13[j].Rank != 13 - j) { complete = false; break; }
+                    }
+                    if (!complete) continue;
+                    col.RemoveRange(col.Count - 13, 13);
+                    FlipTop(col);
+                    swept = true;
+                    break;
+                }
+            } while (swept);
+        }
+        return false;
     }
 
     // Spider doesn't merge to foundations directly — it relocates each column's topmost
