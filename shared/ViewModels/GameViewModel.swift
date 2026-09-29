@@ -278,6 +278,13 @@ public final class GameViewModel {
                 vegasBankroll = 0
             }
             startNewGame(countAsNewGame: false)
+        } else if options.drawMode != oldValue.drawMode && state.drawMode != options.drawMode {
+            // iOS's Draw 1/Draw 3 picker only changes options.drawMode — the board reads
+            // state.drawMode, which was otherwise only synced at launch, so the switch did
+            // nothing until the app restarted. Deal a new game in the new mode, as Mac's
+            // Options OK does (Mac sets state.drawMode itself first, so this is skipped).
+            state.drawMode = options.drawMode
+            startNewGame()
         }
     }
     

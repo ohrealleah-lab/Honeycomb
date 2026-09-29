@@ -53,7 +53,7 @@ Everything persisted (settings, stats, card bank, decks, card-database seed, the
 
 ## Key architecture notes
 - **MVVM** via `CommunityToolkit.Mvvm`; settings changes broadcast with `WeakReferenceMessenger` (`OptionsChangedMessage`, `FaceCardArtChangedMessage`)
-- **SettingsService** reads/writes `GameOptions` to JSON; call `SettingsService.LoadOptions()` / `SaveOptions()` — loaded fresh each call (no singleton cache)
+- **SettingsService** reads/writes `GameOptions` to JSON; call `SettingsService.LoadOptions()` / `SaveOptions()` — cached after the first load, so every ViewModel's `Options` is the same shared `GameOptions` object (mutating it in one place changes it for all games; an `OptionsChangedMessage` carrying that same object won't look like a change to a handler comparing old vs new)
 - **Static brush pool** in `CardView.axaml.cs` — never create `SolidColorBrush` per-render; add to the `_brush*` static fields instead
 - **SkiaSharp 3.119.4** (the version Avalonia 12 is built on) used for image processing (trim, background removal, scaling)
 

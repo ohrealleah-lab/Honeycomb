@@ -19,6 +19,7 @@ struct GameViewModelTests {
         testResetStatistics()
         testRestartCurrentGame()
         testRestartAfterWinCountsAsNewGame()
+        testDrawModeOptionChangeAppliesToBoard()
         testHighScorePersistence()
         testKeyboardNavigation()
     }
@@ -372,6 +373,22 @@ struct GameViewModelTests {
         assert(viewModel.gamesPlayed == playedBefore + 1, "Restarting a won game must count as a new game played")
         assert(!viewModel.state.hasWon, "Restart should replay the deal from the start")
 
+        UserDefaults.standard.set(savedPlayed, forKey: "gamesPlayed")
+    }
+
+    // iOS's Draw 1/3 picker changes options.drawMode only — the board must switch too
+    // (it used to keep the old mode until the app restarted).
+    static func testDrawModeOptionChangeAppliesToBoard() {
+        let savedOptions = UserDefaults.standard.data(forKey: "solitaire_options")
+        let savedPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
+        let viewModel = GameViewModel()
+        let target: GameState.DrawMode = viewModel.state.drawMode == .drawOne ? .drawThree : .drawOne
+        let playedBefore = viewModel.gamesPlayed
+        viewModel.options.drawMode = target
+        assert(viewModel.state.drawMode == target, "Changing the draw-mode option must switch the board's draw mode")
+        assert(viewModel.gamesPlayed == playedBefore + 1, "The switch deals a new, counted game")
+        if let savedOptions { UserDefaults.standard.set(savedOptions, forKey: "solitaire_options") }
+        else { UserDefaults.standard.removeObject(forKey: "solitaire_options") }
         UserDefaults.standard.set(savedPlayed, forKey: "gamesPlayed")
     }
 
