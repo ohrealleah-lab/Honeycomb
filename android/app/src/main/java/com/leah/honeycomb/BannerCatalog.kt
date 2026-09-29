@@ -70,11 +70,24 @@ sealed class BannerFireResult {
 }
 
 class BannerCatalog(
-    context: Context,
+    // Supplies the catalog JSON. The app reads it from assets (the Context constructor
+    // below); unit tests pass the repo's shared copy, so ViewModels can be built without
+    // an Android Context.
+    private val loadCatalogJson: () -> String,
     private val sharedOptions: SharedGameOptions,
     private val languageFlow: StateFlow<AppLanguage>,
     private val dataStore: DataStore<Preferences>
 ) {
+    constructor(
+        context: Context,
+        sharedOptions: SharedGameOptions,
+        languageFlow: StateFlow<AppLanguage>,
+        dataStore: DataStore<Preferences>
+    ) : this(
+        { context.assets.open("HoneycombBannerCatalog.json").bufferedReader().use { it.readText() } },
+        sharedOptions, languageFlow, dataStore
+    )
+
     // For a caller's own fallback text when fire() doesn't return a message.
     val currentLanguage: AppLanguage get() = languageFlow.value
 
@@ -156,11 +169,11 @@ class BannerCatalog(
         private var lastLoadingBannerWasAppLaunch = false
     }
 
-    private val entries: Map<BannerId, BannerDefinition> = load(context)
+    private val entries: Map<BannerId, BannerDefinition> = load()
 
-    private fun load(context: Context): Map<BannerId, BannerDefinition> {
+    private fun load(): Map<BannerId, BannerDefinition> {
         return try {
-            val json = context.assets.open("HoneycombBannerCatalog.json").bufferedReader().use { it.readText() }
+            val json = loadCatalogJson()
             val doc = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
                 .decodeFromString(BannerCatalogDocument.serializer(), json)
             val result = mutableMapOf<BannerId, BannerDefinition>()
