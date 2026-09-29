@@ -285,8 +285,9 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     public void InitializeGame(bool countAsNewGame = true)
     {
         _untimedThisGame = false;
-        if (State.MovesCount > 0 && !State.HasWon)
+        if ((State.MovesCount > 0 || _movedThisDeal) && !State.HasWon)
             Stats.CurrentStreak = 0;
+        _movedThisDeal = false;
 
         ClearHintCycle();
         PointPopup = null;
@@ -428,6 +429,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         // won game's winnings (which are kept, not rolled back below).
         if (State.HasWon)
         {
+            _movedThisDeal = false; // a fresh playthrough of the won deal
             Stats.GamesPlayed++;
             StatsService.SaveStats(Stats);
             if (Options.IsVegasScoring) _vegasBalanceBeforeDeal = State.Score;
@@ -838,11 +840,17 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
         }, null, 1000, Timeout.Infinite);
     }
 
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // MovesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak. Mac's movedThisDeal.
+    private bool _movedThisDeal;
+
     public void SaveStateForUndo()
     {
         // No-op during autoplay so every move it makes bundles into the single
         // pre-autocomplete snapshot already pushed when Autocomplete() started.
         if (IsAutoplayRunning) return;
+        _movedThisDeal = true;
 
         var snapshot = new GameStateSnapshot
         {

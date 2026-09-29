@@ -7,6 +7,32 @@ namespace SoliBee.Tests.ViewModels;
 
 public class UndoTests
 {
+    // Undoing back to the start (or Restarting) a played game, then dealing a new one,
+    // is still abandoning it — both reset MovesCount to 0, which used to let the
+    // abandoned game keep the win streak. (Mac parity.)
+    [Fact]
+    public void UndoOrRestartThenNewGameStillBreaksStreak()
+    {
+        var vm = new GameViewModel();
+
+        vm.Stats.CurrentStreak = 3;
+        vm.DrawCard();
+        vm.Undo();
+        Assert.Equal(0, vm.State.MovesCount);
+        vm.InitializeGame();
+        Assert.Equal(0, vm.Stats.CurrentStreak);
+
+        vm.Stats.CurrentStreak = 3;
+        vm.DrawCard();
+        vm.RestartGame();
+        vm.InitializeGame();
+        Assert.Equal(0, vm.Stats.CurrentStreak);
+
+        vm.Stats.CurrentStreak = 3;
+        vm.InitializeGame();
+        Assert.Equal(3, vm.Stats.CurrentStreak);
+    }
+
     [Fact]
     public void TestUndoStackBehavior()
     {

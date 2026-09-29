@@ -398,8 +398,14 @@ class BeecellViewModel(
         saveOptions(newOptions)
     }
 
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // movesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak. Mac's movedThisDeal.
+    private var movedThisDeal = false
+
     private fun saveStateForUndo() {
         if (_isAutoplayRunning.value) return
+        movedThisDeal = true
         undoStack.push(_state.value)
     }
 
@@ -464,7 +470,9 @@ class BeecellViewModel(
         clearHint()
 
         val currentState = _state.value
-        if (currentState.movesCount > 0 && !currentState.hasWon) {
+        val abandonedPlayedGame = (currentState.movesCount > 0 || movedThisDeal) && !currentState.hasWon
+        movedThisDeal = false
+        if (abandonedPlayedGame) {
             
             updateModeStats(4) { it.copy(currentStreak = 0) }
         }
@@ -542,7 +550,10 @@ class BeecellViewModel(
         // A won game is over, so replaying its deal is a new game on the same deal: it
         // counts as played. Otherwise re-winning it adds another win (and streak) with no
         // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
-        if (_state.value.hasWon) updateModeStats(4) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+        if (_state.value.hasWon) {
+            movedThisDeal = false // a fresh playthrough of the won deal
+            updateModeStats(4) { it.copy(gamesPlayed = it.gamesPlayed + 1) }
+        }
         stopTimer()
         clearHint()
         undoStack.clear()

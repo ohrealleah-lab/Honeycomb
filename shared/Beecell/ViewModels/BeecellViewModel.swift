@@ -285,7 +285,7 @@ public final class BeecellViewModel {
         }
 
         // Record loss / reset streak if they abandoned an active game
-        if state.movesCount > 0 && !state.hasWon {
+        if (state.movesCount > 0 || movedThisDeal) && !state.hasWon {
             var stats = statistics
             let modeKey = abandonedModeKey ?? currentModeKey
             var modeStats = stats.statsByMode[modeKey] ?? ModeStats()
@@ -293,6 +293,7 @@ public final class BeecellViewModel {
             stats.statsByMode[modeKey] = modeStats
             statistics = stats
         }
+        movedThisDeal = false
         
         undoStack.removeAll()
         
@@ -377,6 +378,7 @@ public final class BeecellViewModel {
         // counts as played. Otherwise re-winning it adds another win (and streak) with no
         // game played, and repeating that pushes the win rate past 100%.
         if state.hasWon {
+            movedThisDeal = false // a fresh playthrough of the won deal
             var stats = statistics
             var modeStats = stats.statsByMode[currentModeKey] ?? ModeStats()
             modeStats.gamesPlayed += 1
@@ -1104,8 +1106,14 @@ public final class BeecellViewModel {
     
     // MARK: - Undo Implementation
     
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // movesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak.
+    private var movedThisDeal = false
+
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
+        movedThisDeal = true
         undoStack.push(state)
     }
 

@@ -318,7 +318,7 @@ public final class SpiderViewModel {
             enqueueBanner(text)
         }
 
-        if state.movesCount > 0 && !state.hasWon {
+        if (state.movesCount > 0 || movedThisDeal) && !state.hasWon {
             var stats = statistics
             let suitCount = abandonedSuitCount ?? options.suitCount
             var modeStats = stats.statsBySuits[suitCount] ?? SpiderModeStats()
@@ -326,6 +326,7 @@ public final class SpiderViewModel {
             stats.statsBySuits[suitCount] = modeStats
             statistics = stats
         }
+        movedThisDeal = false
         
         undoStack.removeAll()
         gamesPlayed += 1
@@ -419,7 +420,7 @@ public final class SpiderViewModel {
         // A won game is over, so replaying its deal is a new game on the same deal: it
         // counts as played. Otherwise re-winning it adds another win (and streak) with no
         // game played, and repeating that pushes the win rate past 100%.
-        if state.hasWon { gamesPlayed += 1 }
+        if state.hasWon { gamesPlayed += 1; movedThisDeal = false } // a fresh playthrough of the won deal
         stopTimer()
         undoStack.removeAll()
         state = initial
@@ -716,8 +717,14 @@ public final class SpiderViewModel {
 
     // MARK: - Undo Implementation
 
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // movesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak.
+    private var movedThisDeal = false
+
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
+        movedThisDeal = true
         undoStack.push(state)
     }
 

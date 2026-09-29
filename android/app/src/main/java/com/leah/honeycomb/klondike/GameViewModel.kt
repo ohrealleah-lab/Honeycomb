@@ -506,8 +506,14 @@ class GameViewModel(
         }
     }
 
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // movesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak. Mac's movedThisDeal.
+    private var movedThisDeal = false
+
     private fun saveStateForUndo() {
         if (_isAutoplayRunning.value) return
+        movedThisDeal = true
         undoStack.push(_state.value)
     }
 
@@ -572,7 +578,9 @@ class GameViewModel(
         clearHint()
 
         val currentState = _state.value
-        if (currentState.movesCount > 0 && !currentState.hasWon) {
+        val abandonedPlayedGame = (currentState.movesCount > 0 || movedThisDeal) && !currentState.hasWon
+        movedThisDeal = false
+        if (abandonedPlayedGame) {
             updateStatistics { it.copy(currentStreak = 0) }
         }
 
@@ -680,6 +688,7 @@ class GameViewModel(
         // In Vegas that also means a fresh buy-in, and the won game's winnings are kept
         // rather than rolled back.
         if (_state.value.hasWon) {
+            movedThisDeal = false // a fresh playthrough of the won deal
             updateStatistics { it.copy(gamesPlayed = it.gamesPlayed + 1) }
             if (_options.value.isVegasScoring) {
                 _vegasBankroll.value += -5200

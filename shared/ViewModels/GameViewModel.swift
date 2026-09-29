@@ -375,11 +375,12 @@ public final class GameViewModel {
         // fresh one while dodging the loss, letting a losing streak be preserved
         // indefinitely just by flipping an option back and forth. Matches the Windows
         // port's InitializeGame, which checks this unconditionally at the top.
-        if state.movesCount > 0 && !state.hasWon {
+        if (state.movesCount > 0 || movedThisDeal) && !state.hasWon {
             var stats = statistics
             stats.currentStreak = 0
             statistics = stats
         }
+        movedThisDeal = false
 
         if countAsNewGame {
             // gamesPlayed increments below at the start of every deal (not once per
@@ -492,6 +493,7 @@ public final class GameViewModel {
         // In Vegas that also means a fresh buy-in, and the won game's winnings are kept
         // rather than rolled back below.
         if state.hasWon {
+            movedThisDeal = false // a fresh playthrough of the won deal
             gamesPlayed += 1
             if options.isVegasScoring {
                 vegasBankroll += -5200
@@ -1289,8 +1291,14 @@ public final class GameViewModel {
     
     // MARK: - Undo Implementation
     
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // movesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak.
+    private var movedThisDeal = false
+
     private func saveStateForUndo() {
         guard !isAutoplayRunning else { return }
+        movedThisDeal = true
         undoStack.push(state)
     }
 

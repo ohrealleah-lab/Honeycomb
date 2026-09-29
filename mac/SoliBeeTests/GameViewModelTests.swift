@@ -20,6 +20,7 @@ struct GameViewModelTests {
         testRestartCurrentGame()
         testRestartAfterWinCountsAsNewGame()
         testDrawModeOptionChangeAppliesToBoard()
+        testUndoOrRestartDoesNotDodgeStreakBreak()
         testHighScorePersistence()
         testKeyboardNavigation()
     }
@@ -389,6 +390,35 @@ struct GameViewModelTests {
         assert(viewModel.gamesPlayed == playedBefore + 1, "The switch deals a new, counted game")
         if let savedOptions { UserDefaults.standard.set(savedOptions, forKey: "solitaire_options") }
         else { UserDefaults.standard.removeObject(forKey: "solitaire_options") }
+        UserDefaults.standard.set(savedPlayed, forKey: "gamesPlayed")
+    }
+
+    // Undoing back to the start (or Restarting) a game you've played, then dealing a new
+    // one, is still abandoning it — both put movesCount back to 0, which used to let the
+    // abandoned game keep the win streak.
+    static func testUndoOrRestartDoesNotDodgeStreakBreak() {
+        let savedStats = UserDefaults.standard.data(forKey: "solitaire_statistics")
+        let savedPlayed = UserDefaults.standard.integer(forKey: "gamesPlayed")
+        let viewModel = GameViewModel()
+
+        viewModel.statistics.currentStreak = 3
+        viewModel.drawCard()
+        viewModel.undoLastAction()
+        assert(viewModel.state.movesCount == 0, "Undo should put the board back to the start")
+        viewModel.startNewGame()
+        assert(viewModel.statistics.currentStreak == 0, "New Game after undoing a played game must break the streak")
+
+        viewModel.statistics.currentStreak = 3
+        viewModel.drawCard()
+        viewModel.restartCurrentGame()
+        viewModel.startNewGame()
+        assert(viewModel.statistics.currentStreak == 0, "New Game after restarting a played game must break the streak")
+
+        viewModel.statistics.currentStreak = 3
+        viewModel.startNewGame()
+        assert(viewModel.statistics.currentStreak == 3, "New Game on an untouched deal must keep the streak")
+
+        if let savedStats { UserDefaults.standard.set(savedStats, forKey: "solitaire_statistics") }
         UserDefaults.standard.set(savedPlayed, forKey: "gamesPlayed")
     }
 

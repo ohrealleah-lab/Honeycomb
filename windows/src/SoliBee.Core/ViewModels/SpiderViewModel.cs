@@ -247,7 +247,8 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     public void InitializeGame(bool countAsNewGame = true)
     {
         _untimedThisGame = false;
-        bool wasAbandonedGame = State.MovesCount > 0 && !State.HasWon;
+        bool wasAbandonedGame = (State.MovesCount > 0 || _movedThisDeal) && !State.HasWon;
+        _movedThisDeal = false;
 
         _autocompleteTimer?.Dispose();
         _autocompleteTimer = null;
@@ -369,6 +370,7 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         // game played, and repeating that pushes the win rate past 100%. (Mac parity.)
         if (State.HasWon)
         {
+            _movedThisDeal = false; // a fresh playthrough of the won deal
             var stats = StatsService.LoadStats();
             if (!stats.SpiderStatsBySuit.ContainsKey(SuitKey))
                 stats.SpiderStatsBySuit[SuitKey] = new ModeStats();
@@ -1224,11 +1226,17 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         OnPropertyChanged(nameof(ScoreDisplay));
     }
 
+    // Set by the player's first move of a deal and kept through Undo/Restart (both put
+    // MovesCount back to 0) — so undoing or restarting a losing game and then dealing a
+    // new one still counts as abandoning it and breaks the streak. Mac's movedThisDeal.
+    private bool _movedThisDeal;
+
     private void SaveStateForUndo()
     {
         // No-op during autoplay so every move it makes bundles into the single
         // pre-autocomplete snapshot already pushed when Autocomplete() started.
         if (IsAutoplayRunning) return;
+        _movedThisDeal = true;
 
         _undoStack.Push(CaptureSnapshot());
         OnPropertyChanged(nameof(CanUndo));
