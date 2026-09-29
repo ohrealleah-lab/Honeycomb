@@ -19,10 +19,35 @@ make clean   # Remove Honeycomb.app and .build/
 
 Tests use a custom `TestRunner.swift` entry point (not XCTest) so the GUI `@main` is excluded from the test compile. Run individual tests by editing `TestRunner.swift` to call only the desired suite.
 
+## Product rules (settled — every platform follows these)
+
+Mac is the parity reference for Windows, Android and iOS; the list below is what "correct" means when a port disagrees. Don't re-litigate these in reviews.
+
+**Mobile (iOS + Android) — no betting, for app-store gambling rules**
+- Video Poker/Blackjack are hard-locked free play (`isFreePlay` always true): no bets, credits, payouts, Rebuy, pay table, out-of-credits toast, or money stats rows. Klondike has no Vegas scoring.
+- Help and picker text on mobile uses the betting-free `*_ios` localization keys (Video Poker/Blackjack help, Klondike rules + subtitle). Any new mobile-visible VP/BJ/Vegas text must avoid bet/credit/payout/jackpot wording.
+- No Reset Stats button on mobile (desktop has it). Mobile Honeycomb stats omit the card-collection breakdown. Beecell 2-deck is desktop-only. Triple Play is hidden everywhere.
+
+**Stats and streaks**
+- Starting a new game (or changing mode) on a played, unwon game breaks the win streak. "Played" is remembered per deal (`movedThisDeal`) so Undo-to-start or Restart can't dodge it.
+- Restarting a *won* game counts as a new game played (and in Vegas charges a fresh buy-in, keeping the winnings). Restarting an unwon game keeps its buy-in paid and rolls back in-game Vegas gains.
+- Honeycomb: Quit Match or a new match while one is being played (incl. Sudden Death) is a loss and ends the win streak; Quit Match asks first ("Quit this match? It will count as a loss…").
+- Klondike standard scoring: undo deducts the undone move's points again; a timed win gets −2/10 s then a 700,000 ÷ seconds bonus (no 30 s minimum). The Vegas bankroll starts at $0 each launch.
+- Desktop Video Poker/Blackjack sessions reset credits each launch; the out-of-credits toast fires at ≤10 credits after a losing hand, once the result banner has gone.
+
+**Game behaviour**
+- Blackjack: dealer stands on all 17s and only draws while a player hand is live (not after every hand busts or a natural); dealer natural is checked at the deal; a natural pays 3:1 and only counts on an unsplit hand; one split per round, split Aces get one card.
+- A settings change that deals a new game (Klondike draw mode/Vegas, Spider suits, Beecell decks) asks "Start a new game?" first when a game is in progress. Desktop Video Poker/Blackjack have no New Game/Restart (menu items/shortcuts disabled there; also during a Honeycomb match).
+- Spider Autocomplete is offered only when simulating it finishes the game (capped at 1000 moves — the uncapped loop froze the app). Hint shows the "fill all empty columns" toast when that's the blocker.
+- Klondike "no moves left": immediately once the deck can't be cycled; never while Vegas allows another pass; otherwise only after the player recycles past where it was first detected.
+- Desktop timers keep running when the window is in the background; mobile pauses. Only Android saves a game in progress across launches (by decision — don't add it elsewhere).
+
+**Text** — every user-visible string goes through `tools/Honeycomb_Localization.xlsx` (English + Spanish) and `python3 tools/generate_localization.py`, which regenerates Mac/iOS, Windows and Android string files together. Help text must describe what the code actually does — update it with any rules change.
+
 ## Architecture
 
 ### Entry point and routing
-`SoliBeeApp.swift` owns a single `@State private var coordinator = AppCoordinator()` and passes it into `AppRouterView`, which switches between `GameView` / `BeecellView` / `SpiderView` based on `coordinator.gameMode`. The coordinator is injected into the environment (`.environment(coordinator)`) so card views can read it.
+`SoliBeeApp.swift` owns a single `@State private var coordinator = AppCoordinator()` and passes it into `AppRouterView`, which switches between the six game views (`GameView` / `BeecellView` / `SpiderView` / `VideoPokerView` / `BlackjackView` / `HoneycombView`) based on `coordinator.gameMode`. The coordinator is injected into the environment (`.environment(coordinator)`) so card views can read it.
 
 ### AppCoordinator (`src/ViewModels/AppCoordinator.swift`)
 The single source of truth for which game is active. Holds all six ViewModels (`klondikeViewModel`, `beecellViewModel`, `spiderViewModel`, `videoPokerViewModel`, `blackjackViewModel`, `honeycombViewModel`) alive simultaneously — but note `AppRouterView`'s `switch` on `gameMode` (each case carrying its own `.id()`) fully unmounts/remounts the *View* on every switch; only the ViewModels themselves persist. Fields that are genuinely shared across every game — `isSoundEnabled`, `noStressMode`, `honeyMode`, `manuallyDismissBanners`, `hideHintButton` — are true single-field state via `SharedGameOptions` (`shared/Models/SharedGameOptions.swift`): one `@Observable` class instance that `AppCoordinator` and all six ViewModels hold the identical reference to (constructed once in `AppCoordinator.init()` and passed to each ViewModel's `sharedOptions:` init parameter), not six independently-synced copies. `AppCoordinator.isSoundEnabled` etc. are thin computed passthroughs (`get`/`set` forwarding to `sharedOptions.X`) kept only so every existing `coordinator.X`/`$coordinator.X` call site didn't need to change. A ViewModel reads/writes its own copy of these via `sharedOptions.X` directly — there's no `options.X` for them anymore, and no broadcast/sync step of any kind, since reading `coordinator.X` and `viewModel.sharedOptions.X` touch the literal same stored property. The one place this needs care: reacting to a change (e.g. Klondike/Beecell/Spider starting/stopping their timer when No Stress Mode toggles) must not run for *every* registered ViewModel — `SharedGameOptions.onNoStressModeChange` fires for the shared instance, so `AppCoordinator.init()` is the only place that registers a handler, and it dispatches to only the currently-active game's `reactToNoStressModeChange()` (see `SoliBeeTests/StatsRegressionTests.swift`'s `testBackgroundGameTimerDoesNotResumeFromAnotherGamesOptionsSync` for the regression this guards against — a naive per-ViewModel self-registration would spuriously resume a *backgrounded* game's stopped timer).

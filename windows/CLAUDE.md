@@ -9,6 +9,8 @@ Avalonia UI 12.1.3 / .NET 10 port of the **Honeycomb Card Suite** — all six ga
 
 **Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
 
+**Settled product rules** (stats/streaks, Blackjack dealer, confirm-before-new-game, Spider Autocomplete, Klondike "no moves" timing, text/localization) are listed once in `mac/CLAUDE.md` → "Product rules" — Windows follows them. Windows-specific: Help-window shortcut rows are built in `HelpWindow.axaml.cs`, so keep them in sync with the keys each view actually handles.
+
 ## Build & run
 ```bash
 # Debug build (runs on Mac for development)
