@@ -21,6 +21,10 @@ struct OptionsSheetShell<Content: View>: View {
     // entirely rather than wiring a dead `{}` closure to a link that did nothing.
     var onViewStats: (() -> Void)?
     var onOK: () -> Void
+    // Returns true when OK would end a game in progress (a draw-mode/deck/suit/Vegas
+    // change deals a new game) — OK then asks first instead of applying right away.
+    var endsGameInProgress: (() -> Bool)?
+    @State private var showingEndGameConfirm = false
     // Solibee watermark's max width/height, shared across every sheet built on this shell
     // but overridable per-caller — the Honeycomb Rules sheet (HoneycombRulesView) wants a
     // noticeably bigger one than the plain per-game Preferences sheets.
@@ -85,6 +89,7 @@ struct OptionsSheetShell<Content: View>: View {
         onViewStats: (() -> Void)? = nil,
         watermarkMaxSize: CGFloat = 220,
         onOK: @escaping () -> Void,
+        endsGameInProgress: (() -> Bool)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self._isPresented = isPresented
@@ -100,6 +105,7 @@ struct OptionsSheetShell<Content: View>: View {
         self.onViewStats = onViewStats
         self.watermarkMaxSize = watermarkMaxSize
         self.onOK = onOK
+        self.endsGameInProgress = endsGameInProgress
         self.content = content
 
         _originalFeltColor = State(initialValue: coordinator.feltColor)
@@ -217,10 +223,21 @@ struct OptionsSheetShell<Content: View>: View {
                     }
 
                     Button(coordinator.L(.ok)) {
-                        onOK()
-                        isPresented = false
+                        if endsGameInProgress?() == true {
+                            showingEndGameConfirm = true
+                        } else {
+                            onOK()
+                            isPresented = false
+                        }
                     }
                     .keyboardShortcut(.defaultAction)
+                    .alert(coordinator.L(.newGameConfirmTitle), isPresented: $showingEndGameConfirm) {
+                        Button(coordinator.L(.cancel), role: .cancel) {}
+                        Button(coordinator.L(.newGame), role: .destructive) {
+                            onOK()
+                            isPresented = false
+                        }
+                    }
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 16)

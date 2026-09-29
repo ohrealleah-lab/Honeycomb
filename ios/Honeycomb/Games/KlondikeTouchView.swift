@@ -847,14 +847,41 @@ struct KlondikeTouchView: View {
 struct KlondikeSettingsSection: View {
     @Bindable var viewModel: GameViewModel
     @Bindable var coordinator: AppCoordinator
+    // Switching mode deals a new game — if one is in progress, ask first (same prompt
+    // as Mac's Options OK and the other platforms) instead of ending it on the tap.
+    @State private var pendingDrawMode: GameState.DrawMode? = nil
+
+    private var drawModeSelection: Binding<GameState.DrawMode> {
+        Binding(
+            get: { viewModel.options.drawMode },
+            set: { newValue in
+                guard newValue != viewModel.options.drawMode else { return }
+                if viewModel.state.movesCount > 0 && !viewModel.state.hasWon {
+                    pendingDrawMode = newValue
+                } else {
+                    viewModel.options.drawMode = newValue
+                }
+            }
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker(coordinator.L(.drawModeLabel), selection: $viewModel.options.drawMode) {
+            Picker(coordinator.L(.drawModeLabel), selection: drawModeSelection) {
                 Text(coordinator.L(.drawOne)).tag(GameState.DrawMode.drawOne)
                 Text(coordinator.L(.drawThree)).tag(GameState.DrawMode.drawThree)
             }
             .pickerStyle(.segmented)
+            .alert(coordinator.L(.newGameConfirmTitle), isPresented: Binding(
+                get: { pendingDrawMode != nil },
+                set: { if !$0 { pendingDrawMode = nil } }
+            )) {
+                Button(coordinator.L(.cancel), role: .cancel) { pendingDrawMode = nil }
+                Button(coordinator.L(.newGame), role: .destructive) {
+                    if let mode = pendingDrawMode { viewModel.options.drawMode = mode }
+                    pendingDrawMode = nil
+                }
+            }
 
             // Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners live
             // in OptionsFullScreenView's own Global section now — this card is

@@ -780,15 +780,42 @@ struct SpiderTouchView: View {
 struct SpiderSettingsSection: View {
     @Bindable var viewModel: SpiderViewModel
     @Bindable var coordinator: AppCoordinator
+    // Switching mode deals a new game — if one is in progress, ask first (same prompt
+    // as Mac's Options OK and the other platforms) instead of ending it on the tap.
+    @State private var pendingSuitCount: Int? = nil
+
+    private var suitCountSelection: Binding<Int> {
+        Binding(
+            get: { viewModel.options.suitCount },
+            set: { newValue in
+                guard newValue != viewModel.options.suitCount else { return }
+                if viewModel.state.movesCount > 0 && !viewModel.state.hasWon {
+                    pendingSuitCount = newValue
+                } else {
+                    viewModel.options.suitCount = newValue
+                }
+            }
+        )
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Picker(coordinator.L(.touchSuitsPickerLabel), selection: $viewModel.options.suitCount) {
+            Picker(coordinator.L(.touchSuitsPickerLabel), selection: suitCountSelection) {
                 Text(coordinator.L(.suitCount1)).tag(1)
                 Text(coordinator.L(.suitCount2)).tag(2)
                 Text(coordinator.L(.suitCount4)).tag(4)
             }
             .pickerStyle(.segmented)
+            .alert(coordinator.L(.newGameConfirmTitle), isPresented: Binding(
+                get: { pendingSuitCount != nil },
+                set: { if !$0 { pendingSuitCount = nil } }
+            )) {
+                Button(coordinator.L(.cancel), role: .cancel) { pendingSuitCount = nil }
+                Button(coordinator.L(.newGame), role: .destructive) {
+                    if let count = pendingSuitCount { viewModel.options.suitCount = count }
+                    pendingSuitCount = nil
+                }
+            }
             // Sound/No Stress Mode/Honey Mode/Hide Hint/Manually Dismiss Banners live
             // in OptionsFullScreenView's own Global section now — this card is
             // Spider-specific only.

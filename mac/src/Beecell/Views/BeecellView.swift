@@ -1073,7 +1073,8 @@ struct BeecellOptionsView: View {
                 // OptionsSheetShell's direct $coordinator.X bindings below.
                 coordinator.noStressMode = noStressMode
                 coordinator.hideBee = hideBee
-            }
+            },
+            endsGameInProgress: { deckCount != viewModel.options.deckCount && viewModel.state.movesCount > 0 && !viewModel.state.hasWon }
         ) {
             Picker(coordinator.L(.toggleGameModeLabel), selection: $deckCount) {
                 Text(coordinator.L(.option1deck)).tag(1)

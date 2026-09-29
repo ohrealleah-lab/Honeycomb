@@ -897,7 +897,8 @@ struct SpiderOptionsView: View {
                 // OptionsSheetShell's direct $coordinator.X bindings below.
                 coordinator.noStressMode = noStressMode
                 coordinator.hideBee = hideBee
-            }
+            },
+            endsGameInProgress: { suitCount != viewModel.options.suitCount && viewModel.state.movesCount > 0 && !viewModel.state.hasWon }
         ) {
             Picker(coordinator.L(.pickerSuitsLabel), selection: $suitCount) {
                 Text(coordinator.L(.optionSuits1)).tag(1)

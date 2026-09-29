@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.leah.honeycomb.LocalAppContainer
 
@@ -26,6 +27,28 @@ fun KlondikeOptionsSheet(
     val sharedOptions = appContainer.sharedOptions
     val language by appContainer.language.collectAsState()
 
+    // Changing mode (or Vegas) deals a new game — if one is in progress, ask first
+    // (same prompt as Mac's Options OK, iOS and Windows) instead of ending it on the tap.
+    var pendingOptions by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<GameOptions?>(null) }
+    val gameState by viewModel.state.collectAsState()
+    fun requestOptions(newOptions: GameOptions) {
+        if (gameState.movesCount > 0 && !gameState.hasWon) pendingOptions = newOptions
+        else viewModel.updateOptions(newOptions)
+    }
+    pendingOptions?.let { pending ->
+        AlertDialog(
+            onDismissRequest = { pendingOptions = null },
+            title = { Text(Strings.get(StringKey.NewGameConfirmTitle, language)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.updateOptions(pending); pendingOptions = null }) {
+                    Text(Strings.get(StringKey.NewGame, language))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingOptions = null }) { Text(Strings.get(StringKey.Cancel, language)) }
+            }
+        )
+    }
 
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),
@@ -38,7 +61,7 @@ fun KlondikeOptionsSheet(
                 SegmentedControl(
                     items = listOf(DrawMode.DrawOne, DrawMode.DrawThree),
                     selectedItem = options.drawMode,
-                    onItemSelection = { viewModel.updateOptions(options.copy(drawMode = it)) },
+                    onItemSelection = { if (it != options.drawMode) requestOptions(options.copy(drawMode = it)) },
                     itemLabel = {
                         if (it == DrawMode.DrawOne) Strings.get(StringKey.DrawOne, language)
                         else Strings.get(StringKey.DrawThree, language)
@@ -47,7 +70,7 @@ fun KlondikeOptionsSheet(
                 SwitchOptionRow(
                     label = Strings.get(StringKey.VegasScoring, language),
                     checked = options.isVegasScoring,
-                    onCheckedChange = { viewModel.updateOptions(options.copy(isVegasScoring = it)) }
+                    onCheckedChange = { requestOptions(options.copy(isVegasScoring = it)) }
                 )
             }
         }

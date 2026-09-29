@@ -30,6 +30,8 @@ public partial class MainWindow : Window
     private bool _variantInitializing;
     private DispatcherTimer? _gameSwitchTimer;
     private string _pendingAction = "";
+    // Run when the confirm overlay's button is clicked for _pendingAction == "Callback".
+    private Action? _pendingConfirmCallback;
     private bool _revertingSelection = false;
     private PreferencesView? _preferencesView;
     private ManageDecksView? _manageDecksView;
@@ -602,6 +604,12 @@ public partial class MainWindow : Window
         {
             ExecuteRestartGame();
         }
+        else if (_pendingAction == "Callback")
+        {
+            var callback = _pendingConfirmCallback;
+            _pendingConfirmCallback = null;
+            callback?.Invoke();
+        }
         else if (_pendingAction == "QuitMatch")
         {
             if (this.DataContext is HoneycombViewModel hVm) hVm.QuitMatch();
@@ -624,9 +632,23 @@ public partial class MainWindow : Window
         _pendingAction = "";
     }
 
+    // "Start a new game? Your current game will end." — for settings changes that deal a
+    // new game (Draw 1/3, deck/suit count, Vegas) while one is in progress. Mac's Options
+    // OK and the iOS/Android pickers ask the same question.
+    private void ConfirmEndGame(Action onConfirm)
+    {
+        _pendingAction = "Callback";
+        _pendingConfirmCallback = onConfirm;
+        ConfirmActionTitle.Text = Strings.Get(StringKey.NewGameConfirmTitle, _language);
+        ConfirmActionMessage.IsVisible = false;
+        ConfirmActionButton.Content = Strings.Get(StringKey.NewGame, _language);
+        ConfirmActionOverlay.IsVisible = true;
+    }
+
     private void CancelConfirmAction_Click(object? sender, RoutedEventArgs e)
     {
         ConfirmActionOverlay.IsVisible = false;
+        _pendingConfirmCallback = null;
         _pendingAction = "";
     }
 
@@ -1040,6 +1062,8 @@ public partial class MainWindow : Window
     private void Preferences_Click(object? sender, RoutedEventArgs e)
     {
         _preferencesView = new PreferencesView();
+        _preferencesView.IsGameInProgress = IsGameInProgress;
+        _preferencesView.ConfirmEndGame = ConfirmEndGame;
         PreferencesBackButton.IsVisible = false;
         // FaceCardsPanel (inside PreferencesView) draws its own dedicated solibee.png
         // watermark behind the card grid — hide this dialog-chrome copy while it's open so
@@ -1217,9 +1241,14 @@ public partial class MainWindow : Window
         // a different mode while browsing Preferences doesn't itself trigger a reset.
         if (_preferencesView != null && _preferencesView.TryGetPendingGameModeChange(out string? newTag))
         {
-            _preferencesView.CommitGameModeCombo();
-            ApplyGameModeChange(newTag!);
-            SlideOutAndClosePreferences();
+            void Apply()
+            {
+                _preferencesView!.CommitGameModeCombo();
+                ApplyGameModeChange(newTag!);
+                SlideOutAndClosePreferences();
+            }
+            if (IsGameInProgress()) ConfirmEndGame(Apply);
+            else Apply();
             return;
         }
 

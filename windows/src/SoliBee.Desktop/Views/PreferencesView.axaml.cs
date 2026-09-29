@@ -25,6 +25,11 @@ namespace SoliBee.Desktop.Views;
 public partial class PreferencesView : UserControl
 {
     private bool _initializing = true;
+
+    // Set by MainWindow: toggling Vegas Scoring re-deals Klondike, so while a game is in
+    // progress it asks first (the same "Start a new game?" prompt as a mode change).
+    public Func<bool>? IsGameInProgress { get; set; }
+    public Action<Action>? ConfirmEndGame { get; set; }
     private int _confirmedGameModeIndex = -1;
     private Bitmap? _cardBackPreviewBitmap;
     private List<SoliBeeTheme> _themes = new();
@@ -1244,6 +1249,23 @@ public partial class PreferencesView : UserControl
 
         if (DataContext is GameOptions options)
         {
+            bool vegasNew = VegasCheckBox.IsChecked ?? false;
+            if (vegasNew != options.IsVegasScoring && ConfirmEndGame != null && IsGameInProgress?.Invoke() == true)
+            {
+                // Put the box back until the player confirms ending the game in progress.
+                _initializing = true;
+                VegasCheckBox.IsChecked = options.IsVegasScoring;
+                _initializing = false;
+                ConfirmEndGame(() =>
+                {
+                    _initializing = true;
+                    VegasCheckBox.IsChecked = vegasNew;
+                    _initializing = false;
+                    options.IsVegasScoring = vegasNew;
+                    NotifySettingsChanged(options);
+                });
+                return;
+            }
             options.IsNoStressMode     = NoStressModeCheckBox.IsChecked ?? false;
             options.IsSoundEnabled     = SoundCheckBox.IsChecked        ?? false;
             options.IsVegasScoring     = VegasCheckBox.IsChecked        ?? false;

@@ -1366,6 +1366,10 @@ struct OptionsView: View {
                 // OptionsSheetShell's direct $coordinator.X bindings below.
                 coordinator.noStressMode = noStressMode
                 coordinator.hideBee = hideBee
+            },
+            endsGameInProgress: {
+                (drawMode != viewModel.state.drawMode || isVegasScoring != viewModel.options.isVegasScoring)
+                    && viewModel.state.movesCount > 0 && !viewModel.state.hasWon
             }
         ) {
             Picker(coordinator.L(.drawModeLabel), selection: $drawMode) {
