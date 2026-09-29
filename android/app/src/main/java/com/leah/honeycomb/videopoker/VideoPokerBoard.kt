@@ -316,7 +316,9 @@ fun VideoPokerBoard(
         )
         val isLandscape = maxWidth > maxHeight
         val scoreCapsule = @Composable {
-            Row(
+            // Credits/bet panel (and, for Video Poker, the pay table it opens) only exists
+            // with betting on — which Android never has (isFreePlay), matching iOS.
+            if (!viewModel.isFreePlay) Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(24.dp),
                 modifier = Modifier

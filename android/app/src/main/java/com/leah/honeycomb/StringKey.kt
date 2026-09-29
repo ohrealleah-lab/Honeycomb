@@ -743,4 +743,5 @@ enum class StringKey {
     HelpBlackjackRulesIos,
     HelpBlackjackStrategyIos,
     HelpKlondikeRulesIos,
+    HelpKlondikeSubtitleIos,
 }

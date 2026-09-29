@@ -92,7 +92,9 @@ class GameViewModel(
         }
     }
 
-    fun updateOptions(newOptions: GameOptions) {
+    fun updateOptions(requested: GameOptions) {
+        // Vegas scoring (cash-style buy-in/bankroll) is off on Android, matching iOS.
+        val newOptions = requested.copy(isVegasScoring = false)
         val oldOptions = _options.value
         _options.value = newOptions
         saveOptions(newOptions)
@@ -116,7 +118,8 @@ class GameViewModel(
         com.leah.honeycomb.PreferencesHelper.saveObjectAsync(dataStore, "solitaire_options", GameOptions.serializer(), options)
     }
 
-    private val _options = MutableStateFlow(loadOptions())
+    // Vegas scoring stays off even if an older build saved it on (see updateOptions).
+    private val _options = MutableStateFlow(loadOptions().copy(isVegasScoring = false))
     val options: StateFlow<GameOptions> = _options.asStateFlow()
 
     private val _statistics = MutableStateFlow(run {

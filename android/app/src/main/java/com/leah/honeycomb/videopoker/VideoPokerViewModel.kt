@@ -74,7 +74,7 @@ class VideoPokerViewModel(
         val s = _state.value
         if (!outOfCreditsCheckDue || s.phase != VideoPokerPhase.Result) return
         outOfCreditsCheckDue = false
-        if (sharedOptions.noStressMode.value || s.sessionCredits > 10) return
+        if (isFreePlay || sharedOptions.noStressMode.value || s.sessionCredits > 10) return
         if (s.lastPayout > 0) return
         val result = bannerCatalog.fire(com.leah.honeycomb.BannerId.GameplayPlayerRunsOutOfCreditsVideoPokerBlackjack)
         val text = if (result is com.leah.honeycomb.BannerFireResult.Message) {
@@ -138,11 +138,12 @@ class VideoPokerViewModel(
     // Locked for the hand once it's dealt: deal() deducts the bet based on free play, and
     // the draw's payout must use that same answer. Reading the live toggle mid-hand let a
     // player deal free, turn No Stress off, then draw and collect a real payout.
+    // Hard-locked to free play on Android, matching iOS: no betting, credits or payouts
+    // (simulated gambling — app stores' gambling rules). Everything that reads this
+    // (bet controls, credit display, payouts, money stats, Rebuy, out-of-credits toast)
+    // therefore stays off regardless of No Stress Mode.
     val isFreePlay: Boolean
-        get() {
-            val s = _state.value
-            return if (s.phase == VideoPokerPhase.Holding) s.handFreePlay else sharedOptions.noStressMode.value
-        }
+        get() = true
 
     val canOpenOptions: Boolean
         get() = _state.value.phase == VideoPokerPhase.Deal || _state.value.phase == VideoPokerPhase.Result

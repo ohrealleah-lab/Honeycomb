@@ -1482,4 +1482,6 @@ public enum StringKey: String, CaseIterable {
     case helpBlackjackStrategyIos = "help_blackjack_strategy_ios"
     /// iOS Klondike rules — no Vegas scoring (betting-style; removed on iOS for the App Store)
     case helpKlondikeRulesIos = "help_klondike_rules_ios"
+    /// Klondike one-liner on mobile (iOS/Android) — no Vegas scoring there
+    case helpKlondikeSubtitleIos = "help_klondike_subtitle_ios"
 }

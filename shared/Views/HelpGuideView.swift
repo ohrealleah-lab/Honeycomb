@@ -83,6 +83,14 @@ private struct HelpShell<Content: View>: View {
 struct KlondikeHelpView: View {
     @Environment(AppCoordinator.self) private var coordinator
 
+    private var helpKlondikeSubtitleKey: StringKey {
+        #if os(iOS)
+        return .helpKlondikeSubtitleIos
+        #else
+        return .helpKlondikeSubtitle
+        #endif
+    }
+
     private var helpKlondikeRulesKey: StringKey {
         #if os(iOS)
         return .helpKlondikeRulesIos
@@ -92,7 +100,7 @@ struct KlondikeHelpView: View {
     }
 
     var body: some View {
-        HelpShell(title: coordinator.L(.helpKlondikeTitle), subtitle: coordinator.L(.helpKlondikeSubtitle)) {
+        HelpShell(title: coordinator.L(.helpKlondikeTitle), subtitle: coordinator.L(helpKlondikeSubtitleKey)) {
             RuleSection(title: coordinator.L(.helpOverviewObjectiveTitle),
                         text: coordinator.L(.helpKlondikeObjective))
 

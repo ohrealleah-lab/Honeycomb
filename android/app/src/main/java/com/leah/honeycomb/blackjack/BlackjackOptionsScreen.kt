@@ -10,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.leah.honeycomb.OptionsFullScreenView
-import com.leah.honeycomb.IntStepperRow
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.LocalAppContainer
 
@@ -28,20 +27,13 @@ fun BlackjackOptionsScreen(
 
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),
-        gameSectionTitle = "Blackjack",
-        helpText = Strings.get(StringKey.HelpBlackjackRules, language),
+        // Starting Credits was the only Blackjack setting; betting is off on Android
+        // (as on iOS), so there is no game section.
+        gameSectionTitle = null,
+        helpText = listOf(StringKey.HelpBlackjackObjective, StringKey.HelpBlackjackRulesIos, StringKey.HelpBlackjackStrategyIos)
+            .joinToString("\n\n") { Strings.get(it, language) },
         onDismiss = onBack,
         onShowStats = onShowStats,
-        gameSettings = {
-            Column(modifier = Modifier.padding(vertical = 8.dp)) {
-                IntStepperRow(
-                    label = Strings.get(StringKey.StartingCreditsFmt, language).substringBefore(":"),
-                    value = options.startingCredits,
-                    step = 10, // Mac: BlackjackView options stepper
-                    range = 10..10000,
-                    onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
-                )
-            }
-        }
+        gameSettings = null
     )
 }

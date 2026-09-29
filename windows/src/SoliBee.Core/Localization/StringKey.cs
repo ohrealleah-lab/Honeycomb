@@ -747,4 +747,5 @@ public enum StringKey
     HelpBlackjackRulesIos,
     HelpBlackjackStrategyIos,
     HelpKlondikeRulesIos,
+    HelpKlondikeSubtitleIos,
 }

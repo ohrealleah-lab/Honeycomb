@@ -83,7 +83,7 @@ struct GameSelectionFullScreenView: View {
 
     private func description(for mode: GameMode) -> String {
         switch mode {
-        case .klondike:   return coordinator.L(.helpKlondikeSubtitle)
+        case .klondike:   return coordinator.L(.helpKlondikeSubtitleIos) // no Vegas on iOS
         case .beecell:    return coordinator.L(.helpBeecellSubtitle)
         case .spider:     return coordinator.L(.helpSpiderSubtitle)
         case .videoPoker: return coordinator.L(.helpVideopokerSubtitleIos) // no "casino"/"pay tables" — betting is off on iOS

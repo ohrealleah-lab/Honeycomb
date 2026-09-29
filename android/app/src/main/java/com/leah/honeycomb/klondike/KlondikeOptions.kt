@@ -55,7 +55,7 @@ fun KlondikeOptionsSheet(
         gameSectionTitle = "Klondike",
         onDismiss = onDismiss,
         onShowStats = onShowStats,
-        helpText = Strings.get(StringKey.HelpKlondikeRules, language),
+        helpText = Strings.get(StringKey.HelpKlondikeRulesIos, language), // rules without Vegas, as on iOS
         gameSettings = {
             Column {
                 SegmentedControl(
@@ -67,11 +67,7 @@ fun KlondikeOptionsSheet(
                         else Strings.get(StringKey.DrawThree, language)
                     }
                 )
-                SwitchOptionRow(
-                    label = Strings.get(StringKey.VegasScoring, language),
-                    checked = options.isVegasScoring,
-                    onCheckedChange = { requestOptions(options.copy(isVegasScoring = it)) }
-                )
+                // No Vegas Scoring toggle — betting-style scoring is off on Android, as on iOS.
             }
         }
     )

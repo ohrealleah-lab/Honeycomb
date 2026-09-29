@@ -35,7 +35,7 @@ val gamesList = listOf(
     GameInfo(
         route = AppRoute.Klondike.Board.route,
         title = StringKey.GamemodeKlondikeDisplay,
-        description = StringKey.HelpKlondikeSubtitle,
+        description = StringKey.HelpKlondikeSubtitleIos, // no Vegas on Android (betting off), as on iOS
         textIcon = "♠"
     ),
     GameInfo(
@@ -53,7 +53,7 @@ val gamesList = listOf(
     GameInfo(
         route = AppRoute.VideoPoker.Board.route,
         title = StringKey.HelpVideopokerTitle,
-        description = StringKey.HelpVideopokerSubtitle,
+        description = StringKey.HelpVideopokerSubtitleIos, // no "casino"/"pay tables" — betting is off
         textIcon = "♦"
     ),
     GameInfo(

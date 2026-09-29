@@ -82,7 +82,7 @@ class BlackjackViewModel(
         val s = _state.value
         if (!outOfCreditsCheckDue || s.phase != BlackjackPhase.Result) return
         outOfCreditsCheckDue = false
-        if (sharedOptions.noStressMode.value || s.sessionCredits > 10) return
+        if (isFreePlay || sharedOptions.noStressMode.value || s.sessionCredits > 10) return
         val roundWon = s.playerHands.any { it.result == BlackjackHandResult.Win || it.result == BlackjackHandResult.Blackjack }
         val roundLost = s.playerHands.any { it.result == BlackjackHandResult.Loss || it.result == BlackjackHandResult.Bust }
         if (!roundLost || roundWon) return
@@ -146,12 +146,12 @@ class BlackjackViewModel(
     // doubleDown/split/evaluateAllHands must use that same answer. Reading the live toggle
     // mid-hand let a player deal free, turn No Stress off, and collect a real payout.
     // Mirrors Windows' _handFreePlay.
+    // Hard-locked to free play on Android, matching iOS: no betting, credits or payouts
+    // (simulated gambling — app stores' gambling rules). Everything that reads this
+    // (bet controls, credit display, payouts, money stats, Rebuy, out-of-credits toast)
+    // therefore stays off regardless of No Stress Mode.
     val isFreePlay: Boolean
-        get() {
-            val s = _state.value
-            return if (s.phase == BlackjackPhase.Playing || s.phase == BlackjackPhase.DealerTurn) s.handFreePlay
-            else sharedOptions.noStressMode.value
-        }
+        get() = true
 
     // A hand saved mid-auto-resolve lost the delayed action that would have finished it
     // when the process died — the dealer-blackjack/player-blackjack/split-aces auto-resolve

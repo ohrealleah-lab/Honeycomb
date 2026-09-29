@@ -10,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import com.leah.honeycomb.OptionsFullScreenView
 import com.leah.honeycomb.SegmentedControl
-import com.leah.honeycomb.IntStepperRow
 import com.leah.honeycomb.Strings
 import com.leah.honeycomb.LocalAppContainer
 
@@ -29,11 +28,11 @@ fun VideoPokerOptionsScreen(
     OptionsFullScreenView(
         title = Strings.get(StringKey.Options, language),
         gameSectionTitle = "Video Poker",
+        // Betting-free guide shared with iOS (no bets, coins, payouts or jackpots).
         helpText = listOf(
-            StringKey.HelpVideopokerObjective,
-            StringKey.HelpVideopokerHowToPlay,
-            StringKey.HelpVideopokerStrategy,
-            StringKey.HelpVideopokerNoStress
+            StringKey.HelpVideopokerObjectiveIos,
+            StringKey.HelpVideopokerHowToPlayIos,
+            StringKey.HelpVideopokerStrategyIos
         ).joinToString("\n\n") { Strings.get(it, language) },
         onDismiss = onBack,
         onShowStats = onShowStats,
@@ -53,20 +52,7 @@ fun VideoPokerOptionsScreen(
                         }
                     }
                 )
-                IntStepperRow(
-                    label = Strings.get(StringKey.StartingCreditsFmt, language).substringBefore(":"),
-                    value = options.startingCredits,
-                    step = 100,
-                    range = 100..10000, // Mac: VideoPokerView options stepper
-                    onValueChange = { viewModel.updateOptions(options.copy(startingCredits = it)) }
-                )
-                IntStepperRow(
-                    label = Strings.get(StringKey.PickerDefaultBetLabel, language).trimEnd(':'),
-                    value = options.betPerHand,
-                    step = 1,
-                    range = 1..5,
-                    onValueChange = { viewModel.updateOptions(options.copy(betPerHand = it)) }
-                )
+                // No Starting Credits/Default Bet — betting is off on Android, as on iOS.
             }
         }
     )
