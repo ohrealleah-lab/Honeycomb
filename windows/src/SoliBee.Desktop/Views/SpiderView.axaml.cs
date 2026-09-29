@@ -363,6 +363,11 @@ public partial class SpiderView : CardGameView
             else if (e.PropertyName == nameof(SpiderViewModel.ActiveHint))
             {
                 ApplyHint(vm.ActiveHint, AllPileViews());
+                // "Deal from stock" has no pile id (the stock here is a drawn graphic, not
+                // a Pile), so ApplyHint highlights nothing — the Hint button seemed to do
+                // nothing. Pulse the stock's own slot instead, as Mac highlights its stock.
+                if (vm.ActiveHint?.Card.Id == "deal" && vm.CanDealFromStock)
+                    HighlightWholePile(StockCursorPileView);
             }
             else if (e.PropertyName == nameof(SpiderViewModel.PointPopup))
             {

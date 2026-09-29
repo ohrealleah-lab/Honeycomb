@@ -416,7 +416,7 @@ public abstract class CardGameView : UserControl
         }
     }
 
-    private void HighlightWholePile(PileView pv)
+    protected void HighlightWholePile(PileView pv)
     {
         pv.ShowHint();
         _hintedPileViews.Add(pv);
