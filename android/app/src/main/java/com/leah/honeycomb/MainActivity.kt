@@ -275,6 +275,7 @@ class MainActivity : ComponentActivity() {
                                     AppRoute.VideoPoker.Board.route -> appContainer.videoPokerViewModel.resetIfRoundOver()
                                     AppRoute.Blackjack.Board.route -> appContainer.blackjackViewModel.resetIfRoundOver()
                                 }
+                                appContainer.rearmIdleCheck(fromRoute = currentRoute, toRoute = route)
                                 navController.navigate(route) {
                                     popUpTo(0) { inclusive = true }
                                     launchSingleTop = true

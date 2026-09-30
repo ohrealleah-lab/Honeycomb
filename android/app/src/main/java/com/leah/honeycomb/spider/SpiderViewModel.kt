@@ -18,7 +18,7 @@ class SpiderViewModel(
     val sharedOptions: SharedGameOptions,
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
     private val bannerCatalog: com.leah.honeycomb.BannerCatalog
-) : ViewModel() {
+) : ViewModel(), com.leah.honeycomb.IdleActionChecking {
 
     private val _state = MutableStateFlow(SpiderState())
     val state: StateFlow<SpiderState> = _state.asStateFlow()
@@ -50,7 +50,12 @@ class SpiderViewModel(
     }
 
     private var idleCheckGeneration = 0
-    fun scheduleIdleActionCheck() {
+    // A game switch counts as player activity: the game being left cancels its pending
+    // idle nudge (it would otherwise fire off screen and pop up on return), and the game
+    // being entered restarts its minute — see AppContainer.rearmIdleCheck. Mac parity.
+    override fun cancelIdleActionCheck() { idleCheckGeneration++ }
+
+    override fun scheduleIdleActionCheck() {
         idleCheckGeneration++
         val generation = idleCheckGeneration
         viewModelScope.launch {

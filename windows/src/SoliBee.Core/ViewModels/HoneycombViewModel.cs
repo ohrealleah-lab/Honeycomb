@@ -14,7 +14,7 @@ namespace SoliBee.Core.ViewModels;
 
 public record HoneycombPendingSteal(int BoardIndex, string CardName);
 
-public partial class HoneycombViewModel : ObservableObject
+public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
 {
     [ObservableProperty] private HoneycombState _state = new();
     [ObservableProperty] private HoneycombOptions _options = new();
@@ -57,6 +57,15 @@ public partial class HoneycombViewModel : ObservableObject
     // no-op instead of firing late. Mirrors the Swift port's scheduleIdleCheck.
     private int _idleCheckGeneration = 0;
     private const int IdleToastDelayMs = 60000;
+
+    // A game switch counts as player activity — see GameViewModel.CancelIdleActionCheck.
+    public void CancelIdleActionCheck() => _idleCheckGeneration++;
+
+    // Entering Honeycomb mid-match restarts the idle minute from the switch.
+    public void ScheduleIdleActionCheck()
+    {
+        if (State.Phase == HoneycombPhase.Playing) ScheduleIdleCheck(); else CancelIdleActionCheck();
+    }
 
     private async void ScheduleIdleCheck()
     {

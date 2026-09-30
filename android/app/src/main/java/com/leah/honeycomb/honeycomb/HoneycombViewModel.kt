@@ -119,7 +119,7 @@ class HoneycombViewModel(
     private val dataStore: androidx.datastore.core.DataStore<androidx.datastore.preferences.core.Preferences>,
     private val bannerCatalog: BannerCatalog,
     private val appLanguage: kotlinx.coroutines.flow.StateFlow<com.leah.honeycomb.AppLanguage> = kotlinx.coroutines.flow.MutableStateFlow(com.leah.honeycomb.AppLanguage.English)
-) : ViewModel() {
+) : ViewModel(), com.leah.honeycomb.IdleActionChecking {
 
     private val _state = MutableStateFlow(HoneycombState())
     val state: StateFlow<HoneycombState> = _state.asStateFlow()
@@ -1046,6 +1046,14 @@ class HoneycombViewModel(
     // mismatch and silently no-ops instead of firing late. Mirrors Windows'
     // ScheduleIdleActionCheck.
     private var idleCheckGeneration = 0
+
+    // A game switch counts as player activity — see GameViewModel.cancelIdleActionCheck.
+    override fun cancelIdleActionCheck() { idleCheckGeneration++ }
+
+    // Entering Honeycomb mid-match restarts the idle minute from the switch.
+    override fun scheduleIdleActionCheck() {
+        if (_state.value.gameState == HoneycombGameState.Playing) scheduleIdleCheck() else cancelIdleActionCheck()
+    }
 
     private fun scheduleIdleCheck() {
         idleCheckGeneration++

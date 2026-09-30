@@ -54,6 +54,12 @@ public partial class AppCoordinator : ObservableObject
             _            => (object)GameViewModel
         };
 
+        // Every game armed its idle nudge when it dealt its first game above, but only the
+        // game on screen should be counting — otherwise a game not yet opened queues its
+        // idle message and shows it the moment you switch to it.
+        foreach (var vm in new object[] { GameViewModel, FreecellViewModel, SpiderViewModel, VideoPokerViewModel, BlackjackViewModel, HoneycombViewModel })
+            if (!ReferenceEquals(vm, ActiveViewModel)) (vm as IIdleActionChecking)?.CancelIdleActionCheck();
+
         // OptionsChangedMessage is broadcast from many places (Preferences, MainWindow,
         // and each timer-having ViewModel's own No-Stress-Mode toggle) and every
         // registered listener receives it regardless of which game is actually on
@@ -87,9 +93,18 @@ public partial class AppCoordinator : ObservableObject
         _                       => false
     };
 
+    // Switching games counts as player activity for the one-minute idle nudge: cancel the
+    // outgoing game's pending one and restart the incoming game's. Mac parity.
+    private void RearmIdleCheck(object next)
+    {
+        (ActiveViewModel as IIdleActionChecking)?.CancelIdleActionCheck();
+        (next as IIdleActionChecking)?.ScheduleIdleActionCheck();
+    }
+
     public void SwitchToGame()
     {
         PauseTimer(ActiveViewModel);
+        RearmIdleCheck(GameViewModel);
         ActiveViewModel = GameViewModel;
         GameViewModel.ResumeTimerForSwitch();
         SaveLastMode("Klondike");
@@ -99,6 +114,7 @@ public partial class AppCoordinator : ObservableObject
     public void SwitchToFreecell()
     {
         PauseTimer(ActiveViewModel);
+        RearmIdleCheck(FreecellViewModel);
         ActiveViewModel = FreecellViewModel;
         FreecellViewModel.ResumeTimerForSwitch();
         SaveLastMode("Freecell");
@@ -108,6 +124,7 @@ public partial class AppCoordinator : ObservableObject
     public void SwitchToSpider()
     {
         PauseTimer(ActiveViewModel);
+        RearmIdleCheck(SpiderViewModel);
         ActiveViewModel = SpiderViewModel;
         SpiderViewModel.ResumeTimerForSwitch();
         SaveLastMode("Spider");
@@ -121,6 +138,7 @@ public partial class AppCoordinator : ObservableObject
         // previous visit) resets the board instead of showing — and replaying the
         // banner for — a round that's already over.
         VideoPokerViewModel.ResetIfRoundOver();
+        RearmIdleCheck(VideoPokerViewModel);
         ActiveViewModel = VideoPokerViewModel;
         SaveLastMode("VideoPoker");
         OnPropertyChanged(nameof(CanUndo));
@@ -130,6 +148,7 @@ public partial class AppCoordinator : ObservableObject
     {
         PauseTimer(ActiveViewModel);
         BlackjackViewModel.ResetIfRoundOver();
+        RearmIdleCheck(BlackjackViewModel);
         ActiveViewModel = BlackjackViewModel;
         SaveLastMode("Blackjack");
         OnPropertyChanged(nameof(CanUndo));
@@ -138,6 +157,7 @@ public partial class AppCoordinator : ObservableObject
     public void SwitchToHoneycomb()
     {
         PauseTimer(ActiveViewModel);
+        RearmIdleCheck(HoneycombViewModel);
         ActiveViewModel = HoneycombViewModel;
         SaveLastMode("Honeycomb");
         OnPropertyChanged(nameof(CanUndo));
@@ -224,4 +244,11 @@ public partial class AppCoordinator : ObservableObject
         }
         catch { }
     }
+}
+
+// The one-minute idle nudge every game schedules; AppCoordinator re-arms it on a game switch.
+public interface IIdleActionChecking
+{
+    void ScheduleIdleActionCheck();
+    void CancelIdleActionCheck();
 }

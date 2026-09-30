@@ -27,7 +27,7 @@ public record BoardScrimRequestMessage(object Source, bool Active);
 // single-hint queue shows no prefix, which is exactly the desired display for those.
 public record HintMove(Card Card, string SourcePileId, string TargetPileId, string Description, int Index = 1, int Total = 1);
 
-public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewModel
+public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewModel, IIdleActionChecking
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -155,6 +155,11 @@ public partial class FreecellViewModel : ObservableObject, ISolitaireGameViewMod
     // port's ScheduleIdleCheck — called from InitializeGame() and every move site.
     private int _idleCheckGeneration = 0;
     private const int IdleToastDelayMs = 60000;
+
+    // A game switch counts as player activity: the game being left cancels its pending
+    // idle nudge (it would otherwise fire off screen and pop up on return), and the
+    // game being entered restarts its minute — see AppCoordinator.RearmIdleCheck. Mac parity.
+    public void CancelIdleActionCheck() => _idleCheckGeneration++;
 
     public async void ScheduleIdleActionCheck()
     {

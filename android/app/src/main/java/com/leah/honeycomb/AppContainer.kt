@@ -21,7 +21,32 @@ import com.leah.honeycomb.honeycomb.HoneycombDatabase
 import com.leah.honeycomb.honeycomb.HoneycombProfileManager
 import com.leah.honeycomb.honeycomb.HoneycombViewModel
 
+// The one-minute idle nudge every game schedules; AppContainer re-arms it on a game switch.
+interface IdleActionChecking {
+    fun scheduleIdleActionCheck()
+    fun cancelIdleActionCheck()
+}
+
 class AppContainer(private val context: Context) {
+    // Switching games counts as player activity for the one-minute idle nudge: cancel the
+    // outgoing game's pending one and restart the incoming game's (Mac's AppCoordinator).
+    // Games are created lazily, so this only ever touches the two games involved.
+    fun rearmIdleCheck(fromRoute: String, toRoute: String) {
+        if (fromRoute == toRoute) return
+        idleCheckTarget(fromRoute)?.cancelIdleActionCheck()
+        idleCheckTarget(toRoute)?.scheduleIdleActionCheck()
+    }
+
+    private fun idleCheckTarget(route: String): IdleActionChecking? = when (route) {
+        AppRoute.Klondike.Board.route -> klondikeViewModel
+        AppRoute.Beecell.Board.route -> beecellViewModel
+        AppRoute.Spider.Board.route -> spiderViewModel
+        AppRoute.VideoPoker.Board.route -> videoPokerViewModel
+        AppRoute.Blackjack.Board.route -> blackjackViewModel
+        AppRoute.Honeycomb.Board.route -> honeycombViewModel
+        else -> null
+    }
+
     val coroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     
     val sharedOptions = SharedGameOptions(context.dataStore, coroutineScope)

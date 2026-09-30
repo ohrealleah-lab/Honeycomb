@@ -10,7 +10,7 @@ using SoliBee.Core.Services;
 
 namespace SoliBee.Core.ViewModels;
 
-public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
+public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, IIdleActionChecking
 {
     [ObservableProperty]
     private GameState _state = new();
@@ -136,6 +136,11 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel
     // port's ScheduleIdleCheck — called from StartNewGame() and every move site.
     private int _idleCheckGeneration = 0;
     private const int IdleToastDelayMs = 60000;
+
+    // A game switch counts as player activity: the game being left cancels its pending
+    // idle nudge (it would otherwise fire off screen and pop up on return), and the
+    // game being entered restarts its minute — see AppCoordinator.RearmIdleCheck. Mac parity.
+    public void CancelIdleActionCheck() => _idleCheckGeneration++;
 
     public async void ScheduleIdleActionCheck()
     {

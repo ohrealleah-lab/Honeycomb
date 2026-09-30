@@ -12,7 +12,7 @@ using SoliBee.Core.Services;
 
 namespace SoliBee.Core.ViewModels;
 
-public partial class VideoPokerViewModel : ObservableObject
+public partial class VideoPokerViewModel : ObservableObject, IIdleActionChecking
 {
     [ObservableProperty] private VideoPokerState _state = new();
     [ObservableProperty] private VideoPokerOptions _options = new();
@@ -103,6 +103,11 @@ public partial class VideoPokerViewModel : ObservableObject
     // Honeycomb port's ScheduleIdleCheck — called from Deal().
     private int _idleCheckGeneration = 0;
     private const int IdleToastDelayMs = 60000;
+
+    // A game switch counts as player activity: the game being left cancels its pending
+    // idle nudge (it would otherwise fire off screen and pop up on return), and the
+    // game being entered restarts its minute — see AppCoordinator.RearmIdleCheck. Mac parity.
+    public void CancelIdleActionCheck() => _idleCheckGeneration++;
 
     public async void ScheduleIdleActionCheck()
     {

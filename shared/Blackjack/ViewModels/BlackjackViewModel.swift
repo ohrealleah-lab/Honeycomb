@@ -179,6 +179,13 @@ public final class BlackjackViewModel {
     // way Honeycomb/Klondike bump their own match generation counters.
     private var handGeneration: Int = 0
 
+    // A game switch counts as player activity: the game being left cancels its pending
+    // idle nudge (it would otherwise fire off screen and pop up on return), and the
+    // game being entered restarts its minute — see AppCoordinator.gameMode.
+    public func cancelIdleActionCheck() {
+        idleCheckGeneration += 1
+    }
+
     public func scheduleIdleActionCheck() {
         idleCheckGeneration += 1
         let generation = idleCheckGeneration

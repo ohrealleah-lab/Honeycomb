@@ -2009,6 +2009,16 @@ public final class HoneycombViewModel {
     private var idleCheckGeneration: Int = 0
     private static let idleToastDelay: TimeInterval = 60
 
+    // A game switch counts as player activity — see GameViewModel.cancelIdleActionCheck.
+    public func cancelIdleActionCheck() {
+        idleCheckGeneration += 1
+    }
+
+    // Entering Honeycomb mid-match restarts the idle minute from the switch.
+    public func scheduleIdleActionCheck() {
+        if gameState == .playing { scheduleIdleCheck() } else { cancelIdleActionCheck() }
+    }
+
     private func scheduleIdleCheck() {
         idleCheckGeneration += 1
         let generation = idleCheckGeneration

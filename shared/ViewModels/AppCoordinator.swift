@@ -17,6 +17,17 @@ public extension Notification.Name {
 
 @Observable
 public final class AppCoordinator {
+    private func idleCheckTarget(_ mode: GameMode) -> any IdleActionChecking {
+        switch mode {
+        case .klondike:   return klondikeViewModel
+        case .beecell:    return beecellViewModel
+        case .spider:     return spiderViewModel
+        case .videoPoker: return videoPokerViewModel
+        case .blackjack:  return blackjackViewModel
+        case .honeycomb:  return honeycombViewModel
+        }
+    }
+
     public var gameMode: GameMode {
         didSet {
             UserDefaults.standard.set(gameMode.rawValue, forKey: "selectedGameMode")
@@ -34,6 +45,12 @@ public final class AppCoordinator {
             case .videoPoker: videoPokerViewModel.resetIfRoundOver()
             case .blackjack:  blackjackViewModel.resetIfRoundOver()
             default: break
+            }
+            // Switching games counts as player activity for the one-minute idle nudge:
+            // cancel the outgoing game's pending one and restart the incoming game's.
+            if oldValue != gameMode {
+                idleCheckTarget(oldValue).cancelIdleActionCheck()
+                idleCheckTarget(gameMode).scheduleIdleActionCheck()
             }
             #if canImport(AppKit)
             applyWindowSizeForCurrentGameMode()
@@ -699,6 +716,13 @@ public final class AppCoordinator {
             case .videoPoker, .blackjack, .honeycomb: break
             }
         }
+
+        // Every game schedules its idle nudge when it deals its first game above, but only
+        // the game on screen should be counting — otherwise a game you haven't opened yet
+        // queues its idle message and shows it the moment you switch to it.
+        for mode in GameMode.allCases where mode != gameMode {
+            idleCheckTarget(mode).cancelIdleActionCheck()
+        }
     }
 
     // MARK: - Game actions
@@ -951,3 +975,15 @@ public final class AppCoordinator {
         }
     }
 }
+
+// The one-minute idle nudge every game schedules; AppCoordinator re-arms it on a game switch.
+public protocol IdleActionChecking: AnyObject {
+    func scheduleIdleActionCheck()
+    func cancelIdleActionCheck()
+}
+extension GameViewModel: IdleActionChecking {}
+extension BeecellViewModel: IdleActionChecking {}
+extension SpiderViewModel: IdleActionChecking {}
+extension VideoPokerViewModel: IdleActionChecking {}
+extension BlackjackViewModel: IdleActionChecking {}
+extension HoneycombViewModel: IdleActionChecking {}
