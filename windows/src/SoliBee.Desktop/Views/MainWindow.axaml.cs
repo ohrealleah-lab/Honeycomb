@@ -1359,6 +1359,12 @@ public partial class MainWindow : Window
             _          => baseTag,
         };
 
+        // The Stats panel (unlike Preferences/Manage Decks) doesn't lock the toolbar, so the
+        // selector stays usable while it's open. It's built for whichever game was active
+        // when it opened, and its Reset button acts on the *active* game — left open across
+        // a switch it would show one game's numbers while resetting another's.
+        StatsOverlay.IsVisible = false;
+
         SaveCurrentWindowSize();
         _currentGameTag = tag;
 
