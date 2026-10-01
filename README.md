@@ -12,6 +12,10 @@
 
 **Honeycomb Card Suite** supports six fully implemented, distinct games:
 
+> **Platform note:** On iOS and Android, Video Poker and Blackjack are free play only (no betting or credits), and Klondike has no Vegas Scoring Mode.
+>
+> **Nota sobre plataformas:** En iOS y Android, Video Poker y Blackjack son solo de juego libre (sin apuestas ni créditos), y Klondike no tiene el modo de puntuación Vegas.
+
 ### 1. Honeycomb (Triple Triad Style Card Battle)
 * **Dynamic Gameplay**: Strategically place cards featuring attack values on all four sides to control a 3x3 grid, navigating a roulette built from a pool of 13 rules, including Symmetry, Math Bee, Pollination, and Swarm to the Death. Includes a ban list to remove rules from roulette.
 * **Massive Collection**: Draft your perfect 5-card hand from a 552-card database spanning 4 suits and 5 rarity tiers. 
@@ -23,7 +27,7 @@
 
 ### 2. Klondike Solitaire
 * **Modes**: Easy (1-Card Draw) and Standard (3-Card Draw).
-* **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode**.
+* **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode** (Mac and Windows).
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/f99f00e9-da4c-40b3-bbf2-d8b9855a69bb" />
@@ -44,13 +48,13 @@
 ### 5. Video Poker
 * **Jacks or Better**: Win by holding a pair of Jacks or higher
 * **Deuces Wild**: All 2s are wild cards
-* **Bonus Poker**: Jacks or Better rules with enhanced payouts for four-of-a-kind hands.
+* **Bonus Poker**: Jacks or Better rules with extra emphasis on four-of-a-kind hands.
 
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/35eed9e9-93c3-4ef3-95c7-9f4632211cbc" />
 
 ### 6. Video Blackjack
-* **Casino-style Blackjack**: Hit, stand, double, and split.
-* **Video Blackjack Betting**: Bid in 1, 10, or 25 credits, or double your last bet.
+* **Classic Blackjack**: Hit, stand, double, and split.
+* **Video Blackjack Betting** (Mac and Windows): Build your bet with 1, 5, 10, or 25 chips, or double it with 2X.
 
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/4981aa0d-ca78-4f1d-bfa1-eb476b21e246" />
 
@@ -65,7 +69,7 @@
 * **Custom Color Background**: Set the tableau to match your deck of cards.
 * **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
 * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
-* **No Stress Mode**: Disable timers and hide betting for a relaxed card gaming session.
+* **No Stress Mode**: Disable timers for a relaxed card gaming session. On Mac and Windows, it also switches Video Poker and Blackjack to betting-free play.
   
 ---
 
