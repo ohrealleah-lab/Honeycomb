@@ -53,6 +53,8 @@ If one fails after a Windows change, Windows drifted — fix Windows. If it fail
 ## Persistence
 Everything persisted (settings, stats, card bank, decks, card-database seed, themes) is written through `AtomicFile.WriteAllText` (write temp, then replace) — never `File.WriteAllText` directly, since loaders fall back to defaults on a parse failure and a half-written file would silently wipe the data on the next save.
 
+The data folder (`%LocalAppData%\Honeycomb`) comes from one place, `AppPaths.DataDirectory` — build file paths from it rather than calling `Environment.GetFolderPath` yourself. It's pure path math and never creates the folder (that would make `AppDataMigration` skip moving the legacy `SoliBee` folder); writers create it themselves, as `AtomicFile` does. The app ships via Velopack, never the Microsoft Store, so there is deliberately no packaged-app (`Windows.Storage`) location.
+
 ## Key architecture notes
 - **MVVM** via `CommunityToolkit.Mvvm`; settings changes broadcast with `WeakReferenceMessenger` (`OptionsChangedMessage`, `FaceCardArtChangedMessage`)
 - **SettingsService** reads/writes `GameOptions` to JSON; call `SettingsService.LoadOptions()` / `SaveOptions()` — cached after the first load, so every ViewModel's `Options` is the same shared `GameOptions` object (mutating it in one place changes it for all games; an `OptionsChangedMessage` carrying that same object won't look like a change to a handler comparing old vs new)

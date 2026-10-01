@@ -9,9 +9,7 @@ namespace SoliBee.Core.Services;
 // it doesn't (can't) stop the process from exiting once an exception is truly unhandled.
 public static class CrashLogger
 {
-    private static readonly string LogPath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName, "crash.log");
+    private static readonly string LogPath = Path.Combine(AppPaths.DataDirectory, "crash.log");
 
     public static void Install()
     {

@@ -31,9 +31,7 @@ public partial class AppCoordinator : ObservableObject
     [ObservableProperty]
     private object _activeViewModel;
 
-    private static readonly string LastModeFile = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName, "last_mode.txt");
+    private static readonly string LastModeFile = Path.Combine(AppPaths.DataDirectory, "last_mode.txt");
 
     public AppCoordinator()
     {

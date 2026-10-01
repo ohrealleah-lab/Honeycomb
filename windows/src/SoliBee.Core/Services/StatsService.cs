@@ -1,7 +1,6 @@
 using System.Linq;
 using System;
 using System.IO;
-using System.Reflection;
 using System.Text.Json;
 using SoliBee.Core.Models;
 
@@ -9,45 +8,7 @@ namespace SoliBee.Core.Services;
 
 public static class StatsService
 {
-    private static string GetLocalFolderPath()
-    {
-        try
-        {
-            var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");
-            if (appDataType != null)
-            {
-                var currentProp = appDataType.GetProperty("Current", BindingFlags.Public | BindingFlags.Static);
-                var currentInstance = currentProp?.GetValue(null);
-                if (currentInstance != null)
-                {
-                    var localFolderProp = currentInstance.GetType().GetProperty("LocalFolder", BindingFlags.Public | BindingFlags.Instance);
-                    var localFolderInstance = localFolderProp?.GetValue(currentInstance);
-                    if (localFolderInstance != null)
-                    {
-                        var pathProp = localFolderInstance.GetType().GetProperty("Path", BindingFlags.Public | BindingFlags.Instance);
-                        var path = pathProp?.GetValue(localFolderInstance) as string;
-                        if (!string.IsNullOrEmpty(path))
-                        {
-                            return path;
-                        }
-                    }
-                }
-            }
-        }
-        catch
-        {
-            // Ignore and fallback
-        }
-
-        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
-        if (!Directory.Exists(fallbackDir))
-        {
-            Directory.CreateDirectory(fallbackDir);
-        }
-        return fallbackDir;
-    }
-
-    public static string StatsFilePath => Path.Combine(GetLocalFolderPath(), "stats.json");
+    public static string StatsFilePath => Path.Combine(AppPaths.DataDirectory, "stats.json");
 
     public static GameStatistics LoadStats()
     {

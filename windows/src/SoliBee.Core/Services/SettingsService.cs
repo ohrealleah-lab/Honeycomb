@@ -10,10 +10,7 @@ public static class SettingsService
 {
     private static GameOptions? _cache;
 
-    private static readonly string FallbackDirectory = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName
-    );
+    private static readonly string FallbackDirectory = AppPaths.DataDirectory;
     private static readonly string FallbackFilePath = Path.Combine(FallbackDirectory, "settings.json");
 
     private static object? GetLocalSettings()

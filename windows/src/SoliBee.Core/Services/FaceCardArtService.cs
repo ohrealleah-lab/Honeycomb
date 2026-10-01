@@ -8,9 +8,7 @@ namespace SoliBee.Core.Services;
 
 public static class FaceCardArtService
 {
-    private static readonly string _artDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName, "FaceCardArt");
+    private static readonly string _artDir = Path.Combine(AppPaths.DataDirectory, "FaceCardArt");
 
     private static readonly string _configPath;
     private static List<CustomFaceArt> _arts = new();

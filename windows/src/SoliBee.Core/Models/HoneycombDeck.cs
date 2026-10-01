@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Reflection;
 using System.Text.Json;
 using SoliBee.Core.Services;
 
@@ -22,44 +21,9 @@ public class HoneycombProfileManager
     public List<HoneycombDeckState> SavedDecks { get; private set; } = new List<HoneycombDeckState>();
     public HashSet<int> FavoriteCardIds { get; private set; } = new HashSet<int>();
 
-    private string GetLocalFolderPath()
-    {
-        try
-        {
-            var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");
-            if (appDataType != null)
-            {
-                var currentProp = appDataType.GetProperty("Current", BindingFlags.Public | BindingFlags.Static);
-                var currentInstance = currentProp?.GetValue(null);
-                if (currentInstance != null)
-                {
-                    var localFolderProp = currentInstance.GetType().GetProperty("LocalFolder", BindingFlags.Public | BindingFlags.Instance);
-                    var localFolderInstance = localFolderProp?.GetValue(currentInstance);
-                    if (localFolderInstance != null)
-                    {
-                        var pathProp = localFolderInstance.GetType().GetProperty("Path", BindingFlags.Public | BindingFlags.Instance);
-                        var path = pathProp?.GetValue(localFolderInstance) as string;
-                        if (!string.IsNullOrEmpty(path))
-                        {
-                            return path;
-                        }
-                    }
-                }
-            }
-        }
-        catch { }
-
-        var fallbackDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
-        if (!Directory.Exists(fallbackDir))
-        {
-            Directory.CreateDirectory(fallbackDir);
-        }
-        return fallbackDir;
-    }
-
-    private string UnlockedCardsPath => Path.Combine(GetLocalFolderPath(), "honeycomb_unlocked_cards.json");
-    private string SavedDecksPath => Path.Combine(GetLocalFolderPath(), "honeycomb_saved_decks.json");
-    private string FavoriteCardsPath => Path.Combine(GetLocalFolderPath(), "honeycomb_favorite_cards.json");
+    private string UnlockedCardsPath => Path.Combine(AppPaths.DataDirectory, "honeycomb_unlocked_cards.json");
+    private string SavedDecksPath => Path.Combine(AppPaths.DataDirectory, "honeycomb_saved_decks.json");
+    private string FavoriteCardsPath => Path.Combine(AppPaths.DataDirectory, "honeycomb_favorite_cards.json");
 
     private HoneycombProfileManager()
     {

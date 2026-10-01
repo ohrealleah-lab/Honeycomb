@@ -2181,34 +2181,7 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
         }
     }
 
-    private static string GetLocalFolderPath()
-    {
-        try
-        {
-            var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");
-            if (appDataType != null)
-            {
-                var currentProp = appDataType.GetProperty("Current", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-                var currentInstance = currentProp?.GetValue(null);
-                if (currentInstance != null)
-                {
-                    var localFolderProp = currentInstance.GetType().GetProperty("LocalFolder", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                    var localFolderInstance = localFolderProp?.GetValue(currentInstance);
-                    if (localFolderInstance != null)
-                    {
-                        var pathProp = localFolderInstance.GetType().GetProperty("Path", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
-                        var path = pathProp?.GetValue(localFolderInstance) as string;
-                        if (!string.IsNullOrEmpty(path)) return path;
-                    }
-                }
-            }
-        }
-        catch { }
-        return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
-    }
-
-    private static string DataDir => GetLocalFolderPath();
-    private static string OptionsPath => Path.Combine(DataDir, "honeycomb_options.json");
+    private static string DataDir => AppPaths.DataDirectory;
     private static string StatisticsPath => Path.Combine(DataDir, "honeycomb_stats.json");
 
     public void SaveOptions()

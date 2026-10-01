@@ -447,8 +447,7 @@ public partial class CardView : UserControl
     public static void PreloadCardBacks(GameOptions options)
     {
         var backDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppDataMigration.FolderName, "CardBacks");
+            AppPaths.DataDirectory, "CardBacks");
 
         foreach (var cb in options.CustomCardBacks)
         {
@@ -966,8 +965,7 @@ public partial class CardView : UserControl
             {
                 isCustom = true;
                 customPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    AppDataMigration.FolderName, "CardBacks", customBack.FileName);
+                    AppPaths.DataDirectory, "CardBacks", customBack.FileName);
                 scale = customBack.Scale;
                 offsetX = customBack.OffsetX;
                 offsetY = customBack.OffsetY;
@@ -1035,8 +1033,7 @@ public partial class CardView : UserControl
             {
                 isCustom = true;
                 customPath = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    AppDataMigration.FolderName,
+                    AppPaths.DataDirectory,
                     "CardBacks",
                     customBack.FileName
                 );

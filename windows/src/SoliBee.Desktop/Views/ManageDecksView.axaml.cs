@@ -101,8 +101,7 @@ public partial class ManageDecksView : UserControl
     // deck tint below is sampled from that image instead of falling back to whatever
     // felt color happens to be set — same idea as PreferencesView.SwatchColorForTheme.
     private static string BackgroundsDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName, "Backgrounds");
+        AppPaths.DataDirectory, "Backgrounds");
 
     private static Color CurrentSwatchColor()
     {

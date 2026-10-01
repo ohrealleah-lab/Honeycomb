@@ -652,8 +652,7 @@ public partial class VideoPokerViewModel : ObservableObject, IIdleActionChecking
 
     // ── Persistence ───────────────────────────────────────────────────────────
 
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), AppDataMigration.FolderName);
+    private static readonly string DataDir = AppPaths.DataDirectory;
 
     private static readonly string OptionsPath    = Path.Combine(DataDir, "videopoker_options.json");
     private static readonly string StatisticsPath = Path.Combine(DataDir, "videopoker_stats.json");

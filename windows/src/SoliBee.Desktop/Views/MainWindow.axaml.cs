@@ -380,8 +380,7 @@ public partial class MainWindow : Window
         }
 
         var path = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            AppDataMigration.FolderName, "Backgrounds", customBg.FileName);
+            AppPaths.DataDirectory, "Backgrounds", customBg.FileName);
 
         if (!File.Exists(path))
         {

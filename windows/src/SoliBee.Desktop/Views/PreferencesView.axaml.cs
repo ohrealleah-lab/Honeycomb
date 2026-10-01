@@ -1439,8 +1439,7 @@ public partial class PreferencesView : UserControl
             if (customBack != null && PathSafety.IsSafeFileName(customBack.FileName))
             {
                 var path = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    AppDataMigration.FolderName, "CardBacks", customBack.FileName);
+                    AppPaths.DataDirectory, "CardBacks", customBack.FileName);
                 if (File.Exists(path))
                     return new Bitmap(path);
             }
@@ -1551,8 +1550,7 @@ public partial class PreferencesView : UserControl
             if (PathSafety.IsSafeFileName(customBack.FileName))
             {
                 var destDir = Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    AppDataMigration.FolderName, "CardBacks");
+                    AppPaths.DataDirectory, "CardBacks");
                 var filePath = Path.Combine(destDir, customBack.FileName);
                 try { if (File.Exists(filePath)) File.Delete(filePath); } catch { }
             }
@@ -1610,8 +1608,7 @@ public partial class PreferencesView : UserControl
             }
 
             var destDir = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                AppDataMigration.FolderName, "CardBacks");
+                AppPaths.DataDirectory, "CardBacks");
             if (!Directory.Exists(destDir))
                 Directory.CreateDirectory(destDir);
 
@@ -1719,8 +1716,7 @@ public partial class PreferencesView : UserControl
     private const long MaxBackgroundFileSizeBytes = 25L * 1024 * 1024;
 
     private static string BackgroundsDir => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName, "Backgrounds");
+        AppPaths.DataDirectory, "Backgrounds");
 
     // Handles both halves of the merged dropdown — a "felt:" tag picks a felt preset
     // (or reveals the Custom Color flyout) and clears any background image; a "bg:" tag
