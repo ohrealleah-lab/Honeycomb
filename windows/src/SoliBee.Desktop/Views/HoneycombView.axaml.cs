@@ -1184,6 +1184,7 @@ public partial class HoneycombView : UserControl
     {
         if (DataContext is not HoneycombViewModel vm) return;
         if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
+        if (DialogGuard.IsDialogOpen(this)) return;
 
         switch (e.Key)
         {

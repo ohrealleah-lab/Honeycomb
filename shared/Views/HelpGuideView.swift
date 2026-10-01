@@ -125,7 +125,7 @@ struct KlondikeHelpView: View {
                     ShortcutRow(action: coordinator.L(.autocompleteGame), shortcut: "A")
                     ShortcutRow(action: coordinator.L(.helpShortcutNewGameRestartDeal), shortcut: coordinator.L(.helpShortcutCmdNR))
                     ShortcutRow(action: coordinator.L(.helpShortcutUndoMove), shortcut: coordinator.L(.helpShortcutCmdZ))
-                    ShortcutRow(action: coordinator.L(.helpShortcutToggleDraw), shortcut: "⌥⌘1 / ⌥⌘3")
+                    ShortcutRow(action: coordinator.L(.helpShortcutToggleDraw), shortcut: "⌘1 / ⌘3")
                     ShortcutRow(action: coordinator.L(.helpShortcutCycleHints), shortcut: coordinator.L(.helpShortcutHintButton))
                 }
             }
@@ -206,7 +206,6 @@ struct SpiderHelpView: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ShortcutRow(action: coordinator.L(.helpShortcutDeal10Cards), shortcut: "D")
                     ShortcutRow(action: coordinator.L(.helpShortcutSelectPlaceSequence), shortcut: coordinator.L(.helpShortcutSpaceEnter))
-                    ShortcutRow(action: coordinator.L(.helpShortcut1suit2suitMode), shortcut: "⌥⌘1 / ⌥⌘2")
                     ShortcutRow(action: coordinator.L(.helpShortcutAutocomplete), shortcut: "A")
                     ShortcutRow(action: coordinator.L(.helpShortcutUndoMove), shortcut: coordinator.L(.helpShortcutCmdZ))
                 }

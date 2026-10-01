@@ -60,7 +60,7 @@ public partial class HelpWindow : Window
 
     // Mirrors the Mac port's HelpGuideView.swift content 1:1 (same source strings),
     // just laid out as one scrollable window instead of 7 separate ones. Shortcut key
-    // combos (Ctrl+N, Alt+1, etc.) are Windows-specific and stay untranslated — only
+    // combos (Ctrl+N, Ctrl+Z, etc.) are Windows-specific and stay untranslated — only
     // the action description on the left of each "• Action: Shortcut" line is
     // localized. A few single-letter shortcuts (Escape, D, F, A, H, M, S, P) have no
     // translation and stay English, same as the Mac port's equivalent gaps.
@@ -105,7 +105,6 @@ public partial class HelpWindow : Window
             Row(StringKey.AutocompleteGame, "A"),
             Row(StringKey.HelpShortcutNewGameRestartDeal, "Ctrl+N / Ctrl+R"),
             Row(StringKey.HelpShortcutUndoMove, "Ctrl+Z"),
-            Row(StringKey.HelpShortcutToggleDraw, "Alt+1 / Alt+3"),
             Row(StringKey.HelpShortcutCycleHints, T(StringKey.HelpShortcutHintButton)));
         KlondikeStrategyHeading.Text = T(StringKey.HelpStrategyProTipsTitle);
         KlondikeStrategyBody.Text = T(StringKey.HelpKlondikeStrategy);
@@ -144,7 +143,6 @@ public partial class HelpWindow : Window
         SpiderShortcutsBody.Text = string.Join("\n",
             Row(StringKey.HelpShortcutDeal10Cards, "D"),
             Row(StringKey.HelpShortcutSelectPlaceSequence, "Space / Enter"),
-            Row(StringKey.HelpShortcut1suit2suitMode, "Alt+1 / Alt+2"),
             Row(StringKey.HelpShortcutAutocomplete, "A"),
             Row(StringKey.HelpShortcutUndoMove, "Ctrl+Z"));
         SpiderStrategyHeading.Text = T(StringKey.HelpStrategyProTipsTitle);

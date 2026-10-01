@@ -937,6 +937,7 @@ public partial class VideoPokerView : UserControl
         // (e.g. the Save Theme name field). Tunnel handlers fire before the focused
         // control, so without this guard 'D'/'Space'/etc. trigger game actions mid-typing.
         if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
+        if (DialogGuard.IsDialogOpen(this)) return;
 
         switch (e.Key)
         {

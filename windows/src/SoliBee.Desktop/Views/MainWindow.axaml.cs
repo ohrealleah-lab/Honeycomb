@@ -2233,6 +2233,12 @@ public partial class MainWindow : Window
         if (UndoButton != null)    UndoButton.Content    = isCompact ? "↩️" : Strings.Get(StringKey.Undo, _language);
     }
 
+    // True while any of the window's dialog overlays is showing. The game views' key handlers
+    // (see DialogGuard) and this window's own game shortcuts stay quiet while it is.
+    internal bool IsDialogOpen =>
+        ConfirmActionOverlay.IsVisible || PreferencesOverlay.IsVisible || StatsOverlay.IsVisible ||
+        ManageDecksOverlay.IsVisible || DeckBuilderOverlay.IsVisible || HoneycombRulesOverlay.IsVisible;
+
     private void OnWindowKeyDown(object? sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
@@ -2272,6 +2278,10 @@ public partial class MainWindow : Window
             Help_Click(null, new RoutedEventArgs());
             return;
         }
+        // Everything below (F2, Ctrl+N/R/Z/H) acts on the game or Preferences behind a dialog —
+        // Escape and F1 above stay live so a dialog can always be dismissed or help opened.
+        if (IsDialogOpen) return;
+
         if (e.Key == Key.F2)
         {
             e.Handled = true;

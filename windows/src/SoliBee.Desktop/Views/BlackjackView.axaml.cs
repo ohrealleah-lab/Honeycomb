@@ -818,6 +818,7 @@ public partial class BlackjackView : UserControl
         // (e.g. the Save Theme name field). Tunnel handlers fire before the focused
         // control, so without this guard 'H'/'S'/etc. trigger game actions mid-typing.
         if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is TextBox) return;
+        if (DialogGuard.IsDialogOpen(this)) return;
 
         switch (e.Key)
         {
