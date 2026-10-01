@@ -743,5 +743,10 @@ enum StringsEnglish {
         .helpBlackjackStrategyIos: "1. Always Split Aces and 8s: Never split 10s or 5s.\n2. Double Down on 11: Always Double Down when your starting hand totals 11 against a dealer 2 through 10.\n3. Watch the Dealer's Upcard: If the dealer shows a 2 through 6, they have a high chance of busting—stand on hard 12 or higher and let the dealer draw.",
         .helpKlondikeRulesIos: "• Tableau Building: Stack cards in descending rank with alternating colors (e.g., a red 6 on a black 7). You may move a single card or an entire face-up sequence to another column.\n• Empty Columns: Only a King (or a sequence starting with a King) may be placed in an empty tableau column.\n• Stock & Waste:\n  – Draw 1 Mode: Clicking the stock reveals 1 card to the waste.\n  – Draw 3 Mode: Reveals 3 cards; only the top card of the waste is playable. Once played, the next card in the 3-card batch becomes available.\n• Scoring: Flip face-down card (+5 pts) · Waste to Tableau (+5 pts) · Waste/Tableau to Foundation (+10 pts) · Foundation back to Tableau (−15 pts). Undo takes back a move's points and deducts them again as a penalty. When you win a timed game: −2 pts per 10 seconds played, then a speed bonus of 700,000 ÷ seconds.",
         .helpKlondikeSubtitleIos: "Classic single-deck solitaire with Draw 1 and Draw 3 modes.",
+        .errDeckNeeds5Cards: "A deck must contain exactly 5 cards.",
+        .errNameEmpty: "Deck name cannot be empty.",
+        .a11yRecycle: "Recycle",
+        .a11yDecrease: "Decrease",
+        .a11yIncrease: "Increase",
     ]
 }

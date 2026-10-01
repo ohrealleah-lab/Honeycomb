@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import com.leah.honeycomb.PreferencesHelper
+import com.leah.honeycomb.StringKey
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.builtins.serializer
 
@@ -106,6 +107,26 @@ class HoneycombProfileManager(
 
     companion object {
         private val defaultStarterComposition = listOf(1, 1, 1, 2, 2)
+
+        // The rarity caps every saved deck must respect — same rules as Mac/iOS/Windows:
+        // at most one 5★; with a 5★ present at most one 4★; otherwise at most two 4★.
+        // Returns the message key for the first rule broken, or null when the deck is fine.
+        fun deckRarityError(cardIds: List<Int>, starLookup: (Int) -> Int?): StringKey? {
+            var fiveStars = 0
+            var fourStars = 0
+            for (id in cardIds) {
+                when (starLookup(id)) {
+                    5 -> fiveStars++
+                    4 -> fourStars++
+                }
+            }
+            return when {
+                fiveStars > 1 -> StringKey.ErrTooMany5star
+                fiveStars == 1 && fourStars > 1 -> StringKey.Err5star4starCombo
+                fiveStars == 0 && fourStars > 2 -> StringKey.ErrTooMany4star
+                else -> null
+            }
+        }
 
         fun computeStartOverDecks(
             currentDecks: List<HoneycombDeckState>,

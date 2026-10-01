@@ -1,4 +1,5 @@
 using Xunit;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using System.Collections.Generic;
 using System.Linq;
@@ -84,6 +85,36 @@ public class HoneycombDeckTests
         bool isValid = HoneycombProfileManager.Shared.ValidateDeck(ids, "Deck", out var error);
         Assert.False(isValid);
         Assert.Equal("A deck must contain exactly 5 cards.", error);
+    }
+
+    // Every message the deck builder can show must come back in the player's language —
+    // these used to be hard-coded English, so Spanish players saw English errors.
+    [Fact]
+    public void ValidateDeck_ReturnsSpanishMessages_WhenLanguageIsSpanish()
+    {
+        var spanish = AppLanguage.Spanish;
+        var five = GetCardOfStars(5);
+        var four = GetCardOfStars(4);
+        var three = GetCardOfStars(3);
+
+        HoneycombProfileManager.Shared.ValidateDeck(new List<int> { three }, "Deck", out var wrongSize, spanish);
+        Assert.Equal("Un mazo debe contener exactamente 5 cartas.", wrongSize);
+
+        var fiveCards = new List<int> { three, three, three, three, three };
+        HoneycombProfileManager.Shared.ValidateDeck(fiveCards, "", out var noName, spanish);
+        Assert.Equal("El nombre del mazo no puede estar vacío.", noName);
+
+        HoneycombProfileManager.Shared.ValidateDeck(fiveCards, new string('x', 21), out var longName, spanish);
+        Assert.Equal("El nombre del mazo no puede superar los 20 caracteres.", longName);
+
+        HoneycombProfileManager.Shared.ValidateDeck(new List<int> { five, five, three, three, three }, "Deck", out var twoFives, spanish);
+        Assert.Equal("Un mazo nunca puede contener más de una carta de 5★.", twoFives);
+
+        HoneycombProfileManager.Shared.ValidateDeck(new List<int> { five, four, four, three, three }, "Deck", out var fiveAndFours, spanish);
+        Assert.Equal("Si tienes una carta de 5★, solo puedes tener una carta de 4★.", fiveAndFours);
+
+        HoneycombProfileManager.Shared.ValidateDeck(new List<int> { four, four, four, three, three }, "Deck", out var threeFours, spanish);
+        Assert.Equal("Un mazo nunca puede contener más de dos cartas de 4★.", threeFours);
     }
 
     [Fact]

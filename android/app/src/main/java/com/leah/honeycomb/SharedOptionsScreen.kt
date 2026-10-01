@@ -264,7 +264,7 @@ fun IntStepperRow(
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { onValueChange((value - step).coerceIn(range)) }, enabled = value > range.first) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease")
+                Icon(Icons.Default.Remove, contentDescription = tr(StringKey.A11yDecrease))
             }
             Text(
                 text = "$value",
@@ -273,7 +273,7 @@ fun IntStepperRow(
                 textAlign = TextAlign.Center
             )
             IconButton(onClick = { onValueChange((value + step).coerceIn(range)) }, enabled = value < range.last) {
-                Icon(Icons.Default.Add, contentDescription = "Increase")
+                Icon(Icons.Default.Add, contentDescription = tr(StringKey.A11yIncrease))
             }
         }
     }

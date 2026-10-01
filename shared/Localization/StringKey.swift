@@ -1484,4 +1484,14 @@ public enum StringKey: String, CaseIterable {
     case helpKlondikeRulesIos = "help_klondike_rules_ios"
     /// Klondike one-liner on mobile (iOS/Android) — no Vegas scoring there
     case helpKlondikeSubtitleIos = "help_klondike_subtitle_ios"
+    /// Deck validation error, Windows Honeycomb deck builder
+    case errDeckNeeds5Cards = "err_deck_needs_5_cards"
+    /// Deck validation error, Windows Honeycomb deck builder
+    case errNameEmpty = "err_name_empty"
+    /// Android screen-reader label on the Klondike stock-pile recycle icon
+    case a11yRecycle = "a11y_recycle"
+    /// Android screen-reader label on the options stepper minus button
+    case a11yDecrease = "a11y_decrease"
+    /// Android screen-reader label on the options stepper plus button
+    case a11yIncrease = "a11y_increase"
 }

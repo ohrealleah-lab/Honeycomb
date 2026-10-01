@@ -748,4 +748,9 @@ public enum StringKey
     HelpBlackjackStrategyIos,
     HelpKlondikeRulesIos,
     HelpKlondikeSubtitleIos,
+    ErrDeckNeeds5Cards,
+    ErrNameEmpty,
+    A11yRecycle,
+    A11yDecrease,
+    A11yIncrease,
 }

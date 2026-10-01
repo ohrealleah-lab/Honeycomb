@@ -46,6 +46,8 @@ fun HoneycombDecksScreen(
         val idx = editingDeckIndex!!
         val deck = savedDecks.getOrNull(idx) ?: HoneycombDeckState()
         var selectedCardIds by remember(idx) { mutableStateOf(deck.cardIds) }
+        // Same rarity caps as Mac/iOS/Windows — an invalid deck can't be saved.
+        val rarityError = HoneycombProfileManager.deckRarityError(selectedCardIds) { database.card(it)?.stars }
 
         Scaffold(
             topBar = {
@@ -58,9 +60,11 @@ fun HoneycombDecksScreen(
                     },
                     actions = {
                         TextButton(
-                            enabled = selectedCardIds.size == 5,
+                            enabled = selectedCardIds.size == 5 && rarityError == null,
                             onClick = {
-                                profileManager.saveDeck(idx, deck.name.ifBlank { "Deck ${idx + 1}" }, selectedCardIds)
+                                // A blank name stays blank — the list shows the localized "Deck N"
+                                // default, so the saved name never bakes in one language.
+                                profileManager.saveDeck(idx, deck.name, selectedCardIds)
                                 editingDeckIndex = null
                             }
                         ) { Text(tr(StringKey.Save)) }
@@ -74,6 +78,19 @@ fun HoneycombDecksScreen(
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    tr(StringKey.DeckRulesHint),
+                    modifier = Modifier.padding(horizontal = 16.dp),
+                    style = MaterialTheme.typography.bodySmall
+                )
+                if (rarityError != null) {
+                    Text(
+                        tr(rarityError),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(90.dp),
                     contentPadding = PaddingValues(8.dp),
@@ -146,7 +163,7 @@ fun HoneycombDecksScreen(
                     ) {
                         Column {
                             Text(
-                                deck.name.ifBlank { "Deck ${index + 1}" },
+                                deck.name.ifBlank { trf(StringKey.DeckSlotDefaultNameFmt, index + 1) },
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(

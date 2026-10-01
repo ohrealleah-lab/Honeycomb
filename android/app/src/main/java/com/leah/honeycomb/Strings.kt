@@ -772,6 +772,11 @@ object Strings {
         StringKey.HelpBlackjackStrategyIos to "1. Always Split Aces and 8s: Never split 10s or 5s.\n2. Double Down on 11: Always Double Down when your starting hand totals 11 against a dealer 2 through 10.\n3. Watch the Dealer's Upcard: If the dealer shows a 2 through 6, they have a high chance of busting—stand on hard 12 or higher and let the dealer draw.",
         StringKey.HelpKlondikeRulesIos to "• Tableau Building: Stack cards in descending rank with alternating colors (e.g., a red 6 on a black 7). You may move a single card or an entire face-up sequence to another column.\n• Empty Columns: Only a King (or a sequence starting with a King) may be placed in an empty tableau column.\n• Stock & Waste:\n  – Draw 1 Mode: Clicking the stock reveals 1 card to the waste.\n  – Draw 3 Mode: Reveals 3 cards; only the top card of the waste is playable. Once played, the next card in the 3-card batch becomes available.\n• Scoring: Flip face-down card (+5 pts) · Waste to Tableau (+5 pts) · Waste/Tableau to Foundation (+10 pts) · Foundation back to Tableau (−15 pts). Undo takes back a move's points and deducts them again as a penalty. When you win a timed game: −2 pts per 10 seconds played, then a speed bonus of 700,000 ÷ seconds.",
         StringKey.HelpKlondikeSubtitleIos to "Classic single-deck solitaire with Draw 1 and Draw 3 modes.",
+        StringKey.ErrDeckNeeds5Cards to "A deck must contain exactly 5 cards.",
+        StringKey.ErrNameEmpty to "Deck name cannot be empty.",
+        StringKey.A11yRecycle to "Recycle",
+        StringKey.A11yDecrease to "Decrease",
+        StringKey.A11yIncrease to "Increase",
     )
 
     private val Spanish = mapOf(
@@ -1514,5 +1519,10 @@ object Strings {
         StringKey.HelpBlackjackStrategyIos to "1. Divide siempre Ases y 8: Nunca dividas 10 ni 5.\n2. Dobla con 11: Dobla siempre cuando tu mano inicial sume 11 contra un 2 a 10 del crupier.\n3. Observa la carta visible del crupier: Si muestra de 2 a 6, tiene muchas probabilidades de pasarse; plántate con 12 duro o más y deja que el crupier pida.",
         StringKey.HelpKlondikeRulesIos to "• Construcción del Tablero: Apila cartas en rango descendente alternando colores (ej., un 6 rojo sobre un 7 negro). Puedes mover una sola carta o una secuencia entera boca arriba a otra columna.\n• Columnas Vacías: Solo un Rey (o una secuencia que empiece con un Rey) puede colocarse en una columna vacía del tablero.\n• Pila y Descarte:\n  – Modo Robar 1: Al hacer clic en la pila se revela 1 carta al descarte.\n  – Modo Robar 3: Revela 3 cartas; solo la carta superior del descarte es jugable. Una vez jugada, la siguiente carta del grupo de 3 estará disponible.\n• Puntuación: Voltear carta boca abajo (+5 pts) · Descarte al Tablero (+5 pts) · Descarte/Tablero a la Fundación (+10 pts) · Fundación de vuelta al Tablero (−15 pts). Deshacer retira los puntos de ese movimiento y los descuenta otra vez como penalización. Al ganar una partida con tiempo: −2 pts por cada 10 segundos jugados, y luego una bonificación de velocidad de 700.000 ÷ segundos.",
         StringKey.HelpKlondikeSubtitleIos to "Clásico solitario de un mazo con modos Robar 1 y Robar 3.",
+        StringKey.ErrDeckNeeds5Cards to "Un mazo debe contener exactamente 5 cartas.",
+        StringKey.ErrNameEmpty to "El nombre del mazo no puede estar vacío.",
+        StringKey.A11yRecycle to "Reciclar",
+        StringKey.A11yDecrease to "Disminuir",
+        StringKey.A11yIncrease to "Aumentar",
     )
 }

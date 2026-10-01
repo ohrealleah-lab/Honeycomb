@@ -374,7 +374,7 @@ fun KlondikeBoard(
                             if (state.stock.cards.isNotEmpty()) {
                                 CardView(card = state.stock.cards.last().copy(faceUp = false), modifier = Modifier.size(cardW, cardH))
                             } else if (viewModel.canRecycleStock) {
-                                Icon(Icons.Default.Refresh, contentDescription = "Recycle", tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.Center))
+                                Icon(Icons.Default.Refresh, contentDescription = com.leah.honeycomb.tr(StringKey.A11yRecycle), tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.align(Alignment.Center))
                             }
                         }
 

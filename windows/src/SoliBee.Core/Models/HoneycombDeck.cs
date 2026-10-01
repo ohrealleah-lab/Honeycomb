@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using SoliBee.Core.Localization;
 using SoliBee.Core.Services;
 
 namespace SoliBee.Core.Models;
@@ -137,23 +138,25 @@ public class HoneycombProfileManager
         catch { }
     }
 
-    public bool ValidateDeck(List<int> cardIds, string deckName, out string errorMessage)
+    // errorMessage is shown to the player, so it comes back in `language` (English by default,
+    // which keeps the unit tests independent of whatever language is saved on the machine).
+    public bool ValidateDeck(List<int> cardIds, string deckName, out string errorMessage, AppLanguage language = AppLanguage.English)
     {
         if (cardIds.Count != 5)
         {
-            errorMessage = "A deck must contain exactly 5 cards.";
+            errorMessage = Strings.Get(StringKey.ErrDeckNeeds5Cards, language);
             return false;
         }
 
         if (string.IsNullOrWhiteSpace(deckName))
         {
-            errorMessage = "Deck name cannot be empty.";
+            errorMessage = Strings.Get(StringKey.ErrNameEmpty, language);
             return false;
         }
 
         if (deckName.Length > 20)
         {
-            errorMessage = "Deck name cannot exceed 20 characters.";
+            errorMessage = Strings.Get(StringKey.ErrNameTooLong, language);
             return false;
         }
 
@@ -171,17 +174,17 @@ public class HoneycombProfileManager
 
         if (fiveStars > 1)
         {
-            errorMessage = "A deck can never contain more than one 5★ card.";
+            errorMessage = Strings.Get(StringKey.ErrTooMany5star, language);
             return false;
         }
         else if (fiveStars == 1 && fourStars > 1)
         {
-            errorMessage = "If you have a 5★ card, you can only have one 4★ card.";
+            errorMessage = Strings.Get(StringKey.Err5star4starCombo, language);
             return false;
         }
         else if (fiveStars == 0 && fourStars > 2)
         {
-            errorMessage = "A deck can never contain more than two 4★ cards.";
+            errorMessage = Strings.Get(StringKey.ErrTooMany4star, language);
             return false;
         }
 

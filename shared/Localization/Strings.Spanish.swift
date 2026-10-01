@@ -743,5 +743,10 @@ enum StringsSpanish {
         .helpBlackjackStrategyIos: "1. Divide siempre Ases y 8: Nunca dividas 10 ni 5.\n2. Dobla con 11: Dobla siempre cuando tu mano inicial sume 11 contra un 2 a 10 del crupier.\n3. Observa la carta visible del crupier: Si muestra de 2 a 6, tiene muchas probabilidades de pasarse; plántate con 12 duro o más y deja que el crupier pida.",
         .helpKlondikeRulesIos: "• Construcción del Tablero: Apila cartas en rango descendente alternando colores (ej., un 6 rojo sobre un 7 negro). Puedes mover una sola carta o una secuencia entera boca arriba a otra columna.\n• Columnas Vacías: Solo un Rey (o una secuencia que empiece con un Rey) puede colocarse en una columna vacía del tablero.\n• Pila y Descarte:\n  – Modo Robar 1: Al hacer clic en la pila se revela 1 carta al descarte.\n  – Modo Robar 3: Revela 3 cartas; solo la carta superior del descarte es jugable. Una vez jugada, la siguiente carta del grupo de 3 estará disponible.\n• Puntuación: Voltear carta boca abajo (+5 pts) · Descarte al Tablero (+5 pts) · Descarte/Tablero a la Fundación (+10 pts) · Fundación de vuelta al Tablero (−15 pts). Deshacer retira los puntos de ese movimiento y los descuenta otra vez como penalización. Al ganar una partida con tiempo: −2 pts por cada 10 segundos jugados, y luego una bonificación de velocidad de 700.000 ÷ segundos.",
         .helpKlondikeSubtitleIos: "Clásico solitario de un mazo con modos Robar 1 y Robar 3.",
+        .errDeckNeeds5Cards: "Un mazo debe contener exactamente 5 cartas.",
+        .errNameEmpty: "El nombre del mazo no puede estar vacío.",
+        .a11yRecycle: "Reciclar",
+        .a11yDecrease: "Disminuir",
+        .a11yIncrease: "Aumentar",
     ]
 }

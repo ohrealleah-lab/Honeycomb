@@ -346,7 +346,7 @@ public partial class DeckBuilderView : UserControl
     private void ValidateRealtime()
     {
         string name = DeckNameTextBox.Text?.Trim() ?? "";
-        bool ok = HoneycombProfileManager.Shared.ValidateDeck(_currentCardIds, name, out string err);
+        bool ok = HoneycombProfileManager.Shared.ValidateDeck(_currentCardIds, name, out string err, SettingsService.LoadOptions().Language);
         ErrorText.Text          = err;
         SaveButton.IsEnabled    = ok;
     }
@@ -401,7 +401,7 @@ public partial class DeckBuilderView : UserControl
         var pm   = HoneycombProfileManager.Shared;
         string name = DeckNameTextBox.Text?.Trim() ?? "";
 
-        if (!pm.ValidateDeck(_currentCardIds, name, out string err))
+        if (!pm.ValidateDeck(_currentCardIds, name, out string err, SettingsService.LoadOptions().Language))
         {
             ErrorText.Text = err;
             return;
