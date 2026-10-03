@@ -8,6 +8,7 @@ import Foundation
 struct HoneycombBombShelterTests {
     static func run() {
         testTimerDecrementPersistsAndEventuallyReveals()
+        testSuddenDeathRevealsEveryHiddenCardEvenWithNectarExchange()
     }
 
     static func testTimerDecrementPersistsAndEventuallyReveals() {
@@ -56,6 +57,63 @@ struct HoneycombBombShelterTests {
 
         guard revealed else {
             fatalError("❌ HoneycombBombShelterTests: REGRESSION — Bomb Shelter card never revealed mid-match after its timer should have expired")
+        }
+    }
+
+    // Capped Brood + Sudden Death (+ Nectar Exchange): the end-of-board reveal used to
+    // sort hidden cards by originalOwner, so a hidden Nectar Exchange card (owned by
+    // the player, originally the opponent's) collided with the opponent's own hidden
+    // card — one of the two never turned over and re-entered the Sudden Death hand
+    // still face-down. Every card that was visible must still be visible afterwards.
+    static func testSuddenDeathRevealsEveryHiddenCardEvenWithNectarExchange() {
+        UISound.isHeadlessMode = true
+        let statsKey = "honeycomb_stats"
+        let saved = UserDefaults.standard.data(forKey: statsKey)
+        defer {
+            if let saved { UserDefaults.standard.set(saved, forKey: statsKey) }
+            else { UserDefaults.standard.removeObject(forKey: statsKey) }
+        }
+
+        let vm = HoneycombViewModel()
+        vm.activeRules = [.bombShelter, .suddenDeath, .swap, .allOpen]
+        vm.gameState = .playing
+        vm.isPlayerTurn = true
+
+        // Equal stats everywhere, so nothing captures and the round ends 5-5.
+        func mkCard(_ id: Int, owner: CardOwner, originalOwner: CardOwner? = nil, faceDown: Bool = false) -> HoneycombCard {
+            var c = HoneycombCard(data: HoneycombCardData(id: id, name: "C\(id)", stars: 3, stats: [5, 5, 5, 5], suit: "S"), owner: owner, originalOwner: originalOwner ?? owner)
+            if faceDown { c.isFaceDown = true; c.bombShelterTurnsRemaining = 3 }
+            return c
+        }
+        var board = HoneycombBoard()
+        board.cells[0].card = mkCard(0, owner: .player, originalOwner: .opponent, faceDown: true) // swapped card, hidden
+        for i in 1..<4 { board.cells[i].card = mkCard(i, owner: .player) }
+        board.cells[4].card = mkCard(4, owner: .opponent, faceDown: true)
+        for i in 5..<8 { board.cells[i].card = mkCard(i, owner: .opponent) }
+        vm.board = board
+        vm.playerHand = [mkCard(100, owner: .player)]
+        vm.opponentHand = [mkCard(200, owner: .opponent)]
+        vm.openPlayerCardIds = Set(vm.playerHand.map { $0.id })
+        vm.openOpponentCardIds = Set(vm.opponentHand.map { $0.id })
+
+        _ = vm.playerPlayCard(handIndex: 0, boardIndex: 8)
+
+        // End-of-board reveal (~3s of staged flips) + the 2.5s Sudden Death lead-in.
+        let deadline = Date().addingTimeInterval(10)
+        while vm.handIdentityToken == 0 || vm.playerHand.count < 5, Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.1))
+        }
+        guard vm.gameState == .playing, vm.playerHand.count == 5, vm.opponentHand.count == 5 else {
+            fatalError("❌ HoneycombBombShelterTests: forced 5-5 Capped Brood board didn't reach Sudden Death (state=\(vm.gameState), hands=\(vm.playerHand.count)/\(vm.opponentHand.count))")
+        }
+        let stillHidden = (vm.playerHand + vm.opponentHand).filter { $0.isFaceDown }.map { $0.data.id }
+        guard stillHidden.isEmpty else {
+            fatalError("❌ HoneycombBombShelterTests: REGRESSION — card(s) \(stillHidden) went back into a Sudden Death hand still face-down")
+        }
+        let notOpen = vm.opponentHand.filter { !vm.isOpponentCardVisible(cardId: $0.id) }.map { $0.data.id }
+            + vm.playerHand.filter { !vm.isPlayerCardVisibleToOpponent(cardId: $0.id) }.map { $0.data.id }
+        guard notOpen.isEmpty, (vm.playerHand + vm.opponentHand).allSatisfy({ vm.isCardRevealed($0.id) }) else {
+            fatalError("❌ HoneycombBombShelterTests: REGRESSION — previously visible card(s) \(notOpen) are hidden after Sudden Death")
         }
     }
 }

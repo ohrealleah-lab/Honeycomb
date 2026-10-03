@@ -2223,7 +2223,9 @@ public final class HoneycombViewModel {
         var attackerIds: Set<String> = []
         for i in indices {
             guard var card = updated.cells[i].card else { continue }
-            let revealedOwner = card.originalOwner
+            // Whoever played it (face-down cards can't be captured), not originalOwner —
+            // a Nectar Exchange card would otherwise announce the wrong side's swarm.
+            let revealedOwner = card.owner
             card.bombShelterTurnsRemaining = nil
             updated.cells[i].card = card
             let flips = updated.revealFaceDownCard(at: i, rules: activeRules)
@@ -2288,24 +2290,33 @@ public final class HoneycombViewModel {
 
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
             // A New Game/Quit during this delay bumps handSetupGeneration — without this
-            // check, starterCell/secondCell below would be computed from (and later
+            // check, starterCells/secondCells below would be computed from (and later
             // reused against) whatever board belongs to the match that replaced this one.
             guard let self, self.handSetupGeneration == generation else { return }
 
             let starterOwner: CardOwner = self.playerHand.isEmpty ? .player : .opponent
 
-            var starterCell = -1
-            var secondCell = -1
+            // Sorted by who *played* each hidden card (`owner` — a face-down card can't be
+            // captured, so it's still the placer's), not originalOwner: a Nectar Exchange
+            // card or a card won in an earlier Sudden Death round belongs to the other
+            // side originally, so both hidden cards could land in the same slot and one
+            // was never revealed — it stayed face-down and went back to the hand that
+            // way. Every hidden card is collected, not just one per side.
+            var starterCells: [Int] = []
+            var secondCells: [Int] = []
 
             for i in 0..<9 {
                 if let card = self.board.cells[i].card, card.isFaceDown {
-                    if card.originalOwner == starterOwner { starterCell = i }
-                    else { secondCell = i }
+                    if card.owner == starterOwner { starterCells.append(i) }
+                    else { secondCells.append(i) }
                 }
             }
 
-            if starterCell != -1 {
-                let flips = self.board.revealFaceDownCard(at: starterCell, rules: self.activeRules)
+            if !starterCells.isEmpty {
+                var flips: [Int] = []
+                for cell in starterCells {
+                    flips += self.board.revealFaceDownCard(at: cell, rules: self.activeRules)
+                }
                 if !flips.isEmpty && self.sharedOptions.isSoundEnabled {
                     UISound.play(named: "snap", enabled: true)
                 }
@@ -2327,8 +2338,11 @@ public final class HoneycombViewModel {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                 guard let self, self.handSetupGeneration == generation else { return }
 
-                if secondCell != -1 {
-                    let flips = self.board.revealFaceDownCard(at: secondCell, rules: self.activeRules)
+                if !secondCells.isEmpty {
+                    var flips: [Int] = []
+                    for cell in secondCells {
+                        flips += self.board.revealFaceDownCard(at: cell, rules: self.activeRules)
+                    }
                     if !flips.isEmpty && self.sharedOptions.isSoundEnabled {
                         UISound.play(named: "snap", enabled: true)
                     }
@@ -2517,6 +2531,16 @@ public final class HoneycombViewModel {
         }
     }
     
+    // Also clears any leftover Capped Brood state — every card was turned face-up
+    // before the round settled, but a card must never re-enter a hand still hidden.
+    private static func resetForSuddenDeathHand(_ card: HoneycombCard) -> HoneycombCard {
+        var c = card
+        c.modifier = 0
+        c.isFaceDown = false
+        c.bombShelterTurnsRemaining = nil
+        return c
+    }
+
     private func triggerSuddenDeath() {
         stats.suddenDeathCount += 1
         saveStats()
@@ -2532,9 +2556,9 @@ public final class HoneycombViewModel {
         // — otherwise they'd keep displaying the previous round's inflated/deflated
         // stats instead of their base card values.
         let pCards = (board.cells.compactMap { $0.card }.filter { $0.owner == .player } + playerHand)
-            .map { card -> HoneycombCard in var c = card; c.modifier = 0; return c }
+            .map(Self.resetForSuddenDeathHand)
         let oCards = (board.cells.compactMap { $0.card }.filter { $0.owner == .opponent } + opponentHand)
-            .map { card -> HoneycombCard in var c = card; c.modifier = 0; return c }
+            .map(Self.resetForSuddenDeathHand)
 
         let previousBoardCardIds = Set(board.cells.compactMap { $0.card?.id })
         playerHand = pCards

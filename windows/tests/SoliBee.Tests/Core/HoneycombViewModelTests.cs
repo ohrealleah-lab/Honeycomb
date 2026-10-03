@@ -59,6 +59,50 @@ public class HoneycombViewModelTests
         Assert.Equal(9, vm.State.PlayerHand.Count + vm.State.OpponentHand.Count); // 10 total cards, but AI played 1, so 9 in hands
     }
 
+    // Capped Brood + Sudden Death (+ Nectar Exchange): the end-of-board reveal used to
+    // sort hidden cards by OriginalOwner, so a hidden Nectar Exchange card (the
+    // player's, originally the opponent's) collided with the opponent's own hidden card
+    // and one never turned over — it re-entered the Sudden Death hand still face-down.
+    [Fact]
+    public void SuddenDeath_Reveals_Every_Hidden_Card_Even_With_Nectar_Exchange()
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+        vm.State.Phase = HoneycombPhase.Playing;
+        vm.State.ActiveRules = new List<HoneycombRule> { HoneycombRule.BombShelter, HoneycombRule.SuddenDeath, HoneycombRule.Swap, HoneycombRule.AllOpen };
+        vm.Stats = new HoneycombStats();
+
+        // Equal stats everywhere, so nothing captures and the round ends 5-5.
+        HoneycombCard Card(int id, int owner, int? originalOwner = null, bool faceDown = false)
+        {
+            var c = new HoneycombCard(new HoneycombCardData { Id = id, Stats = new[] { 5, 5, 5, 5 } }, owner);
+            c.OriginalOwner = originalOwner ?? owner;
+            if (faceDown) { c.IsFaceDown = true; c.BombShelterTurnsRemaining = 3; }
+            return c;
+        }
+        vm.State.Board = new HoneycombBoard();
+        vm.State.Board.Cells[0].Card = Card(0, 1, originalOwner: -1, faceDown: true); // swapped card, hidden
+        for (int i = 1; i < 4; i++) vm.State.Board.Cells[i].Card = Card(i, 1);
+        vm.State.Board.Cells[4].Card = Card(4, -1, faceDown: true);
+        for (int i = 5; i < 8; i++) vm.State.Board.Cells[i].Card = Card(i, -1);
+        vm.State.PlayerHand = new List<HoneycombCard> { Card(100, 1) };
+        vm.State.OpponentHand = new List<HoneycombCard> { Card(200, -1) };
+        vm.State.PlayerRevealedIds = new HashSet<Guid>(vm.State.PlayerHand.Select(c => c.UniqueInstanceId));
+        vm.State.OpponentRevealedIds = new HashSet<Guid>(vm.State.OpponentHand.Select(c => c.UniqueInstanceId));
+
+        vm.State.CurrentTurn = 1;
+        vm.PlayCard(0, 8);
+        // End-of-board reveal (~3s of staged flips) before the tie settles.
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        while (!vm.State.IsSuddenDeath && DateTime.UtcNow < deadline) System.Threading.Thread.Sleep(20);
+        HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
+
+        Assert.True(vm.State.IsSuddenDeath);
+        var hands = vm.State.PlayerHand.Concat(vm.State.OpponentHand).ToList();
+        Assert.DoesNotContain(hands, c => c.IsFaceDown);
+        Assert.All(vm.State.PlayerHand, c => Assert.Contains(c.UniqueInstanceId, vm.State.PlayerRevealedIds));
+        Assert.All(vm.State.OpponentHand, c => Assert.Contains(c.UniqueInstanceId, vm.State.OpponentRevealedIds));
+    }
+
     [Fact]
     public void Tie_Without_SuddenDeathRule_Settles_As_Draw()
     {

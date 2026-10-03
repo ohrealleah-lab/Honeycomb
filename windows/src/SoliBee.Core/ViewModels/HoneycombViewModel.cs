@@ -1634,7 +1634,9 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
         var attackerIds = new HashSet<Guid>();
         foreach (var i in pendingReveals)
         {
-            int revealedOwner = revealedBoard.Cells[i].Card!.OriginalOwner;
+            // Whoever played it (face-down cards can't be captured), not OriginalOwner —
+            // a Nectar Exchange card would otherwise announce the wrong side's swarm.
+            int revealedOwner = revealedBoard.Cells[i].Card!.Owner;
             Guid revealedId = revealedBoard.Cells[i].Card!.UniqueInstanceId;
             revealedBoard.Cells[i].Card!.BombShelterTurnsRemaining = null;
             var flips = revealedBoard.RevealFaceDownCard(i, new HashSet<HoneycombRule>(State.ActiveRules));
@@ -1726,7 +1728,7 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
 
         await Task.Delay(1000);
         // A New Game/Quit during any of this method's delays must stop it from reusing
-        // starterCell/secondCell (computed below, against the board at the time of the
+        // starterCells/secondCells (computed below, against the board at the time of the
         // reveal) against whatever board State now holds — otherwise a stale index could
         // flip/reveal the wrong cell on a match that has already moved on. Matches
         // StageBombShelterReveal's own generation guard.
@@ -1734,26 +1736,33 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
 
         int starter = State.PlayerHand.Count == 0 ? 1 : -1;
 
-        int starterCell = -1;
-        int secondCell = -1;
+        // Sorted by who *played* each hidden card (Owner — a face-down card can't be
+        // captured, so it's still the placer's), not OriginalOwner: a Nectar Exchange
+        // card or a card won in an earlier Sudden Death round belongs to the other side
+        // originally, so both hidden cards could land in the same slot and one was never
+        // revealed — it stayed face-down and went back to the hand that way. Every hidden
+        // card is collected, not just one per side.
+        var starterCells = new List<int>();
+        var secondCells = new List<int>();
 
         for (int i=0; i<9; i++)
         {
             if (!State.Board.Cells[i].IsEmpty && State.Board.Cells[i].Card!.IsFaceDown)
             {
-                if (State.Board.Cells[i].Card!.OriginalOwner == starter) starterCell = i;
-                else secondCell = i;
+                if (State.Board.Cells[i].Card!.Owner == starter) starterCells.Add(i);
+                else secondCells.Add(i);
             }
         }
 
-        if (starterCell != -1)
+        if (starterCells.Count > 0)
         {
             // Banner first (if this reveal triggers Same/Plus/Fallen Ace/Combo), then
             // the flip once it's mostly faded — same pacing as StageCaptureCommit/
             // StageBombShelterReveal. No banner means nothing special happened, so
             // the flip lands immediately, same as before.
             var revealedBoard = State.Board.Clone();
-            revealedBoard.RevealFaceDownCard(starterCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            foreach (var cell in starterCells)
+                revealedBoard.RevealFaceDownCard(cell, new HashSet<HoneycombRule>(State.ActiveRules));
             var comboText = ComboBannerText(revealedBoard);
             if (comboText != null)
             {
@@ -1767,10 +1776,11 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
             if (generation != _matchGeneration || !IsPlaying) return;
         }
 
-        if (secondCell != -1)
+        if (secondCells.Count > 0)
         {
             var revealedBoard = State.Board.Clone();
-            revealedBoard.RevealFaceDownCard(secondCell, new HashSet<HoneycombRule>(State.ActiveRules));
+            foreach (var cell in secondCells)
+                revealedBoard.RevealFaceDownCard(cell, new HashSet<HoneycombRule>(State.ActiveRules));
             var comboText = ComboBannerText(revealedBoard);
             if (comboText != null)
             {
@@ -2022,6 +2032,10 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
             {
                 knownIds.Add(c.UniqueInstanceId);
                 c.Modifier = 0;
+                // Every card was turned face-up before the round settled, but a card
+                // must never re-enter a hand still hidden (Capped Brood).
+                c.IsFaceDown = false;
+                c.BombShelterTurnsRemaining = null;
                 if (c.Owner == 1) pHand.Add(c);
                 else oHand.Add(c);
             }

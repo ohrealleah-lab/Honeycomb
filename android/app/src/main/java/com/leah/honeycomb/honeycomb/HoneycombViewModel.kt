@@ -1239,7 +1239,9 @@ class HoneycombViewModel(
         pendingUndoRepeatCheck = null
         lastPlayerMove = card.data.id to boardIndex
 
-        val isFirstCard = st.board.cells.all { it.card == null }
+        // Capped Brood hides each side's first card of the round (Mac: playerHand.count == 4
+        // after the play), not just whichever card lands on the empty board first.
+        val isFirstCard = st.playerHand.size == 5
         if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
             card.isFaceDown = true
             card.bombShelterTurnsRemaining = 3
@@ -1265,7 +1267,7 @@ class HoneycombViewModel(
 
         checkWinCondition()
 
-        if (_state.value.gameState == HoneycombGameState.Playing) {
+        if (_state.value.gameState == HoneycombGameState.Playing && !_state.value.board.isFull) {
             scheduleAiTurn(2500)
         }
         return true
@@ -1273,7 +1275,7 @@ class HoneycombViewModel(
 
     fun aiPlayTurn() {
         val st = _state.value
-        if (st.gameState != HoneycombGameState.Playing || st.isPlayerTurn) return
+        if (st.gameState != HoneycombGameState.Playing || st.isPlayerTurn || st.board.isFull) return
 
         val gen = ++aiMoveGeneration
         val difficulty = _state.value.matchDifficulty
@@ -1328,7 +1330,7 @@ class HoneycombViewModel(
                 val newOpponentHand = st.opponentHand.toMutableList()
                 val cardToPlay = newOpponentHand.removeAt(move.first)
 
-                val isFirstCard = st.board.cells.all { it.card == null }
+                val isFirstCard = st.opponentHand.size == 5
                 if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
                     cardToPlay.isFaceDown = true
                     cardToPlay.bombShelterTurnsRemaining = 3
@@ -1403,6 +1405,43 @@ class HoneycombViewModel(
     private fun checkWinCondition() {
         val st = _state.value
         if (st.board.isFull) {
+            if (st.board.cells.any { it.card?.isFaceDown == true }) {
+                revealBombSheltersAndSettle()
+            } else {
+                settleMatch()
+            }
+        }
+    }
+
+    // Capped Brood: any card still hidden when the board fills is turned over before the
+    // round is scored — the side that just emptied its hand first, then the other, a
+    // beat apart (Mac's revealBombSheltersAndSettle). Sorted by who *played* each card
+    // (owner — a face-down card can't be captured), never originalOwner, which for a
+    // Nectar Exchange card or a card won in an earlier Sudden Death round is the other side.
+    private fun revealBombSheltersAndSettle() {
+        val gen = aiMoveGeneration
+        viewModelScope.launch {
+            val starterOwner = if (_state.value.playerHand.isEmpty()) CardOwner.Player else CardOwner.Opponent
+            for (fromStarter in listOf(true, false)) {
+                delay(1000)
+                if (aiMoveGeneration != gen) return@launch
+                val st = _state.value
+                val cells = st.board.cells.indices.filter { i ->
+                    val card = st.board.cells[i].card
+                    card != null && card.isFaceDown && (card.owner == starterOwner) == fromStarter
+                }
+                if (cells.isEmpty()) continue
+                val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
+                var flipped = false
+                for (i in cells) {
+                    newBoard.cells[i].card?.bombShelterTurnsRemaining = null
+                    if (newBoard.revealFaceDownCard(i, st.activeRules).isNotEmpty()) flipped = true
+                }
+                if (flipped) com.leah.honeycomb.audio.UISound.play("snap")
+                _state.update { it.copy(board = newBoard) }
+            }
+            delay(1000)
+            if (aiMoveGeneration != gen) return@launch
             settleMatch()
         }
     }
@@ -1556,10 +1595,14 @@ class HoneycombViewModel(
         undoSessionCardsCaptured.clear()
 
         val st = _state.value
+        // Every card was turned face-up before the round settled, but a card must never
+        // re-enter a hand still hidden (Capped Brood).
+        fun resetForHand(card: HoneycombCard) =
+            card.copy(modifier = 0, isFaceDown = false, bombShelterTurnsRemaining = null)
         val playerCards = (st.board.cells.mapNotNull { it.card }.filter { it.owner == CardOwner.Player } + st.playerHand)
-            .map { it.copy(modifier = 0) }
+            .map(::resetForHand)
         val opponentCards = (st.board.cells.mapNotNull { it.card }.filter { it.owner == CardOwner.Opponent } + st.opponentHand)
-            .map { it.copy(modifier = 0) }
+            .map(::resetForHand)
 
         val newBoard = HoneycombBoard().apply { ascensionDescensionSuits = st.ascensionDescensionSuits }
         val nextPlayerTurn = !st.isPlayerTurn
