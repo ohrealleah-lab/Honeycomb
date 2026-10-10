@@ -593,6 +593,7 @@ struct ThemesFullScreenView: View {
                 cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
                 cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
                 cardColorSwatch(coordinator.L(.hintHighlightLabel), binding: $coordinator.customCardColors.hintHighlightColor)
+                cardColorSwatch(coordinator.L(.topBarButtonsLabel), binding: $coordinator.customCardColors.buttonColor)
             }
             .padding(12)
             .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 10))

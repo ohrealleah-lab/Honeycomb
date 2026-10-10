@@ -94,6 +94,9 @@ public class HoneycombViewModelTests
         // End-of-board reveal (~3s of staged flips) before the tie settles.
         var deadline = DateTime.UtcNow.AddSeconds(10);
         while (!vm.State.IsSuddenDeath && DateTime.UtcNow < deadline) System.Threading.Thread.Sleep(20);
+        // The opponent opens the overtime round; its first card is marked face-down while
+        // still in hand, so wait until that move has actually landed on the board.
+        while (vm.State.Board.Cells.All(c => c.IsEmpty) && DateTime.UtcNow < deadline) System.Threading.Thread.Sleep(20);
         HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
         Assert.True(vm.State.IsSuddenDeath);

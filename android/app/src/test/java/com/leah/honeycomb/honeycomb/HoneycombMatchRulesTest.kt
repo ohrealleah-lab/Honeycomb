@@ -93,4 +93,35 @@ class HoneycombMatchRulesTest : ViewModelTestBase() {
         assertEquals(st.playerHand.map { it.id }.toSet(), st.openPlayerCardIds)
         assertEquals(st.opponentHand.map { it.id }.toSet(), st.openOpponentCardIds)
     }
+
+    // Capped Brood: the second side's hidden first card lands next to cards already on the
+    // board, but captures nothing until it turns over (Mac/Windows pass skipCaptures).
+    @Test(timeout = 30_000)
+    fun hiddenCappedBroodCardDoesNotCaptureOnPlacement() {
+        val vm = newVm()
+        fun card(id: Int, owner: CardOwner, stat: Int) =
+            HoneycombCard(HoneycombCardData(id, "C$id", 3, listOf(stat, stat, stat, stat), "S"), owner)
+        // The opponent's weak first card sits face-down in cell 0, its timer still running.
+        val opponentFirst = card(50, CardOwner.Opponent, 1).apply { isFaceDown = true; bombShelterTurnsRemaining = 3 }
+        val cells = List(9) { i -> HoneycombCell(card = if (i == 0) opponentFirst else null) }
+        // ...and a face-up weak opponent card in cell 4 for the player's strong card to sit beside.
+        val weakNeighbour = card(51, CardOwner.Opponent, 1)
+        val board = HoneycombBoard(cells = cells.mapIndexed { i, c -> if (i == 4) HoneycombCell(card = weakNeighbour) else c })
+        privateFlow<HoneycombState>(vm, "_state").let {
+            it.value = it.value.copy(
+                activeRules = listOf(HoneycombRule.BombShelter),
+                gameState = HoneycombGameState.Playing,
+                isPlayerTurn = true,
+                board = board,
+                playerHand = (1..5).map { id -> card(id, CardOwner.Player, 10) },
+                opponentHand = (11..14).map { id -> card(id, CardOwner.Opponent, 1) }
+            )
+        }
+
+        vm.playerPlayCard(0, 1) // the player's first card: goes face-down beside cell 0 and cell 4
+        val st = vm.state.value
+        assertEquals(true, st.board.cells[1].card?.isFaceDown)
+        assertEquals("Hidden card captured nothing as it landed", CardOwner.Opponent, st.board.cells[4].card?.owner)
+        assertEquals(CardOwner.Opponent, st.board.cells[0].card?.owner)
+    }
 }

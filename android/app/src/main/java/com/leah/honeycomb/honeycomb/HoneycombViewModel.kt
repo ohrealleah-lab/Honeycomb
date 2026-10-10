@@ -744,7 +744,10 @@ class HoneycombViewModel(
     }
 
     val canUndo: Boolean
-        get() = undoHistory.isNotEmpty() && _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn
+        // Not on a full board: that's the end-of-round Capped Brood reveal, which Undo
+        // would otherwise cancel after the hidden cards were already shown (Mac blocks it).
+        get() = undoHistory.isNotEmpty() && _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn &&
+            !_state.value.board.isFull
 
     fun undoLastAction() {
         if (!canUndo) return
@@ -762,7 +765,8 @@ class HoneycombViewModel(
     }
 
     val hasHintsAvailable: Boolean
-        get() = _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn && _state.value.playerHand.isNotEmpty()
+        get() = _state.value.gameState == HoneycombGameState.Playing && _state.value.isPlayerTurn && _state.value.playerHand.isNotEmpty() &&
+            !_state.value.board.isFull
 
     private val _hintMove = MutableStateFlow<Pair<Int, Int>?>(null)
     val hintMove: StateFlow<Pair<Int, Int>?> = _hintMove.asStateFlow()
@@ -1242,14 +1246,16 @@ class HoneycombViewModel(
         // Capped Brood hides each side's first card of the round (Mac: playerHand.count == 4
         // after the play), not just whichever card lands on the empty board first.
         val isFirstCard = st.playerHand.size == 5
-        if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
+        val isBombShelterFirst = st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard
+        if (isBombShelterFirst) {
             card.isFaceDown = true
             card.bombShelterTurnsRemaining = 3
         }
 
         com.leah.honeycomb.audio.UISound.play("snap")
         val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
-        val flips = newBoard.placeCard(card, boardIndex, st.activeRules)
+        // A hidden card captures only when it turns over, never as it lands (Mac's skipCaptures).
+        val flips = newBoard.placeCard(card, boardIndex, st.activeRules, skipCaptures = isBombShelterFirst)
         sessionCardsCaptured += flips.size
         enqueueCaptureBanners(newBoard, st.activeRules, card, boardIndex, flips)
         processBombShelter(newBoard, boardIndex, st.activeRules)
@@ -1331,14 +1337,15 @@ class HoneycombViewModel(
                 val cardToPlay = newOpponentHand.removeAt(move.first)
 
                 val isFirstCard = st.opponentHand.size == 5
-                if (st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard) {
+                val isBombShelterFirst = st.activeRules.contains(HoneycombRule.BombShelter) && isFirstCard
+                if (isBombShelterFirst) {
                     cardToPlay.isFaceDown = true
                     cardToPlay.bombShelterTurnsRemaining = 3
                 }
 
                 com.leah.honeycomb.audio.UISound.play("snap")
                 val newBoard = st.board.copy(cells = st.board.cells.map { it.copy(card = it.card?.copy()) })
-                val flips = newBoard.placeCard(cardToPlay, move.second, st.activeRules)
+                val flips = newBoard.placeCard(cardToPlay, move.second, st.activeRules, skipCaptures = isBombShelterFirst)
                 sessionCardsCaptured += flips.size
                 enqueueCaptureBanners(newBoard, st.activeRules, cardToPlay, move.second, flips)
                 processBombShelter(newBoard, move.second, st.activeRules)

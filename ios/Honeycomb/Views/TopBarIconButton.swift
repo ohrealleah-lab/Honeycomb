@@ -45,7 +45,10 @@ private struct TopBarFilledTint: ViewModifier {
     func body(content: Content) -> some View {
         let colors = coordinator.customCardColors
         if colors.isEnabled {
-            let isLight = 0.299 * colors.buttonRed + 0.587 * colors.buttonGreen + 0.114 * colors.buttonBlue > 0.6
+            // Brightness as actually seen: a see-through fill shows the (dark) felt through
+            // it, so blend toward a dark backdrop by however transparent the color is.
+            let luminance = 0.299 * colors.buttonRed + 0.587 * colors.buttonGreen + 0.114 * colors.buttonBlue
+            let isLight = luminance * colors.buttonAlpha + 0.2 * (1 - colors.buttonAlpha) > 0.6
             content
                 .tint(colors.buttonColor)
                 .foregroundStyle(isLight ? Color.black : Color.white)
