@@ -5,13 +5,54 @@ import SwiftUI
 /// generic hamburger that always lands on Games.
 func topBarIconButton(systemImage: String, accessibilityLabel: String, action: @escaping () -> Void) -> some View {
     Button(action: action) {
+        TopBarIcon(systemImage: systemImage)
+    }
+    .accessibilityLabel(accessibilityLabel)
+}
+
+// Icon glyph in the Custom Card Colors "Top Bar Buttons" color (white by default).
+private struct TopBarIcon: View {
+    let systemImage: String
+    @Environment(AppCoordinator.self) private var coordinator
+
+    var body: some View {
         Image(systemName: systemImage)
             .font(.title3.weight(.semibold))
-            .foregroundStyle(.white)
+            .foregroundStyle(coordinator.customCardColors.toolbarButtonColor)
             .frame(width: 44, height: 44)
             .contentShape(Rectangle())
     }
-    .accessibilityLabel(accessibilityLabel)
+}
+
+extension View {
+    /// Top-bar `.bordered` buttons (Quit, Rematch): tinted with the "Top Bar Buttons" color.
+    func topBarOutlinedTint() -> some View { modifier(TopBarOutlinedTint()) }
+    /// Top-bar `.borderedProminent` button (New Deal / Start): filled with the "Top Bar
+    /// Buttons" color when custom colors are on — label flips to black on light colors so
+    /// it stays readable — otherwise the normal accent fill.
+    func topBarFilledTint() -> some View { modifier(TopBarFilledTint()) }
+}
+
+private struct TopBarOutlinedTint: ViewModifier {
+    @Environment(AppCoordinator.self) private var coordinator
+    func body(content: Content) -> some View {
+        content.tint(coordinator.customCardColors.toolbarButtonColor)
+    }
+}
+
+private struct TopBarFilledTint: ViewModifier {
+    @Environment(AppCoordinator.self) private var coordinator
+    func body(content: Content) -> some View {
+        let colors = coordinator.customCardColors
+        if colors.isEnabled {
+            let isLight = 0.299 * colors.buttonRed + 0.587 * colors.buttonGreen + 0.114 * colors.buttonBlue > 0.6
+            content
+                .tint(colors.buttonColor)
+                .foregroundStyle(isLight ? Color.black : Color.white)
+        } else {
+            content
+        }
+    }
 }
 
 /// The three entry points every game's top bar exposes, replacing the single generic

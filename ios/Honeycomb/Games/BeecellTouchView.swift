@@ -247,6 +247,7 @@ struct BeecellTouchView: View {
                 Label(coordinator.L(.touchNewDealLabel), systemImage: "play.fill")
             }
             .buttonStyle(.borderedProminent)
+            .topBarFilledTint()
         }
         .overlay {
             if isLandscape {

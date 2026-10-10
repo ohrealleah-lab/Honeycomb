@@ -16,6 +16,7 @@ struct CustomCardColorsSheet: View {
                     cardColorSwatch(coordinator.L(.blackSuitTextLabel), binding: $coordinator.customCardColors.blackSuitColor)
                     cardColorSwatch(coordinator.L(.redSuitTextLabel), binding: $coordinator.customCardColors.redSuitColor)
                     cardColorSwatch(coordinator.L(.hintHighlightLabel), binding: $coordinator.customCardColors.hintHighlightColor)
+                    cardColorSwatch(coordinator.L(.topBarButtonsLabel), binding: $coordinator.customCardColors.buttonColor)
                 }
                 .padding(16)
             }

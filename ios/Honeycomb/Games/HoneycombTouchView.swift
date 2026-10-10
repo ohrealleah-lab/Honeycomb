@@ -354,7 +354,7 @@ struct HoneycombTouchView: View {
 
                 Button(coordinator.L(.quitButton)) { isShowingQuitMatchConfirm = true }
                     .buttonStyle(.bordered)
-                    .tint(.white)
+                    .topBarOutlinedTint()
             } else {
                 // Mirrors mac's toolbar Rematch button — same availability
                 // (gameOver + canRematch) — for whenever the post-game overlay's been
@@ -378,7 +378,7 @@ struct HoneycombTouchView: View {
                         }
                     }
                     .buttonStyle(.bordered)
-                    .tint(.white)
+                    .topBarOutlinedTint()
                     .accessibilityLabel(coordinator.L(.rematch))
                 }
 
@@ -392,6 +392,7 @@ struct HoneycombTouchView: View {
                     }
                 }
                 .buttonStyle(.borderedProminent)
+                .topBarFilledTint()
                 .accessibilityLabel(coordinator.L(.startButton))
             }
         }
