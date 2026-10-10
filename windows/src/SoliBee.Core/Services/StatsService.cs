@@ -74,6 +74,28 @@ public static class StatsService
     }
 
 
+    // Klondike, Freecell and Spider share stats.json. Klondike saves through this: the
+    // file is re-read first and only Klondike's own numbers are copied in, so a launch-time
+    // copy can't overwrite Freecell/Spider progress made since (they reload before saving
+    // too). The caller's copy picks up the fresh Freecell/Spider numbers as well.
+    public static void SaveKlondikeStats(GameStatistics klondike)
+    {
+        var fresh = LoadStats();
+        fresh.GamesPlayed = klondike.GamesPlayed;
+        fresh.GamesWon = klondike.GamesWon;
+        fresh.CurrentStreak = klondike.CurrentStreak;
+        fresh.LongestStreak = klondike.LongestStreak;
+        fresh.VegasHighScore = klondike.VegasHighScore;
+        fresh.VegasCumulativeScore = klondike.VegasCumulativeScore;
+        fresh.StandardHighScore = klondike.StandardHighScore;
+        fresh.ShortestWinSeconds = klondike.ShortestWinSeconds;
+        fresh.TotalWinSeconds = klondike.TotalWinSeconds;
+        fresh.TimedGamesWon = klondike.TimedGamesWon;
+        SaveStats(fresh);
+        klondike.FreecellStatsByMode = fresh.FreecellStatsByMode;
+        klondike.SpiderStatsBySuit = fresh.SpiderStatsBySuit;
+    }
+
     public static void SaveStats(GameStatistics stats)
     {
         try

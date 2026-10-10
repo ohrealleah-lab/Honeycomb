@@ -396,7 +396,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
 
             Stats.GamesPlayed++;
         }
-        StatsService.SaveStats(Stats);
+        StatsService.SaveKlondikeStats(Stats);
 
         // Start background timer ticking
         _gameTimer?.Dispose();
@@ -436,7 +436,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
         {
             _movedThisDeal = false; // a fresh playthrough of the won deal
             Stats.GamesPlayed++;
-            StatsService.SaveStats(Stats);
+            StatsService.SaveKlondikeStats(Stats);
             if (Options.IsVegasScoring) _vegasBalanceBeforeDeal = State.Score;
         }
 
@@ -1082,7 +1082,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
                     }
                 }
 
-                StatsService.SaveStats(Stats);
+                StatsService.SaveKlondikeStats(Stats);
                 CheckWinMilestones();
             }
         }

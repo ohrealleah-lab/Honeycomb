@@ -212,6 +212,7 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
         _isHeadless = isHeadless;
         Options = SettingsService.LoadHoneycombOptions();
         Stats = LoadStats();
+        StartOverRecorded += count => Stats.TimesStartedOver = count;
         HideBee = SettingsService.LoadOptions().HideBee;
         HoneycombWatermarkScale = SettingsService.LoadOptions().HoneycombWatermarkScale;
         HoneycombWatermarkOffsetX = SettingsService.LoadOptions().HoneycombWatermarkOffsetX;
@@ -2219,12 +2220,18 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
     // Callable from ManageDecksView (which has no live HoneycombViewModel instance to
     // call SaveStats() on) after HoneycombProfileManager.StartOver() — mirrors Mac's
     // startOver(), which increments stats.timesStartedOver in the same place.
+    // Start Over lives on the Manage Decks screen, which has no view model to hand, so it
+    // writes the file directly — and tells any running Honeycomb view model, whose own
+    // copy would otherwise save the old count over this +1 at the next match end.
+    private static event Action<int>? StartOverRecorded;
+
     public static void RecordStartOver()
     {
         var stats = LoadStats();
         stats.TimesStartedOver++;
         try { Directory.CreateDirectory(DataDir); SoliBee.Core.Services.AtomicFile.WriteAllText(StatisticsPath, JsonSerializer.Serialize(stats, new JsonSerializerOptions { WriteIndented = true })); }
         catch { }
+        StartOverRecorded?.Invoke(stats.TimesStartedOver);
     }
 
     public void NotifyOptionsChanged()
