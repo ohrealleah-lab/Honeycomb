@@ -270,13 +270,14 @@ public struct HoneycombCardView: View {
         // so transparent card-back images (e.g. Vulpera sticker) don't show the
         // felt through transparent areas. The card back image now fills to the full
         // card size so this no longer creates a visible border rim.
-        .background(Color.white)
+        // Custom Card Color theme's background/outline, same as CardView's.
+        .background(customCardColors.isEnabled ? customCardColors.backgroundColor : Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         // Thin standard border (matches CardView's outlineColor) — applied to both the
         // face-up card and CardBackView alike, unlike the face-only content above.
         .overlay(
             RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                .stroke(customCardColors.isEnabled ? customCardColors.outlineColor : Color.black.opacity(0.85), lineWidth: 0.75)
         )
         .shadow(color: .black.opacity(0.15), radius: 1.5, x: 0, y: 1.5)
         // Ascension/Descension badge — same top-right corner spot as the Solitaire
