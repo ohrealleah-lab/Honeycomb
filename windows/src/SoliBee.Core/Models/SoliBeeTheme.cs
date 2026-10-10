@@ -33,5 +33,6 @@ public class SoliBeeTheme
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeCardShadow { get; set; }
     public string? ThemeHintHighlight { get; set; }
+    public string? ThemeToolbarButton { get; set; }
     public List<FaceArtSnapshot> FaceArts { get; set; } = new();
 }

@@ -144,6 +144,8 @@ public class GameOptions
     public string? ThemeTextBlackNormal { get; set; }
     public string? ThemeCardShadow { get; set; }
     public string? ThemeHintHighlight { get; set; }
+    // Top-bar button tint (text, outline, see-through fill) — null keeps the normal white.
+    public string? ThemeToolbarButton { get; set; }
 
     // Deep-copies every field via a JSON round-trip (same approach as ThemeService's
     // ClonePreset, and for the same reason its own comment gives: a hand-listed field-

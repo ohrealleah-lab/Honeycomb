@@ -433,6 +433,7 @@ public partial class PreferencesView : UserControl
         CardTextBlackColorPicker.Color = Color.Parse(options.ThemeTextBlackNormal ?? "#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse(options.ThemeTextRed ?? "#CC1A1A");
         HintHighlightColorPicker.Color = Color.Parse(options.ThemeHintHighlight ?? "#FFD700");
+        TopBarButtonsColorPicker.Color = Color.Parse(options.ThemeToolbarButton ?? "#FFFFFF");
 
         // Honey Mode (Flavor) — global, shared across all 6 games.
         PointHighlightsCheckBox.IsVisible = true;
@@ -789,6 +790,7 @@ public partial class PreferencesView : UserControl
         BlackSuitTextColorLabelText.Text = Strings.Get(StringKey.BlackSuitTextLabel, language) + ":";
         RedSuitTextColorLabelText.Text = Strings.Get(StringKey.RedSuitTextLabel, language) + ":";
         HintHighlightColorLabelText.Text = Strings.Get(StringKey.HintHighlightLabel, language) + ":";
+        TopBarButtonsColorLabelText.Text = Strings.Get(StringKey.TopBarButtonsLabel, language) + ":";
 
         ConfirmDeleteBackgroundBodyText.Text = Strings.Get(StringKey.DeleteBackgroundConfirmBody, language);
         SaveThemeTitleText.Text = Strings.Get(StringKey.SaveNewThemeTitle, language);
@@ -2126,6 +2128,8 @@ public partial class PreferencesView : UserControl
             options.ThemeTextRed = e.NewColor.ToString();
         else if (sender == HintHighlightColorPicker)
             options.ThemeHintHighlight = e.NewColor.ToString();
+        else if (sender == TopBarButtonsColorPicker)
+            options.ThemeToolbarButton = e.NewColor.ToString();
 
         CardView.ApplyThemeColors(options);
         NotifySettingsChanged(options);
@@ -2153,6 +2157,7 @@ public partial class PreferencesView : UserControl
         options.ThemeTextRed = null;
         options.ThemeCardShadow = null;
         options.ThemeHintHighlight = null;
+        options.ThemeToolbarButton = null;
 
         _initializing = true;
         CardBgColorPicker.Color = Colors.White;
@@ -2160,6 +2165,7 @@ public partial class PreferencesView : UserControl
         CardTextBlackColorPicker.Color = Color.Parse("#1A1A1A");
         CardTextRedColorPicker.Color = Color.Parse("#CC1A1A");
         HintHighlightColorPicker.Color = Color.Parse("#FFD700");
+        TopBarButtonsColorPicker.Color = Colors.White;
         _initializing = false;
 
         CardView.ApplyThemeColors(options);

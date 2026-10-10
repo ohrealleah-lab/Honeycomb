@@ -90,6 +90,7 @@ public partial class MainWindow : Window
             ApplyFeltColor(m.Options);
             ApplyBoardBackground(m.Options);
             CardView.ApplyThemeColors(m.Options);
+            ApplyToolbarColors(m.Options);
             CardView.InvalidateAllCardViews(this);
             bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb";
             if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !m.Options.IsNoStressMode;
@@ -138,6 +139,7 @@ public partial class MainWindow : Window
 
         // Apply any saved theme color overrides before first render
         CardView.ApplyThemeColors(_coordinator.GameViewModel.Options);
+        ApplyToolbarColors(_coordinator.GameViewModel.Options);
 
         // Tunnel (not the default Bubble) so Escape/Ctrl+Z/Ctrl+H/F1 are seen here first,
         // before a focused child control gets a chance to consume them — a ComboBox
@@ -261,6 +263,19 @@ public partial class MainWindow : Window
         // solitaire key-hint row, since both are built from literals elsewhere in this file.
         if (StatsOverlay.IsVisible) PopulateStatsPanel();
         UpdateSolitaireKeyHint(_currentGameTag, _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb");
+    }
+
+    // Custom Card Colors "Top Bar Buttons": one tint for the toolbar text, outline and
+    // see-through fill (15% / 25% on hover / 40% when disabled), same as Mac. Unset = white.
+    private void ApplyToolbarColors(GameOptions options)
+    {
+        var tint = options.ThemeToolbarButton != null && Color.TryParse(options.ThemeToolbarButton, out var parsed)
+            ? parsed : Colors.White;
+        Color WithAlpha(double fraction) => Color.FromArgb((byte)Math.Round(tint.A * fraction), tint.R, tint.G, tint.B);
+        Resources["ToolbarTintBrush"] = new SolidColorBrush(tint);
+        Resources["ToolbarFillBrush"] = new SolidColorBrush(WithAlpha(0.15));
+        Resources["ToolbarHoverFillBrush"] = new SolidColorBrush(WithAlpha(0.25));
+        Resources["ToolbarDisabledBrush"] = new SolidColorBrush(WithAlpha(0.4));
     }
 
     private void ApplyFeltColor(GameOptions options)

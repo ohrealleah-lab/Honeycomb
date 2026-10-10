@@ -456,12 +456,21 @@
         </Rectangle>
     </Grid>
 
+    <!-- Top-bar colors — swapped at runtime by MainWindow.ApplyToolbarColors from the
+         Custom Card Colors "Top Bar Buttons" setting (white by default). -->
+    <Window.Resources>
+        <SolidColorBrush x:Key="ToolbarTintBrush" Color="White" />
+        <SolidColorBrush x:Key="ToolbarFillBrush" Color="#26FFFFFF" />
+        <SolidColorBrush x:Key="ToolbarHoverFillBrush" Color="#40FFFFFF" />
+        <SolidColorBrush x:Key="ToolbarDisabledBrush" Color="#66FFFFFF" />
+    </Window.Resources>
+
     <Window.Styles>
         <!-- Toolbar Button Styles -->
         <Style Selector="Button.toolbar">
-            <Setter Property="Background" Value="#26FFFFFF" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarFillBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarTintBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarTintBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="4" />
@@ -477,9 +486,15 @@
             </Setter>
         </Style>
         <Style Selector="Button.toolbar:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#40FFFFFF" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarHoverFillBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarTintBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarTintBrush}" />
+        </Style>
+        <!-- Faded version of the tint while disabled (e.g. Undo with nothing to undo), as on Mac. -->
+        <Style Selector="Button.toolbar:disabled /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource ToolbarFillBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarDisabledBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarDisabledBrush}" />
         </Style>
         <Style Selector="Button.toolbar:pointerover">
             <Setter Property="RenderTransform" Value="scale(1.04)" />
@@ -490,20 +505,20 @@
         
         <!-- Toolbar ComboBox Styles -->
         <Style Selector="ComboBox.toolbar-combo">
-            <Setter Property="Background" Value="#26FFFFFF" />
-            <Setter Property="Foreground" Value="White" />
-            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarFillBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarTintBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarTintBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="12,6" />
             <Setter Property="CornerRadius" Value="4" />
             <Setter Property="FontWeight" Value="Bold" />
         </Style>
         <Style Selector="ComboBox.toolbar-combo:pointerover /template/ Border">
-            <Setter Property="Background" Value="#40FFFFFF" />
-            <Setter Property="BorderBrush" Value="White" />
+            <Setter Property="Background" Value="{DynamicResource ToolbarHoverFillBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource ToolbarTintBrush}" />
         </Style>
         <Style Selector="ComboBox.toolbar-combo /template/ PathIcon">
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource ToolbarTintBrush}" />
         </Style>
 
     </Window.Styles>
