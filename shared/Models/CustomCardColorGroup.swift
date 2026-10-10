@@ -61,6 +61,13 @@ public struct CustomCardColorGroup: Codable, Equatable {
     public var hintHighlightBlue: Double = 0.0
     public var hintHighlightAlpha: Double = 1.0
 
+    // Top-bar button color (Default: White, the toolbar's normal look) — tints the
+    // button text, outline and see-through fill. Follows isEnabled like the card colors.
+    public var buttonRed: Double = 1.0
+    public var buttonGreen: Double = 1.0
+    public var buttonBlue: Double = 1.0
+    public var buttonAlpha: Double = 1.0
+
     public init() {}
 
     // Custom Decodable so a JSON blob saved before hintHighlight* existed still decodes
@@ -74,6 +81,7 @@ public struct CustomCardColorGroup: Codable, Equatable {
         case redSuitRed, redSuitGreen, redSuitBlue, redSuitAlpha
         case shadowRed, shadowGreen, shadowBlue, shadowAlpha
         case hintHighlightRed, hintHighlightGreen, hintHighlightBlue, hintHighlightAlpha
+        case buttonRed, buttonGreen, buttonBlue, buttonAlpha
     }
 
     public init(from decoder: Decoder) throws {
@@ -103,6 +111,10 @@ public struct CustomCardColorGroup: Codable, Equatable {
         hintHighlightGreen = try container.decodeIfPresent(Double.self, forKey: .hintHighlightGreen) ?? 0.843
         hintHighlightBlue = try container.decodeIfPresent(Double.self, forKey: .hintHighlightBlue) ?? 0.0
         hintHighlightAlpha = try container.decodeIfPresent(Double.self, forKey: .hintHighlightAlpha) ?? 1.0
+        buttonRed = try container.decodeIfPresent(Double.self, forKey: .buttonRed) ?? 1.0
+        buttonGreen = try container.decodeIfPresent(Double.self, forKey: .buttonGreen) ?? 1.0
+        buttonBlue = try container.decodeIfPresent(Double.self, forKey: .buttonBlue) ?? 1.0
+        buttonAlpha = try container.decodeIfPresent(Double.self, forKey: .buttonAlpha) ?? 1.0
     }
 
     public mutating func reset() {
@@ -113,6 +125,7 @@ public struct CustomCardColorGroup: Codable, Equatable {
         redSuitRed = 0.8; redSuitGreen = 0.1; redSuitBlue = 0.1; redSuitAlpha = 1.0
         shadowRed = 0.0; shadowGreen = 0.0; shadowBlue = 0.0; shadowAlpha = 0.15
         hintHighlightRed = 1.0; hintHighlightGreen = 0.843; hintHighlightBlue = 0.0; hintHighlightAlpha = 1.0
+        buttonRed = 1.0; buttonGreen = 1.0; buttonBlue = 1.0; buttonAlpha = 1.0
     }
 }
 
@@ -194,5 +207,24 @@ extension CustomCardColorGroup {
                 hintHighlightAlpha = rgb.alpha
             }
         }
+    }
+
+    public var buttonColor: Color {
+        get { Color(red: buttonRed, green: buttonGreen, blue: buttonBlue, opacity: buttonAlpha) }
+        set {
+            if let rgb = rgbaComponents(of: newValue) {
+                buttonRed = rgb.red
+                buttonGreen = rgb.green
+                buttonBlue = rgb.blue
+                buttonAlpha = rgb.alpha
+                isEnabled = true
+            }
+        }
+    }
+
+    // What the top bar actually draws with: the custom color when the scheme is on,
+    // otherwise the normal white.
+    public var toolbarButtonColor: Color {
+        isEnabled ? buttonColor : .white
     }
 }

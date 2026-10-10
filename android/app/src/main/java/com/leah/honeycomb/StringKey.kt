@@ -238,6 +238,7 @@ enum class StringKey {
     BlackSuitTextLabel,
     RedSuitTextLabel,
     HintHighlightLabel,
+    TopBarButtonsLabel,
     EditFaceCardArtTitleFmt,
     ScaleShortLabel,
     HorizontalShortLabel,

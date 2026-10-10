@@ -260,7 +260,11 @@ struct GameToolbarButton: View {
     var disabled: Bool = false
     let action: () -> Void
 
+    // Custom Card Color "Top Bar Buttons" — white unless the theme sets one.
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+
     var body: some View {
+        let tint = coordinator.customCardColors.toolbarButtonColor
         Button(action: action) {
             Group {
                 if isCompact, let systemImage {
@@ -272,12 +276,12 @@ struct GameToolbarButton: View {
                         .lineLimit(1)
                 }
             }
-            .foregroundColor(disabled ? .white.opacity(0.4) : .white)
+            .foregroundColor(disabled ? tint.opacity(0.4) : tint)
             .padding(.horizontal, isCompact ? 10 : 12)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.15))
+            .background(tint.opacity(0.15))
             .cornerRadius(4)
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? Color.white.opacity(0.4) : Color.white, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(disabled ? tint.opacity(0.4) : tint, lineWidth: 1))
         }
         .buttonStyle(HoverToolbarButtonStyle())
         .disabled(disabled)
@@ -306,12 +310,12 @@ struct GameSelectionDropdown: View {
                 Image(systemName: "chevron.down")
                     .font(.system(size: 11, weight: .semibold))
             }
-            .foregroundColor(.white)
+            .foregroundColor(coordinator.customCardColors.toolbarButtonColor)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
-            .background(Color.white.opacity(0.15))
+            .background(coordinator.customCardColors.toolbarButtonColor.opacity(0.15))
             .cornerRadius(4)
-            .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 4).stroke(coordinator.customCardColors.toolbarButtonColor, lineWidth: 1))
         }
         .buttonStyle(HoverToolbarButtonStyle())
         .focusable(false)

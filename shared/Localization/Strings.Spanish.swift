@@ -237,6 +237,7 @@ enum StringsSpanish {
         .blackSuitTextLabel: "Texto de Palo Negro",
         .redSuitTextLabel: "Texto de Palo Rojo",
         .hintHighlightLabel: "Resaltado de Pista",
+        .topBarButtonsLabel: "Botones de la Barra Superior",
         .editFaceCardArtTitleFmt: "Editar Arte de %@%@",
         .scaleShortLabel: "Escala",
         .horizontalShortLabel: "Horizontal",

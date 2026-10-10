@@ -242,6 +242,7 @@ public enum StringKey
     BlackSuitTextLabel,
     RedSuitTextLabel,
     HintHighlightLabel,
+    TopBarButtonsLabel,
     EditFaceCardArtTitleFmt,
     ScaleShortLabel,
     HorizontalShortLabel,

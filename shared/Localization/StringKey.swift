@@ -472,6 +472,8 @@ public enum StringKey: String, CaseIterable {
     case redSuitTextLabel = "red_suit_text_label"
     /// Color row label
     case hintHighlightLabel = "hint_highlight_label"
+    /// Color row label (tints the top-bar buttons)
+    case topBarButtonsLabel = "top_bar_buttons_label"
     /// Editor sheet header, %@%@ = rank label + suit symbol concatenated with no separator (e.g. 'K♠')
     case editFaceCardArtTitleFmt = "edit_face_card_art_title_fmt"
     /// Short slider label

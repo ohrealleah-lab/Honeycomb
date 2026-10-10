@@ -66,6 +66,14 @@ struct CustomCardColorSectionView: View {
                     ColorPicker("", selection: $customCardColors.hintHighlightColor)
                         .labelsHidden()
                 }
+
+                HStack {
+                    Text(coordinator.L(.topBarButtonsLabel))
+                        .font(.system(.body))
+                    Spacer()
+                    ColorPicker("", selection: $customCardColors.buttonColor)
+                        .labelsHidden()
+                }
             }
         }
     }

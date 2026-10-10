@@ -237,6 +237,7 @@ enum StringsEnglish {
         .blackSuitTextLabel: "Black Suit Text",
         .redSuitTextLabel: "Red Suit Text",
         .hintHighlightLabel: "Hint Highlight",
+        .topBarButtonsLabel: "Top Bar Buttons",
         .editFaceCardArtTitleFmt: "Edit %@%@ Art",
         .scaleShortLabel: "Scale",
         .horizontalShortLabel: "Horizontal",
