@@ -83,6 +83,34 @@ struct TestRunner {
         print("✅ StatsRegressionTests passed.")
 
         VideoPokerAndBlackjackTests.run()
+
+        print("🧪 Running SpiderGameplayTests...")
+        SpiderGameplayTests.run()
+        print("✅ SpiderGameplayTests passed.")
+
+        print("🧪 Running KlondikeGameplayTests...")
+        KlondikeGameplayTests.run()
+        print("✅ KlondikeGameplayTests passed.")
+
+        print("🧪 Running BeecellGameplayTests...")
+        BeecellGameplayTests.run()
+        print("✅ BeecellGameplayTests passed.")
+
+        print("🧪 Running VideoPokerGameplayTests...")
+        VideoPokerGameplayTests.run()
+        print("✅ VideoPokerGameplayTests passed.")
+
+        print("🧪 Running BlackjackGameplayTests...")
+        BlackjackGameplayTests.run()
+        print("✅ BlackjackGameplayTests passed.")
+
+        print("🧪 Running SettingsPersistenceTests...")
+        SettingsPersistenceTests.run()
+        print("✅ SettingsPersistenceTests passed.")
+
+        print("🧪 Running AppCoordinatorBehaviorTests...")
+        AppCoordinatorBehaviorTests.run()
+        print("✅ AppCoordinatorBehaviorTests passed.")
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
