@@ -399,14 +399,12 @@ public final class GameViewModel {
             }
 
             gamesPlayed += 1
-        } else {
-            // Re-dealing because of an option change, not a player-initiated new game.
-            // If Vegas mode is active, the initial state.score is -5200, but we shouldn't
-            // double-charge their cumulative bankroll for this re-deal.
-            if options.isVegasScoring && state.movesCount > 0 {
-                vegasBankroll -= -5200 // Refund the cost of the aborted layout
-            }
         }
+        // countAsNewGame == false is an options-driven re-deal (toggling Vegas). It needs no
+        // bankroll adjustment here: handleOptionsChanged already zeroed the bankroll, so the
+        // deal below charges the fresh Vegas buy-in (or none when leaving Vegas) exactly once.
+        // (A "refund" used to run here, but the aborted layout was a standard game that never
+        // paid a buy-in, so it just cancelled the new game's buy-in.)
 
         undoStack.removeAll()
         playSound(named: "shuffle")

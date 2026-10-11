@@ -22,6 +22,7 @@ struct KlondikeGameplayTests {
         isolated(testVegasHighScoreAndDisplayStrings)
         isolated(testBankrollStartsAtZeroEachLaunch)
         isolated(testTogglingVegasMidGameBreaksStreakButNotGamesPlayed)
+        isolated(testEnteringVegasChargesTheBuyInWhetherOrNotYouHadPlayed)
         isolated(testNoMovesLeftRules)
         isolated(testAutocompleteAvailabilityAndRun)
         isolated(testHintTexts)
@@ -480,6 +481,31 @@ struct KlondikeGameplayTests {
         setVegas(vm, true)
         expect(vm.statistics.currentStreak == 0 && vm.statistics.longestStreak == 3, "Abandoning a played game by switching scoring breaks the streak")
         expect(vm.gamesPlayed == played, "...without counting a new game played")
+    }
+
+    // Regression: switching Vegas on AFTER playing a standard game used to skip the $52 buy-in
+    // (score showed −$52.00 but the bankroll stayed at $0.00), while doing it on an untouched
+    // game charged it correctly.
+    static func testEnteringVegasChargesTheBuyInWhetherOrNotYouHadPlayed() {
+        let untouched = freshVM()
+        setVegas(untouched, true)
+        expect(untouched.state.score == -5200 && untouched.vegasBankroll == -5200, "Untouched game: Vegas charges the buy-in")
+
+        let played = freshVM()
+        board(played, tableau: [[CovCards.card(.hearts, 5)], [CovCards.card(.spades, 6)]])
+        played.moveCards([played.state.tableau[0].cards[0]], from: played.state.tableau[0], to: played.state.tableau[1])
+        expect(played.state.movesCount == 1, "A move was made in standard play")
+        setVegas(played, true)
+        expect(played.state.score == -5200, "Score shows the buy-in")
+        expect(played.vegasBankroll == -5200, "...and the bankroll is charged it too, even after playing (got \(played.vegasBankroll))")
+
+        // The bankroll then tracks the score as usual, and leaving Vegas zeroes it.
+        let ace = CovCards.card(.spades, 1)
+        board(played, tableau: [[ace]])
+        played.moveCards([ace], from: played.state.tableau[0], to: played.state.foundations[0])
+        expect(played.vegasBankroll == -4700, "A foundation card pays $5 on top of the buy-in")
+        setVegas(played, false)
+        expect(played.vegasBankroll == 0, "Leaving Vegas clears the bankroll")
     }
 
     // MARK: - No moves left
