@@ -10,3 +10,8 @@ ios/build/
 # Temporary copy `make test` places next to the test runner (removed after the run)
 mac/HoneycombBannerCatalog.json
 mac/test_runner
+
+# Coverage output from `make test COVERAGE=1`
+mac/coverage.lcov
+mac/coverage.profraw
+mac/coverage.profdata

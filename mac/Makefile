@@ -7,6 +7,10 @@ MACOS_BIN=$(APP_BUNDLE)/Contents/MacOS/$(APP_NAME)
 SHARED_SRCS=../shared/Models/*.swift ../shared/Views/*.swift ../shared/Honeycomb/Views/*.swift ../shared/ViewModels/*.swift ../shared/Beecell/Models/*.swift ../shared/Beecell/ViewModels/*.swift ../shared/Spider/Models/*.swift ../shared/Spider/ViewModels/*.swift ../shared/Blackjack/Models/*.swift ../shared/Blackjack/ViewModels/*.swift ../shared/VideoPoker/Models/*.swift ../shared/VideoPoker/ViewModels/*.swift ../shared/Honeycomb/Models/*.swift ../shared/Honeycomb/ViewModels/*.swift ../shared/Localization/*.swift
 MAC_SRCS=src/Models/*.swift src/Views/*.swift src/Beecell/Views/*.swift src/Spider/Views/*.swift src/Blackjack/Views/*.swift src/VideoPoker/Views/*.swift src/Honeycomb/Views/*.swift src/Debug/*.swift
 
+# `make test COVERAGE=1` (used by CI) compiles the test runner with coverage
+# instrumentation and writes coverage.lcov for Codecov; plain `make test` is unchanged.
+COVERAGE_FLAGS=$(if $(COVERAGE),-profile-generate -profile-coverage-mapping)
+
 .PHONY: all build clean test run bridge
 
 all: build
@@ -52,15 +56,18 @@ clean:
 
 test:
 	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
-	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(SHARED_SRCS) $(MAC_SRCS) SoliBeeTests/*.swift
+	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(COVERAGE_FLAGS) $(SHARED_SRCS) $(MAC_SRCS) SoliBeeTests/*.swift
 	# test_runner is a bare executable, not a .app bundle, so Bundle.main looks for
 	# resources right next to it rather than in a Resources/ subfolder — copy the
 	# banner catalog there so HoneycombBannerCatalogTests can actually load it.
 	cp ../shared/Honeycomb/Resources/HoneycombBannerCatalog.json HoneycombBannerCatalog.json
 	# Run tests
-	./test_runner
-	# Cleanup test runner binary + copied resource
-	rm -f test_runner HoneycombBannerCatalog.json
+	LLVM_PROFILE_FILE=coverage.profraw ./test_runner
+	# Coverage only: export an lcov report of app code (test files and build folders left out)
+	$(if $(COVERAGE),xcrun llvm-profdata merge -sparse coverage.profraw -o coverage.profdata)
+	$(if $(COVERAGE),xcrun llvm-cov export test_runner -instr-profile=coverage.profdata -format=lcov -ignore-filename-regex='(SoliBeeTests|\.build)/' > coverage.lcov)
+	# Cleanup test runner binary + copied resource + raw profile data
+	rm -f test_runner HoneycombBannerCatalog.json coverage.profraw coverage.profdata
 
 bridge:
 	# Compile the Universal Agent Bridge
