@@ -105,10 +105,43 @@ fun KlondikeBoard(
     // animation starts.
     val dragSettle = rememberDragSettle()
 
+    // Tap to move (see TapToMove.kt): same cards a drag can pick up — any face-up column
+    // card with the cards on top of it, or the top waste/foundation card.
+    val tap = rememberTapToMove()
+    LaunchedEffect(state.movesCount) { tap.clear() }
+    fun tapPiles(): List<Pile> = viewModel.state.value.let { it.tableau + it.foundations + listOf(it.waste) }
+    val canTapSelect: (Pile, Int) -> Boolean = { pile, index ->
+        val st = viewModel.state.value
+        val card = pile.cards.getOrNull(index)
+        when {
+            card == null || !card.faceUp || st.hasWon -> false
+            pile.id == st.waste.id || st.foundations.any { it.id == pile.id } -> index == pile.cards.size - 1
+            else -> true
+        }
+    }
+    val tryTapMove: (Pile, List<Card>, Pile) -> Boolean = { from, cards, to ->
+        val resolved = SmartDrop.resolve(cards) { viewModel.isValidMove(it, to) }
+        resolved != null && viewModel.moveCards(resolved, from, to)
+    }
+    fun handleTapResult(result: TapResult) {
+        when (result) {
+            TapResult.Selected -> { viewModel.clearHint(); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+            TapResult.Moved -> haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            TapResult.Rejected -> dragScope.launch { tap.playShake(with(density) { 6.dp.toPx() }) }
+            else -> {}
+        }
+    }
+    fun onCardTapped(pileId: String, card: Card) =
+        handleTapResult(tap.onCardTap(pileId, card.id, tapPiles(), canTapSelect, tryTapMove))
+    fun onPileTapped(pileId: String) =
+        handleTapResult(tap.onPileTap(pileId, tapPiles(), canTapSelect, tryTapMove))
+    fun isTapSelected(card: Card, pileId: String) = tap.isSelected(card, pileId, tapPiles(), canTapSelect)
+
     // Starts a new drag: invalidates any settle still in flight (see DragSettle) so its
     // later completion can't clobber this drag's state, then adopts it.
     fun beginDrag(newState: DragState) {
         dragSettle.beginDrag()
+        tap.clear()
         dragState = newState
     }
     // Stock -> waste slide-in (matches Windows' CardView.BeginSlideIn / iOS's
@@ -277,7 +310,7 @@ fun KlondikeBoard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) { detectTapGestures(onTap = { tap.clear() }) }) {
                 val widthCardW = (maxWidth.value - 6 * 6) / 7f
                 val baseCardW = widthCardW.coerceAtMost(110f)
                 val baseCardH = baseCardW * 1.4f
@@ -350,6 +383,7 @@ fun KlondikeBoard(
                                 val now = System.currentTimeMillis()
                                 if (now - lastStockTapTime < 250) return@clickable
                                 lastStockTapTime = now
+                                tap.clear()
                                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                 val wasRealDraw = state.stock.cards.isNotEmpty()
                                 val stockFrame = pileFrames[state.stock.id]
@@ -408,7 +442,7 @@ fun KlondikeBoard(
                                                     coroutineScope {
                                                         launch {
                                                             detectTapGestures(
-                                                                onTap = {},
+                                                                onTap = { onCardTapped(state.waste.id, card) },
                                                                 onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, state.waste)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                             )
                                                         }
@@ -424,7 +458,7 @@ fun KlondikeBoard(
                                                 }
                                             }
                                     ) {
-                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(card, state.waste.id), tap))
                                     }
                                 }
                             }
@@ -437,6 +471,7 @@ fun KlondikeBoard(
                             Box(modifier = Modifier
                                 .size(cardW, cardH)
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .pointerInput(pile.id) { detectTapGestures(onTap = { onPileTapped(pile.id) }) }
                                 .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 Box(modifier = Modifier.matchParentSize().background(Color.Black.copy(alpha = 0.2f)))
@@ -449,15 +484,20 @@ fun KlondikeBoard(
                                             .size(cardW, cardH)
                                             .onGloballyPositioned { layoutPos = it.positionInRoot() }
                                             .pointerInput(topCard.id) {
-                                                detectDragGestures(
-                                                    onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(listOf(topCard), pile, layoutPos, Offset.Zero)) },
-                                                    onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
-                                                    onDragEnd = { performDragEnd() },
-                                                    onDragCancel = { dragState = DragState() }
-                                                )
+                                                coroutineScope {
+                                                    launch { detectTapGestures(onTap = { onCardTapped(pile.id, topCard) }) }
+                                                    launch {
+                                                        detectDragGestures(
+                                                            onDragStart = { _ -> haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove); beginDrag(DragState(listOf(topCard), pile, layoutPos, Offset.Zero)) },
+                                                            onDrag = { change, amount -> change.consume(); dragState = dragState.copy(offset = dragState.offset + amount) },
+                                                            onDragEnd = { performDragEnd() },
+                                                            onDragCancel = { dragState = DragState() }
+                                                        )
+                                                    }
+                                                }
                                             }
                                     ) {
-                                        CardView(card = topCard, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
+                                        CardView(card = topCard, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(topCard, pile.id), tap))
                                     }
                                 }
                             }
@@ -473,6 +513,7 @@ fun KlondikeBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .pointerInput(pile.id) { detectTapGestures(onTap = { onPileTapped(pile.id) }) }
                                 .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                             ) {
                                 Box(modifier = Modifier.size(cardW, cardH).background(Color.Black.copy(alpha = 0.2f)))
@@ -493,7 +534,7 @@ fun KlondikeBoard(
                                                     coroutineScope {
                                                         launch {
                                                             detectTapGestures(
-                                                                onTap = {},
+                                                                onTap = { onCardTapped(pile.id, card) },
                                                                 onDoubleTap = { if (viewModel.doubleClickMoveToFoundation(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                             )
                                                         }
@@ -509,7 +550,7 @@ fun KlondikeBoard(
                                                 }
                                             }
                                     ) {
-                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(card, pile.id), tap))
                                     }
                                     runningY += if (card.faceUp) upStep else downStep
                                 }

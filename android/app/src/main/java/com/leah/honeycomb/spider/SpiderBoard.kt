@@ -1,5 +1,8 @@
 package com.leah.honeycomb.spider
 
+import com.leah.honeycomb.TapResult
+import com.leah.honeycomb.rememberTapToMove
+import com.leah.honeycomb.tapSelected
 import com.leah.honeycomb.tr
 
 import androidx.compose.animation.core.*
@@ -108,8 +111,41 @@ fun SpiderBoard(
     // around moveCards) — purely cosmetic; the move itself is committed synchronously in
     // performDragEnd, before this animation starts.
     val dragSettle = rememberDragSettle()
+
+    // Tap to move (see TapToMove.kt): same cards a drag can pick up — a valid same-suit run from a column.
+    val tap = rememberTapToMove()
+    val tapScope = rememberCoroutineScope()
+    LaunchedEffect(state.movesCount) { tap.clear() }
+    fun tapPiles(): List<Pile> = viewModel.state.value.let { it.tableau }
+    val canTapSelect: (Pile, Int) -> Boolean = { pile, index ->
+        val st = viewModel.state.value
+        val card = pile.cards.getOrNull(index)
+        when {
+            card == null || !card.faceUp || st.hasWon -> false
+            else -> viewModel.isValidDragSequence(pile.cards.subList(index, pile.cards.size))
+        }
+    }
+    val tryTapMove: (Pile, List<Card>, Pile) -> Boolean = { from, cards, to ->
+        val resolved = SmartDrop.resolve(cards) { viewModel.isValidMove(it, to) }
+        resolved != null && viewModel.moveCards(resolved, from, to)
+    }
+    fun handleTapResult(result: TapResult) {
+        when (result) {
+            TapResult.Selected -> { viewModel.clearHint(); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+            TapResult.Moved -> haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            TapResult.Rejected -> tapScope.launch { tap.playShake(with(density) { 6.dp.toPx() }) }
+            else -> {}
+        }
+    }
+    fun onCardTapped(pileId: String, card: Card) =
+        handleTapResult(tap.onCardTap(pileId, card.id, tapPiles(), canTapSelect, tryTapMove))
+    fun onPileTapped(pileId: String) =
+        handleTapResult(tap.onPileTap(pileId, tapPiles(), canTapSelect, tryTapMove))
+    fun isTapSelected(card: Card, pileId: String) = tap.isSelected(card, pileId, tapPiles(), canTapSelect)
+
     fun beginDrag(newState: DragState) {
         dragSettle.beginDrag()
+        tap.clear()
         dragState = newState
     }
 
@@ -262,7 +298,7 @@ fun SpiderBoard(
                 }
             }
             
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) { detectTapGestures(onTap = { tap.clear() }) }) {
             if (showEmptyStockWarning) {
                 Text(
                     tr(StringKey.EmptyColumnDrawToast),
@@ -337,6 +373,7 @@ fun SpiderBoard(
                         .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                         .hintHighlight(isHighlighted = hintSourceId == state.stock.id, cornerRadius = 4.dp)
                         .clickable {
+                            tap.clear()
                             if (!state.stock.isEmpty && viewModel.hasEmptyTableauColumn) {
                                 showEmptyStockWarning = true
                             } else {
@@ -382,6 +419,7 @@ fun SpiderBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .pointerInput(pile.id) { detectTapGestures(onTap = { onPileTapped(pile.id) }) }
                                 .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             if (pile.isEmpty) {
@@ -404,7 +442,7 @@ fun SpiderBoard(
                                                     coroutineScope {
                                                         launch {
                                                             detectTapGestures(
-                                                                onTap = {},
+                                                                onTap = { onCardTapped(pile.id, card) },
                                                                 onDoubleTap = { viewModel.doubleClickMove(card, pile); haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                             )
                                                         }
@@ -422,7 +460,7 @@ fun SpiderBoard(
                                                 }
                                             }
                                     ) {
-                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(card, pile.id), tap))
                                     }
                                     runningY += if (card.faceUp) upStep else downStep
                                 }

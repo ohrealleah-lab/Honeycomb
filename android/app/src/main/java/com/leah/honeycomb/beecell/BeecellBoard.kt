@@ -1,5 +1,8 @@
 package com.leah.honeycomb.beecell
 
+import com.leah.honeycomb.TapResult
+import com.leah.honeycomb.rememberTapToMove
+import com.leah.honeycomb.tapSelected
 import com.leah.honeycomb.tr
 
 import androidx.compose.animation.core.*
@@ -97,8 +100,43 @@ fun BeecellBoard(
     // around moveCards) — purely cosmetic; the move itself is committed synchronously in
     // performDragEnd, before this animation starts.
     val dragSettle = rememberDragSettle()
+
+    // Tap to move (see TapToMove.kt): same cards a drag can pick up — a free-cell card, or a valid run from a column (foundation cards don't drag here).
+    val tap = rememberTapToMove()
+    val tapScope = rememberCoroutineScope()
+    LaunchedEffect(state.movesCount) { tap.clear() }
+    fun tapPiles(): List<Pile> = viewModel.state.value.let { it.tableau + it.freeCells + it.foundations }
+    val canTapSelect: (Pile, Int) -> Boolean = { pile, index ->
+        val st = viewModel.state.value
+        val card = pile.cards.getOrNull(index)
+        when {
+            card == null || !card.faceUp || st.hasWon -> false
+            st.tableau.any { it.id == pile.id } -> viewModel.isValidDragSequence(pile.cards.subList(index, pile.cards.size))
+            st.freeCells.any { it.id == pile.id } -> index == pile.cards.size - 1
+            else -> false
+        }
+    }
+    val tryTapMove: (Pile, List<Card>, Pile) -> Boolean = { from, cards, to ->
+        val resolved = SmartDrop.resolve(cards) { viewModel.isValidMove(it, to) }
+        resolved != null && viewModel.moveCards(resolved, from, to)
+    }
+    fun handleTapResult(result: TapResult) {
+        when (result) {
+            TapResult.Selected -> { viewModel.clearHint(); haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove) }
+            TapResult.Moved -> haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            TapResult.Rejected -> tapScope.launch { tap.playShake(with(density) { 6.dp.toPx() }) }
+            else -> {}
+        }
+    }
+    fun onCardTapped(pileId: String, card: Card) =
+        handleTapResult(tap.onCardTap(pileId, card.id, tapPiles(), canTapSelect, tryTapMove))
+    fun onPileTapped(pileId: String) =
+        handleTapResult(tap.onPileTap(pileId, tapPiles(), canTapSelect, tryTapMove))
+    fun isTapSelected(card: Card, pileId: String) = tap.isSelected(card, pileId, tapPiles(), canTapSelect)
+
     fun beginDrag(newState: DragState) {
         dragSettle.beginDrag()
+        tap.clear()
         dragState = newState
     }
 
@@ -252,7 +290,7 @@ fun BeecellBoard(
                 }
             }
             
-            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            BoxWithConstraints(modifier = Modifier.weight(1f).fillMaxWidth().pointerInput(Unit) { detectTapGestures(onTap = { tap.clear() }) }) {
             val config = LocalConfiguration.current
             val screenWidth = config.screenWidthDp.dp
             val baseCardW = ((maxWidth.value - 32f) / 8f).coerceAtMost(90f)
@@ -307,6 +345,7 @@ fun BeecellBoard(
                         Box(modifier = Modifier
                             .size(cardW, cardH)
                             .onGloballyPositioned { pileFrames[cell.id] = it.boundsInRoot() }
+                            .pointerInput(cell.id) { detectTapGestures(onTap = { onPileTapped(cell.id) }) }
                             .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                             .hintHighlight(isHighlighted = cell.id == hintSourceId || cell.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
@@ -322,7 +361,7 @@ fun BeecellBoard(
                                             coroutineScope {
                                                 launch {
                                                     detectTapGestures(
-                                                        onTap = {},
+                                                        onTap = { onCardTapped(cell.id, card) },
                                                         onDoubleTap = { if (viewModel.doubleClickMove(card, cell)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                     )
                                                 }
@@ -337,7 +376,7 @@ fun BeecellBoard(
                                             }
                                         }
                                 ) {
-                                    CardView(card = card, modifier = Modifier.fillMaxSize().alpha(if (isDragging) 0f else 1f))
+                                    CardView(card = card, modifier = Modifier.fillMaxSize().alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(card, cell.id), tap))
                                 }
                             }
                         }
@@ -347,6 +386,7 @@ fun BeecellBoard(
                         Box(modifier = Modifier
                             .size(cardW, cardH)
                             .onGloballyPositioned { pileFrames[fdn.id] = it.boundsInRoot() }
+                            .pointerInput(fdn.id) { detectTapGestures(onTap = { onPileTapped(fdn.id) }) }
                             .border(1.dp, Color.Black.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
                             .hintHighlight(isHighlighted = fdn.id == hintSourceId || fdn.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
@@ -367,6 +407,7 @@ fun BeecellBoard(
                                 .width(cardW)
                                 .fillMaxHeight()
                                 .onGloballyPositioned { pileFrames[pile.id] = it.boundsInRoot() }
+                                .pointerInput(pile.id) { detectTapGestures(onTap = { onPileTapped(pile.id) }) }
                                 .hintHighlight(isHighlighted = pile.id == hintSourceId || pile.id == hintTargetId, cornerRadius = 4.dp)
                         ) {
                             if (pile.isEmpty) {
@@ -388,7 +429,7 @@ fun BeecellBoard(
                                                 coroutineScope {
                                                     launch {
                                                         detectTapGestures(
-                                                            onTap = {},
+                                                            onTap = { onCardTapped(pile.id, card) },
                                                             onDoubleTap = { if (viewModel.doubleClickMove(card, pile)) haptics.performHapticFeedback(HapticFeedbackType.LongPress) }
                                                         )
                                                     }
@@ -405,7 +446,7 @@ fun BeecellBoard(
                                                 }
                                             }
                                     ) {
-                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f))
+                                        CardView(card = card, modifier = Modifier.size(cardW, cardH).alpha(if (isDragging) 0f else 1f).tapSelected(isTapSelected(card, pile.id), tap))
                                     }
                                     runningY += downStep
                                 }
