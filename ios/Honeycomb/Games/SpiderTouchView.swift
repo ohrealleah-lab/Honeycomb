@@ -20,6 +20,8 @@ struct SpiderTouchView: View {
     @State private var dragSourcePile: Pile? = nil
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
+    @State private var tapSelection: TapSelection? = nil
+    @State private var tapShake: CGFloat = 0
 
     @State private var isMenuOpen = false
     @State private var showingOptions = false
@@ -36,6 +38,7 @@ struct SpiderTouchView: View {
     @State private var emptyStockWarningTask: DispatchWorkItem? = nil
 
     private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
+    private let selectionHaptic = UIImpactFeedbackGenerator(style: .light)
 
     var body: some View {
         GeometryReader { geo in
@@ -102,6 +105,10 @@ struct SpiderTouchView: View {
             // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
             // .named(Self.boardSpace) reference below depends on this exact container.
             // Moving this modifier to a different view breaks drop hit-testing silently.
+            // Tap to move: tapping the felt puts a picked-up card back down, and any
+            // move/undo/new deal drops the selection too.
+            .background(Color.clear.contentShape(Rectangle()).onTapGesture { tapSelection = nil })
+            .onChange(of: viewModel.state.movesCount) { _, _ in tapSelection = nil }
             .coordinateSpace(name: Self.boardSpace)
             // winOverlay/stuckOverlay both call .ignoresSafeArea() internally. As plain
             // ZStack siblings, that would make the ZStack itself adopt the full-bleed,
@@ -400,9 +407,11 @@ struct SpiderTouchView: View {
                 TouchCardView(card: card, width: cardW)
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }
+                    .onTapGesture { handleCardTap(pile: pile, index: i) }
                     .gesture(
                         (card.faceUp && viewModel.isValidDragSequence(stack))
                             ? cardDragGesture(pile: pile, stack: stack) : nil
@@ -442,6 +451,8 @@ struct SpiderTouchView: View {
                 .allowsHitTesting(false)
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture { handlePileTap(pile) }
         .modifier(TouchHintHighlight(isHighlighted: pile.cards.isEmpty && hintTouches(pile.id)))
         .background(frameTracker(id: pile.id))
     }
@@ -470,6 +481,7 @@ struct SpiderTouchView: View {
             .onChanged { val in
                 if draggedCards.isEmpty {
                     viewModel.clearHint()
+                    tapSelection = nil
                     draggedCards = stack
                     dragSourcePile = pile
                     dragLocation = val.startLocation
@@ -503,6 +515,70 @@ struct SpiderTouchView: View {
         draggedCards = []
         dragSourcePile = nil
         dragOffset = .zero
+    }
+
+    // MARK: Tap to move
+
+    /// Can this card be picked up by a tap? Same cards a drag can pick up.
+    private func canTapSelect(pile: Pile, index: Int) -> Bool {
+        guard pile.cards.indices.contains(index), pile.cards[index].faceUp, !viewModel.state.hasWon else { return false }
+        return viewModel.isValidDragSequence(Array(pile.cards[index...]))
+    }
+
+    /// The currently picked-up pile and stack, re-read from the live board (nil if the
+    /// selection no longer matches it).
+    private func tapSelectedStack() -> (pile: Pile, cards: [Card])? {
+        guard let sel = tapSelection else { return nil }
+        let piles = viewModel.state.tableau
+        guard let pile = piles.first(where: { $0.id == sel.pileId }),
+              let index = pile.cards.firstIndex(where: { $0.id == sel.cardId }),
+              canTapSelect(pile: pile, index: index) else { return nil }
+        return (pile, Array(pile.cards[index...]))
+    }
+
+    private func isTapSelected(pile: Pile, index: Int) -> Bool {
+        guard let stack = tapSelectedStack(), stack.pile.id == pile.id, pile.cards.indices.contains(index) else { return false }
+        return stack.cards.contains(where: { $0.id == pile.cards[index].id })
+    }
+
+    private func handleCardTap(pile: Pile, index: Int) {
+        guard pile.cards.indices.contains(index) else { return }
+        if let selected = tapSelectedStack() {
+            if selected.pile.id == pile.id {
+                // Same pile: tapping the picked-up card puts it down; another card picks that one up instead.
+                if selected.cards.first?.id == pile.cards[index].id || !canTapSelect(pile: pile, index: index) {
+                    tapSelection = nil
+                } else {
+                    tapSelection = TapSelection(pileId: pile.id, cardId: pile.cards[index].id)
+                }
+            } else {
+                tapMove(selected, to: pile)
+            }
+        } else if canTapSelect(pile: pile, index: index) {
+            viewModel.clearHint()
+            tapSelection = TapSelection(pileId: pile.id, cardId: pile.cards[index].id)
+            selectionHaptic.impactOccurred()
+        }
+    }
+
+    /// A tap on a pile's empty space (an empty column/cell/foundation, or below a column).
+    private func handlePileTap(_ pile: Pile) {
+        guard let selected = tapSelectedStack() else { return }
+        if selected.pile.id == pile.id { tapSelection = nil } else { tapMove(selected, to: pile) }
+    }
+
+    private func tapMove(_ selected: (pile: Pile, cards: [Card]), to target: Pile) {
+        if let resolved = SmartDrop.resolve(cards: selected.cards, isValidMove: { viewModel.isValidMove(cards: $0, to: target) }) {
+            viewModel.clearHint()
+            tapSelection = nil
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                viewModel.moveCards(resolved, from: selected.pile, to: target)
+            }
+            placementHaptic.impactOccurred()
+        } else {
+            withAnimation(.linear(duration: 0.3)) { tapShake += 1 }
+            selectionHaptic.impactOccurred(intensity: 0.5)
+        }
     }
 
     private func handleDragEnded() {
@@ -557,6 +633,7 @@ struct SpiderTouchView: View {
             flashEmptyStockWarning()
             return
         }
+        tapSelection = nil
         isDealInFlight = true
         withAnimation(.easeInOut(duration: 0.25)) {
             viewModel.drawFromStock()

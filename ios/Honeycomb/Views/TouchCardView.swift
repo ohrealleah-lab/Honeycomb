@@ -514,3 +514,45 @@ struct RankLetterPath: Shape {
         return path.applying(transform)
     }
 }
+
+// MARK: - Tap to move (Klondike / Beecell / Spider)
+//
+// Alternative to dragging, always on: tap a card to pick it (and everything on top of it)
+// up, then tap the pile it should go to. Tapping the picked card again, or the felt,
+// puts it down; a pile that can't take it shakes the selection and keeps it picked up.
+
+/// The picked-up stack, identified by its pile and its bottom card.
+struct TapSelection: Equatable {
+    let pileId: String
+    let cardId: UUID
+}
+
+/// Steady outline around a picked-up card, in the Hint Highlight color (the same color
+/// the player already associates with "this card"), plus the wrong-pile shake.
+struct TapSelectedCard: ViewModifier {
+    let isSelected: Bool
+    let shake: CGFloat
+    let cardW: CGFloat
+    @Environment(AppCoordinator.self) private var coordinator
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if isSelected {
+                    RoundedRectangle(cornerRadius: cardW * 0.07)
+                        .stroke(coordinator.customCardColors.hintHighlightColor, lineWidth: 3)
+                        .allowsHitTesting(false)
+                }
+            }
+            .modifier(TapShakeEffect(animatableData: isSelected ? shake : 0))
+    }
+}
+
+/// A short side-to-side wobble each time `animatableData` steps up by 1.
+struct TapShakeEffect: GeometryEffect {
+    var animatableData: CGFloat
+
+    func effectValue(size: CGSize) -> ProjectionTransform {
+        ProjectionTransform(CGAffineTransform(translationX: 6 * sin(animatableData * .pi * 4), y: 0))
+    }
+}

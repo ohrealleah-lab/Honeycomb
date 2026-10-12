@@ -21,6 +21,8 @@ struct KlondikeTouchView: View {
     @State private var dragSourcePile: Pile? = nil
     @State private var dragLocation: CGPoint = .zero
     @State private var dragOffset: CGSize = .zero
+    @State private var tapSelection: TapSelection? = nil
+    @State private var tapShake: CGFloat = 0
 
     @State private var isMenuOpen = false
     @State private var showingOptions = false
@@ -35,6 +37,7 @@ struct KlondikeTouchView: View {
     @State private var noHintsBannerTask: DispatchWorkItem? = nil
 
     private let placementHaptic = UIImpactFeedbackGenerator(style: .medium)
+    private let selectionHaptic = UIImpactFeedbackGenerator(style: .light)
 
     var body: some View {
         GeometryReader { geo in
@@ -98,6 +101,10 @@ struct KlondikeTouchView: View {
             // Anchors boardSpace — every pileFrames GeometryReader and DragGesture
             // .named(Self.boardSpace) reference below depends on this exact container.
             // Moving this modifier to a different view breaks drop hit-testing silently.
+            // Tap to move: tapping the felt puts a picked-up card back down, and any
+            // move/undo/new deal drops the selection too.
+            .background(Color.clear.contentShape(Rectangle()).onTapGesture { tapSelection = nil })
+            .onChange(of: viewModel.state.movesCount) { _, _ in tapSelection = nil }
             .coordinateSpace(name: Self.boardSpace)
             // autocompleteBanner/winOverlay/stuckOverlay all call .ignoresSafeArea()
             // internally. As plain ZStack siblings (like IOSBackgroundLayer used to be —
@@ -354,9 +361,13 @@ struct KlondikeTouchView: View {
                 TouchCardView(card: card, width: cardW)
                     .offset(x: CGFloat(i) * fanStep)
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: viewModel.state.waste, index: viewModel.state.waste.cards.count - visible.count + i), shake: tapShake, cardW: cardW))
                     .gesture(isTop ? cardDragGesture(pile: viewModel.state.waste, stack: [card]) : nil)
                     .onTapGesture(count: 2) {
                         if isTop { viewModel.doubleClickMoveToFoundation(card: card, from: viewModel.state.waste) }
+                    }
+                    .onTapGesture {
+                        if isTop { handleCardTap(pile: viewModel.state.waste, index: viewModel.state.waste.cards.count - 1) }
                     }
             }
             // Ring drawn as its own sibling, positioned with the same offset math as
@@ -390,10 +401,14 @@ struct KlondikeTouchView: View {
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
                     .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: pile.cards.count - 1), shake: tapShake, cardW: cardW))
                     .gesture(cardDragGesture(pile: pile, stack: [top]))
+                    .onTapGesture { handleCardTap(pile: pile, index: pile.cards.count - 1) }
             }
         }
         .frame(width: cardW, height: cardH)
+        .contentShape(Rectangle())
+        .onTapGesture { handlePileTap(pile) }
         .modifier(TouchHintHighlight(isHighlighted: hintTouches(pile.id)))
         .background(frameTracker(id: pile.id))
     }
@@ -454,9 +469,11 @@ struct KlondikeTouchView: View {
                 TouchCardView(card: card, width: cardW)
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMoveToFoundation(card: card, from: pile)
                     }
+                    .onTapGesture { handleCardTap(pile: pile, index: i) }
                     .gesture(card.faceUp ? cardDragGesture(pile: pile, stack: Array(pile.cards[i...])) : nil)
             }
             // Drawn as its own sibling, positioned with the exact same offsets[]
@@ -493,6 +510,8 @@ struct KlondikeTouchView: View {
                 .allowsHitTesting(false)
         }
         .frame(width: cardW, height: columnHeight, alignment: .top)
+        .contentShape(Rectangle())
+        .onTapGesture { handlePileTap(pile) }
         .modifier(TouchHintHighlight(isHighlighted: pile.cards.isEmpty && hintTouches(pile.id)))
         .background(frameTracker(id: pile.id))
     }
@@ -544,6 +563,7 @@ struct KlondikeTouchView: View {
             .onChanged { val in
                 if draggedCards.isEmpty {
                     viewModel.clearHint()
+                    tapSelection = nil
                     draggedCards = stack
                     dragSourcePile = pile
                     dragLocation = val.startLocation
@@ -661,11 +681,80 @@ struct KlondikeTouchView: View {
         cancelDrag()
     }
 
+    // MARK: Tap to move
+
+    /// Can this card be picked up by a tap? Same cards a drag can pick up: any face-up
+    /// tableau card (with everything on top of it), or the top waste/foundation card.
+    private func canTapSelect(pile: Pile, index: Int) -> Bool {
+        guard pile.cards.indices.contains(index), pile.cards[index].faceUp, !viewModel.state.hasWon else { return false }
+        if pile.id == viewModel.state.waste.id || viewModel.state.foundations.contains(where: { $0.id == pile.id }) {
+            return index == pile.cards.count - 1
+        }
+        return true
+    }
+
+    /// The currently picked-up pile and stack, re-read from the live board (nil if the
+    /// selection no longer matches it).
+    private func tapSelectedStack() -> (pile: Pile, cards: [Card])? {
+        guard let sel = tapSelection else { return nil }
+        let piles = viewModel.state.tableau + viewModel.state.foundations + [viewModel.state.waste]
+        guard let pile = piles.first(where: { $0.id == sel.pileId }),
+              let index = pile.cards.firstIndex(where: { $0.id == sel.cardId }),
+              canTapSelect(pile: pile, index: index) else { return nil }
+        return (pile, Array(pile.cards[index...]))
+    }
+
+    private func isTapSelected(pile: Pile, index: Int) -> Bool {
+        guard let stack = tapSelectedStack(), stack.pile.id == pile.id, pile.cards.indices.contains(index) else { return false }
+        return stack.cards.contains(where: { $0.id == pile.cards[index].id })
+    }
+
+    private func handleCardTap(pile: Pile, index: Int) {
+        guard pile.cards.indices.contains(index) else { return }
+        if let selected = tapSelectedStack() {
+            if selected.pile.id == pile.id {
+                // Same pile: tapping the picked-up card puts it down; another card picks that one up instead.
+                if selected.cards.first?.id == pile.cards[index].id || !canTapSelect(pile: pile, index: index) {
+                    tapSelection = nil
+                } else {
+                    tapSelection = TapSelection(pileId: pile.id, cardId: pile.cards[index].id)
+                }
+            } else {
+                tapMove(selected, to: pile)
+            }
+        } else if canTapSelect(pile: pile, index: index) {
+            viewModel.clearHint()
+            tapSelection = TapSelection(pileId: pile.id, cardId: pile.cards[index].id)
+            selectionHaptic.impactOccurred()
+        }
+    }
+
+    /// A tap on a pile's empty space (an empty column/foundation, or below a column).
+    private func handlePileTap(_ pile: Pile) {
+        guard let selected = tapSelectedStack() else { return }
+        if selected.pile.id == pile.id { tapSelection = nil } else { tapMove(selected, to: pile) }
+    }
+
+    private func tapMove(_ selected: (pile: Pile, cards: [Card]), to target: Pile) {
+        if let resolved = SmartDrop.resolve(cards: selected.cards, isValidMove: { viewModel.isValidMove(cards: $0, to: target) }) {
+            viewModel.clearHint()
+            tapSelection = nil
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.8)) {
+                viewModel.moveCards(resolved, from: selected.pile, to: target)
+            }
+            placementHaptic.impactOccurred()
+        } else {
+            withAnimation(.linear(duration: 0.3)) { tapShake += 1 }
+            selectionHaptic.impactOccurred(intensity: 0.5)
+        }
+    }
+
     private func performStockDraw() {
         if viewModel.state.hasWon { return }
         if viewModel.state.stock.isEmpty && !viewModel.canRecycleStock { return }
         guard !isDrawInFlight else { return }
         viewModel.clearHint()
+        tapSelection = nil
         isDrawInFlight = true
         withAnimation(.easeInOut(duration: 0.22)) {
             viewModel.drawCard()
