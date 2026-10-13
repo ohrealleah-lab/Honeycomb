@@ -312,8 +312,8 @@ struct BeecellTouchView: View {
             emptySlot(cardW: cardW, cardH: cardH)
             if let card = pile.cards.last {
                 TouchCardView(card: card, width: cardW)
-                    .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
                     .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: pile.cards.count - 1), shake: tapShake, cardW: cardW))
+                    .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
                     .gesture(cardDragGesture(pile: pile, stack: [card]))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
@@ -333,8 +333,8 @@ struct BeecellTouchView: View {
             emptySlot(cardW: cardW, cardH: cardH, letterSymbol: "A")
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
-                    .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
                     .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: pile.cards.count - 1), shake: tapShake, cardW: cardW))
+                    .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
                     .gesture(cardDragGesture(pile: pile, stack: [top]))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: top, from: pile)
@@ -391,9 +391,9 @@ struct BeecellTouchView: View {
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { i, card in
                 let stack = Array(pile.cards[i...])
                 TouchCardView(card: card, width: cardW)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .offset(y: CGFloat(i) * upStep)
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }

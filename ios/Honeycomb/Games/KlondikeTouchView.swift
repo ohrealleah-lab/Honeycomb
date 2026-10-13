@@ -359,9 +359,9 @@ struct KlondikeTouchView: View {
             ForEach(Array(visible.enumerated()), id: \.element.id) { i, card in
                 let isTop = i == visible.count - 1
                 TouchCardView(card: card, width: cardW)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: viewModel.state.waste, index: viewModel.state.waste.cards.count - visible.count + i), shake: tapShake, cardW: cardW))
                     .offset(x: CGFloat(i) * fanStep)
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: viewModel.state.waste, index: viewModel.state.waste.cards.count - visible.count + i), shake: tapShake, cardW: cardW))
                     .gesture(isTop ? cardDragGesture(pile: viewModel.state.waste, stack: [card]) : nil)
                     .onTapGesture(count: 2) {
                         if isTop { viewModel.doubleClickMoveToFoundation(card: card, from: viewModel.state.waste) }
@@ -400,8 +400,8 @@ struct KlondikeTouchView: View {
             emptySlot(cardW: cardW, cardH: cardH, letterSymbol: "A")
             if let top = pile.cards.last {
                 TouchCardView(card: top, width: cardW)
-                    .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
                     .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: pile.cards.count - 1), shake: tapShake, cardW: cardW))
+                    .opacity(draggedCards.contains(where: { $0.id == top.id }) ? 0 : 1)
                     .gesture(cardDragGesture(pile: pile, stack: [top]))
                     .onTapGesture { handleCardTap(pile: pile, index: pile.cards.count - 1) }
             }
@@ -467,9 +467,9 @@ struct KlondikeTouchView: View {
             emptySlot(cardW: cardW, cardH: cardH, symbol: nil)
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { i, card in
                 TouchCardView(card: card, width: cardW)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMoveToFoundation(card: card, from: pile)
                     }

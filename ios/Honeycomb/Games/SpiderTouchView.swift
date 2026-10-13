@@ -405,9 +405,9 @@ struct SpiderTouchView: View {
             ForEach(Array(pile.cards.enumerated()), id: \.element.id) { i, card in
                 let stack = Array(pile.cards[i...])
                 TouchCardView(card: card, width: cardW)
+                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .offset(y: offsets[i])
                     .opacity(draggedCards.contains(where: { $0.id == card.id }) ? 0 : 1)
-                    .modifier(TapSelectedCard(isSelected: isTapSelected(pile: pile, index: i), shake: tapShake, cardW: cardW))
                     .onTapGesture(count: 2) {
                         viewModel.doubleClickMove(card: card, from: pile)
                     }
