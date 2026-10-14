@@ -1,3 +1,5 @@
+using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using SoliBee.Core.Services;
 using Xunit;
@@ -25,5 +27,10 @@ internal static class TestModeInit
     internal static void Init()
     {
         TestMode.IsHeadless = true;
+
+        // Every test reads and writes a throwaway data folder, never the real
+        // %LocalAppData%\Honeycomb. Must be set before AppPaths is first touched.
+        Environment.SetEnvironmentVariable("HONEYCOMB_DATA_DIR",
+            Path.Combine(Path.GetTempPath(), "HoneycombTests_" + Guid.NewGuid().ToString("N")));
     }
 }

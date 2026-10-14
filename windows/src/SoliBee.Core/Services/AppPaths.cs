@@ -13,7 +13,12 @@ namespace SoliBee.Core.Services;
 // (Windows.Storage.ApplicationData) location to consider — this is the only location.
 public static class AppPaths
 {
-    public static string DataDirectory { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        AppDataMigration.FolderName);
+    // HONEYCOMB_DATA_DIR, when set, replaces the folder wholesale. The test project sets it
+    // to a temp folder before anything reads this, so tests can never touch real user data.
+    public static string DataDirectory { get; } =
+        Environment.GetEnvironmentVariable("HONEYCOMB_DATA_DIR") is { Length: > 0 } overridden
+            ? overridden
+            : Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+                AppDataMigration.FolderName);
 }
