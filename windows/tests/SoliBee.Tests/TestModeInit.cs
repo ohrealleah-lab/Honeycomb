@@ -29,8 +29,13 @@ internal static class TestModeInit
         TestMode.IsHeadless = true;
 
         // Every test reads and writes a throwaway data folder, never the real
-        // %LocalAppData%\Honeycomb. Must be set before AppPaths is first touched.
-        Environment.SetEnvironmentVariable("HONEYCOMB_DATA_DIR",
-            Path.Combine(Path.GetTempPath(), "HoneycombTests_" + Guid.NewGuid().ToString("N")));
+        // %LocalAppData%\Honeycomb. Must be set before AppPaths is first touched. The
+        // folder is deleted when the test run ends.
+        var dir = Path.Combine(Path.GetTempPath(), "HoneycombTests_" + Guid.NewGuid().ToString("N"));
+        Environment.SetEnvironmentVariable("HONEYCOMB_DATA_DIR", dir);
+        AppDomain.CurrentDomain.ProcessExit += (_, _) =>
+        {
+            try { Directory.Delete(dir, recursive: true); } catch { /* best effort */ }
+        };
     }
 }
