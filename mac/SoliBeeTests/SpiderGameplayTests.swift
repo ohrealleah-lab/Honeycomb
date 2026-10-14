@@ -570,6 +570,15 @@ struct SpiderGameplayTests {
         expect(vm.isStuck == false, "Empty column 0 can still take cards, so not stuck")
         vm.undoLastAction()
         expect(!vm.isStuck, "Undo clears the stuck flag")
+
+        // Moving a card between two identical stacks changes nothing, so it isn't a way out
+        // (Hint already skips it). Windows/Android parity.
+        board(vm, padded([[CovCards.card(.spades, 6), CovCards.card(.hearts, 5)], [CovCards.card(.spades, 6)]]))
+        vm.moveCards([vm.state.tableau[0].cards[1]], from: vm.state.tableau[0], to: vm.state.tableau[1])
+        expect(vm.isStuck, "Only the pointless 5♥ shuttle between two 6♠ is left: stuck")
+        board(vm, padded([[CovCards.card(.spades, 6), CovCards.card(.hearts, 5)], [CovCards.card(.clubs, 6)], [CovCards.card(.spades, 7)]]))
+        vm.moveCards([vm.state.tableau[0].cards[1]], from: vm.state.tableau[0], to: vm.state.tableau[1])
+        expect(!vm.isStuck, "The 6♠ can still go onto the 7♠: not stuck")
     }
 
     // MARK: - Autocomplete

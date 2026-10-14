@@ -556,6 +556,11 @@ public partial class BlackjackViewModel : ObservableObject, IIdleActionChecking
         CheckWinMilestones(previousHandsWon);
 
         State.Phase         = BlackjackPhase.Result;
+        // Keep the bet for the next hand if it's still affordable, otherwise fall back to
+        // the 1-credit minimum (Mac parity) — a bet above the credits left made Deal do
+        // nothing until the player lowered it by hand. Skipped in free play, where
+        // credits never change and the comparison would reset the bet every hand.
+        if (!_handFreePlay && State.CurrentBet > State.Credits) State.CurrentBet = 1;
         Options.BetPerHand  = State.CurrentBet;
         SaveOptions();
         SaveStatistics();

@@ -486,6 +486,10 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
     public bool CanMoveSequence(List<Card> cards, Pile target)
     {
         if (cards.Count == 0) return false;
+        // Only tableau columns take cards — finished runs reach the foundations by
+        // themselves (TryCompleteRuns), and SpiderView's foundation slots are drop
+        // targets like any other PileView. Matches Mac's isValidMove.
+        if (target.Type != PileType.Tableau) return false;
 
         if (cards.Count > 1)
         {

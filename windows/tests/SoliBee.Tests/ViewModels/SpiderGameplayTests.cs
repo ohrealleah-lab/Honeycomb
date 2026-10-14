@@ -311,18 +311,21 @@ public class SpiderGameplayTests : DataSandbox
         Assert.Empty(vm.Tableaus[0].Cards);
     }
 
-    // Mac refuses any drop that isn't on a tableau column. Windows' CanMoveSequence never
-    // looks at the target pile's type, so a card can be dropped onto an empty Spider
-    // foundation slot (the foundation PileViews are drop targets in SpiderView).
-    [Fact(Skip = "Mac difference found 2026-10-11, not fixed yet: Spider lets a card be moved onto an empty foundation")]
+    // Only tableau columns take cards; finished runs go up to the foundations by themselves.
+    [Fact]
     public void Moves_CannotDropOnAFoundation()
     {
         var vm = Fresh();
         var five = C(CardSuit.Hearts, 5);
-        Board(vm, Padded(L(five)));
+        var ace = C(CardSuit.Spades, 1);
+        Board(vm, Padded(L(five), L(ace)));
         Assert.False(vm.CanMoveSequence(L(five), vm.Foundations[0]));
+        Assert.False(vm.CanMoveSequence(L(ace), vm.Foundations[0]));
         vm.MoveSequence(L(five), vm.Tableaus[0], vm.Foundations[0]);
         Assert.Empty(vm.Foundations[0].Cards);
+        Assert.Single(vm.Tableaus[0].Cards);
+        Assert.Equal(0, vm.MovesCount);
+        Assert.False(vm.CanUndo);
     }
 
     // ── Completed runs ────────────────────────────────────────────────────────
@@ -676,6 +679,21 @@ public class SpiderGameplayTests : DataSandbox
         Move(vm, 0, 1);
         Assert.False(vm.HasNoMoves);   // the emptied column can still take cards
         vm.Undo();
+        Assert.False(vm.HasNoMoves);
+    }
+
+    // Moving a card between two identical stacks changes nothing, so it isn't a way out
+    // (Hint skips it too). Mac and Android follow this rule.
+    [Fact]
+    public void Stuck_ALateralMoveBetweenIdenticalStacksIsNotAWayOut()
+    {
+        var vm = Fresh();
+        Board(vm, Padded(L(C(CardSuit.Spades, 6), C(CardSuit.Hearts, 5)), L(C(CardSuit.Spades, 6))));
+        Move(vm, 0, 1);   // leaves 6♠ | 6♠ 5♥ — only the pointless shuttle remains
+        Assert.True(vm.HasNoMoves);
+
+        Board(vm, Padded(L(C(CardSuit.Spades, 6), C(CardSuit.Hearts, 5)), L(C(CardSuit.Clubs, 6)), L(C(CardSuit.Spades, 7))));
+        Move(vm, 0, 1);   // the 6♠ can still go onto the 7♠
         Assert.False(vm.HasNoMoves);
     }
 

@@ -829,10 +829,17 @@ class SpiderViewModel(
                     for (tgtIdx in 0 until 10) {
                         if (tgtIdx == colIdx) continue
                         val target = _state.value.tableau[tgtIdx]
-                        if (isValidMove(seq, target)) {
-                            hasValidMove = true
-                            break@outer
+                        if (!isValidMove(seq, target)) continue
+                        // A lateral move (the card it would uncover matches the target's top
+                        // card in suit and rank) changes nothing, so it isn't a way out —
+                        // Hint already skips it. Mac/Windows parity.
+                        val top = target.topCard
+                        if (start > 0 && top != null) {
+                            val exposed = col.cards[start - 1]
+                            if (exposed.faceUp && exposed.suit == top.suit && exposed.rank == top.rank) continue
                         }
+                        hasValidMove = true
+                        break@outer
                     }
                 }
             }

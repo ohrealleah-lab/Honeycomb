@@ -48,4 +48,28 @@ class SpiderAutocompleteTest : ViewModelTestBase() {
         vm.checkAutocompleteState()
         assertTrue(vm.isAutocompleteAvailable.value)
     }
+
+    // Moving a card between two identical stacks (a 5♥ off one 6♠ onto another 6♠)
+    // changes nothing, so it doesn't count as a way out — matches Hint, Mac and Windows.
+    @Test(timeout = 20_000)
+    fun lateralMoveBetweenIdenticalStacksIsNotAWayOut() {
+        val vm = newVm()
+        val cols = MutableList(10) { listOf(up(Suit.Diamonds, 13)) }
+        cols[0] = listOf(up(Suit.Spades, 6), up(Suit.Hearts, 5))
+        cols[1] = listOf(up(Suit.Spades, 6))
+        vm.setTableau(cols)
+        val t = vm.state.value.tableau
+        vm.moveCards(listOf(t[0].cards.last()), t[0], t[1])
+        assertTrue(vm.isStuck.value)
+
+        // A real move is still a way out.
+        val other = MutableList(10) { listOf(up(Suit.Diamonds, 13)) }
+        other[0] = listOf(up(Suit.Spades, 6), up(Suit.Hearts, 5))
+        other[1] = listOf(up(Suit.Clubs, 6))
+        other[2] = listOf(up(Suit.Spades, 7))
+        vm.setTableau(other)
+        val t2 = vm.state.value.tableau
+        vm.moveCards(listOf(t2[0].cards.last()), t2[0], t2[1])   // 6♠ can still go on the 7♠
+        assertFalse(vm.isStuck.value)
+    }
 }

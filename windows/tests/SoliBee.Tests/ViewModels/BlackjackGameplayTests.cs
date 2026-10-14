@@ -379,9 +379,9 @@ public class BlackjackGameplayTests : DataSandbox
         Assert.Equal(1, vm.State.CurrentBet);
     }
 
-    // Mac: "Bet falls back to 1 when it can't be afforded" after a round. Windows keeps the
-    // old bet, so Deal does nothing until the player lowers it by hand.
-    [Fact(Skip = "Mac difference found 2026-10-11, not fixed yet: the bet isn't reset to 1 when it's more than the credits left")]
+    // After a round the bet stays if it's still affordable, otherwise it falls back to 1
+    // so the next Deal isn't silently refused (Mac parity). Free play never resets it.
+    [Fact]
     public void Bet_FallsBackToOneWhenItCanNoLongerBeAfforded()
     {
         var vm = Fresh();
@@ -389,17 +389,18 @@ public class BlackjackGameplayTests : DataSandbox
         vm.Stand();
         Assert.Equal(8, vm.State.Credits);
         Assert.Equal(1, vm.State.CurrentBet);
-    }
+        Assert.Equal(1, vm.Options.BetPerHand);
 
-    // Mac's Blackjack has no saved bet: every launch starts at 1. Windows saves the last
-    // bet (Options.BetPerHand) and starts the next launch with it.
-    [Fact(Skip = "Mac difference found 2026-10-11, not fixed yet: Windows remembers the last bet across launches")]
-    public void Bet_StartsAtOneEachLaunch()
-    {
-        var vm = Fresh();
-        WinningRound(vm, bet: 10);
-        vm.Stand();
-        Assert.Equal(1, new BlackjackViewModel().State.CurrentBet);
+        var kept = Fresh();
+        WinningRound(kept, bet: 10, credits: 90);
+        kept.Stand();
+        Assert.Equal(10, kept.State.CurrentBet);   // still affordable: kept
+
+        var free = Fresh();
+        LosingRound(free, bet: 50, credits: 8);
+        Reflect.Set(free, "_handFreePlay", true);
+        free.Stand();
+        Assert.Equal(50, free.State.CurrentBet);
     }
 
     [Fact]

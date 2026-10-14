@@ -799,7 +799,15 @@ public final class SpiderViewModel {
                 if hasEmpty && seq.first?.faceUp == true { return true }
                 for tgtIdx in 0..<state.tableau.count where tgtIdx != colIdx {
                     let target = state.tableau[tgtIdx]
-                    if isValidMove(cards: seq, to: target) { return true }
+                    guard isValidMove(cards: seq, to: target) else { continue }
+                    // A lateral move (the card it would uncover matches the target's top card
+                    // in suit and rank) changes nothing — Hint already skips it, so counting it
+                    // here left the player with no hint and no "no moves" either. Windows parity.
+                    if start > 0, let top = target.topCard {
+                        let exposed = col.cards[start - 1]
+                        if exposed.faceUp && exposed.suit == top.suit && exposed.rank == top.rank { continue }
+                    }
+                    return true
                 }
             }
         }
