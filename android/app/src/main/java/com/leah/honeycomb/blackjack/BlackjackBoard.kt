@@ -435,11 +435,6 @@ fun BlackjackBoard(
         val controlsArea = @Composable {
             Column(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (state.phase == BlackjackPhase.Betting || state.phase == BlackjackPhase.Result) {
-                    if (state.phase == BlackjackPhase.Result) {
-                        Box(modifier = Modifier.padding(bottom = 16.dp)) {
-                            ActionButton(Strings.get(StringKey.BtnNewBet, language), Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.resetIfRoundOver() })
-                        }
-                    }
                     if (viewModel.canRebuy) {
                         Box(modifier = Modifier.padding(bottom = 16.dp)) {
                             ActionButton(Strings.get(StringKey.BtnRebuy, language), Color(0xFF4CAF50), { haptics.performHapticFeedback(HapticFeedbackType.LongPress); viewModel.rebuy() })
