@@ -135,6 +135,103 @@ public class HoneycombDeckTests
         Assert.Equal("Deck name cannot exceed 20 characters.", error);
     }
 
+    // ---- Decks that ARE allowed ----
+
+    [Fact]
+    public void ValidateDeck_AllowsOneFiveStarWithOneFourStar()
+    {
+        var ids = new List<int> { GetCardOfStars(5), GetCardOfStars(4), GetCardOfStars(1), GetCardOfStars(2), GetCardOfStars(3) };
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(ids, "Deck", out var error));
+        Assert.Empty(error);
+    }
+
+    [Fact]
+    public void ValidateDeck_AllowsOneFiveStarAndNoFourStars()
+    {
+        var ids = new List<int> { GetCardOfStars(5), GetCardOfStars(3), GetCardOfStars(3), GetCardOfStars(2), GetCardOfStars(1) };
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(ids, "Deck", out _));
+    }
+
+    [Fact]
+    public void ValidateDeck_AllowsTwoFourStarsWhenThereIsNoFiveStar()
+    {
+        var ids = new List<int> { GetCardOfStars(4), GetCardOfStars(4), GetCardOfStars(3), GetCardOfStars(2), GetCardOfStars(1) };
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(ids, "Deck", out _));
+    }
+
+    [Fact]
+    public void ValidateDeck_AllowsANameOfExactlyTwentyCharacters()
+    {
+        var ids = Enumerable.Repeat(GetCardOfStars(1), 5).ToList();
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(ids, new string('A', 20), out _));
+    }
+
+    // ---- Which complaint wins when a deck has several problems ----
+
+    [Fact]
+    public void ValidateDeck_AWhitespaceOnlyNameCountsAsEmpty()
+    {
+        var ids = Enumerable.Repeat(GetCardOfStars(1), 5).ToList();
+        Assert.False(HoneycombProfileManager.Shared.ValidateDeck(ids, "   ", out var error));
+        Assert.Equal("Deck name cannot be empty.", error);
+    }
+
+    [Fact]
+    public void ValidateDeck_WrongCardCountIsReportedBeforeAnythingElse()
+    {
+        var tooMany = Enumerable.Repeat(GetCardOfStars(5), 6).ToList();
+        Assert.False(HoneycombProfileManager.Shared.ValidateDeck(tooMany, "", out var error));
+        Assert.Equal("A deck must contain exactly 5 cards.", error);
+
+        Assert.False(HoneycombProfileManager.Shared.ValidateDeck(new List<int>(), new string('x', 30), out var emptyError));
+        Assert.Equal("A deck must contain exactly 5 cards.", emptyError);
+    }
+
+    [Fact]
+    public void ValidateDeck_NameProblemsAreReportedBeforeStarProblems()
+    {
+        var twoFives = new List<int> { GetCardOfStars(5), GetCardOfStars(5), GetCardOfStars(3), GetCardOfStars(3), GetCardOfStars(3) };
+
+        HoneycombProfileManager.Shared.ValidateDeck(twoFives, "", out var emptyName);
+        Assert.Equal("Deck name cannot be empty.", emptyName);
+
+        HoneycombProfileManager.Shared.ValidateDeck(twoFives, new string('x', 21), out var longName);
+        Assert.Equal("Deck name cannot exceed 20 characters.", longName);
+    }
+
+    [Fact]
+    public void ValidateDeck_ErrorTextIsClearedAgainOnceTheDeckIsFixed()
+    {
+        var bad = new List<int> { GetCardOfStars(5), GetCardOfStars(5), GetCardOfStars(3), GetCardOfStars(3), GetCardOfStars(3) };
+        var good = new List<int> { GetCardOfStars(5), GetCardOfStars(4), GetCardOfStars(3), GetCardOfStars(3), GetCardOfStars(3) };
+
+        Assert.False(HoneycombProfileManager.Shared.ValidateDeck(bad, "Deck", out var first));
+        Assert.NotEmpty(first);
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(good, "Deck", out var second));
+        Assert.Empty(second);
+    }
+
+    // ---- Start Over: rebuilding the deck ----
+
+    [Fact]
+    public void ComputeStartOverDeck_KeepsTheStarOrderOfThePreviousDeck()
+    {
+        var previous = new List<int> { GetCardOfStars(1), GetCardOfStars(5), GetCardOfStars(2), GetCardOfStars(4), GetCardOfStars(3) };
+
+        var rebuilt = HoneycombProfileManager.ComputeStartOverDeck(previous);
+
+        Assert.Equal(new[] { 1, 5, 2, 4, 3 }, rebuilt.Select(id => HoneycombDatabase.Shared.Card(id)!.Stars));
+    }
+
+    [Fact]
+    public void ComputeStartOverDeck_ResultCanBeSavedAsADeck()
+    {
+        // The rebuilt "Default" deck follows the same rules the deck builder enforces.
+        var previous = new List<int> { GetCardOfStars(5), GetCardOfStars(4), GetCardOfStars(3), GetCardOfStars(3), GetCardOfStars(3) };
+        var rebuilt = HoneycombProfileManager.ComputeStartOverDeck(previous);
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(rebuilt, "Default", out var error), error);
+    }
+
     [Fact]
     public void ComputeStartOverDeck_PreservesComposition()
     {

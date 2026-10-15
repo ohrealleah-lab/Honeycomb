@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
 using SoliBee.Core.Models;
+using SoliBee.Core.Services;
 using Xunit;
 
 namespace SoliBee.Tests.Core;
@@ -323,4 +325,192 @@ public class HoneycombProfileStorageTests : DataSandbox
             Assert.Equal(new[] { 1, 1, 1, 2, 2 }, ids.Select(Stars).OrderBy(s => s));
         }
     }
+
+    // ---- Odd saved files ----
+
+    [Fact]
+    public void UnlockedFileWithRepeatedIds_CountsEachCardOnce()
+    {
+        Write(Unlocked, "[3,3,7,7,7,9]");
+        Write(Decks, "[]");
+
+        Assert.Equal(new HashSet<int> { 3, 7, 9 }, Launch().UnlockedCardIds);
+    }
+
+    [Fact]
+    public void ASavedDeckWithNoNameInTheFile_KeepsItsCardsAndGetsTheEmptySlotName()
+    {
+        Write(Unlocked, "[1,2,3,4,5]");
+        Write(Decks, "[{\"CardIds\":[1,2,3,4,5]}]");
+        var m = Launch();
+
+        Assert.Equal(new[] { 1, 2, 3, 4, 5 }, m.SavedDecks[0].CardIds);
+        Assert.Equal("Empty Slot", m.SavedDecks[0].Name);
+        Assert.Equal(5, m.SavedDecks.Count);
+    }
+
+    [Fact]
+    public void AnEmptyDecksFile_GivesFiveEmptySlots_AndNoDefaultDeck()
+    {
+        Write(Unlocked, "[1,2,3,4,5]");
+        Write(Decks, "[]");
+        var m = Launch();
+
+        Assert.Equal(new[] { "Empty Slot 1", "Empty Slot 2", "Empty Slot 3", "Empty Slot 4", "Empty Slot 5" }, m.SavedDecks.Select(d => d.Name));
+        Assert.All(m.SavedDecks, d => Assert.Empty(d.CardIds));
+    }
+
+    [Fact]
+    public void UnlockingACard_LeavesDecksAndFavouritesAlone()
+    {
+        FirstLaunchState();
+        var m = Launch();
+        var deckBefore = m.SavedDecks[0].CardIds.ToList();
+        m.FavoriteCardIds.Add(deckBefore[0]);
+        m.SaveFavoriteCards();
+
+        m.UnlockCard(HoneycombDatabase.Shared.AllCards.First(c => c.Stars == 5).Id);
+
+        Assert.Equal(6, m.UnlockedCardIds.Count);
+        var again = Launch();
+        Assert.Equal(deckBefore, again.SavedDecks[0].CardIds);
+        Assert.Equal(new HashSet<int> { deckBefore[0] }, again.FavoriteCardIds);
+    }
+
+    [Fact]
+    public void EditingOneDeck_DoesNotChangeTheOthers()
+    {
+        FirstLaunchState();
+        var m = Launch();
+        var deckOne = m.SavedDecks[0].CardIds.ToList();
+
+        m.SavedDecks[3].Name = "Fourth";
+        m.SavedDecks[3].CardIds = new List<int> { 20, 21, 22, 23, 24 };
+        m.SaveSavedDecks();
+
+        var again = Launch();
+        Assert.Equal(deckOne, again.SavedDecks[0].CardIds);
+        Assert.Equal("Default", again.SavedDecks[0].Name);
+        Assert.Equal("Fourth", again.SavedDecks[3].Name);
+        Assert.Equal("Empty Slot 2", again.SavedDecks[1].Name);
+        Assert.Empty(again.SavedDecks[1].CardIds);
+        Assert.Equal("Empty Slot 5", again.SavedDecks[4].Name);
+    }
+
+    [Fact]
+    public void SavedFiles_AreWrittenAsPlainJsonLists()
+    {
+        FirstLaunchState();
+        var m = Launch();
+        m.FavoriteCardIds.Add(42);
+        m.SaveFavoriteCards();
+
+        Assert.Equal(m.UnlockedCardIds.OrderBy(i => i), Saved(Unlocked).OrderBy(i => i));
+        Assert.Equal(new List<int> { 42 }, Saved(Favorites));
+        var decks = JsonSerializer.Deserialize<List<HoneycombDeckState>>(Read(Decks))!;
+        Assert.Equal(5, decks.Count);
+        Assert.Equal("Default", decks[0].Name);
+    }
+
+    // ---- Start Over, more than once ----
+
+    [Fact]
+    public void StartOverTwice_KeepsTheSameStarMix_AndStaysOneDefaultDeck() => WithDatabaseRestored(() =>
+    {
+        var db = HoneycombDatabase.Shared;
+        int Pick(int stars, int skip) => db.AllCards.Where(c => c.Stars == stars).Skip(skip).First().Id;
+        var old = new List<int> { Pick(5, 0), Pick(4, 0), Pick(3, 0), Pick(3, 1), Pick(3, 2) };
+        Write(Unlocked, JsonSerializer.Serialize(old));
+        Write(Decks, JsonSerializer.Serialize(new List<HoneycombDeckState> { new() { Name = "Mine", CardIds = old } }));
+        var m = Launch();
+
+        m.StartOver();
+        m.StartOver();
+
+        Assert.Equal(new[] { 5, 4, 3, 3, 3 }, m.SavedDecks[0].CardIds.Select(Stars).OrderByDescending(s => s));
+        Assert.Equal("Default", m.SavedDecks[0].Name);
+        Assert.Equal(5, m.UnlockedCardIds.Count);
+        Assert.True(HoneycombProfileManager.Shared.ValidateDeck(m.SavedDecks[0].CardIds, "Default", out var error), error);
+    });
+
+    // ---- Saving when the disk says no ----
+
+    // A read-only data folder (full disk, locked-down machine): saving must quietly do nothing
+    // rather than crash the game. Unix-only because the folder permissions are set with chmod;
+    // skipped if the test runs as a user who ignores permissions (e.g. root).
+    private static void WithReadOnlyDataFolder(Action body)
+    {
+        if (OperatingSystem.IsWindows()) return;
+        var dir = AppPaths.DataDirectory;
+        Directory.CreateDirectory(dir);
+        var original = File.GetUnixFileMode(dir);
+        File.SetUnixFileMode(dir, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+        try
+        {
+            try
+            {
+                var probe = Path.Combine(dir, "probe.tmp");
+                File.WriteAllText(probe, "");
+                File.Delete(probe);
+                return; // permissions not enforced for this user
+            }
+            catch (UnauthorizedAccessException) { }
+            body();
+        }
+        finally { File.SetUnixFileMode(dir, original); }
+    }
+
+    [Fact]
+    public void UnlockCard_WhenTheFolderCannotBeWritten_StillUnlocksForThisSession_WithoutCrashing()
+    {
+        Write(Unlocked, "[1,2,3]");
+        Write(Decks, "[]");
+        var m = Launch();
+
+        WithReadOnlyDataFolder(() =>
+        {
+            m.UnlockCard(40);
+
+            Assert.Contains(40, m.UnlockedCardIds);
+            Assert.Equal("[1,2,3]", Read(Unlocked));
+        });
+    }
+
+    [Fact]
+    public void SavingDecksAndFavourites_WhenTheFolderCannotBeWritten_DoesNotCrashOrTouchTheOldFiles()
+    {
+        Write(Unlocked, "[1,2,3,4,5]");
+        Write(Decks, "[]");
+        Write(Favorites, "[1]");
+        var m = Launch();
+        var oldDecks = Read(Decks);
+
+        WithReadOnlyDataFolder(() =>
+        {
+            m.SavedDecks[1].Name = "Unsaved";
+            m.SaveSavedDecks();
+            m.FavoriteCardIds.Add(2);
+            m.SaveFavoriteCards();
+
+            Assert.Equal(oldDecks, Read(Decks));
+            Assert.Equal("[1]", Read(Favorites));
+        });
+    }
+
+    [Fact]
+    public void StartOver_WhenTheFolderCannotBeWritten_StillRebuildsInMemory_WithoutCrashing() => WithDatabaseRestored(() =>
+    {
+        Write(Unlocked, "[1,2,3]");
+        Write(Decks, "[]");
+        var m = Launch();
+
+        WithReadOnlyDataFolder(() =>
+        {
+            m.StartOver();
+
+            Assert.Equal("Default", m.SavedDecks[0].Name);
+            Assert.Equal(5, m.SavedDecks[0].CardIds.Count);
+            Assert.Equal("[1,2,3]", Read(Unlocked));
+        });
+    });
 }
