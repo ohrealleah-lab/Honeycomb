@@ -1,10 +1,32 @@
 # Honeycomb Card Suite :honeybee: :honey_pot:
 
-**Honeycomb Card Suite** is designed to recreate the gameplay dynamics of classic card games with modern flourishes and deep customization.  Change the card decks and card art to your pictures. Match the felt and card color, save it as a full custom theme. Make your own dark mode. **Make the game yours.** 
+Six card games, four platforms, one shared rule engine, and a deep customization system. Includes a Triple Triad–style card battler (Honeycomb) plus Klondike, Freecell, Spider, Video Poker, and Blackjack.
 
-**Honeycomb Card Suite** está diseñado para recrear la dinámica de los juegos de cartas clásicos con toques modernos y una profunda personalización. Cambia los mazos y el arte de las cartas por tus propias imágenes. Combina el color del fieltro y de las cartas, y guárdalo como un tema personalizado completo. Crea tu propio modo oscuro. **Haz que el juego sea tuyo.**
+**▶ [Play it on itch.io](https://playhoneycomb.itch.io/honeycomb-card-suite)** · [Español](README.es.md)
 
-**Honeycomb** was built using spec-driven development with SpecKit, Claude Code, and Gemini. The macOS & iOS versions are written in Swift 6 & SwiftUI, the Windows version is C# & Avalonia. Zero AI art assets are used. All art used with permission, special thanks to the friends who contributed whom wish to remain uncredited.
+<!-- HERO SCREENSHOT goes here -->
+
+---
+
+## 🛠️ Tech at a Glance
+
+| Platform | Language | UI | Notes |
+|---|---|---|---|
+| macOS | Swift 6 | SwiftUI | macOS 14+, unit-tested, release builds via CI |
+| iOS | Swift 6 | SwiftUI | iOS 17+, shares its game logic with macOS, build and smoke test via CI |
+| Windows | C# (.NET 10) | Avalonia | Signed release builds via CI |
+| Android | Kotlin | Jetpack Compose | minSdk 26 |
+
+* **Shared core**: macOS and iOS use the same Swift game logic (`shared/`). The Windows and Android versions mirror it by hand.
+* **Localization pipeline**: English and Español strings live in one spreadsheet (`tools/`) that generates the string files for every platform.
+* **Tests & CI**: GitHub Actions workflows build macOS, Windows, and iOS, with unit tests covering game state, scoring, casino logic, and the Honeycomb card database.
+* **How it was built**: spec-driven development with SpecKit and Claude Code. Zero AI art assets are used. All art is used with permission, with special thanks to the friends who contributed and wish to remain uncredited.
+
+---
+
+## 🎨 Make The Game Yours
+
+Change the card decks and card art to your own pictures. Match the felt and card colors and save it all as a full custom theme. Make your own dark mode. **Make the game yours.**
 
 ---
 
@@ -13,12 +35,10 @@
 **Honeycomb Card Suite** supports six fully implemented, distinct games:
 
 > **Platform note:** On iOS and Android, Video Poker and Blackjack are free play only (no betting or credits), and Klondike has no Vegas Scoring Mode.
->
-> **Nota sobre plataformas:** En iOS y Android, Video Poker y Blackjack son solo de juego libre (sin apuestas ni créditos), y Klondike no tiene el modo de puntuación Vegas.
 
 ### 1. Honeycomb (Triple Triad Style Card Battle)
 * **Dynamic Gameplay**: Strategically place cards featuring attack values on all four sides to control a 3x3 grid, navigating a roulette built from a pool of 13 rules, including Symmetry, Math Bee, Pollination, and Swarm to the Death. Includes a ban list to remove rules from roulette.
-* **Massive Collection**: Draft your perfect 5-card hand from a 552-card database spanning 4 suits and 5 rarity tiers. 
+* **Massive Collection**: Draft your perfect 5-card hand from a 552-card database spanning 4 suits and 5 rarity tiers.
 * **Meaningful Progression**: Permanently steal cards from your opponent to build up your Card Bank, craft custom decks, and track comprehensive battle stats.
 * **Challenging AI**: Climb the ranks against Baby Bee, Honey Bee, Queen Bee, and Killer Bee — each bringing their own unique decks and strategies.
 
@@ -46,8 +66,8 @@
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/e1585280-d30b-4ab7-a834-0c834d93d923" />
 
 ### 5. Video Poker
-* **Jacks or Better**: Win by holding a pair of Jacks or higher
-* **Deuces Wild**: All 2s are wild cards
+* **Jacks or Better**: Win by holding a pair of Jacks or higher.
+* **Deuces Wild**: All 2s are wild cards.
 * **Bonus Poker**: Jacks or Better rules with extra emphasis on four-of-a-kind hands.
 
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/35eed9e9-93c3-4ef3-95c7-9f4632211cbc" />
@@ -65,12 +85,12 @@
 * **Languages**: English and Español support.
 * **Custom Card Backs**: Set the card back to whatever image you want. Even an animated gif!
 * **Custom Card Art**: Set the art for red and black suits for Aces, Jacks, Kings, and Queens.
-* **Custom Card Colors**: Change the color of the cards and the card suits. 
+* **Custom Card Colors**: Change the color of the cards and the card suits.
 * **Custom Color Background**: Set the tableau to match your deck of cards.
 * **Visual Themes**: Use a presaved theme, or create your own! Easily toggle between multiple themes.
 * **Retro Sound Effects**: Audio cues for shuffling, snapping cards into place, and victory cascades.
 * **No Stress Mode**: Disable timers for a relaxed card gaming session. On Mac and Windows, it also switches Video Poker and Blackjack to betting-free play.
-  
+
 ---
 
 ## ♣️ Game Capabilities
@@ -84,6 +104,9 @@
 
 ## ♦️ Getting Started
 
-Please see the platform-specific READMEs for build instructions and prerequisites:
-- [macOS README](mac/README.md)
-- [Windows README](windows/README.md)
+Platform-specific build instructions and prerequisites:
+
+* [macOS README](mac/README.md)
+* [Windows README](windows/README.md)
+* **iOS**: `cd ios && xcodegen generate`, then open `Honeycomb.xcodeproj` in Xcode (iOS 17+).
+* **Android**: `cd android && ./gradlew assembleDebug` (minSdk 26).
