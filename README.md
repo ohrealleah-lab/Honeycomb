@@ -21,6 +21,7 @@ Six card games, four platforms, one shared rule engine, and a deep customization
 * **Localization pipeline**: English and Español strings live in one spreadsheet (`tools/`) that generates the string files for every platform.
 * **Tests & CI**: GitHub Actions workflows build macOS, Windows, and iOS, with unit tests covering game state, scoring, casino logic, and the Honeycomb card database.
 * **How it was built**: spec-driven development with SpecKit and Claude Code. Zero AI art assets are used. All art is used with permission, with special thanks to the friends who contributed and wish to remain uncredited.
+* **License**: [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, copy, and modify for noncommercial purposes.
 
 ---
 

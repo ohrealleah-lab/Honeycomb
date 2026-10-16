@@ -19,6 +19,7 @@ Seis juegos de cartas, cuatro plataformas, un motor de reglas compartido y un si
 * **Localización**: las cadenas en inglés y español viven en una sola hoja de cálculo (`tools/`) que genera los archivos de cadenas de cada plataforma.
 * **Pruebas y CI**: los flujos de GitHub Actions compilan macOS, Windows e iOS, con pruebas unitarias del estado de juego, la puntuación, la lógica de casino y la base de datos de cartas de Honeycomb.
 * **Cómo se hizo**: desarrollo guiado por especificaciones con SpecKit y Claude Code. No se usa arte generado por IA. Todo el arte se usa con permiso, con agradecimiento especial a los amigos que contribuyeron y desean permanecer sin acreditar.
+* **Licencia**: [PolyForm Noncommercial 1.0.0](LICENSE). Libre para usar, copiar y modificar con fines no comerciales.
 
 ---
 
