@@ -30,7 +30,7 @@
 * **Rules & Scoring**: Classic scoring rules alongside an optional **Vegas Scoring Mode** (Mac and Windows).
 * **Classic Win Animation**: The cards will flow from the foundations, and you will feel alive again.
 
-<img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/f99f00e9-da4c-40b3-bbf2-d8b9855a69bb" />
+<img width="800" height="648" alt="youwin" src="https://github.com/user-attachments/assets/16a20aee-a8b9-4486-b4ad-f9eac83fee36" />
 
 
 ### 3. Freecell Solitaire
