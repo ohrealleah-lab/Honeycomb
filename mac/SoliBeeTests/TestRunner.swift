@@ -111,6 +111,10 @@ struct TestRunner {
         print("🧪 Running AppCoordinatorBehaviorTests...")
         AppCoordinatorBehaviorTests.run()
         print("✅ AppCoordinatorBehaviorTests passed.")
+
+        print("🧪 Running HoneycombRulesAndDealTests...")
+        HoneycombRulesAndDealTests.run()
+        print("✅ HoneycombRulesAndDealTests passed.")
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
