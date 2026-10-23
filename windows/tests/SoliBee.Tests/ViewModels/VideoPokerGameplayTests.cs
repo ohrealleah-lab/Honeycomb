@@ -79,7 +79,10 @@ public class VideoPokerGameplayTests : DataSandbox
         Assert.NotEqual(Fresh().DealDrawLabel, vm.DealDrawLabel); // "Draw" mid-hand, "Deal" otherwise
 
         // The Deal/Draw button mid-hand draws; it never deals (and charges) a second hand.
+        // Nothing is held, so the draw replaces all five cards — from an empty deck, so the
+        // hand stays "nothing" (the dealt deck is shuffled, and a random draw can win).
         vm.State.Hand = Nothing();
+        Reflect.Set(vm, "_deck", new List<Card>());
         vm.DealOrDraw();
         Assert.Equal(VideoPokerPhase.Result, vm.State.Phase);
         Assert.Equal(97, vm.State.SessionCredits);
