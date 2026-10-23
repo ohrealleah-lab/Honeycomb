@@ -217,6 +217,26 @@ public class AppCoordinatorTests : DataSandbox
     }
 
     [Fact]
+    public void NoStressMode_OnSpiderScreen_StopsZeroesAndRestartsSpidersClockOnly()
+    {
+        var c = Fresh();
+        c.GameViewModel.DrawCard();
+        c.SwitchToSpider();
+        c.SpiderViewModel.DealFromStock();
+        c.SpiderViewModel.State.TimerSeconds = 12;
+        c.GameViewModel.State.TimerSeconds = 9;
+
+        ChangeSharedOptions(o => o.IsNoStressMode = true);
+        Assert.False(c.SpiderViewModel.State.IsTimerActive);
+        Assert.Equal(0, c.SpiderViewModel.State.TimerSeconds);
+        Assert.Equal(9, c.GameViewModel.State.TimerSeconds);
+
+        ChangeSharedOptions(o => o.IsNoStressMode = false);
+        Assert.True(c.SpiderViewModel.State.IsTimerActive);
+        Assert.False(c.GameViewModel.State.IsTimerActive);
+    }
+
+    [Fact]
     public void NoStressMode_SwitchedOffElsewhere_NeverResumesABackgroundedGamesClock()
     {
         var c = Fresh();

@@ -445,13 +445,24 @@ public class SpiderGameplayTests : DataSandbox
 
         ChangeSharedOptions(o => o.IsNoStressMode = true);
         Assert.False(vm.State.IsTimerActive);
+        Assert.Equal(0, vm.State.TimerSeconds);   // the elapsed time is dropped too (Mac parity)
         ChangeSharedOptions(o => o.IsNoStressMode = false);
+        Assert.True(vm.State.IsTimerActive);      // back off: the clock resumes right away
 
         Move(vm, 2, 0);
         Assert.True(vm.State.HasWon);
         Assert.Equal(1, Mode().GamesWon);
         Assert.Equal(0, Mode().TimedGamesWon);
         Assert.Equal(0, Mode().ShortestWinSeconds);
+    }
+
+    [Fact]
+    public void TogglingNoStress_BeforeTheFirstMove_NeverStartsTheClock()
+    {
+        var vm = Fresh();
+        ChangeSharedOptions(o => o.IsNoStressMode = true);
+        ChangeSharedOptions(o => o.IsNoStressMode = false);
+        Assert.False(vm.State.IsTimerActive);
     }
 
     [Fact]

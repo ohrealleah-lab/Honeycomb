@@ -216,8 +216,13 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
         {
             var old = Options;
             // No Stress Mode's whole point is "no timer" — if it's switched on mid-game,
-            // stop the timer immediately instead of leaving it ticking until the next deal.
-            bool noStressJustEnabled = m.Options.IsNoStressMode && !old.IsNoStressMode;
+            // stop the timer immediately and zero the elapsed time; if switched back off,
+            // resume immediately instead of leaving it frozen until the next move. Only
+            // zero on the "stop" branch if the timer was actually running here — a
+            // shared-option change reaching a backgrounded game shouldn't wipe elapsed
+            // time it already had paused. Mirrors Mac's reactToNoStressModeChange.
+            bool noStressJustEnabled  = m.Options.IsNoStressMode && !old.IsNoStressMode;
+            bool noStressJustDisabled = !m.Options.IsNoStressMode && old.IsNoStressMode;
             if (m.Options.IsNoStressMode != Options.IsNoStressMode && State.MovesCount > 0 && !State.HasWon)
                 _untimedThisGame = true;
             Options = m.Options;
@@ -230,7 +235,12 @@ public partial class SpiderViewModel : ObservableObject, ISolitaireGameViewModel
             if (Options.SpiderSuitCount != old.SpiderSuitCount)
                 InitializeGame(countAsNewGame: false);
             else if (noStressJustEnabled && State.IsTimerActive)
+            {
                 State.IsTimerActive = false;
+                State.TimerSeconds = 0;
+            }
+            else if (noStressJustDisabled && State.MovesCount > 0 && !State.HasWon)
+                State.IsTimerActive = true;
         });
 
         for (int i = 0; i < 10; i++)
