@@ -704,6 +704,7 @@ class BeecellGameplayTest : ViewModelTestBase() {
 
     @Test fun statsSurviveARelaunch() {
         val rig = newRig()
+        flush(rig)   // let the deal's own stats write land first — saves aren't ordered, so back-to-back ones can cross
         rig.vm.playLastWinningMove()
         flush(rig)
         val again = newRig(rig.ds).vm.stats()
