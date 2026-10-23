@@ -578,9 +578,12 @@ class HoneycombViewModel(
             }
         }
         
+        // Draw each star tier once, with its combined count: Baby Bee's table lists the 2★
+        // tier twice (a fixed slot plus a variable last slot), and two separate draws from
+        // one tier don't know about each other, so they could deal the same card twice.
         val deck = mutableListOf<HoneycombCardData>()
-        for ((stars, count) in composition) {
-            deck.addAll(database.rulesAwareCards(stars, count, preferLowStats))
+        for ((stars, tier) in composition.groupBy { it.first }) {
+            deck.addAll(database.rulesAwareCards(stars, tier.sumOf { it.second }, preferLowStats))
         }
 
         deck.shuffle()

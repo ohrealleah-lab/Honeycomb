@@ -1189,8 +1189,16 @@ public final class HoneycombViewModel {
             ? reverseComposition(for: matchDifficulty)
             : normalComposition(for: matchDifficulty)
 
-        var deck: [HoneycombCardData] = []
+        // Draw each star tier once, with its combined count: Baby Bee's table lists the 2★
+        // tier twice (a fixed slot plus a variable last slot), and two separate draws from
+        // one tier don't know about each other, so they could deal the same card twice.
+        var tierCounts: [(stars: Int, count: Int)] = []
         for (stars, count) in composition {
+            if let i = tierCounts.firstIndex(where: { $0.stars == stars }) { tierCounts[i].count += count }
+            else { tierCounts.append((stars, count)) }
+        }
+        var deck: [HoneycombCardData] = []
+        for (stars, count) in tierCounts {
             deck += db.rulesAwareCards(stars: stars, count: count, preferLowStats: preferLowStats)
         }
 

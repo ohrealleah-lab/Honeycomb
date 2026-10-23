@@ -15,6 +15,26 @@ public class HoneycombViewModelTests
         // Removed flaky test
     }
 
+    // Baby Bee's table lists the 2-star tier twice (a fixed slot plus a variable last slot),
+    // which once let one card be dealt twice (about 1 deal in 300).
+    [Theory]
+    [InlineData(HoneycombDifficulty.Easy)]
+    [InlineData(HoneycombDifficulty.Medium)]
+    [InlineData(HoneycombDifficulty.Hard)]
+    [InlineData(HoneycombDifficulty.UltraHard)]
+    public void OpponentDeck_NeverHasTheSameCardTwice(HoneycombDifficulty difficulty)
+    {
+        var vm = new HoneycombViewModel(isHeadless: true);
+        vm.State.MatchDifficulty = difficulty;
+        vm.State.ActiveRules = new List<HoneycombRule>();
+        for (int i = 0; i < 1500; i++)
+        {
+            var deck = (List<HoneycombCardData>)Reflect.Call(vm, "RollOpponentDeck")!;
+            Assert.Equal(5, deck.Count);
+            Assert.Equal(5, deck.Select(c => c.Id).Distinct().Count());
+        }
+    }
+
     [Fact]
     public void SuddenDeath_Triggers_On_Tie()
     {

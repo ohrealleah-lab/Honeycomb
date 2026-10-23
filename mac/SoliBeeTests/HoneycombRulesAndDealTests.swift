@@ -29,6 +29,7 @@ struct HoneycombRulesAndDealTests {
         isolated(testBanningNormalModeAlwaysRollsAtLeastOneRule)
         isolated(testRouletteWithOneRuleLeftOnlyUsesThatRule)
         isolated(testOpponentDeckStarsPerDifficulty)
+        isolated(testNoOpponentDeckHasTheSameCardTwice)
         isolated(testUltraHardGuaranteesThreePollinationSuitCards)
         isolated(testNoStressMatchDealsTheOverpoweredPlayerDeck)
         isolated(testDifficultyIsLockedForTheMatch)
@@ -265,6 +266,19 @@ struct HoneycombRulesAndDealTests {
         expect(stars(.hard, [.reverse]).allSatisfy { $0 == [1, 1, 2, 2, 2] }, "Hard under Inversion: two 1★ and three 2★")
         expect(stars(.ultraHard, [.reverse]).allSatisfy { $0 == [1, 1, 1, 1, 1] }, "Ultra Hard under Inversion: five 1★")
         expect(stars(.easy, [.reverse]).allSatisfy { $0 == [1, 1, 1, 2, 2] || $0 == [1, 1, 1, 2, 3] }, "Baby Bee keeps its own deck under Inversion")
+    }
+
+    // Baby Bee's table lists the 2★ tier twice, which once let one card be dealt twice
+    // (about 1 match in 300). Many Baby Bee and Honey Bee deals, none may repeat a card.
+    static func testNoOpponentDeckHasTheSameCardTwice() {
+        for difficulty in [HoneycombDifficulty.easy, .medium] {
+            let vm = vmWith(difficulty: difficulty, picked: [.order])
+            for _ in 0..<400 {
+                vm.startNewGame()
+                let ids = opponentDeal(vm).map { $0.id }
+                expect(ids.count == 5 && Set(ids).count == 5, "\(difficulty): the opponent's five cards are all different: \(ids)")
+            }
+        }
     }
 
     static func testUltraHardGuaranteesThreePollinationSuitCards() {

@@ -581,10 +581,13 @@ public partial class HoneycombViewModel : ObservableObject, IIdleActionChecking
         bool reverse = State.ActiveRules.Contains(HoneycombRule.Reverse);
         var comp = reverse ? ReverseComposition(State.MatchDifficulty) : NormalComposition(State.MatchDifficulty);
 
+        // Draw each star tier once, with its combined count: Baby Bee's table lists the 2★
+        // tier twice (a fixed slot plus a variable last slot), and two separate draws from
+        // one tier don't know about each other, so they could deal the same card twice.
         var deck = new List<HoneycombCardData>();
-        foreach (var (stars, count) in comp)
+        foreach (var tier in comp.GroupBy(c => c.stars))
         {
-            deck.AddRange(HoneycombDatabase.Shared.RulesAwareCards(stars, count, reverse));
+            deck.AddRange(HoneycombDatabase.Shared.RulesAwareCards(tier.Key, tier.Sum(c => c.count), reverse));
         }
 
         // Composition always assembles in the same fixed star-tier order (e.g. Ultra

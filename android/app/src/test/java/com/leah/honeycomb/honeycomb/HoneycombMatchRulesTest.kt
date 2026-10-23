@@ -124,4 +124,22 @@ class HoneycombMatchRulesTest : ViewModelTestBase() {
         assertEquals("Hidden card captured nothing as it landed", CardOwner.Opponent, st.board.cells[4].card?.owner)
         assertEquals(CardOwner.Opponent, st.board.cells[0].card?.owner)
     }
+
+    // Baby Bee's table lists the 2★ tier twice (a fixed slot plus a variable last slot), which
+    // once let one card be dealt twice (about 1 deal in 300).
+    @Test(timeout = 60_000)
+    fun opponentDeckNeverHasTheSameCardTwice() {
+        val vm = newVm()
+        val roll = vm.javaClass.getDeclaredMethod(
+            "rollOpponentDeck", HoneycombDifficulty::class.java, List::class.java, Set::class.java, Boolean::class.javaPrimitiveType
+        ).apply { isAccessible = true }
+        for (difficulty in HoneycombDifficulty.values()) {
+            repeat(1500) {
+                @Suppress("UNCHECKED_CAST")
+                val deck = roll.invoke(vm, difficulty, emptyList<HoneycombRule>(), emptySet<String>(), false) as List<HoneycombCardData>
+                assertEquals(5, deck.size)
+                assertEquals("$difficulty dealt a card twice", 5, deck.map { it.id }.toSet().size)
+            }
+        }
+    }
 }
