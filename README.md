@@ -1,4 +1,15 @@
+<p align="center">
+  <img src="mac/images/icon/AppIcon-1024.png" width="128" alt="Honeycomb app icon">
+</p>
+
 # Honeycomb Card Suite :honeybee: :honey_pot:
+
+[![macOS build](https://img.shields.io/github/actions/workflow/status/ohrealleah-lab/Honeycomb/build-release-mac.yml?branch=main&label=macOS%20build)](https://github.com/ohrealleah-lab/Honeycomb/actions/workflows/build-release-mac.yml)
+[![iOS build](https://img.shields.io/github/actions/workflow/status/ohrealleah-lab/Honeycomb/build-test-ios.yml?branch=main&label=iOS%20build)](https://github.com/ohrealleah-lab/Honeycomb/actions/workflows/build-test-ios.yml)
+[![Windows build](https://img.shields.io/github/actions/workflow/status/ohrealleah-lab/Honeycomb/build-sign-windows.yml?event=push&label=Windows%20build)](https://github.com/ohrealleah-lab/Honeycomb/actions/workflows/build-sign-windows.yml)
+[![Latest release](https://img.shields.io/github/v/release/ohrealleah-lab/Honeycomb?label=release)](https://github.com/ohrealleah-lab/Honeycomb/releases)
+[![Test coverage](https://codecov.io/gh/ohrealleah-lab/Honeycomb/branch/main/graph/badge.svg)](https://codecov.io/gh/ohrealleah-lab/Honeycomb)
+![Platforms: macOS, iOS, Windows, Android](https://img.shields.io/badge/platforms-macOS%20%7C%20iOS%20%7C%20Windows%20%7C%20Android-blue)
 
 Six card games, four platforms, one shared rule engine, and a deep customization system. Includes a Triple Triad–style card battler (Honeycomb) plus Klondike, Freecell, Spider, Video Poker, and Blackjack.
 
