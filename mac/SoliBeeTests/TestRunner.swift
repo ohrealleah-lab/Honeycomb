@@ -115,6 +115,10 @@ struct TestRunner {
         print("🧪 Running HoneycombRulesAndDealTests...")
         HoneycombRulesAndDealTests.run()
         print("✅ HoneycombRulesAndDealTests passed.")
+
+        print("🧪 Running MacGapTests...")
+        MacGapTests.run()
+        print("✅ MacGapTests passed.")
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
