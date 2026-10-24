@@ -21,6 +21,7 @@ struct HoneycombPlayTests {
         isolated(testHintPointsAtALegalMove)
         isolated(testHintUnderOrderAndWhenUnavailable)
         isolated(testATieWithoutSuddenDeathIsADraw)
+        isolated(testALossIsNotAWin)
         isolated(testATieWithSuddenDeathPlaysOvertime)
         isolated(testRefusedPlays)
         isolated(testRestartDealsAFreshMatch)
@@ -286,6 +287,22 @@ struct HoneycombPlayTests {
         expect(vm.stats.matchesDrawn == 1 && vm.stats.gamesPlayed == 1 && vm.stats.matchesWon == 0 && vm.stats.matchesLost == 0, "It's recorded as a draw")
         expect(vm.stats.currentWinStreak == 0, "A draw doesn't build a win streak")
         expect(vm.showPostGamePrompt, "The result is shown")
+        expect(vm.matchOutcome != .win, "A draw isn't a win, so the Steal button (shown only after a win) stays hidden")
+    }
+
+    static func testALossIsNotAWin() {
+        let vm = HoneycombViewModel()
+        vm.gameState = .playing
+        vm.isPlayerTurn = true
+        vm.activeRules = []
+        var board = HoneycombBoard()
+        for i in 0..<8 { board.cells[i].card = card(owner: .opponent) }
+        vm.board = board
+        vm.playerHand = [card(owner: .player, stats: [1, 1, 1, 1])]
+        vm.opponentHand = []
+        _ = vm.playerPlayCard(handIndex: 0, boardIndex: 8)
+        expect(vm.gameState == .gameOver && vm.matchOutcome == .loss, "A 1–8 board is a loss")
+        expect(vm.matchOutcome != .win, "A loss isn't a win, so the Steal button stays hidden")
     }
 
     static func testATieWithSuddenDeathPlaysOvertime() {
