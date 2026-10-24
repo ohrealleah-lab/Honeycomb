@@ -320,12 +320,12 @@ class BannerCatalog(
         var firstPlayed = prefs[FIRST_PLAYED_DATE_KEY]
         if (firstPlayed == null) {
             firstPlayed = now
-            PreferencesHelper.trackWrite { dataStore.edit { it[FIRST_PLAYED_DATE_KEY] = now } }
+            PreferencesHelper.trackWrite(dataStore) { dataStore.edit { it[FIRST_PLAYED_DATE_KEY] = now } }
         }
         val hasShown = prefs[HAS_SHOWN_ONE_YEAR_BANNER_KEY] ?: false
         val oneYearMs = 365L * 24 * 60 * 60 * 1000
         if (hasShown || now - firstPlayed < oneYearMs) return false
-        PreferencesHelper.trackWrite { dataStore.edit { it[HAS_SHOWN_ONE_YEAR_BANNER_KEY] = true } }
+        PreferencesHelper.trackWrite(dataStore) { dataStore.edit { it[HAS_SHOWN_ONE_YEAR_BANNER_KEY] = true } }
         return true
     }
 }

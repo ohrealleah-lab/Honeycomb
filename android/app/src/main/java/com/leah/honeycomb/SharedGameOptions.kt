@@ -55,7 +55,7 @@ class SharedGameOptions(
 
     fun setSoundEnabled(enabled: Boolean) {
         _isSoundEnabled.value = enabled
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalSoundEnabledKey] = enabled }
         }
     }
@@ -63,7 +63,7 @@ class SharedGameOptions(
     fun setNoStressMode(enabled: Boolean) {
         val oldValue = _noStressMode.value
         _noStressMode.value = enabled
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalNoStressModeKey] = enabled }
         }
         if (oldValue != enabled) {
@@ -73,28 +73,28 @@ class SharedGameOptions(
 
     fun setHoneyMode(enabled: Boolean) {
         _honeyMode.value = enabled
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalHoneyModeKey] = enabled }
         }
     }
 
     fun setManuallyDismissBanners(enabled: Boolean) {
         _manuallyDismissBanners.value = enabled
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalManuallyDismissBannersKey] = enabled }
         }
     }
 
     fun setHideHintButton(hide: Boolean) {
         _hideHintButton.value = hide
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalHideHintButtonKey] = hide }
         }
     }
 
     fun setHideBee(hide: Boolean) {
         _hideBee.value = hide
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(dataStore) {
             dataStore.edit { it[globalHideBeeKey] = hide }
         }
     }

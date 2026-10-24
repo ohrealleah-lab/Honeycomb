@@ -588,12 +588,27 @@ class KlondikeGameplayTest : ViewModelTestBase() {
     private fun flush() {
         clock.scheduler.advanceTimeBy(600)   // past the 500 ms save debounce
         clock.scheduler.runCurrent()
-        runBlocking { PreferencesHelper.awaitPendingWrites(5000) }
+        awaitSaves()
     }
 
-    // A win that also sets a new high score saves the stats twice back to back (high score,
-    // then the win), and those two background writes can land in either order — so this test
-    // starts from a high score the win can't beat, leaving one write. (See the report.)
+    // A win that sets a new high score saves the stats twice back to back (the high score, then
+    // the win). Saves now run in order, so the win is never overwritten by the older save.
+    @Test fun aWinThatSetsAHighScoreSurvivesARelaunch() {
+        repeat(15) {
+            val rig = newRig()
+            flush()
+            rig.vm.oneCardFromWinning()
+            rig.vm.setState { it.copy(score = 500, timerSeconds = 100) }
+            rig.vm.playLastCard()
+            flush()
+            val again = newRig(rig.ds).vm.stats()
+            assertEquals(1, again.gamesWon)
+            assertEquals(1, again.currentStreak)
+            assertEquals(100, again.shortestWinTime)
+            assertEquals(7490, again.highScore)
+        }
+    }
+
     @Test fun statsSurviveARelaunch() {
         val rig = newRig()
         privateFlow<GameStatistics>(rig.vm, "_statistics").let { it.value = it.value.copy(highScore = 1_000_000) }

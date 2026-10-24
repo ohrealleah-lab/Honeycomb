@@ -118,14 +118,14 @@ class AppContainer(private val context: Context) {
     
     fun setLanguage(lang: AppLanguage) {
         _language.value = lang
-        coroutineScope.launch {
+        PreferencesHelper.trackWrite(context.dataStore) {
             context.dataStore.edit { it[appLanguageKey] = lang.name }
         }
     }
 
     fun setLastGameMode(mode: String) {
         activeGameRoute = mode
-        PreferencesHelper.trackWrite {
+        PreferencesHelper.trackWrite(context.dataStore) {
             context.dataStore.edit { it[lastGameModeKey] = mode }
         }
     }

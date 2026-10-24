@@ -82,7 +82,7 @@ class SpiderGameplayTest : ViewModelTestBase() {
     private fun flush() {
         clock.scheduler.advanceTimeBy(600)   // past the 500 ms save debounce
         clock.scheduler.runCurrent()
-        runBlocking { PreferencesHelper.awaitPendingWrites(5000) }
+        awaitSaves()
     }
 
     // ---- Deal ----

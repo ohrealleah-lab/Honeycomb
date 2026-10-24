@@ -53,7 +53,7 @@ class SettingsPersistenceTest : ViewModelTestBase() {
     }
 
     private fun flush() {
-        runBlocking { PreferencesHelper.awaitPendingWrites(5000) }
+        awaitSaves()
     }
 
     private fun klondike(ds: DataStore<Preferences>): GameViewModel {
@@ -311,5 +311,38 @@ class SettingsPersistenceTest : ViewModelTestBase() {
         // Two launches dealt two games.
         assertEquals(2, load(ds, "beecell_statistics", BeecellStatistics.serializer(), BeecellStatistics())
             .statsByFreeCells[4]?.gamesPlayed)
+    }
+
+    // Saves made back to back run in the order they were made, so the last value always wins.
+    @Test fun backToBackSavesOfOneItemLandInOrder() {
+        repeat(3) {
+            val ds = newDataStore()
+            repeat(80) { n ->
+                PreferencesHelper.saveObjectAsync(ds, "klondike_statistics", GameStatistics.serializer(), GameStatistics(gamesWon = n))
+            }
+            flush()
+            assertEquals(79, load(ds, "klondike_statistics", GameStatistics.serializer(), GameStatistics()).gamesWon)
+        }
+    }
+
+    @Test fun savingASettingTwiceQuickly_KeepsTheLastValue() {
+        repeat(20) {
+            val ds = newDataStore()
+            val o = newSharedOptions(ds)
+            o.setHoneyMode(false)
+            o.setHoneyMode(true)
+            o.setHoneyMode(false)
+            flush()
+            assertFalse(newSharedOptions(ds).honeyMode.value)
+        }
+    }
+
+    @Test fun aFailedSaveDoesNotStopTheOnesBehindIt() {
+        val ds = newDataStore()
+        // The queue reports the failure the way a failed save job always did, and carries on.
+        PreferencesHelper.trackWrite(ds) { error("boom") }
+        PreferencesHelper.saveObjectAsync(ds, "klondike_statistics", GameStatistics.serializer(), GameStatistics(gamesWon = 5))
+        flush()
+        assertEquals(5, load(ds, "klondike_statistics", GameStatistics.serializer(), GameStatistics()).gamesWon)
     }
 }

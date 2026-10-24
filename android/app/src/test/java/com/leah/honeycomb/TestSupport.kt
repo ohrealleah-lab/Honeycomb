@@ -28,9 +28,19 @@ abstract class ViewModelTestBase {
     @Before fun setMainDispatcher() { Dispatchers.setMain(clock) }
     @After fun resetMainDispatcher() { Dispatchers.resetMain() }
 
+    private val dataStores = mutableListOf<DataStore<Preferences>>()
+
     protected fun newDataStore(): DataStore<Preferences> {
         val file = File.createTempFile("honeycomb-test", ".preferences_pb").apply { delete(); deleteOnExit() }
-        return PreferenceDataStoreFactory.create(scope = ioScope, produceFile = { file })
+        return PreferenceDataStoreFactory.create(scope = ioScope, produceFile = { file }).also { dataStores += it }
+    }
+
+    // Waits for the saves still in flight to every DataStore this test made (and only those —
+    // another test's store shouldn't be able to hold this one up).
+    protected fun awaitSaves(timeoutMs: Long = 30_000) {
+        kotlinx.coroutines.runBlocking {
+            dataStores.toList().forEach { com.leah.honeycomb.PreferencesHelper.awaitPendingWrites(timeoutMs, it) }
+        }
     }
 
     protected val language = MutableStateFlow(AppLanguage.English)
