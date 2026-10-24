@@ -27,8 +27,6 @@ build:
 	cp src/priest.png $(APP_BUNDLE)/Contents/Resources/priest.png
 	cp src/moogle.jpg $(APP_BUNDLE)/Contents/Resources/moogle.jpg
 	cp src/dingwall.jpg $(APP_BUNDLE)/Contents/Resources/dingwall.jpg
-	cp images/letters/Parisienne-Regular.ttf $(APP_BUNDLE)/Contents/Resources/Parisienne-Regular.ttf
-	cp images/letters/LilyScriptOne-Regular.ttf $(APP_BUNDLE)/Contents/Resources/LilyScriptOne-Regular.ttf
 	cp "images/backgrounds/Forest.png" "$(APP_BUNDLE)/Contents/Resources/Forest.png"
 	cp "images/backgrounds/On The Water.png" "$(APP_BUNDLE)/Contents/Resources/On The Water.png"
 	cp "images/backgrounds/Pareidolic.png" "$(APP_BUNDLE)/Contents/Resources/Pareidolic.png"

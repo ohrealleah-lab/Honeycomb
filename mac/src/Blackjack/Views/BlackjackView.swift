@@ -743,29 +743,6 @@ public struct BlackjackView: View {
     // constructing a PokerChipView at all.
     private static let chipDiameter: CGFloat = 46
 
-    private func stackedButton(_ label: String, hotkey: String, color: Color,
-                               textColor: Color = .white, disabled: Bool = false,
-                               action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 2) {
-                Text(label)
-                    .font(.display(14, weight: .black))
-                    .foregroundColor(disabled ? textColor.opacity(0.4) : textColor)
-                Text("[\(hotkey)]")
-                    .font(.display(10, weight: .bold))
-                    .foregroundColor((disabled ? textColor.opacity(0.4) : textColor).opacity(0.6))
-            }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 8)
-            .background(disabled ? Color.gray.opacity(0.3) : color)
-            .cornerRadius(6)
-            .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.white.opacity(0.3), lineWidth: 1))
-        }
-        .buttonStyle(PressButtonStyle())
-        .focusable(false)
-        .disabled(disabled)
-    }
-
     private func casinoButton(_ label: String, systemImage: String? = nil, color: Color, textColor: Color = .white,
                                disabled: Bool = false, action: @escaping () -> Void) -> some View {
         let isCompact = systemImage != nil && actionButtonsWidth < Self.compactActionButtonsWidthThreshold

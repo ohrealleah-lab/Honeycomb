@@ -8,16 +8,9 @@ struct HoneycombiOSApp: App {
     init() {
         UISound.backend = IOSSoundBackend()
         _coordinator = State(initialValue: AppCoordinator())
-        // Card rank-letter script candidates being compared against the system-
-        // provided Noteworthy-Bold currently in use (see TouchCardView.swift) — mirrors
-        // mac's own SoliBeeApp.swift font registration (Parisienne/LilyScriptOne), same
-        // CoreText API, since neither of these ships on iOS by default. Both are OFL-
-        // licensed, sourced from Google Fonts. Dancing Script is registered under its
-        // variable font's own default-instance PostScript name ("DancingScript-
-        // Regular") rather than one of its named Medium/SemiBold/Bold instances —
-        // whether those are separately addressable via Font.custom on iOS, as opposed
-        // to only the default instance, hasn't been confirmed live.
-        for name in ["MarckScript-Regular", "DancingScript-Regular"] {
+        // Card rank-letter script font (see TouchCardView.swift) — not shipped on iOS by
+        // default, so it's bundled (OFL-licensed, from Google Fonts) and registered here.
+        for name in ["MarckScript-Regular"] {
             if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
                 CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
             }

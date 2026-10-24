@@ -27,7 +27,6 @@ data class GameInfo(
     // (GameMode.localizedDisplayName + the Help guide's help*Subtitle one-liners).
     val title: StringKey,
     val description: StringKey,
-    val iconResId: Int? = null,
     val textIcon: String? = null
 )
 

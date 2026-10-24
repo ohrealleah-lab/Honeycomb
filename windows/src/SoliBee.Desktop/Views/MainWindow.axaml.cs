@@ -1219,11 +1219,6 @@ public partial class MainWindow : Window
         _helpWindow.Show(this);
     }
 
-    private void Exit_Click(object? sender, RoutedEventArgs e)
-    {
-        Close();
-    }
-
     private void About_Click(object? sender, RoutedEventArgs e)
     {
         var about = new AboutWindow();

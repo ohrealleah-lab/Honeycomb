@@ -104,10 +104,6 @@ class WindowZoomController {
             window.setFrame(screen.visibleFrame, display: true, animate: true)
         }
     }
-
-    func clearZoomState() {
-        previousFrame = nil
-    }
 }
 
 // Shared board-fit-to-window math, factored out of each game view's own recomputeScale().

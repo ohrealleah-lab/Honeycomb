@@ -34,9 +34,9 @@ public enum BannerFireResult {
     // A message from the catalog's own pool for this id.
     case message(String)
     // The gate roll failed — this is the fallback text instead (an existing
-    // production banner's own text, e.g. "Fallen Ace!", or the sentinel
-    // BannerCatalog.ruleNameSentinel for rulesBanner entries, which the
-    // caller resolves to the actual active rule's own display name).
+    // production banner's own text, e.g. "Fallen Ace!", or the placeholder
+    // "$RULE_NAME" for rulesBanner entries, which the caller replaces with
+    // its own default text — the active rule's display name).
     case fallback(String)
     // The id has no catalog entry, or its entry has no eligible content
     // (shouldn't happen for a valid, non-empty catalog) — nothing to show.
@@ -45,12 +45,6 @@ public enum BannerFireResult {
 
 public final class BannerCatalog {
     public static let shared = BannerCatalog()
-
-    // Sentinel a `fallback` string can equal for `rulesBanner`-location
-    // entries — there's no single literal fallback text for those (it
-    // depends on which rule is active), so the catalog can't bake it in;
-    // the caller substitutes the rule's own existing display name instead.
-    public static let ruleNameSentinel = "$RULE_NAME"
 
     private let entries: [BannerID: BannerDefinition]
 

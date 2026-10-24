@@ -22,15 +22,6 @@ namespace SoliBee.Desktop.Views;
 
 public partial class CardView : UserControl
 {
-    public void DisableBorderAndShadowsForStretch()
-    {
-        CardBack.CornerRadius = new Avalonia.CornerRadius(0);
-        CardBack.BorderThickness = new Avalonia.Thickness(0);
-        CardBack.BoxShadow = new Avalonia.Media.BoxShadows();
-        
-        InnerCardBack.CornerRadius = new Avalonia.CornerRadius(0);
-    }
-
     private bool _isDragging;
     private bool _dragArmed;
     private const double DragThresholdSq = 4; // ~2px — below this, treat as a click, not a drag
@@ -680,12 +671,6 @@ public partial class CardView : UserControl
     private static float _pipFontSize = 87.5f;
     private static float _aceFontSize = 187.5f;
 
-    public static void SetAceFontSize(float size)
-    {
-        _aceFontSize = size;
-        _aceBitmapCache.Clear();
-    }
-
     internal static Bitmap GetOrCreateAceBitmap(string suitChar, IBrush brush)
     {
         var color = brush is SolidColorBrush scb ? scb.Color : Colors.Black;
@@ -1109,147 +1094,6 @@ public partial class CardView : UserControl
         }
     }
 
-    private static Bitmap GetCachedBitmapNoBackground(string resourceUri, int tolerance = 25)
-    {
-        string cacheKey = resourceUri + "__nobg";
-        if (_bitmapCache.TryGetValue(cacheKey, out var cached)) return cached;
-        try
-        {
-            using var stream = AssetLoader.Open(new Uri(resourceUri));
-            using var codec = SKCodec.Create(stream);
-            if (codec == null) return GetCachedBitmap(resourceUri);
-
-            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
-            using var bmp = new SKBitmap(info);
-            codec.GetPixels(info, bmp.GetPixels());
-
-            int w = bmp.Width, h = bmp.Height;
-            byte[] bytes = bmp.Bytes;
-
-            // Sample background from top-left corner (BGRA order)
-            byte bgB = bytes[0], bgG = bytes[1], bgR = bytes[2];
-
-            // BFS flood fill from all 4 corners to identify background pixels
-            var visited = new bool[w * h];
-            var queue = new Queue<int>();
-
-            bool IsBg(int idx)
-            {
-                int o = idx * 4;
-                return Math.Abs(bytes[o]     - bgB) <= tolerance &&
-                       Math.Abs(bytes[o + 1] - bgG) <= tolerance &&
-                       Math.Abs(bytes[o + 2] - bgR) <= tolerance;
-            }
-
-            void Enqueue(int x, int y)
-            {
-                if (x < 0 || x >= w || y < 0 || y >= h) return;
-                int i = y * w + x;
-                if (!visited[i] && IsBg(i)) { visited[i] = true; queue.Enqueue(i); }
-            }
-
-            Enqueue(0, 0); Enqueue(w - 1, 0); Enqueue(0, h - 1); Enqueue(w - 1, h - 1);
-            while (queue.Count > 0)
-            {
-                int i = queue.Dequeue();
-                int x = i % w, y = i / w;
-                Enqueue(x + 1, y); Enqueue(x - 1, y); Enqueue(x, y + 1); Enqueue(x, y - 1);
-            }
-
-            // Erase background pixels and find tight bounding box of remaining content
-            int minX = w, maxX = 0, minY = h, maxY = 0;
-            for (int i = 0; i < w * h; i++)
-            {
-                if (visited[i])
-                {
-                    int o = i * 4;
-                    bytes[o] = bytes[o+1] = bytes[o+2] = bytes[o+3] = 0;
-                }
-                else
-                {
-                    int x = i % w, y = i / w;
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
-                }
-            }
-
-            // Crop to the tight bounding box so the character fills the image slot
-            if (minX > maxX || minY > maxY) return GetCachedBitmap(resourceUri);
-            int cropW = maxX - minX + 1, cropH = maxY - minY + 1;
-            var cropped = new byte[cropW * cropH * 4];
-            for (int row = 0; row < cropH; row++)
-                Array.Copy(bytes, ((minY + row) * w + minX) * 4, cropped, row * cropW * 4, cropW * 4);
-
-            var wb = new WriteableBitmap(
-                new PixelSize(cropW, cropH), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
-                Marshal.Copy(cropped, 0, fb.Address, cropped.Length);
-
-            _bitmapCache[cacheKey] = wb;
-            return wb;
-        }
-        catch { return GetCachedBitmap(resourceUri); }
-    }
-
-    // Removes near-transparent noise pixels and auto-crops to the tight content bounding box.
-    // Use for images that already have transparency but have anti-aliasing/noise at the edges.
-    private static Bitmap GetCachedBitmapTrimmed(string resourceUri, byte alphaThreshold = 40)
-    {
-        string cacheKey = resourceUri + "__trimmed";
-        if (_bitmapCache.TryGetValue(cacheKey, out var cached)) return cached;
-        try
-        {
-            using var stream = AssetLoader.Open(new Uri(resourceUri));
-            using var codec = SKCodec.Create(stream);
-            if (codec == null) return GetCachedBitmap(resourceUri);
-
-            var info = new SKImageInfo(codec.Info.Width, codec.Info.Height, SKColorType.Bgra8888, SKAlphaType.Unpremul);
-            using var bmp = new SKBitmap(info);
-            codec.GetPixels(info, bmp.GetPixels());
-
-            int w = bmp.Width, h = bmp.Height;
-            byte[] bytes = bmp.Bytes;
-
-            // Zero noise pixels (alpha below threshold) and track content bounding box
-            int minX = w, maxX = 0, minY = h, maxY = 0;
-            for (int i = 0; i < w * h; i++)
-            {
-                int o = i * 4;
-                if (bytes[o + 3] <= alphaThreshold)
-                {
-                    bytes[o] = bytes[o+1] = bytes[o+2] = bytes[o+3] = 0;
-                }
-                else
-                {
-                    int x = i % w, y = i / w;
-                    if (x < minX) minX = x;
-                    if (x > maxX) maxX = x;
-                    if (y < minY) minY = y;
-                    if (y > maxY) maxY = y;
-                }
-            }
-
-            if (minX > maxX || minY > maxY) return GetCachedBitmap(resourceUri);
-            int cropW = maxX - minX + 1, cropH = maxY - minY + 1;
-            var cropped = new byte[cropW * cropH * 4];
-            for (int row = 0; row < cropH; row++)
-                Array.Copy(bytes, ((minY + row) * w + minX) * 4, cropped, row * cropW * 4, cropW * 4);
-
-            var wb = new WriteableBitmap(
-                new PixelSize(cropW, cropH), new Vector(96, 96),
-                PixelFormat.Bgra8888, AlphaFormat.Unpremul);
-            using (var fb = wb.Lock())
-                Marshal.Copy(cropped, 0, fb.Address, cropped.Length);
-
-            _bitmapCache[cacheKey] = wb;
-            return wb;
-        }
-        catch { return GetCachedBitmap(resourceUri); }
-    }
-
     private static (Bitmap[] Frames, int[] Durations) GetCachedGifFrames(string filePath)
     {
         if (_gifFrameCache.TryGetValue(filePath, out var cached)) return cached;
@@ -1335,20 +1179,6 @@ public partial class CardView : UserControl
             _sharedGifTimer?.Stop();
             _sharedGifFrames = null;
             _sharedGifFrameIndex = 0;
-        }
-    }
-
-    public Pile? ParentPile
-    {
-        get
-        {
-            var parent = this.Parent;
-            while (parent != null)
-            {
-                if (parent is PileView pv) return pv.Pile;
-                parent = parent.Parent;
-            }
-            return null;
         }
     }
 
@@ -1581,8 +1411,8 @@ public partial class CardView : UserControl
             else
             {
                 var selectedCard = gameView.SelectedCardView.Card;
-                // Use SelectedSourcePile (captured at selection time) not ParentPile,
-                // because after PointerReleased the old CardView is orphaned.
+                // Use SelectedSourcePile (captured at selection time) rather than walking up
+                // from the old CardView, because after PointerReleased it's orphaned.
                 var sourcePile = gameView.SelectedSourcePile;
                 if (selectedCard != null && sourcePile != null && thisPile != sourcePile)
                 {

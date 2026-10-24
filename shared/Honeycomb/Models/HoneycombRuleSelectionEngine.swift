@@ -19,7 +19,6 @@ public enum HoneycombRuleRowID: Hashable {
     case normalMode
 
     public static let banListOrder: [HoneycombRuleRowID] = [.normalMode] + HoneycombRule.allCases.map { .rule($0) }
-    public static let pickableOrder: [HoneycombRuleRowID] = [.normalMode] + HoneycombRule.allCases.map { .rule($0) }
 
     public var isPickable: Bool { true }
 

@@ -1,31 +1,6 @@
 import SwiftUI
 import AppKit
 
-// MARK: - Width Measurement
-
-/// Publishes the width of whatever it's attached to, for toolbars/action-button rows that
-/// need to know their own available width to decide when to swap text labels for
-/// icon-only buttons. Same GeometryReader-in-background idiom already used elsewhere in
-/// this codebase for pile-frame tracking.
-private struct MeasuredWidthKey: PreferenceKey {
-    static let defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
-        value = nextValue()
-    }
-}
-
-extension View {
-    /// Reports this view's rendered width into `width` on every layout pass.
-    func measureWidth(into width: Binding<CGFloat>) -> some View {
-        self.background(
-            GeometryReader { geo in
-                Color.clear.preference(key: MeasuredWidthKey.self, value: geo.size.width)
-            }
-        )
-        .onPreferenceChange(MeasuredWidthKey.self) { width.wrappedValue = $0 }
-    }
-}
-
 // MARK: - Press Button Style
 
 struct PressButtonStyle: ButtonStyle {
@@ -422,13 +397,5 @@ extension Font {
     static func display(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
         .system(size: size, weight: weight, design: .default)
             .width(.condensed)
-    }
-}
-
-/// A button style that disables the default macOS hover effect and click dimming.
-public struct NoHoverButtonStyle: ButtonStyle {
-    public init() {}
-    public func makeBody(configuration: Configuration) -> some View {
-        configuration.label
     }
 }

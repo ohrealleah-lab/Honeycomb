@@ -61,9 +61,9 @@ sealed class BannerFireResult {
     // A message from the catalog's own pool for this id.
     data class Message(val text: String) : BannerFireResult()
     // The gate roll failed — this is the fallback text instead (an existing
-    // production banner's own text, e.g. "Fallen Ace!", or BannerCatalog.RULE_NAME_SENTINEL
-    // for rulesBanner entries, which the caller resolves to the active rule's own
-    // display name).
+    // production banner's own text, e.g. "Fallen Ace!", or the placeholder
+    // "$RULE_NAME" for rulesBanner entries, which the caller replaces with its own
+    // default text — the active rule's display name).
     data class Fallback(val text: String) : BannerFireResult()
     // The id has no catalog entry, or its entry has no eligible content — nothing to show.
     object None : BannerFireResult()
@@ -92,12 +92,6 @@ class BannerCatalog(
     val currentLanguage: AppLanguage get() = languageFlow.value
 
     companion object {
-        // Sentinel a `fallback` string can equal for `rulesBanner`-location entries —
-        // there's no single literal fallback text for those (it depends on which rule
-        // is active), so the catalog can't bake it in; the caller substitutes the
-        // rule's own existing display name instead.
-        const val RULE_NAME_SENTINEL = "\$RULE_NAME"
-
         // One shared anchor for the whole app (not per-game) — "a year since you
         // started playing" should have one answer regardless of which game happens to
         // load first on any given day, so this deliberately isn't scoped to any one

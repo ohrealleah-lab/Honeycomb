@@ -50,9 +50,6 @@ public partial class BlackjackView : UserControl
     private List<string>       _prevDealerIds  = new();
     private List<List<string>> _prevPlayerIds  = new();
 
-    // Active chip button highlight tracking
-    private static readonly SolidColorBrush _chipHighlight = new(Color.FromArgb(0x50, 0xFF, 0xFF, 0xFF));
-
     // Active split-hand border — cached rather than allocated per RebuildPlayerHands call
     private static readonly SolidColorBrush _activeSplitHandBorder = new(Color.FromRgb(0xFF, 0xCC, 0x00));
 

@@ -948,7 +948,6 @@ struct BlackjackTouchView: View {
     private var bettingGridButtonWidth: CGFloat { isRegularWidth ? 52 : 72 }
     private var bettingGridButtonScale: CGFloat { isRegularWidth ? 0.72 : 1.0 }
     private var isRegularWidth: Bool { horizontalSizeClass == .regular }
-    private static let bettingGridButtonMinHeight: CGFloat = 34
     private static let bettingGridSpacing: CGFloat = 4
     // Portrait's bettingControls chip diameter — sized to roughly match the footprint
     // a compact:true casinoButton rendered at scale 1.0 (28pt padding + ~18pt text),

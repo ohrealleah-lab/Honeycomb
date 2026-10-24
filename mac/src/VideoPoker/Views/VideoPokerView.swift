@@ -79,7 +79,6 @@ public struct VideoPokerView: View {
     // legible size (120pt wide — 100pt base bumped 20% — matching CardView's true
     // 128x181 native aspect ratio) rather than a tiny thumbnail.
     private static let tripleCardScale: CGFloat = 120.0 / 128.0
-    private static let tripleRowSpacing: CGFloat = 12
     // Extra headroom above each triple-play row's card height so the "lift held card"
     // offset animation has room without being clipped by the row's own bounds.
     private static let tripleRowSlack: CGFloat = 16

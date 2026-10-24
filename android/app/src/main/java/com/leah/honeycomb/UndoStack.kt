@@ -15,10 +15,6 @@ class UndoStack<T>(private val capacity: Int = 100) {
         return stack.removeAt(stack.size - 1)
     }
 
-    fun peek(): T? {
-        return stack.lastOrNull()
-    }
-
     fun clear() {
         stack.clear()
     }

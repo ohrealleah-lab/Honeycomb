@@ -9,13 +9,9 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.emptyPreferences
-import kotlinx.coroutines.flow.catch
 import kotlinx.serialization.SerializationException
-import java.io.IOException
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
@@ -36,39 +32,10 @@ object PreferencesHelper {
         coerceInputValues = true
     }
 
-    fun <T> getObject(
-        dataStore: DataStore<Preferences>,
-        key: String,
-        serializer: KSerializer<T>,
-        defaultValue: T
-    ): Flow<T> {
-        val prefKey = stringPreferencesKey(key)
-        return dataStore.data.catch { exception ->
-            if (exception is IOException) {
-                emit(emptyPreferences())
-            } else {
-                throw exception
-            }
-        }.map { preferences ->
-            val jsonString = preferences[prefKey]
-            if (jsonString != null) {
-                try {
-                    json.decodeFromString(serializer, jsonString)
-                } catch (e: SerializationException) {
-                    defaultValue
-                } catch (e: IllegalArgumentException) {
-                    defaultValue
-                }
-            } else {
-                defaultValue
-            }
-        }
-    }
-
     // Synchronous initial read for ViewModel init blocks — mirrors the runBlocking
     // pattern already used by SharedGameOptions/AppContainer so a game's persisted
     // options are available for the very first StateFlow value instead of arriving
-    // one frame late via the Flow-based getObject() above.
+    // one frame late through an async DataStore Flow.
     fun <T> getObjectSync(
         dataStore: DataStore<Preferences>,
         key: String,

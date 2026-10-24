@@ -36,7 +36,7 @@ SoliBee.Desktop/
   Views/        MainWindow, GameView/FreecellView/SpiderView, VideoPokerView, BlackjackView,
                 HoneycombView (+ HoneycombRulesView, ManageDecksView, DeckBuilderView),
                 PreferencesView, CardView, …
-  Assets/       Card-back images, fonts (Apple Chancery, Parisienne), WAV files, banner catalog JSON
+  Assets/       Card-back images, font (Apple Chancery), WAV files, banner catalog JSON
   Properties/PublishProfiles/win-x64.pubxml
 tests/SoliBee.Tests/  xUnit — `dotnet test SoliBee.sln` from windows/
 ```

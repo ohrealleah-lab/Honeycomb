@@ -417,20 +417,3 @@ struct FaceCardArtSectionView: View {
         alert.runModal()
     }
 }
-
-// MARK: - Consolidated art panel (card backs + face cards)
-
-public struct CustomArtPanelView: View {
-    @Binding var cardBackTheme: String
-    @Binding var feltColor: FeltColorTheme
-
-    public var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            CardDeckSelectorView(cardBackTheme: $cardBackTheme, feltColor: $feltColor)
-
-            Divider().background(Color.white.opacity(0.2))
-
-            FaceCardArtSectionView()
-        }
-    }
-}

@@ -1586,23 +1586,6 @@ public final class HoneycombViewModel {
         activeHint = nil
     }
 
-    // Comma-joined summary of this match's active rules — "Normal" if none — used as
-    // the "First Move" banner's second line. Mirrors HoneycombView's rulesBannerLines
-    // formatting for Ascension/Descension (calling out the 2 affected suits) so the two
-    // banners never disagree about what the match's rules actually are.
-    private func activeRulesSummaryText() -> String {
-        let language = BannerCatalog.currentLanguage
-        if activeRules.isEmpty { return L(.ruleLineNormal, language: language) }
-        return activeRules.map { rule -> String in
-            let localizedName = honeycombLocalizedRuleName(rule.rawValue, language: language)
-            if (rule == .ascension || rule == .descension), !ascensionDescensionSuits.isEmpty {
-                let suitNames = ascensionDescensionSuits.sorted().map { HoneycombCardData.localizedSuitName($0, language: language) }
-                return L(.ruleLineSuitFmt, language: language, localizedName, suitNames.joined(separator: ", "))
-            }
-            return localizedName
-        }.joined(separator: ", ")
-    }
-
 
     // Ascension/Descension now only affects 2 chosen suits (not every card), so this
     // flashes for either side's placement as long as the placed card's own suit is

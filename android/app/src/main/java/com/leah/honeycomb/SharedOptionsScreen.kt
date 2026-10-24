@@ -8,8 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -245,37 +243,6 @@ fun SwitchOptionRow(label: String, checked: Boolean, onCheckedChange: (Boolean) 
     ) {
         Text(text = label, style = MaterialTheme.typography.bodyLarge)
         Switch(checked = checked, onCheckedChange = onCheckedChange)
-    }
-}
-
-@Composable
-fun IntStepperRow(
-    label: String,
-    value: Int,
-    step: Int,
-    range: IntRange,
-    onValueChange: (Int) -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(text = label, style = MaterialTheme.typography.bodyLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { onValueChange((value - step).coerceIn(range)) }, enabled = value > range.first) {
-                Icon(Icons.Default.Remove, contentDescription = tr(StringKey.A11yDecrease))
-            }
-            Text(
-                text = "$value",
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.widthIn(min = 56.dp),
-                textAlign = TextAlign.Center
-            )
-            IconButton(onClick = { onValueChange((value + step).coerceIn(range)) }, enabled = value < range.last) {
-                Icon(Icons.Default.Add, contentDescription = tr(StringKey.A11yIncrease))
-            }
-        }
     }
 }
 

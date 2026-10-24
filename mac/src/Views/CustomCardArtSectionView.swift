@@ -438,17 +438,6 @@ public struct CardDeckSelectorView: View {
         }
     }
     
-    private func feltColorName(_ theme: FeltColorTheme) -> String {
-        switch theme {
-        case .feltGreen: return "Green"
-        case .crimson: return "Crimson"
-        case .royalBlue: return "Blue"
-        case .charcoal: return "Charcoal"
-        case .desert: return "Desert"
-        case .custom: return "Custom"
-        }
-    }
-    
     private func slideRight(proxy: ScrollViewProxy, activeDecks: [String]) {
         guard !activeDecks.isEmpty else { return }
         if let currentIndex = activeDecks.firstIndex(of: cardBackTheme) {

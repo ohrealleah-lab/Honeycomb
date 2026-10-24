@@ -1,5 +1,4 @@
 import SwiftUI
-import CoreText
 
 // Opts out of macOS's secure-restorable-state machinery — a simple card game has
 // no real use for window-restoration security, and this app doesn't need it.
@@ -24,11 +23,6 @@ struct SoliBeeApp: App {
 
     init() {
         UISound.backend = MacUISoundBackend()
-        for name in ["Parisienne-Regular", "LilyScriptOne-Regular"] {
-            if let url = Bundle.main.url(forResource: name, withExtension: "ttf") {
-                CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
-            }
-        }
     }
 
     var body: some Scene {
