@@ -11,7 +11,7 @@ MAC_SRCS=src/Models/*.swift src/Views/*.swift src/Beecell/Views/*.swift src/Spid
 # instrumentation and writes coverage.lcov for Codecov; plain `make test` is unchanged.
 COVERAGE_FLAGS=$(if $(COVERAGE),-profile-generate -profile-coverage-mapping)
 
-.PHONY: all build clean test run bridge
+.PHONY: all build clean test run
 
 all: build
 
@@ -66,10 +66,6 @@ test:
 	$(if $(COVERAGE),xcrun llvm-cov export test_runner -instr-profile=coverage.profdata -format=lcov -ignore-filename-regex='(SoliBeeTests|\.build)/' > coverage.lcov)
 	# Cleanup test runner binary + copied resource + raw profile data
 	rm -f test_runner HoneycombBannerCatalog.json coverage.profraw coverage.profdata
-
-bridge:
-	# Compile the Universal Agent Bridge
-	swiftc -o solibee_bridge -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(SHARED_SRCS) $(MAC_SRCS) SoliBeeBridge/UniversalBridge.swift
 
 run: build
 	open $(APP_BUNDLE)

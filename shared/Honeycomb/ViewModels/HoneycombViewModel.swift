@@ -371,51 +371,7 @@ public final class HoneycombViewModel {
 
     // Stats
     public var stats = HoneycombStats()
-    
-    public var legalMoves: [HoneycombLegalMove] {
-        var moves: [HoneycombLegalMove] = []
-        if gameState == .playing && isPlayerTurn {
-            let emptyBoardIndices = (0..<9).filter { board.cells[$0].card == nil }
-            for hIdx in 0..<playerHand.count {
-                for bIdx in emptyBoardIndices {
-                    moves.append(HoneycombLegalMove(action: "playCard", handIndex: hIdx, boardIndex: bIdx, replaceHandIndex: nil))
-                }
-            }
-        } else if gameState == .gameOver && showPostGamePrompt && matchOutcome == .win {
-            // Matches requestSteal's real eligibility (see isStealEligible) and the
-            // one-steal-per-match cap not already spent.
-            let opponentBoardIndices = hasStolenThisMatch ? [] : (0..<9).filter {
-                guard let card = board.cells[$0].card else { return false }
-                return isStealEligible(card)
-            }
-            for bIdx in opponentBoardIndices {
-                moves.append(HoneycombLegalMove(action: "takeCard", handIndex: nil, boardIndex: bIdx, replaceHandIndex: nil))
-            }
-            moves.append(HoneycombLegalMove(action: "startNewGame", handIndex: nil, boardIndex: nil, replaceHandIndex: nil))
-        } else if gameState == .gameOver || gameState == .setup {
-            moves.append(HoneycombLegalMove(action: "startNewGame", handIndex: nil, boardIndex: nil, replaceHandIndex: nil))
-        }
-        return moves
-    }
-    
-    public var state: HoneycombState {
-        HoneycombState(
-            gameState: gameState,
-            isPlayerTurn: isPlayerTurn,
-            activeRules: activeRules,
-            playerHand: playerHand.map { SimplifiedCard(card: $0) },
-            opponentHand: opponentHand.map { isOpponentCardVisible(cardId: $0.id) ? SimplifiedCard(card: $0) : SimplifiedCard(name: "Hidden", owner: "opponent", stats: [0, 0, 0, 0]) },
-            board: board.cells.map { cell in
-                cell.card.map { SimplifiedCard(card: $0) }
-            },
-            playerScore: board.playerScore + playerHand.count,
-            opponentScore: board.opponentScore + opponentHand.count,
-            matchResult: matchResult,
-            showPostGamePrompt: showPostGamePrompt,
-            legalMoves: legalMoves
-        )
-    }
-    
+
     public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
         self.sharedOptions = sharedOptions
         loadStats()
@@ -2137,7 +2093,7 @@ public final class HoneycombViewModel {
             )
         }
 
-        // Headless mode (automated testing bridge) needs the move applied synchronously
+        // Headless mode (automated tests) needs the move applied synchronously
         // and deterministically before the calling command returns — no backgrounding.
         if UISound.isHeadlessMode {
             applyAIMove(computeMove())
@@ -2508,7 +2464,7 @@ public final class HoneycombViewModel {
             // VideoPokerView/BlackjackView's _resultShowTimer, 1.5s) — a beat between
             // the result being decided and the win/lose overlay actually covering the
             // board, so the player sees the final board fully settle first. Skipped in
-            // headless mode (automated testing bridge) — same reasoning as
+            // headless mode (automated tests) — same reasoning as
             // playerPlayCard's opponentMoveDelay bypass, tests need this synchronous.
             if UISound.isHeadlessMode {
                 showPostGamePrompt = true

@@ -22,7 +22,7 @@ struct MacGapTests {
         testDifficultyNamesInBothLanguages()
         testPlayerRankBands()
         withCleanDefaults(["appLanguage"], testStringLookupFallsBackAndFormats)
-        testSuitNamesAndSimplifiedCards()
+        testSuitNames()
         testPureStartOverDecks()
         // These two change the shared card bank in memory, so they run last.
         withCleanDefaults([], preserving: profileKeys, testCardBankUnlockFavouritesAndDecks)
@@ -225,17 +225,11 @@ struct MacGapTests {
         expect(c.L(.freecellStatisticsFmt, "2 decks").contains("2 decks"), "The coordinator fills placeholders too")
     }
 
-    static func testSuitNamesAndSimplifiedCards() {
+    static func testSuitNames() {
         expect(HoneycombCardData.suitDisplayName("S") == "Spades" && HoneycombCardData.suitDisplayName("H") == "Hearts"
                && HoneycombCardData.suitDisplayName("D") == "Diamonds" && HoneycombCardData.suitDisplayName("C") == "Clubs",
                "Suit codes read as names")
         expect(HoneycombCardData.suitDisplayName("X") == "X", "An unknown code is shown as it is")
-        let data = HoneycombCardData(id: 1, name: "Test", stars: 3, stats: [1, 2, 3, 4], suit: "S")
-        let mine = SimplifiedCard(card: HoneycombCard(data: data, owner: .player))
-        expect(mine.owner == "player" && mine.name == "Test" && mine.stats == [1, 2, 3, 4], "A player's card simplifies with its stats in order")
-        expect(SimplifiedCard(card: HoneycombCard(data: data, owner: .opponent)).owner == "opponent", "An opponent's card says so")
-        let made = SimplifiedCard(name: "N", owner: "player", stats: [9, 9, 9, 9])
-        expect(made.name == "N" && made.stats == [9, 9, 9, 9], "Built by hand")
     }
 
     // MARK: - Honeycomb card bank and decks
