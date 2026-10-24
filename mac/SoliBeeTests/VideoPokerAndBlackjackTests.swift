@@ -294,6 +294,12 @@ struct VideoPokerAndBlackjackTests {
 
             viewModel.state.phase = .playing
             viewModel.state.activeHandIndex = 0
+            // The real deal above is random, and a dealer Ace-plus-ten blocks every action until
+            // that natural is resolved (isDealerBlackjackPending) — so fix the dealer's hand too.
+            viewModel.state.dealerCards = [
+                Card(suit: .spades, rank: 13, faceUp: true),
+                Card(suit: .hearts, rank: 7, faceUp: false)
+            ]
             viewModel.state.playerHands = [
                 BlackjackHand(cards: [
                     Card(suit: .hearts, rank: 5, faceUp: true),
