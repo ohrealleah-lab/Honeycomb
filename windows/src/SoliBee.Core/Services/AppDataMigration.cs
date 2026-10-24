@@ -13,11 +13,13 @@ public static class AppDataMigration
     public const string FolderName = "Honeycomb";
     private const string LegacyFolderName = "SoliBee";
 
-    public static void EnsureMigrated()
+    // `localAppDataOverride` is for tests only (the app always passes nothing): it stands in for
+    // %LocalAppData% so the move can be exercised without touching a real user's folders.
+    public static void EnsureMigrated(string? localAppDataOverride = null)
     {
         try
         {
-            string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string localAppData = localAppDataOverride ?? Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string legacyDir = Path.Combine(localAppData, LegacyFolderName);
             string newDir = Path.Combine(localAppData, FolderName);
 

@@ -288,6 +288,7 @@ public class HoneycombBannerTriggerTests
     public void SameDifficultyStreak_FiresOnFifthMatch()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
+        vm.Options = new HoneycombOptions { ForceNormalRules = true };   // no roulette rules: Swap/Capped Brood add their own delayed first-move steps
         // Only rematches count toward this streak (confirmed by the banner content
         // owner: plain New Game starts at the same difficulty shouldn't trip it) —
         // one real StartNewMatch() to populate _rematchOpponentDeck, then 5
@@ -308,6 +309,7 @@ public class HoneycombBannerTriggerTests
     public void SameDifficultyStreak_DoesNotFireOnPlainNewGameStarts()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
+        vm.Options = new HoneycombOptions { ForceNormalRules = true };   // no roulette rules: Swap/Capped Brood add their own delayed first-move steps
         // Same default difficulty every time, but via StartNewMatch() (not
         // RematchGame()) — should never trip the streak, no matter how many times
         // it repeats.
