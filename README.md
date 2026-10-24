@@ -8,7 +8,6 @@
 [![iOS build](https://img.shields.io/github/actions/workflow/status/ohrealleah-lab/Honeycomb/build-test-ios.yml?branch=main&label=iOS%20build)](https://github.com/ohrealleah-lab/Honeycomb/actions/workflows/build-test-ios.yml)
 [![Windows build](https://img.shields.io/github/actions/workflow/status/ohrealleah-lab/Honeycomb/build-sign-windows.yml?event=push&label=Windows%20build)](https://github.com/ohrealleah-lab/Honeycomb/actions/workflows/build-sign-windows.yml)
 [![Latest release](https://img.shields.io/github/v/release/ohrealleah-lab/Honeycomb?label=release)](https://github.com/ohrealleah-lab/Honeycomb/releases)
-[![Test coverage](https://codecov.io/gh/ohrealleah-lab/Honeycomb/branch/main/graph/badge.svg)](https://codecov.io/gh/ohrealleah-lab/Honeycomb)
 ![Platforms: macOS, iOS, Windows, Android](https://img.shields.io/badge/platforms-macOS%20%7C%20iOS%20%7C%20Windows%20%7C%20Android-blue)
 
 Six card games, four platforms, one shared rule engine, and a deep customization system. Includes a Triple Triad–style card battler (Honeycomb) plus Klondike, Freecell, Spider, Video Poker, and Blackjack.
@@ -30,7 +29,7 @@ Six card games, four platforms, one shared rule engine, and a deep customization
 
 * **Shared core**: macOS and iOS use the same Swift game logic (`shared/`). The Windows and Android versions mirror it by hand.
 * **Localization pipeline**: English and Español strings live in one spreadsheet (`tools/`) that generates the string files for every platform.
-* **Tests & CI**: GitHub Actions workflows build macOS, Windows, and iOS, with unit tests covering game state, scoring, casino logic, and the Honeycomb card database.
+* **Tests & CI**: An extensive automated test suite across macOS, Windows, and Android covers game rules, scoring, AI, casino logic, the Honeycomb card database, and saved data. GitHub Actions workflows build macOS, Windows, and iOS and run the tests.
 * **How it was built**: spec-driven development with SpecKit and Claude Code. Zero AI art assets are used. All art is used with permission, with special thanks to the friends who contributed and wish to remain uncredited.
 * **License**: [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, copy, and modify for noncommercial purposes.
 
