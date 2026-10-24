@@ -1095,7 +1095,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
         stats.GamesWon           = 0;
         stats.CurrentStreak      = 0;
         stats.LongestStreak      = 0;
-        stats.VegasHighScore     = 0;
+        stats.VegasHighScore     = GameStatistics.VegasHighScoreStart;
         stats.VegasCumulativeScore = 0;
         stats.StandardHighScore  = 0;
         stats.ShortestWinSeconds = 0;

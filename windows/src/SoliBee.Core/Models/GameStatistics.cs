@@ -8,7 +8,12 @@ public class GameStatistics
     public int GamesWon { get; set; }
     public int CurrentStreak { get; set; }
     public int LongestStreak { get; set; }
-    public int VegasHighScore { get; set; }
+    // The best Vegas result, in cents. Starts at the $52 buy-in loss (−5200) — what a game that
+    // paid nothing back ends on — so a game that wins back less than its buy-in still counts as
+    // a best score, the way it does on Mac. (It used to start at 0, so only a game finishing in
+    // profit was ever recorded.)
+    public const int VegasHighScoreStart = -5200;
+    public int VegasHighScore { get; set; } = VegasHighScoreStart;
     public int VegasCumulativeScore { get; set; }
     public int StandardHighScore { get; set; }
     public int ShortestWinSeconds { get; set; }

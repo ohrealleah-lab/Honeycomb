@@ -19,7 +19,7 @@ public static class StatsService
             {
                 var json = File.ReadAllText(filePath);
                 var stats = JsonSerializer.Deserialize<GameStatistics>(json);
-                if (stats != null) { MigrateTimedGamesWon(stats); return stats; }
+                if (stats != null) { MigrateTimedGamesWon(stats); MigrateVegasHighScore(stats); return stats; }
             }
         }
         catch
@@ -39,6 +39,14 @@ public static class StatsService
     // GamesWon — exactly the divisor the stats screen used before — so existing averages
     // don't jump when the screen switches to dividing by timed wins. Idempotent: once
     // seeded (or for any stats recorded since), TimedGamesWon > 0 whenever time exists.
+    // Saves from before the Vegas best started at −$52 hold 0 for "no best yet". A real best of
+    // exactly $0 (winning back precisely $52 more than the game paid) is the only thing this
+    // can mistake for that, and the next such win restores it.
+    public static void MigrateVegasHighScore(GameStatistics stats)
+    {
+        if (stats.VegasHighScore == 0) stats.VegasHighScore = GameStatistics.VegasHighScoreStart;
+    }
+
     public static void MigrateTimedGamesWon(GameStatistics stats)
     {
         if (stats.TimedGamesWon == 0 && stats.TotalWinSeconds > 0) stats.TimedGamesWon = stats.GamesWon;

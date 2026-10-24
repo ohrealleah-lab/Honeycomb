@@ -637,6 +637,45 @@ public class KlondikeGameplayTests : DataSandbox
     }
 
     [Fact]
+    public void Vegas_BestScore_StartsAtTheBuyInLoss_AndRecordsAWinThatEndsBelowZero()
+    {
+        var vm = Fresh();
+        Assert.Equal(-5200, vm.Stats.VegasHighScore);   // nothing recorded yet
+        SetVegas(true);
+        OneCardFromWinning(vm);
+        vm.State.Score = -5200;
+        PlayLastCard(vm);
+        Assert.True(vm.State.HasWon);
+        Assert.Equal(-4700, vm.State.Score);
+        Assert.Equal(-4700, Stats().VegasHighScore);   // a win that only paid back part of the buy-in is still a best
+
+        // A worse Vegas game afterwards doesn't replace it, and the standard best is separate.
+        vm.InitializeGame();
+        OneCardFromWinning(vm);
+        vm.State.Score = -5800;
+        PlayLastCard(vm);
+        Assert.Equal(-4700, Stats().VegasHighScore);
+        Assert.Equal(0, Stats().StandardHighScore);
+    }
+
+    [Fact]
+    public void Vegas_BestScore_FromAnOldSaveOfZero_IsTreatedAsNoneYet_AndResetStatsClearsIt()
+    {
+        Write("stats.json", "{\"GamesWon\":3,\"VegasHighScore\":0}");
+        var vm = new GameViewModel();
+        Assert.Equal(-5200, vm.Stats.VegasHighScore);
+        Assert.Equal(3, vm.Stats.GamesWon);
+
+        SetVegas(true);
+        OneCardFromWinning(vm);
+        vm.State.Score = -5200;
+        PlayLastCard(vm);
+        Assert.Equal(-4700, Stats().VegasHighScore);
+        vm.ResetStats();
+        Assert.Equal(-5200, Stats().VegasHighScore);
+    }
+
+    [Fact]
     public void Vegas_BankrollStartsAtZeroEachLaunch_ButTheModeIsRemembered()
     {
         var vm = Fresh();
