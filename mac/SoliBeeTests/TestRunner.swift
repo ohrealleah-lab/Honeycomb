@@ -116,6 +116,10 @@ struct TestRunner {
         HoneycombRulesAndDealTests.run()
         print("✅ HoneycombRulesAndDealTests passed.")
 
+        print("🧪 Running CustomArtManagerTests...")
+        CustomArtManagerTests.run()
+        print("✅ CustomArtManagerTests passed.")
+
         print("🧪 Running MacGapTests...")
         MacGapTests.run()
         print("✅ MacGapTests passed.")

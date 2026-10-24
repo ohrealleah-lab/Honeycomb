@@ -15,8 +15,7 @@ public final class CustomFaceCardArtManager {
     private init() { load(); preloadImages() }
 
     private var appSupportDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let base = AppSupportLocation.baseDirectory
         let dir = base.appendingPathComponent("SoliBee").appendingPathComponent("FaceArt")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir
@@ -25,8 +24,7 @@ public final class CustomFaceCardArtManager {
     // Pre-folder-structure location — files used to be dumped flat here alongside card
     // backs and (later) background images. Not created; only read from during migration.
     private var legacyAppSupportDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let base = AppSupportLocation.baseDirectory
         return base.appendingPathComponent("SoliBee")
     }
 

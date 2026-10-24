@@ -87,8 +87,7 @@ public final class CustomBackgroundManager {
     }
 
     private var appSupportDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let base = AppSupportLocation.baseDirectory
         let dir = base.appendingPathComponent("SoliBee").appendingPathComponent("Backgrounds")
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         return dir

@@ -108,8 +108,7 @@ public final class CustomCardBackManager {
     }
     
     private var appSupportDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let base = AppSupportLocation.baseDirectory
         let appSupport = base.appendingPathComponent("SoliBee").appendingPathComponent("CardBacks")
         // Ensure directory exists
         try? FileManager.default.createDirectory(at: appSupport, withIntermediateDirectories: true)
@@ -119,8 +118,7 @@ public final class CustomCardBackManager {
     // Pre-folder-structure location — files used to be dumped flat here alongside face
     // art and (later) background images. Not created; only read from during migration.
     private var legacyAppSupportDirectory: URL {
-        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-            ?? FileManager.default.temporaryDirectory
+        let base = AppSupportLocation.baseDirectory
         return base.appendingPathComponent("SoliBee")
     }
 
