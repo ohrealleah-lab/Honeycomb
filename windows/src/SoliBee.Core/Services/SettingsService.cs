@@ -13,8 +13,14 @@ public static class SettingsService
     private static readonly string FallbackDirectory = AppPaths.DataDirectory;
     private static readonly string FallbackFilePath = Path.Combine(FallbackDirectory, "settings.json");
 
+    // Tests only: stands in for Windows' per-app storage (ApplicationData.Current.LocalSettings) so
+    // the code path real Windows players use can be exercised on any machine. The object it
+    // returns needs a `Values` property that behaves like a string-keyed dictionary.
+    internal static Func<object?>? LocalSettingsOverride;
+
     private static object? GetLocalSettings()
     {
+        if (LocalSettingsOverride != null) return LocalSettingsOverride();
         try
         {
             var appDataType = Type.GetType("Windows.Storage.ApplicationData, Windows, Version=255.255.255.255, Culture=neutral, PublicKeyToken=null, ContentType=WindowsRuntime");

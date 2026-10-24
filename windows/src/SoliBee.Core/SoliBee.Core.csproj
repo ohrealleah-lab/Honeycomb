@@ -12,6 +12,11 @@
     <DebugType>none</DebugType>
   </PropertyGroup>
 
+  <!-- Lets the tests stand in a fake of Windows' per-app storage (SettingsService.LocalSettingsOverride). -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="SoliBee.Tests" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
     <PackageReference Include="Velopack" Version="1.2.0" />
