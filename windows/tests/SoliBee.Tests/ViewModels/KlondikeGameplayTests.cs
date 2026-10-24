@@ -160,11 +160,14 @@ public class KlondikeGameplayTests : DataSandbox
         Assert.Equal("+10", vm.PointPopup?.DisplayText);
         Assert.True(vm.Tableaus[0].Cards.Last().IsFaceUp);
 
-        // Tableau → tableau that only reveals a card: +5
+        // Tableau → tableau that only reveals a card: +5, popup on the revealed card
         var h5 = C(CardSuit.Hearts, 5);
-        Board(vm, new() { L(C(CardSuit.Clubs, 9, up: false), h5), L(C(CardSuit.Spades, 6)) });
+        var nine = C(CardSuit.Clubs, 9, up: false);
+        Board(vm, new() { L(nine, h5), L(C(CardSuit.Spades, 6)) });
         vm.MoveCard(h5, vm.Tableaus[1]);
         Assert.Equal(5, vm.State.Score);
+        Assert.Equal("+5", vm.PointPopup?.DisplayText);
+        Assert.Equal(nine.Id, vm.PointPopup?.CardId);
 
         // A plain tableau shuffle scores nothing
         Board(vm, new() { L(C(CardSuit.Hearts, 5)), L(C(CardSuit.Spades, 6)) });

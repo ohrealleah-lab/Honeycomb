@@ -21,8 +21,7 @@ import org.junit.Test
 // the deal for each suit count, stock deals, move rules, finished runs and scoring, winning
 // and stats, No Stress, streak and restart rules, undo, "stuck", Autocomplete, double-tap,
 // and what survives a relaunch. Hints are timing-dependent and Mac's keyboard tests have no
-// Android equivalent, so neither is ported. (Mac's point-popup test is left out: Android
-// Spider never shows one — see the report.)
+// Android equivalent, so neither is ported.
 @OptIn(ExperimentalCoroutinesApi::class)
 class SpiderGameplayTest : ViewModelTestBase() {
 
@@ -630,6 +629,49 @@ class SpiderGameplayTest : ViewModelTestBase() {
         assertFalse("A mixed-suit stack", vm.doubleClickMove(vm.t(1).cards[0], vm.t(1)))
         assertFalse("A card with nowhere to go", vm.doubleClickMove(vm.t(5).cards[0], vm.t(5)))
         assertEquals(0, vm.state.value.movesCount)
+    }
+
+    // ---- Point popups ----
+
+    @Test fun honeyModeShowsAMinusOneOverTheMovedCard_AndPlus100OverAFinishedRun() {
+        val vm = newVm()
+        val five = c(Suit.Hearts, 5)
+        vm.board(padded(listOf(listOf(five), listOf(c(Suit.Spades, 6)))))
+        vm.moveCards(listOf(five), vm.t(0), vm.t(1))
+        assertEquals("-1", vm.pointPopup.value?.displayText)
+        assertEquals(false, vm.pointPopup.value?.isPositive)
+        assertEquals(five.id, vm.pointPopup.value?.cardId)
+        vm.undoLastAction()
+        assertEquals("Undo dismisses the popup", null, vm.pointPopup.value)
+
+        val ace = c(Suit.Spades, 1)
+        vm.board(padded(listOf(run(Suit.Spades, 13, 2), listOf(ace))))
+        vm.moveCards(listOf(ace), vm.t(1), vm.t(0))
+        assertEquals("+100", vm.pointPopup.value?.displayText)
+        assertEquals(true, vm.pointPopup.value?.isPositive)
+        assertEquals("Over the finished run's ace", ace.id, vm.pointPopup.value?.cardId)
+    }
+
+    @Test fun thePopupFadesAfterAboutASecond() {
+        val vm = newVm()
+        vm.board(padded(listOf(listOf(c(Suit.Hearts, 5)), listOf(c(Suit.Spades, 6)))))
+        vm.moveCards(listOf(vm.t(0).cards[0]), vm.t(0), vm.t(1))
+        assertTrue(vm.pointPopup.value != null)
+        clock.scheduler.advanceTimeBy(1100); clock.scheduler.runCurrent()
+        assertEquals(null, vm.pointPopup.value)
+    }
+
+    @Test fun noPopupWithHoneyModeOff_OrForTheStockDeal() {
+        val quiet = newVm()
+        quiet.sharedOptions.setHoneyMode(false)
+        quiet.board(padded(listOf(listOf(c(Suit.Hearts, 5)), listOf(c(Suit.Spades, 6)))))
+        quiet.moveCards(listOf(quiet.t(0).cards[0]), quiet.t(0), quiet.t(1))
+        assertEquals(null, quiet.pointPopup.value)
+
+        val vm = newVm()
+        vm.board((0 until 10).map { king() }, stock = (0 until 10).map { c(Suit.Hearts, 3, up = false) })
+        vm.drawFromStock()
+        assertEquals("No single card to anchor the stock deal's -1 to", null, vm.pointPopup.value)
     }
 
     // ---- Relaunch ----

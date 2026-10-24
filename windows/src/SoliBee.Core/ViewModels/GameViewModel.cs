@@ -718,6 +718,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
 
         // Auto flip the new top card of the source pile if it's a tableau
         bool didFlip = false;
+        string? revealedCardId = null;
         if (sourcePile.Type == PileType.Tableau && sourcePile.Cards.Count > 0)
         {
             var topCard = sourcePile.Cards.Last();
@@ -725,6 +726,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
             {
                 sourcePile.Cards[sourcePile.Cards.Count - 1] = topCard with { IsFaceUp = true };
                 didFlip = true;
+                revealedCardId = topCard.Id;
             }
         }
 
@@ -753,7 +755,7 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
         // go looking for the card before the pile views have rebuilt themselves for the
         // move that just happened, landing the popup on whatever card used to sit at
         // that now-stale visual slot instead.
-        UpdatePointPopup(cardsToMove.Last(), sourcePile.Type, targetPile.Type);
+        UpdatePointPopup(cardsToMove.Last(), sourcePile.Type, targetPile.Type, revealedCardId);
     }
 
     private void UpdateScoreForMove(PileType source, PileType target, bool didFlip = false)
@@ -787,10 +789,10 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
         }
     }
 
-    // Point Highlights: mirrors UpdateScoreForMove's branching, except the standalone
-    // reveal bonus (+5, no other event) — see the comment inside for why that one
-    // deliberately gets no popup of its own.
-    private void UpdatePointPopup(Card anchorCard, PileType source, PileType target)
+    // Point Highlights: mirrors UpdateScoreForMove's branching. A move that only turns a
+    // card face up (+5, no other scoring event) shows its +5 on the card that turned over —
+    // not on the moved card — matching Mac and Android.
+    private void UpdatePointPopup(Card anchorCard, PileType source, PileType target, string? revealedCardId = null)
     {
         if (!Options.HoneyMode || IsAutoplayRunning) return;
 
@@ -806,18 +808,14 @@ public partial class GameViewModel : ObservableObject, ISolitaireGameViewModel, 
         }
         else
         {
-            // No standalone popup for a plain tableau-to-tableau reveal (didFlip with no
-            // other scoring event) — that would anchor the popup to a *different* card
-            // than the one the player just moved, which reads as "the popup is on the
-            // wrong card" even though it's technically correct (see the reveal-bonus
-            // comment on UpdateScoreForMove — the +5 still scores, it just doesn't get
-            // its own popup here).
             if (target == PileType.Foundation && source != PileType.Foundation)
                 popup = new CardPointPopup(anchorCard.Id, "+10");
             else if (source == PileType.Waste && target == PileType.Tableau)
                 popup = new CardPointPopup(anchorCard.Id, "+5");
             else if (source == PileType.Foundation && target == PileType.Tableau)
                 popup = new CardPointPopup(anchorCard.Id, "-15");
+            else if (revealedCardId != null)
+                popup = new CardPointPopup(revealedCardId, "+5");
             else
                 popup = null;
         }

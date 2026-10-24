@@ -105,6 +105,25 @@ class BeecellViewModel(
 
     private val _pointPopup = MutableStateFlow<CardPointPopup?>(null)
     val pointPopup: StateFlow<CardPointPopup?> = _pointPopup.asStateFlow()
+    private var pointPopupGeneration = 0
+
+    // Honey Mode's "+10" for a card going up to a foundation and "-15" for one coming back
+    // off (mirrors the score rules in moveCards). Mac parity.
+    private fun updatePointPopup(anchorCard: Card?, source: PileType, target: PileType) {
+        if (!sharedOptions.honeyMode.value || _isAutoplayRunning.value || anchorCard == null) return
+        val popup = when {
+            target == PileType.Foundation && source != PileType.Foundation -> CardPointPopup(anchorCard.id, "+10", true)
+            source == PileType.Foundation && target != PileType.Foundation -> CardPointPopup(anchorCard.id, "-15", false)
+            else -> return
+        }
+        pointPopupGeneration += 1
+        val generation = pointPopupGeneration
+        _pointPopup.value = popup
+        viewModelScope.launch {
+            delay(1000)
+            if (pointPopupGeneration == generation) _pointPopup.value = null
+        }
+    }
 
     private val undoStack = UndoStack<BeecellState>()
     private var initialState: BeecellState? = null
@@ -698,6 +717,7 @@ class BeecellViewModel(
             movesCount = currentState.movesCount + 1
         )
         scheduleIdleActionCheck()
+        updatePointPopup(cards.lastOrNull(), sourcePile.type, targetPile.type)
 
         checkWinState()
         checkAutocompleteState()
@@ -952,6 +972,7 @@ class BeecellViewModel(
         // otherwise the 150ms chain keeps going and re-plays the cards the undo took back.
         _isAutoplayRunning.value = false
         clearHint()
+        _pointPopup.value = null
         _isStuck.value = false
         checkWinState()
         checkAutocompleteState()

@@ -102,6 +102,20 @@ class SpiderViewModel(
 
     private val _pointPopup = MutableStateFlow<CardPointPopup?>(null)
     val pointPopup: StateFlow<CardPointPopup?> = _pointPopup.asStateFlow()
+    private var pointPopupGeneration = 0
+
+    // Honey Mode's "-1" over a moved card and "+100" over a finished run's ace (Mac parity).
+    // No popup for the stock deal's flat -1 — there's no single card to anchor it to.
+    private fun showPointPopup(cardId: UUID, displayText: String, isPositive: Boolean) {
+        if (!sharedOptions.honeyMode.value || _isAutoplayRunning.value) return
+        pointPopupGeneration += 1
+        val generation = pointPopupGeneration
+        _pointPopup.value = CardPointPopup(cardId, displayText, isPositive)
+        viewModelScope.launch {
+            delay(1000)
+            if (pointPopupGeneration == generation) _pointPopup.value = null
+        }
+    }
 
     private val undoStack = UndoStack<SpiderState>()
     private var initialState: SpiderState? = null
@@ -646,6 +660,7 @@ class SpiderViewModel(
             movesCount = currentState.movesCount + 1
         )
         scheduleIdleActionCheck()
+        cards.lastOrNull()?.let { showPointPopup(it.id, "-1", false) }
 
         checkCompletedRuns()
         checkAutocompleteState()
@@ -750,6 +765,9 @@ class SpiderViewModel(
                 foundations[fdnIdx] = foundations[fdnIdx].copy(cards = fdnCards)
                 
                 newScore += 100
+                // On the completed run's Ace, the card that lands in the foundation — wins over the
+                // move's own "-1", which was shown just before this sweep.
+                subrange.last().let { showPointPopup(it.id, "+100", true) }
                 break
             }
         }

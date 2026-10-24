@@ -272,6 +272,43 @@ class BeecellGameplayTest : ViewModelTestBase() {
         assertEquals("Tableau → cell is free", 0, vm.state.value.score)
     }
 
+    @Test fun honeyModeShowsPlus10GoingUpAndMinus15ComingBack() {
+        val vm = newVm()
+        val ace = card(Suit.Spades, 1)
+        vm.board(tableau = listOf(listOf(ace)) + fillers(7))
+        vm.moveCards(listOf(ace), vm.t(0), vm.foundation(0))
+        assertEquals("+10", vm.pointPopup.value?.displayText)
+        assertEquals(true, vm.pointPopup.value?.isPositive)
+        assertEquals(ace.id, vm.pointPopup.value?.cardId)
+        vm.undoLastAction()
+        assertEquals("Undo clears the popup", null, vm.pointPopup.value)
+
+        val two = card(Suit.Spades, 2)
+        vm.board(tableau = listOf(listOf(card(Suit.Hearts, 3))) + fillers(7), found = listOf(listOf(card(Suit.Spades, 1), two)))
+        vm.moveCards(listOf(two), vm.foundation(0), vm.t(0))
+        assertEquals("-15", vm.pointPopup.value?.displayText)
+        assertEquals(false, vm.pointPopup.value?.isPositive)
+
+        vm.board(tableau = fillers(8), found = listOf(listOf(card(Suit.Spades, 1), two)))
+        vm.moveCards(listOf(two), vm.foundation(0), vm.cell(0))
+        assertEquals("-15 too when it goes to a free cell", "-15", vm.pointPopup.value?.displayText)
+    }
+
+    @Test fun noPopupForFreeMovesOrWithHoneyModeOff() {
+        val vm = newVm()
+        val five = card(Suit.Hearts, 5)
+        vm.board(tableau = listOf(listOf(five)) + fillers(7))
+        vm.moveCards(listOf(five), vm.t(0), vm.cell(0))
+        assertEquals("A tableau → free cell move scores nothing", null, vm.pointPopup.value)
+
+        val quiet = newVm()
+        quiet.sharedOptions.setHoneyMode(false)
+        quiet.board(tableau = listOf(listOf(card(Suit.Spades, 1))) + fillers(7))
+        quiet.moveCards(listOf(quiet.t(0).cards[0]), quiet.t(0), quiet.foundation(0))
+        assertEquals(null, quiet.pointPopup.value)
+        assertEquals("Points still count", 10, quiet.state.value.score)
+    }
+
     @Test fun undoStepsBackOneMoveAtATimeAndKeepsTheClock() {
         val vm = newVm()
         vm.undoLastAction()
