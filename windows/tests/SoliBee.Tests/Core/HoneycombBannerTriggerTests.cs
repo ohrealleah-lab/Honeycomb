@@ -354,6 +354,7 @@ public class HoneycombBannerTriggerTests
     public void RematchWinStreak_FiresOnThirdWin()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
+        vm.Options = new HoneycombOptions { ForceNormalRules = true };   // no roulette rules: Swap/Capped Brood add their own delayed first-move steps
         // One real StartNewMatch() to populate _rematchOpponentDeck — everything else
         // about this match is immediately overwritten. StartNewMatch/RematchGame can
         // themselves kick off the AI's opening move (fire-and-forget, same RunAITurn
@@ -379,6 +380,7 @@ public class HoneycombBannerTriggerTests
     public void RematchLossStreak_FiresOnThirdLoss()
     {
         var vm = new HoneycombViewModel(isHeadless: true);
+        vm.Options = new HoneycombOptions { ForceNormalRules = true };   // no roulette rules: Swap/Capped Brood add their own delayed first-move steps
         vm.StartNewMatch();
         HoneycombAsyncTestHelpers.WaitForAiTurnToSettle(vm);
 
