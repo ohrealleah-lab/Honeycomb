@@ -116,6 +116,10 @@ struct TestRunner {
         HoneycombRulesAndDealTests.run()
         print("✅ HoneycombRulesAndDealTests passed.")
 
+        print("🧪 Running HoneycombPlayTests...")
+        HoneycombPlayTests.run()
+        print("✅ HoneycombPlayTests passed.")
+
         print("🧪 Running CustomArtManagerTests...")
         CustomArtManagerTests.run()
         print("✅ CustomArtManagerTests passed.")
@@ -123,6 +127,10 @@ struct TestRunner {
         print("🧪 Running MacGapTests...")
         MacGapTests.run()
         print("✅ MacGapTests passed.")
+
+        print("🧪 Running HoneycombPlayTests (Start Over)...")
+        HoneycombPlayTests.runStartOver()
+        print("✅ HoneycombPlayTests (Start Over) passed.")
         
         print("🎉 ALL TESTS PASSED SUCCESSFULLY!")
     }
