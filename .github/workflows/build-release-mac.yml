@@ -54,16 +54,7 @@ jobs:
         run: make build
 
       - name: Test
-        run: make test COVERAGE=1
-
-      # Report-only: never fails the build (see codecov.yml for the status checks).
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: mac/coverage.lcov
-          flags: mac
-          fail_ci_if_error: false
+        run: make test
 
       # ── Package + release (tag pushes only) ──────────────────────────────────
       # Everything below only runs for an actual `v*` tag push — branch pushes and PRs
