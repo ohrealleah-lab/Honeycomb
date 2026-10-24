@@ -24,11 +24,11 @@ public class ThemeServiceTests : DataSandbox
     // ---- Built-in presets ----
 
     [Fact]
-    public void DefaultThemes_AreTheFivePresets_WithUniqueIdsAndNames()
+    public void DefaultThemes_AreTheEightPresets_WithUniqueIdsAndNames()
     {
-        Assert.Equal(new[] { "Default", "Pareidolic 2", "Desert", "Forest", "OceanSky" },
+        Assert.Equal(new[] { "Default", "Honey", "Sunset", "Moogle", "Pareidolic 2", "Desert", "Forest", "OceanSky" },
             ThemeService.DefaultThemes.Select(t => t.Name));
-        Assert.Equal(5, ThemeService.DefaultThemes.Select(t => t.Id).Distinct().Count());
+        Assert.Equal(8, ThemeService.DefaultThemes.Select(t => t.Id).Distinct().Count());
     }
 
     [Fact]
@@ -43,10 +43,10 @@ public class ThemeServiceTests : DataSandbox
     // ---- Load / save ----
 
     [Fact]
-    public void LoadThemes_WithNoFile_GivesTheFivePresets()
+    public void LoadThemes_WithNoFile_GivesTheEightPresets()
     {
         Delete("themes.json");
-        Assert.Equal(5, ThemeService.LoadThemes().Count);
+        Assert.Equal(8, ThemeService.LoadThemes().Count);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class ThemeServiceTests : DataSandbox
     public void BrokenOrEmptyThemesFile_FallsBackToThePresets(string contents)
     {
         Write("themes.json", contents);
-        Assert.Equal(5, ThemeService.LoadThemes().Count);
+        Assert.Equal(8, ThemeService.LoadThemes().Count);
     }
 
     // ---- Update / rename / delete ----
@@ -203,9 +203,26 @@ public class ThemeServiceTests : DataSandbox
         ThemeService.MergeInDefaultThemes();
 
         var saved = ThemeService.LoadThemes();
-        Assert.Equal(6, saved.Count);
+        Assert.Equal(9, saved.Count);
         Assert.Equal(mine.Id, saved[0].Id);
         Assert.All(ThemeService.DefaultThemes, p => Assert.Contains(saved, t => t.Id == p.Id));
+    }
+
+    [Fact]
+    public void Merge_GivesAnExistingPlayerOnlyTheNewPresets_AndLeavesTheirOldOnesAlone()
+    {
+        // A player from before Honey/Sunset/Moogle existed: the original five presets,
+        // saved with their old look (marked here by an "Old" card back).
+        var oldIds = new[] { "000000000006", "000000000001", "000000000003", "000000000004", "000000000005" }
+            .Select(s => new Guid("b0001111-0000-0000-0000-" + s)).ToList();
+        ThemeService.SaveThemes(oldIds.Select(id => new SoliBeeTheme { Id = id, Name = "Old " + id, CardBackTheme = "Old" }).ToList());
+
+        ThemeService.MergeInDefaultThemes();
+
+        var saved = ThemeService.LoadThemes();
+        Assert.Equal(8, saved.Count);
+        Assert.All(saved.Where(t => oldIds.Contains(t.Id)), t => Assert.Equal("Old", t.CardBackTheme));
+        Assert.Equal(new[] { "Honey", "Sunset", "Moogle" }, saved.Skip(5).Select(t => t.Name));
     }
 
     [Fact]
@@ -250,7 +267,7 @@ public class ThemeServiceTests : DataSandbox
 
         var saved = ThemeService.LoadThemes();
         Assert.DoesNotContain(saved, t => t.Id == DesertId);
-        Assert.Equal(4, saved.Count);
+        Assert.Equal(7, saved.Count);
     }
 
     [Fact]
@@ -446,7 +463,7 @@ public class ThemeServiceTests : DataSandbox
         Assert.True(Options.HasAppliedDefaultTheme);
         Assert.Equal("Solibee", Options.CardBackTheme);
         Assert.Equal(DefaultId, Options.ActiveThemeId);
-        Assert.Equal(5, ThemeService.LoadThemes().Count);
+        Assert.Equal(8, ThemeService.LoadThemes().Count);
         Assert.True(File.Exists(Path.Combine(AppPaths.DataDirectory, "themes.json")));
     }
 

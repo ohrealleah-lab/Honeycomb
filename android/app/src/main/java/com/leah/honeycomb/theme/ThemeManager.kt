@@ -40,33 +40,94 @@ class ThemeManager(private val dataStore: DataStore<Preferences>, private val co
     private val saveMutex = Mutex()
 
     companion object {
+        // Matched by name when loading, so a player who already has a theme with one of
+        // these names keeps their own copy; only names they don't have yet get added.
+        // Hint glow and top-bar button colors aren't part of Android themes yet.
         val defaultThemes = listOf(
             SoliBeeTheme(
                 id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000001",
-                name = "Default", cardBackTheme = "Solibee", feltColor = FeltColorType.FeltGreen
+                name = "Default", cardBackTheme = "Solibee", feltColor = FeltColorType.FeltGreen,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 1.0, bgGreen = 1.0, bgBlue = 1.0,
+                    blackSuitRed = 0.0667, blackSuitGreen = 0.0667, blackSuitBlue = 0.0667,
+                    redSuitRed = 0.7686, redSuitGreen = 0.1176, redSuitBlue = 0.1176
+                )
+            ),
+            SoliBeeTheme(
+                id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000006",
+                name = "Honey", cardBackTheme = "Solibee", feltColor = FeltColorType.Custom,
+                customFeltRed = 0.2314, customFeltGreen = 0.1647, customFeltBlue = 0.0784,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 1.0, bgGreen = 0.9647, bgBlue = 0.8627,
+                    blackSuitRed = 0.0549, blackSuitGreen = 0.0353, blackSuitBlue = 0.0118,
+                    redSuitRed = 0.7529, redSuitGreen = 0.1882, redSuitBlue = 0.1098
+                )
+            ),
+            SoliBeeTheme(
+                id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000007",
+                name = "Sunset", cardBackTheme = "Sunset", feltColor = FeltColorType.Custom,
+                customFeltRed = 0.1176, customFeltGreen = 0.2275, customFeltBlue = 0.2824,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 0.9922, bgGreen = 0.9529, bgBlue = 0.8902,
+                    blackSuitRed = 0.0784, blackSuitGreen = 0.0471, blackSuitBlue = 0.0235,
+                    redSuitRed = 0.7412, redSuitGreen = 0.2392, redSuitBlue = 0.102
+                )
+            ),
+            SoliBeeTheme(
+                id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000008",
+                name = "Moogle", cardBackTheme = "Moogle", feltColor = FeltColorType.Custom,
+                customFeltRed = 0.0784, customFeltGreen = 0.0784, customFeltBlue = 0.0784,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 1.0, bgGreen = 1.0, bgBlue = 1.0,
+                    blackSuitRed = 0.0, blackSuitGreen = 0.0, blackSuitBlue = 0.0,
+                    redSuitRed = 0.8157, redSuitGreen = 0.1255, redSuitBlue = 0.1804
+                )
             ),
             SoliBeeTheme(
                 id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000002",
                 name = "Pareidolic 2", cardBackTheme = "Pareidolic 2", feltColor = FeltColorType.Custom,
-                customFeltRed = 0.5925555229187012, customFeltGreen = 0.5882400274276733, customFeltBlue = 0.8116011023521423
+                customFeltRed = 0.3608, customFeltGreen = 0.3451, customFeltBlue = 0.651,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 1.0, bgGreen = 1.0, bgBlue = 1.0,
+                    blackSuitRed = 0.0667, blackSuitGreen = 0.0667, blackSuitBlue = 0.0667,
+                    redSuitRed = 0.7686, redSuitGreen = 0.1176, redSuitBlue = 0.1176
+                )
             ),
             SoliBeeTheme(
                 id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000003",
-                name = "Desert", cardBackTheme = "Vulpera", feltColor = FeltColorType.Desert
+                name = "Desert", cardBackTheme = "Vulpera", feltColor = FeltColorType.Desert,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 1.0, bgGreen = 0.9804, bgBlue = 0.9529,
+                    blackSuitRed = 0.0667, blackSuitGreen = 0.0667, blackSuitBlue = 0.0667,
+                    redSuitRed = 0.7686, redSuitGreen = 0.1176, redSuitBlue = 0.1176
+                )
             ),
             SoliBeeTheme(
                 id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000004",
                 name = "Forest", cardBackTheme = "Forest", feltColor = FeltColorType.Custom,
-                customFeltRed = 0.5211737751960754, customFeltGreen = 0.4769634008407593, customFeltBlue = 0.4559733271598816
+                customFeltRed = 0.3686, customFeltGreen = 0.3294, customFeltBlue = 0.3137,
+                customCardColors = CustomCardColorGroup(
+                    isEnabled = true,
+                    bgRed = 0.902, bgGreen = 0.8118, bgBlue = 0.6745,
+                    blackSuitRed = 0.1333, blackSuitGreen = 0.0353, blackSuitBlue = 0.0392,
+                    redSuitRed = 0.6588, redSuitGreen = 0.0941, redSuitBlue = 0.102
+                )
             ),
             SoliBeeTheme(
                 id = "3B1E1B7A-3F0C-4B8D-9C1E-000000000005",
                 name = "OceanSky", cardBackTheme = "Pareidolic", feltColor = FeltColorType.Custom,
-                customFeltRed = 0.5867433547973633, customFeltGreen = 0.9626139998435974, customFeltBlue = 0.9703466296195984,
+                customFeltRed = 0.1412, customFeltGreen = 0.4706, customFeltBlue = 0.5608,
                 customCardColors = CustomCardColorGroup(
                     isEnabled = true,
-                    bgRed = 0.8808431029319763, bgGreen = 0.9917027354240417, bgBlue = 0.9941582083702087,
-                    redSuitRed = 0.7544758915901184, redSuitGreen = 0.3275292217731476, redSuitBlue = 0.5698546767234802
+                    bgRed = 0.949, bgGreen = 0.9961, bgBlue = 1.0,
+                    blackSuitRed = 0.0784, blackSuitGreen = 0.1098, blackSuitBlue = 0.1255,
+                    redSuitRed = 0.6902, redSuitGreen = 0.1882, redSuitBlue = 0.4314
                 )
             )
         )

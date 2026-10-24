@@ -22,6 +22,8 @@ public static class ThemeService
     // "Dingwall"/"Colorblind" were removed from the preset lineup (no longer in this
     // array), but LoadThemes() never purges a saved theme just because it's missing
     // from here — so existing users who already saved one of those keep it untouched.
+    // Honey/Sunset/Moogle use their own id range (…0010 and up) so they can never collide
+    // with a tombstoned id from an older preset.
     public static readonly IReadOnlyList<SoliBeeTheme> DefaultThemes = new List<SoliBeeTheme>
     {
         // Index 0 — applied by ApplyDefaultThemeIfNeeded on a fresh install (see below).
@@ -31,6 +33,58 @@ public static class ThemeService
             Name           = "Default",
             CardBackTheme  = "Solibee",
             FeltColor      = FeltColorTheme.FeltGreen,
+            ThemeFaceBackNormal   = "#FFFFFFFF",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF111111", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFC41E1E", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
+        },
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000010"),
+            Name           = "Honey",
+            CardBackTheme  = "Solibee",
+            FeltColor      = FeltColorTheme.Custom,
+            CustomFeltColorHex   = "#3B2A14",
+            ThemeFaceBackNormal   = "#FFFFF6DC",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF0E0903", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFC0301C", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD300",
+            ThemeToolbarButton    = "#FFFFD300",
+        },
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000011"),
+            Name           = "Sunset",
+            CardBackTheme  = "Sunset",
+            FeltColor      = FeltColorTheme.Custom,
+            CustomFeltColorHex   = "#1E3A48",
+            ThemeFaceBackNormal   = "#FFFDF3E3",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF140C06", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFBD3D1A", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFB557",
+            ThemeToolbarButton    = "#FFFDF3E3",
+        },
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000012"),
+            Name           = "Moogle",
+            CardBackTheme  = "Moogle",
+            FeltColor      = FeltColorTheme.Custom,
+            CustomFeltColorHex   = "#141414",
+            ThemeFaceBackNormal   = "#FFFFFFFF",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF000000", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFD0202E", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFE500",
+            ThemeToolbarButton    = "#FFFFFFFF",
         },
         new SoliBeeTheme
         {
@@ -38,7 +92,14 @@ public static class ThemeService
             Name           = "Pareidolic 2",
             CardBackTheme  = "Pareidolic 2",
             FeltColor      = FeltColorTheme.Custom,
-            CustomFeltColorHex = "#9796CF",   // R:0.5926 G:0.5882 B:0.8116
+            CustomFeltColorHex   = "#5C58A6",
+            ThemeFaceBackNormal   = "#FFFFFFFF",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF111111", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFC41E1E", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
         },
         new SoliBeeTheme
         {
@@ -46,6 +107,13 @@ public static class ThemeService
             Name           = "Desert",
             CardBackTheme  = "Vulpera",
             FeltColor      = FeltColorTheme.Desert,
+            ThemeFaceBackNormal   = "#FFFFFAF3",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF111111", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFC41E1E", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
         },
         new SoliBeeTheme
         {
@@ -53,12 +121,14 @@ public static class ThemeService
             Name           = "Forest",
             CardBackTheme  = "Forest",
             FeltColor      = FeltColorTheme.Custom,
-            CustomFeltColorHex   = "#857A74", // R:0.5212 G:0.4770 B:0.4560
-            ThemeFaceBackNormal  = "#FFE6CFAC",
+            CustomFeltColorHex   = "#5E5450",
+            ThemeFaceBackNormal   = "#FFE6CFAC",
             ThemeFaceBorderNormal = "#D9000000",
-            ThemeTextBlackNormal = "#FFB53026", // Black suits (Spades/Clubs)
-            ThemeTextRed         = "#FFC61C1A", // Red suits (Hearts/Diamonds)
-            ThemeCardShadow      = "#26000000",
+            ThemeTextBlackNormal  = "#FF22090A", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFA8181A", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
         },
         new SoliBeeTheme
         {
@@ -66,12 +136,14 @@ public static class ThemeService
             Name           = "OceanSky",
             CardBackTheme  = "Pareidolic",
             FeltColor      = FeltColorTheme.Custom,
-            CustomFeltColorHex   = "#96F5F7", // R:0.5867 G:0.9626 B:0.9703
-            ThemeFaceBackNormal  = "#FFE1FDFE",
+            CustomFeltColorHex   = "#24788F",
+            ThemeFaceBackNormal   = "#FFF2FEFF",
             ThemeFaceBorderNormal = "#D9000000",
-            ThemeTextBlackNormal = "#FF424242", // Black suits (Spades/Clubs)
-            ThemeTextRed         = "#FFC05491", // Red suits (Hearts/Diamonds)
-            ThemeCardShadow      = "#26000000",
+            ThemeTextBlackNormal  = "#FF141C20", // Black suits (Spades/Clubs)
+            ThemeTextRed          = "#FFB0306E", // Red suits (Hearts/Diamonds)
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
         },
     }.AsReadOnly();
 
@@ -133,7 +205,7 @@ public static class ThemeService
     public static void MergeInDefaultThemes()
     {
         var (themes, loadFailed) = LoadThemesCore();
-        // A transient read/parse failure of themes.json falls back to just the 5 in-code
+        // A transient read/parse failure of themes.json falls back to just the in-code
         // presets — persisting that back would permanently erase every custom theme over
         // a failure that might not recur. Skip saving and try again next launch instead.
         if (loadFailed) return;
@@ -371,7 +443,7 @@ public static class ThemeService
         options.HasAppliedDefaultTheme = true;
 
         // Only override visuals if the user hasn't changed anything from factory defaults —
-        // a fresh install lands here and gets DefaultThemes[0] ("Default": Moogle + Felt Green).
+        // a fresh install lands here and gets DefaultThemes[0] ("Default": Solibee + Felt Green).
         bool isFactoryFelt = options.FeltColor == FeltColorTheme.FeltGreen;
         bool isFactoryBack = options.CardBackTheme == "Vulpera";
         if (isFactoryFelt && isFactoryBack)

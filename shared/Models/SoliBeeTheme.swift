@@ -80,76 +80,74 @@ public final class ThemeManager {
     // let` re-evaluated fresh on every process launch; without an explicit id here each
     // entry would get a new random UUID() every launch, silently orphaning any persisted
     // `activeThemeId` (or any other stored reference) that pointed at last launch's id.
+    // load() matches these by name, so a player who already has a theme with one of
+    // these names keeps their own copy; only names they don't have yet get added.
     private static let defaultThemes: [SoliBeeTheme] = [
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000001")!,
-                     name: "Default",      cardBackTheme: "Solibee",      feltColor: .feltGreen,
-                     customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
-                     faceArts: [], customCardColors: CustomCardColorGroup()),
+                     name: "Default", cardBackTheme: "Solibee", feltColor: .feltGreen,
+                     customFeltRed: 0.0, customFeltGreen: 0.0, customFeltBlue: 0.0,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 1.0, 1.0), blackSuit: (0.0667, 0.0667, 0.0667), redSuit: (0.7686, 0.1176, 0.1176),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000006")!,
+                     name: "Honey", cardBackTheme: "Solibee", feltColor: .custom,
+                     customFeltRed: 0.2314, customFeltGreen: 0.1647, customFeltBlue: 0.0784,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 0.9647, 0.8627), blackSuit: (0.0549, 0.0353, 0.0118), redSuit: (0.7529, 0.1882, 0.1098),
+                         hint: (1.0, 0.8275, 0.0), button: (1.0, 0.8275, 0.0))),
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000007")!,
+                     name: "Sunset", cardBackTheme: "Sunset", feltColor: .custom,
+                     customFeltRed: 0.1176, customFeltGreen: 0.2275, customFeltBlue: 0.2824,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (0.9922, 0.9529, 0.8902), blackSuit: (0.0784, 0.0471, 0.0235), redSuit: (0.7412, 0.2392, 0.102),
+                         hint: (1.0, 0.7098, 0.3412), button: (0.9922, 0.9529, 0.8902))),
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000008")!,
+                     name: "Moogle", cardBackTheme: "Moogle", feltColor: .custom,
+                     customFeltRed: 0.0784, customFeltGreen: 0.0784, customFeltBlue: 0.0784,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 1.0, 1.0), blackSuit: (0.0, 0.0, 0.0), redSuit: (0.8157, 0.1255, 0.1804),
+                         hint: (1.0, 0.898, 0.0), button: (1.0, 1.0, 1.0))),
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000002")!,
                      name: "Pareidolic 2", cardBackTheme: "Pareidolic 2", feltColor: .custom,
-                     customFeltRed: 0.5925555229187012, customFeltGreen: 0.5882400274276733, customFeltBlue: 0.8116011023521423,
-                     faceArts: [], customCardColors: CustomCardColorGroup()),
+                     customFeltRed: 0.3608, customFeltGreen: 0.3451, customFeltBlue: 0.651,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 1.0, 1.0), blackSuit: (0.0667, 0.0667, 0.0667), redSuit: (0.7686, 0.1176, 0.1176),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000003")!,
-                     name: "Desert",       cardBackTheme: "Vulpera",      feltColor: .desert,
-                     customFeltRed: 0, customFeltGreen: 0, customFeltBlue: 0,
-                     faceArts: [], customCardColors: CustomCardColorGroup()),
+                     name: "Desert", cardBackTheme: "Vulpera", feltColor: .desert,
+                     customFeltRed: 0.0, customFeltGreen: 0.0, customFeltBlue: 0.0,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 0.9804, 0.9529), blackSuit: (0.0667, 0.0667, 0.0667), redSuit: (0.7686, 0.1176, 0.1176),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000004")!,
-                     name: "Forest",       cardBackTheme: "Forest",       feltColor: .custom,
-                     customFeltRed: 0.5211737751960754, customFeltGreen: 0.4769634008407593, customFeltBlue: 0.4559733271598816,
-                     faceArts: [], customCardColors: {
-                         var group = CustomCardColorGroup()
-                         group.isEnabled = true
-                         group.bgRed = 0.9010706543922424
-                         group.bgGreen = 0.812778890132904
-                         group.bgBlue = 0.6745686531066895
-                         group.bgAlpha = 1
-                         group.outlineRed = 0
-                         group.outlineGreen = 0
-                         group.outlineBlue = 0
-                         group.outlineAlpha = 0.85
-                         group.blackSuitRed = 0.22427189350128174
-                         group.blackSuitGreen = 0.06267625838518143
-                         group.blackSuitBlue = 0.04864334315061569
-                         group.blackSuitAlpha = 1
-                         group.redSuitRed = 0.7748149037361145
-                         group.redSuitGreen = 0.11090389639139175
-                         group.redSuitBlue = 0.10087030380964279
-                         group.redSuitAlpha = 1
-                         group.shadowRed = 0
-                         group.shadowGreen = 0
-                         group.shadowBlue = 0
-                         group.shadowAlpha = 0.15
-                         return group
-                     }()),
+                     name: "Forest", cardBackTheme: "Forest", feltColor: .custom,
+                     customFeltRed: 0.3686, customFeltGreen: 0.3294, customFeltBlue: 0.3137,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (0.902, 0.8118, 0.6745), blackSuit: (0.1333, 0.0353, 0.0392), redSuit: (0.6588, 0.0941, 0.102),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000005")!,
-                     name: "OceanSky",     cardBackTheme: "Pareidolic",   feltColor: .custom,
-                     customFeltRed: 0.5867433547973633, customFeltGreen: 0.9626139998435974, customFeltBlue: 0.9703466296195984,
-                     faceArts: [], customCardColors: {
-                         var group = CustomCardColorGroup()
-                         group.isEnabled = true
-                         group.bgRed = 0.8808431029319763
-                         group.bgGreen = 0.9917027354240417
-                         group.bgBlue = 0.9941582083702087
-                         group.bgAlpha = 1
-                         group.outlineRed = 0
-                         group.outlineGreen = 0
-                         group.outlineBlue = 0
-                         group.outlineAlpha = 0.85
-                         group.blackSuitRed = 0.2587890625
-                         group.blackSuitGreen = 0.2587890625
-                         group.blackSuitBlue = 0.2587890625
-                         group.blackSuitAlpha = 1
-                         group.redSuitRed = 0.7544758915901184
-                         group.redSuitGreen = 0.3275292217731476
-                         group.redSuitBlue = 0.5698546767234802
-                         group.redSuitAlpha = 1
-                         group.shadowRed = 0
-                         group.shadowGreen = 0
-                         group.shadowBlue = 0
-                         group.shadowAlpha = 0.15
-                         return group
-                     }()),
+                     name: "OceanSky", cardBackTheme: "Pareidolic", feltColor: .custom,
+                     customFeltRed: 0.1412, customFeltGreen: 0.4706, customFeltBlue: 0.5608,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (0.949, 0.9961, 1.0), blackSuit: (0.0784, 0.1098, 0.1255), redSuit: (0.6902, 0.1882, 0.4314),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
     ]
+
+    // Built-in themes all turn custom card colors on with the standard outline and
+    // shadow; only the card face, suit, hint glow and top-bar button colors differ.
+    private static func presetCardColors(
+        bg: (Double, Double, Double), blackSuit: (Double, Double, Double), redSuit: (Double, Double, Double),
+        hint: (Double, Double, Double), button: (Double, Double, Double)
+    ) -> CustomCardColorGroup {
+        var group = CustomCardColorGroup()
+        group.isEnabled = true
+        (group.bgRed, group.bgGreen, group.bgBlue) = bg
+        (group.blackSuitRed, group.blackSuitGreen, group.blackSuitBlue) = blackSuit
+        (group.redSuitRed, group.redSuitGreen, group.redSuitBlue) = redSuit
+        (group.hintHighlightRed, group.hintHighlightGreen, group.hintHighlightBlue) = hint
+        (group.buttonRed, group.buttonGreen, group.buttonBlue) = button
+        return group
+    }
 
     // Names (lowercased) of built-in themes the user has explicitly deleted — checked
     // in load() so a deleted default doesn't silently reappear on next launch.
