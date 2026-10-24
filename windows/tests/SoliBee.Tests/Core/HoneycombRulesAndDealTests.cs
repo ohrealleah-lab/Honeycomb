@@ -159,6 +159,18 @@ public class HoneycombRulesAndDealTests : DataSandbox
         Assert.Equal("Pollination", HoneycombRule.Ascension.DisplayName());
     }
 
+    // Sudden Death and Scouting Party read the same on Mac, Windows and Android.
+    [Fact]
+    public void SuddenDeathAndScoutingParty_AreWordedLikeTheOtherPlatforms()
+    {
+        const string sudden = "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately.";
+        const string scouting = "Three randomly selected cards from each player's hand are visible.";
+        Assert.Equal(sudden, HoneycombRule.SuddenDeath.GetExplanation());
+        Assert.Equal(sudden, HoneycombRuleLocalization.LocalizedRuleExplanation(HoneycombRule.SuddenDeath, null, SoliBee.Core.Localization.AppLanguage.English));
+        Assert.Equal(scouting, HoneycombRule.ThreeOpen.GetExplanation());
+        Assert.Equal(scouting, HoneycombRuleLocalization.LocalizedRuleExplanation(HoneycombRule.ThreeOpen, null, SoliBee.Core.Localization.AppLanguage.English));
+    }
+
     // ---- The opponent's deck ----
 
     private static List<int> Stars(HoneycombViewModel vm) => RollDeck(vm).Select(c => c.Stars).OrderBy(s => s).ToList();

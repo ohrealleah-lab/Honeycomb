@@ -73,7 +73,7 @@ extension HoneycombRule {
         case .bombShelter:
             return "Each player's first card played remains face-down for 3 turns before flipping automatically."
         case .suddenDeath:
-            return "If the match ends in a draw, a rematch begins immediately."
+            return "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."
         case .swap:
             return "Before the match, one card from your hand is randomly swapped with one of the opponent's."
         }

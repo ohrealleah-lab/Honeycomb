@@ -552,7 +552,7 @@ enum StringsSpanish {
         .ruleExplanationAllOpen: "Las manos de ambos jugadores son completamente visibles.",
         .ruleExplanationThreeOpen: "Tres cartas seleccionadas al azar de la mano de cada jugador son visibles.",
         .ruleExplanationBombShelter: "La primera carta jugada de cada jugador permanece boca abajo durante 3 turnos antes de voltearse automáticamente.",
-        .ruleExplanationSuddenDeath: "Si la partida termina en empate, comienza una revancha inmediatamente.",
+        .ruleExplanationSuddenDeath: "Si la partida termina en empate, las cartas que posee cada jugador en ese momento se convierten en su nueva mano y la partida se reinicia de inmediato.",
         .ruleExplanationSwap: "Antes de la partida, una carta de tu mano se intercambia aleatoriamente con una del oponente.",
         .difficultyEasyRawvalue: "Fácil",
         .difficultyMediumRawvalue: "Medio",

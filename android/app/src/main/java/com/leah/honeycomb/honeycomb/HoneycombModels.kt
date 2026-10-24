@@ -62,7 +62,7 @@ enum class HoneycombRule(val weight: Int) {
             AllOpen -> "Both players' hands are completely visible."
             ThreeOpen -> "Three randomly selected cards from each player's hand are visible."
             BombShelter -> "Each player's first card played remains face-down for 3 turns before flipping automatically."
-            SuddenDeath -> "If the match ends in a draw, a rematch begins immediately."
+            SuddenDeath -> "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."
             Swap -> "Before the match, one card from your hand is randomly swapped with one of the opponent's."
         }
     }

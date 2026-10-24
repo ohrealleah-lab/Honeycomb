@@ -65,7 +65,7 @@ public static class HoneycombRuleWeights
         HoneycombRule.BombShelter => "Each player's first card played remains face-down for 3 turns before flipping automatically.",
         HoneycombRule.Swap => "One card from each player's hand is randomly swapped at the start of the match.",
         HoneycombRule.AllOpen => "Both players' hands are completely visible.",
-        HoneycombRule.ThreeOpen => "Three random cards in the opponent's hand are visible.",
+        HoneycombRule.ThreeOpen => "Three randomly selected cards from each player's hand are visible.",
         HoneycombRule.Order => "Cards must be played in the exact order they were drawn.",
         HoneycombRule.Chaos => "Cards are randomly selected and forced to be played each turn.",
         HoneycombRule.Reverse => "Lower stats capture higher stats.",

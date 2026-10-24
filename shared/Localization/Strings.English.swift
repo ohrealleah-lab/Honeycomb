@@ -552,7 +552,7 @@ enum StringsEnglish {
         .ruleExplanationAllOpen: "Both players' hands are completely visible.",
         .ruleExplanationThreeOpen: "Three randomly selected cards from each player's hand are visible.",
         .ruleExplanationBombShelter: "Each player's first card played remains face-down for 3 turns before flipping automatically.",
-        .ruleExplanationSuddenDeath: "If the match ends in a draw, a rematch begins immediately.",
+        .ruleExplanationSuddenDeath: "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately.",
         .ruleExplanationSwap: "Before the match, one card from your hand is randomly swapped with one of the opponent's.",
         .difficultyEasyRawvalue: "Easy",
         .difficultyMediumRawvalue: "Medium",

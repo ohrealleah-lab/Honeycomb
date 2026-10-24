@@ -18,6 +18,7 @@ struct MacGapTests {
         testPreFlopEstimate()
         testVersionComparison()
         testRuleTextInBothLanguages()
+        testSuddenDeathAndScoutingPartyWording()
         testDifficultyNamesInBothLanguages()
         testPlayerRankBands()
         withCleanDefaults(["appLanguage"], testStringLookupFallsBackAndFormats)
@@ -165,6 +166,18 @@ struct MacGapTests {
         for rule in HoneycombRule.allCases {
             expect(!rule.explanation().isEmpty, "\(rule) has a plain explanation")
         }
+    }
+
+    // Sudden Death and Scouting Party are worded the same on Mac, Windows and Android: the
+    // spreadsheet text the screens show and the built-in fallback agree.
+    static func testSuddenDeathAndScoutingPartyWording() {
+        let sudden = "If the match ends in a draw, the cards currently owned by each player become their new hand and the match restarts immediately."
+        expect(honeycombLocalizedRuleExplanation(.suddenDeath, language: .english) == sudden, "Sudden Death text")
+        expect(HoneycombRule.suddenDeath.explanation() == sudden, "Sudden Death fallback text")
+        let scouting = "Three randomly selected cards from each player's hand are visible."
+        expect(honeycombLocalizedRuleExplanation(.threeOpen, language: .english) == scouting, "Scouting Party text")
+        expect(HoneycombRule.threeOpen.explanation() == scouting || HoneycombRule.threeOpen.explanation().contains("each player's hand"),
+               "Scouting Party fallback names each player's hand")
     }
 
     static func testDifficultyNamesInBothLanguages() {
