@@ -11,7 +11,7 @@ MAC_SRCS=src/Models/*.swift src/Views/*.swift src/Beecell/Views/*.swift src/Spid
 # instrumentation and writes coverage.lcov for Codecov; plain `make test` is unchanged.
 COVERAGE_FLAGS=$(if $(COVERAGE),-profile-generate -profile-coverage-mapping)
 
-.PHONY: all build clean test run
+.PHONY: all build clean test run monkey monkey-replay
 
 all: build
 
@@ -50,7 +50,7 @@ clean:
 	swift package clean --package-path ..
 	rm -rf $(APP_BUNDLE)
 	rm -rf .build ../.build
-	rm -f test_runner
+	rm -f test_runner monkey_runner
 
 test:
 	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
@@ -69,3 +69,19 @@ test:
 
 run: build
 	open $(APP_BUNDLE)
+
+# Overnight monkey test (Monkey/, report in ../monkey/REPORT.md). `make monkey MINUTES=30`
+# plays random legal moves for that long; `make monkey-replay CASE=monkey/cases/<id>.json`
+# replays one saved problem and prints its steps. Optimized like the shipping app (-O keeps
+# Swift's bounds and overflow checks, so crashes still show up).
+MINUTES ?= 30
+
+monkey_runner: $(SHARED_SRCS) $(MAC_SRCS) Monkey/*.swift
+	swiftc -O -o monkey_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(SHARED_SRCS) $(MAC_SRCS) Monkey/*.swift
+	cp ../shared/Honeycomb/Resources/HoneycombBannerCatalog.json HoneycombBannerCatalog.json
+
+monkey: monkey_runner
+	./monkey_runner night --minutes $(MINUTES) --out ../monkey
+
+monkey-replay: monkey_runner
+	./monkey_runner replay --case ../$(CASE)

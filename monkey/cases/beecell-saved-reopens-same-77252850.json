@@ -1,0 +1,18 @@
+{
+  "actions" : [
+    {
+      "kind" : "relaunch"
+    }
+  ],
+  "detail" : "The Beecell stats should be 2deck: played 3, won 0, streak 0, best streak 0 but came back as 2deck: played 2, won 0, streak 0, best streak 0.",
+  "firstFound" : "2026-10-29",
+  "game" : "Beecell",
+  "id" : "beecell-saved-reopens-same-77252850",
+  "rule" : "saved-reopens-same",
+  "seed" : "772528506e0b6021",
+  "setup" : "Beecell, 2 decks",
+  "startMode" : "2",
+  "steps" : [
+    "Quit the app and open it again."
+  ]
+}

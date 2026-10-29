@@ -15,3 +15,6 @@ mac/test_runner
 mac/coverage.lcov
 mac/coverage.profraw
 mac/coverage.profdata
+
+# Overnight monkey test runner (`make monkey`)
+mac/monkey_runner

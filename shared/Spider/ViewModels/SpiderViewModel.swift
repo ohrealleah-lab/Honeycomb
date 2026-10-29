@@ -363,7 +363,7 @@ public final class SpiderViewModel {
         }
         
         // 2. Shuffle deck
-        deck.shuffle()
+        DealShuffle.shuffle(&deck)
         
         // 3. Deal Tableau (10 columns)
         // First 4 columns: 6 cards each (5 down, 1 up)
@@ -948,7 +948,7 @@ public final class SpiderViewModel {
         if let nextMove = findNextAutocompleteMove() {
             moveCards(nextMove.cards, from: nextMove.source, to: nextMove.target)
 
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + AutoplayPacing.stepDelay) { [weak self] in
                 self?.animateNextAutocompleteMove()
             }
         } else {

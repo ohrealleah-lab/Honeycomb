@@ -55,6 +55,28 @@ struct UndoStack<State> {
     }
 }
 
+// Every Klondike/Beecell/Spider deal shuffles through here. The app never sets `seeded`, so
+// players get the system's random shuffle exactly as before; the overnight monkey test
+// (mac/Monkey) sets it so any deal it plays can be replayed exactly from a seed.
+enum DealShuffle {
+    static var seeded: SplitMix64?
+
+    static func shuffle(_ cards: inout [Card]) {
+        if var rng = seeded {
+            cards.shuffle(using: &rng)
+            seeded = rng
+        } else {
+            cards.shuffle()
+        }
+    }
+}
+
+// Pause between Autocomplete's card moves (the animation pace). Only the monkey test changes
+// it, to 0, so it can run thousands of autocompletes a night without waiting on the clock.
+enum AutoplayPacing {
+    static var stepDelay: TimeInterval = 0.15
+}
+
 // Smart Drop Detection: when a player drags a stack, the tapped card might not be the one
 // they meant to grab (e.g. grabbing a 10♠ sitting just above the 9♥ they actually wanted).
 // Rather than rejecting the whole drop, this finds the longest suffix of the dragged stack —

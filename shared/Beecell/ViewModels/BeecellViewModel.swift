@@ -324,7 +324,7 @@ public final class BeecellViewModel {
         }
         
         // 2. Shuffle deck
-        deck.shuffle()
+        DealShuffle.shuffle(&deck)
         
         // 3. Setup pile sizes based on deck count
         let numTableaus = options.deckCount == 1 ? 8 : 10
@@ -1074,7 +1074,7 @@ public final class BeecellViewModel {
         if let nextMove = findNextFoundationMove() {
             moveCards([nextMove.card], from: nextMove.source, to: nextMove.target)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + AutoplayPacing.stepDelay) { [weak self] in
                 self?.animateNextAutocompleteMove()
             }
         } else {

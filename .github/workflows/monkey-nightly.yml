@@ -1,0 +1,50 @@
+name: Monkey test (nightly)
+
+# Plays Klondike, Beecell and Spider with random but legal moves for half an hour, checking
+# rules that must always hold after every step (see mac/Monkey/ and monkey/REPORT.md).
+# The report and saved cases are committed back to main only when they change: a new
+# problem was found, or an old one no longer happens.
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 09:00 UTC, overnight in the US
+  workflow_dispatch:
+    inputs:
+      minutes:
+        description: 'How many minutes to play'
+        default: '30'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: monkey-nightly
+  cancel-in-progress: false
+
+jobs:
+  monkey:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: mac
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run the monkey
+        run: make monkey MINUTES=${{ github.event.inputs.minutes || '30' }}
+
+      - name: Save the report if it changed
+        working-directory: .
+        run: |
+          git add monkey
+          if git diff --cached --quiet; then
+            echo "No change to the monkey report."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Monkey test: update report"
+          git pull --rebase origin main
+          git push origin HEAD:main

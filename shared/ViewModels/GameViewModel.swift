@@ -418,7 +418,7 @@ public final class GameViewModel {
         }
         
         // 2. Shuffle deck
-        deck.shuffle()
+        DealShuffle.shuffle(&deck)
         
         // 3. Deal Tableau (7 columns)
         var tableau: [Pile] = []
@@ -1263,7 +1263,7 @@ public final class GameViewModel {
         if let nextMove = findNextFoundationMove() {
             moveCards([nextMove.card], from: nextMove.source, to: nextMove.target)
             
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + AutoplayPacing.stepDelay) { [weak self] in
                 self?.animateNextAutocompleteMove()
             }
         } else {
