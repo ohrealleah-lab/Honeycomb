@@ -238,7 +238,7 @@ public final class BeecellViewModel {
 
     public init(sharedOptions: SharedGameOptions = SharedGameOptions()) {
         self.sharedOptions = sharedOptions
-        // Initialize all stored properties first with defaults
+        // An empty board until startNewGame() below deals one
         self.state = BeecellState(
             freeCells: [],
             foundations: [],
@@ -249,22 +249,24 @@ public final class BeecellViewModel {
             isTimerActive: false,
             hasWon: false
         )
-        self.options = BeecellOptions()
-        self.statistics = BeecellStatistics()
         self.zoomScale = 1.0
 
-        // Load options
+        // Options and statistics are each assigned exactly once. Under @Observable a second
+        // assignment in init runs didSet, and options' didSet deals a new game when the deck
+        // count differs from the default — so launching with 2 decks saved used to save
+        // fresh stats over the player's real ones before they were loaded.
         if let data = UserDefaults.standard.data(forKey: "beecell_options"),
            let decoded = try? JSONDecoder().decode(BeecellOptions.self, from: data) {
             self.options = decoded
         } else {
             self.options = BeecellOptions()
         }
-        
-        // Load statistics
+
         if let data = UserDefaults.standard.data(forKey: "beecell_statistics"),
            let decoded = try? JSONDecoder().decode(BeecellStatistics.self, from: data) {
             self.statistics = decoded
+        } else {
+            self.statistics = BeecellStatistics()
         }
 
         startNewGame()

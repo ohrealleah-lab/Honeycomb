@@ -10,6 +10,7 @@ struct BeecellGameplayTests {
         UISound.isHeadlessMode = true
         func isolated(_ test: () -> Void) { withCleanDefaults(defaultsKeys, test) }
         isolated(testDealLayoutAndPerDeckCountStats)
+        isolated(testReopeningWithTwoDecksKeepsStats)
         isolated(testSupermoveLimitAndPileRules)
         isolated(testScoringAndUndo)
         isolated(testWinInOneAndTwoDecks)
@@ -81,6 +82,22 @@ struct BeecellGameplayTests {
     }
 
     // MARK: - Deal & modes
+
+    // Reopening the app with 2 decks saved used to deal a game during launch before the saved
+    // stats were loaded, saving fresh stats over the real ones (found by the monkey test).
+    static func testReopeningWithTwoDecksKeepsStats() {
+        let vm = BeecellViewModel()
+        vm.startNewGame()
+        setDecks(vm, 2)
+        vm.startNewGame()
+        vm.recordWin(timeInSeconds: 60)
+        var expected = vm.statistics
+        let reopened = BeecellViewModel()
+        expected.statsByMode["2deck", default: ModeStats()].gamesPlayed += 1  // opening the app deals one new game
+        expect(reopened.options.deckCount == 2, "2 decks is remembered")
+        expect(reopened.statistics == expected, "Reopening with 2 decks keeps both deck counts' stats")
+        expect(mode(reopened, "1deck").gamesPlayed == 2 && mode(reopened, "2deck").gamesWon == 1, "Nothing was reset")
+    }
 
     static func testDealLayoutAndPerDeckCountStats() {
         let vm = BeecellViewModel()
