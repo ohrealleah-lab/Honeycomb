@@ -261,9 +261,9 @@ public final class HoneycombViewModel {
     private func rerollChaosIndexIfNeeded(forPlayerSide: Bool) {
         guard activeRules.contains(.chaos) else { return }
         if forPlayerSide {
-            chaosPlayerIndex = playerHand.isEmpty ? nil : Int.random(in: 0..<playerHand.count)
+            chaosPlayerIndex = playerHand.isEmpty ? nil : GameDice.int(in: 0..<playerHand.count)
         } else {
-            chaosOpponentIndex = opponentHand.isEmpty ? nil : Int.random(in: 0..<opponentHand.count)
+            chaosOpponentIndex = opponentHand.isEmpty ? nil : GameDice.int(in: 0..<opponentHand.count)
         }
     }
 
@@ -531,6 +531,18 @@ public final class HoneycombViewModel {
     private func stageSwapAnimation(_ swapResult: SwapResult?, generation: Int) {
         guard let swapResult else { return }
 
+        // Headless mode (automated tests) skips the three beats and trades at once, so
+        // the first move sees the swapped hands, as it would once the animation landed.
+        if UISound.isHeadlessMode {
+            if let idx = playerHand.firstIndex(where: { $0.id == swapResult.preSwapPlayerCard.id }) {
+                playerHand[idx] = swapResult.finalPlayerCard
+            }
+            if let idx = opponentHand.firstIndex(where: { $0.id == swapResult.preSwapOpponentCard.id }) {
+                opponentHand[idx] = swapResult.finalOpponentCard
+            }
+            return
+        }
+
         // playerStartingDeck deliberately keeps the player's real, pre-swap card
         // here — it's what "Your Deck"/Take-a-Card and the rarity-cap check at
         // match end are based on, so every one of the 5 slots stays normally
@@ -694,7 +706,7 @@ public final class HoneycombViewModel {
         } else if starterStreak >= 3, let lastMatchStarterWasPlayer {
             playerStarts = !lastMatchStarterWasPlayer
         } else {
-            playerStarts = Bool.random()
+            playerStarts = GameDice.bool()
         }
         if let lastMatchStarterWasPlayer, lastMatchStarterWasPlayer == playerStarts {
             starterStreak += 1
@@ -915,11 +927,12 @@ public final class HoneycombViewModel {
             lastRouletteSignature = rouletteSignature(rules: rolledRules, suits: rolledSuits)
             return
         } else {
-            activeRules = Array(options.selectedRules)
+            // In the standard rule order, not however the Set happens to iterate.
+            activeRules = HoneycombRule.allCases.filter { options.selectedRules.contains($0) }
         }
 
         if activeRules.contains(.ascension) || activeRules.contains(.descension) {
-            ascensionDescensionSuits = Set(["S", "H", "D", "C"].shuffled().prefix(1))
+            ascensionDescensionSuits = Set(GameDice.shuffled(["S", "H", "D", "C"]).prefix(1))
         } else {
             ascensionDescensionSuits = []
         }
@@ -972,7 +985,7 @@ public final class HoneycombViewModel {
         var forceMustPickAll = false
 
         if matchDifficulty == .ultraHard {
-            let roll = Double.random(in: 0..<1)
+            let roll = GameDice.double(in: 0..<1)
             if roll < 0.25 { maxSlots = 4 }
             else if roll < 0.70 { maxSlots = 3 }
             else if roll < 0.95 { maxSlots = 2 }
@@ -982,7 +995,7 @@ public final class HoneycombViewModel {
             if maxSlots == 0 && normalBanned { maxSlots = 1 }
             forceMustPickAll = true
         } else if matchDifficulty == .hard {
-            let hardRoll = Double.random(in: 0..<1)
+            let hardRoll = GameDice.double(in: 0..<1)
             if hardRoll < 0.01 {
                 maxSlots = 4
                 forceMustPickAll = true
@@ -997,7 +1010,7 @@ public final class HoneycombViewModel {
             guard !pool.isEmpty else { break }
             let mustPick = (slot == 0 && normalBanned) || forceMustPickAll
             let stopProbability = slot == 0 ? stopProbabilityFirst : stopProbabilitySecond
-            if !mustPick && Double.random(in: 0..<1) < stopProbability { break }
+            if !mustPick && GameDice.double(in: 0..<1) < stopProbability { break }
 
             let randomRule = Self.weightedRandomRule(from: pool)
             rules.append(randomRule)
@@ -1023,7 +1036,7 @@ public final class HoneycombViewModel {
 
         let suits: Set<String>
         if rules.contains(.ascension) || rules.contains(.descension) {
-            suits = Set(["S", "H", "D", "C"].shuffled().prefix(1))
+            suits = Set(GameDice.shuffled(["S", "H", "D", "C"]).prefix(1))
         } else {
             suits = []
         }
@@ -1037,7 +1050,7 @@ public final class HoneycombViewModel {
     // before randomValue can go negative past the last element) but keeps this total.
     private static func weightedRandomRule(from pool: [HoneycombRule]) -> HoneycombRule {
         let totalWeight = pool.reduce(0) { $0 + $1.weight }
-        var randomValue = Int.random(in: 0..<totalWeight)
+        var randomValue = GameDice.int(in: 0..<totalWeight)
         for rule in pool {
             randomValue -= rule.weight
             if randomValue < 0 { return rule }
@@ -1086,12 +1099,12 @@ public final class HoneycombViewModel {
             // Baby Bee: a 20% chance of a 3★ card instead of the usual second 2★, so
             // its deck isn't entirely predictable at this difficulty either — same
             // idea as Medium's own variable last slot below.
-            let lastSlot = Double.random(in: 0..<1) < 0.2 ? 3 : 2
+            let lastSlot = GameDice.double(in: 0..<1) < 0.2 ? 3 : 2
             return [(1, 3), (2, 1), (lastSlot, 1)]
         case .medium:
             // Honey Bee: a 20% chance of a 4★ card instead of the usual 3★, so its
             // deck isn't entirely predictable at this difficulty.
-            let lastSlot = Double.random(in: 0..<1) < 0.2 ? 4 : 3
+            let lastSlot = GameDice.double(in: 0..<1) < 0.2 ? 4 : 3
             return [(2, 4), (lastSlot, 1)]
         case .hard: return [(3, 3), (4, 1), (5, 1)]
         case .ultraHard: return [(3, 2), (4, 1), (5, 2)]
@@ -1165,7 +1178,7 @@ public final class HoneycombViewModel {
         // guaranteed 5-star, 5-star finish. Shuffle unconditionally (not just when
         // Order is active) so tier position never leaks information, regardless of
         // which rules end up active this match.
-        deck.shuffle()
+        GameDice.shuffle(&deck)
 
         // Favor New Cards (always on, not a toggle): if every card in the assembled
         // deck is already owned by the player, swap the first owned card for an
@@ -1180,7 +1193,7 @@ public final class HoneycombViewModel {
                 for i in deck.indices {
                     let tier = deck[i].stars
                     let unownedInTier = db.allCards.filter { $0.stars == tier && !owned.contains($0.id) }
-                    if let substitute = unownedInTier.randomElement() {
+                    if let substitute = GameDice.element(of: unownedInTier) {
                         deck[i] = substitute
                         break
                     }
@@ -1224,7 +1237,7 @@ public final class HoneycombViewModel {
             let candidates = db.allCards.filter {
                 $0.stars == tier && ascensionDescensionSuits.contains($0.suit) && !usedIds.contains($0.id)
             }
-            guard let substitute = candidates.randomElement() else { continue }
+            guard let substitute = GameDice.element(of: candidates) else { continue }
             result[idx] = substitute
             matchingCount += 1
         }
@@ -1253,7 +1266,7 @@ public final class HoneycombViewModel {
         if activeRules.contains(.allOpen) {
             openOpponentCardIds = Set(eventualOpponentIds)
         } else if activeRules.contains(.threeOpen) {
-            openOpponentCardIds = Set(eventualOpponentIds.shuffled().prefix(3))
+            openOpponentCardIds = Set(GameDice.shuffled(eventualOpponentIds).prefix(3))
         }
         if let swap = swapResult {
             // Whether that slot ended up visible (All Open, or Three Open's random
@@ -1286,7 +1299,7 @@ public final class HoneycombViewModel {
         if activeRules.contains(.allOpen) {
             openPlayerCardIds = Set(eventualPlayerIds)
         } else if activeRules.contains(.threeOpen) {
-            openPlayerCardIds = Set(eventualPlayerIds.shuffled().prefix(3))
+            openPlayerCardIds = Set(GameDice.shuffled(eventualPlayerIds).prefix(3))
         }
         if let swap = swapResult {
             let slotIsVisible = openPlayerCardIds.contains(swap.finalPlayerCard.id)
@@ -1328,8 +1341,8 @@ public final class HoneycombViewModel {
     // startNewGame for when/how it's actually applied.
     private func computeSwapIfNeeded() -> SwapResult? {
         guard activeRules.contains(.swap), !playerHand.isEmpty, !opponentHand.isEmpty else { return nil }
-        let pIdx = Int.random(in: 0..<playerHand.count)
-        let oIdx = Int.random(in: 0..<opponentHand.count)
+        let pIdx = GameDice.int(in: 0..<playerHand.count)
+        let oIdx = GameDice.int(in: 0..<opponentHand.count)
         let originalPlayerCard = playerHand[pIdx]
         let originalOpponentCard = opponentHand[oIdx]
         // Identity-preserving: the id that was sitting in one hand moves to the other,
@@ -2433,9 +2446,11 @@ public final class HoneycombViewModel {
                 // above) once the tie-break itself lands, so this same match is only
                 // ever recorded once.
 
-                // Give enough time for the final card placement and any combo animations to fully resolve
+                // Give enough time for the final card placement and any combo animations to
+                // fully resolve. Headless mode (automated tests) skips the pause, but still
+                // waits for the turn that filled the board to finish first.
                 let generation = handSetupGeneration
-                DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                DispatchQueue.main.asyncAfter(deadline: .now() + (UISound.isHeadlessMode ? 0 : 2.5)) { [weak self] in
                     // A New Game/Quit during this delay bumps handSetupGeneration — without
                     // this check, this stale closure would still increment suddenDeathCount
                     // and stomp the turn/undo-stack state of whatever match replaced this one.

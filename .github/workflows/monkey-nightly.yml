@@ -1,6 +1,6 @@
 name: Monkey test (nightly)
 
-# Plays Klondike, Beecell and Spider with random but legal moves for half an hour, checking
+# Plays Klondike, Beecell, Spider and Honeycomb with random but legal moves for half an hour, checking
 # rules that must always hold after every step (see mac/Monkey/ and monkey/REPORT.md).
 # The report and saved cases are committed back to main only when they change: a new
 # problem was found, or an old one no longer happens.

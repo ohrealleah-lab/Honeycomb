@@ -43,7 +43,9 @@ public class HoneycombProfileManager {
             // Put the starter cards in deck 0, named "Default", if it's the first time.
             // (Options.activeDeckIndex already defaults to 0, so this is also the
             // active deck — there's always an active deck to save changes to.)
-            let starters = Array(unlockedCardIds)
+            // Sorted so the starter deck's order doesn't depend on how a Set happens to
+            // iterate (which changes every launch) — keeps seeded test runs replayable.
+            let starters = unlockedCardIds.sorted()
             if starters.count == 5 {
                 savedDecks[0].name = "Default"
                 savedDecks[0].cardIds = starters

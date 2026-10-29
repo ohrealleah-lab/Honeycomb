@@ -153,6 +153,7 @@ final class KlondikeMonkey: MonkeyGame {
             return "In Options, switch to \(label) and click OK."
         case .noStress: return "Turn No Stress Mode \(shared.noStressMode ? "off" : "on")."
         case .relaunch: return "Quit the app and open it again."
+        case .play, .rematch, .quit, .steal, .startOver: return "(not a Klondike step)"
         }
     }
 
@@ -224,6 +225,8 @@ final class KlondikeMonkey: MonkeyGame {
         case .relaunch:
             try relaunch()
             expectedStats = vm.statistics
+        case .play, .rematch, .quit, .steal, .startOver:
+            break
         }
 
         if !before.hasWon && vm.state.hasWon { wins += 1 }

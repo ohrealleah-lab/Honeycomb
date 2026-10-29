@@ -4,7 +4,6 @@ import Foundation
 // out, shrink anything new to its fewest steps, then rewrite the report. Only the saved
 // cases feed the report, so it stays byte-identical on nights where nothing changed.
 struct MonkeyNight {
-    static let stepsPerGame = 1500
     static let newProblemsPerNight = 3
 
     let outDir: URL
@@ -23,7 +22,7 @@ struct MonkeyNight {
         var open: [MonkeyCase] = []
         for (url, saved) in loadCases() {
             let rerun = replay(game: saved.game, startMode: saved.startMode, seed: saved.seedValue, actions: saved.actions,
-                               timeout: saved.rule == .freeze ? 30 : 20)
+                               timeout: Self.timeout(for: saved.game))
             if rerun.rule == saved.rule {
                 open.append(saved)
                 print("Still open: \(saved.id)")
@@ -43,7 +42,8 @@ struct MonkeyNight {
             let seed = rng.next()
             gamesPlayed += 1
             let result = runChild(["child", "--game", gameType.gameName, "--mode", startMode,
-                                   "--seed", String(seed, radix: 16), "--steps", String(Self.stepsPerGame)], timeout: 120)
+                                   "--seed", String(seed, radix: 16), "--steps", String(gameType.stepsPerRun)],
+                                  timeout: gameType.runTimeout)
             wins += result.wins
             guard let rule = result.rule else { continue }
             failures += 1
@@ -56,7 +56,7 @@ struct MonkeyNight {
         }
 
         MonkeyReport.write(cases: open, to: outDir.appendingPathComponent("REPORT.md"))
-        print("Played \(gamesPlayed) runs of up to \(Self.stepsPerGame) steps (\(wins) games won); \(failures) hit a problem; \(newFound) new; \(open.count) open in all.")
+        print("Played \(gamesPlayed) runs (\(wins) games won); \(failures) hit a problem; \(newFound) new; \(open.count) open in all.")
         return 0
     }
 
@@ -73,7 +73,7 @@ struct MonkeyNight {
     private func saveNewCase(game: String, startMode: String, seed: UInt64, rule: MonkeyRule, found: ChildRun) -> MonkeyCase {
         var actions = found.actions
         var detail = found.detail
-        let timeout: TimeInterval = rule == .freeze ? 30 : 20
+        let timeout = Self.timeout(for: game)
         let replays = replay(game: game, startMode: startMode, seed: seed, actions: actions, timeout: timeout).rule == rule
         if replays {
             actions = shrink(game: game, startMode: startMode, seed: seed, rule: rule, actions: actions)
@@ -100,7 +100,7 @@ struct MonkeyNight {
     // still breaks, keeping the shortest list that shows it.
     private func shrink(game: String, startMode: String, seed: UInt64, rule: MonkeyRule, actions: [MonkeyAction]) -> [MonkeyAction] {
         let maxTries = rule == .freeze ? 12 : rule == .crash ? 150 : 400
-        let timeout: TimeInterval = rule == .freeze ? 30 : 20
+        let timeout = Self.timeout(for: game)
         let deadline = Date().addingTimeInterval(5 * 60)
         var best = actions, tries = 0
         var chunk = max(1, best.count / 2)
@@ -140,6 +140,11 @@ struct MonkeyNight {
 
     private func runChild(_ arguments: [String], timeout: TimeInterval) -> ChildRun {
         MonkeyProcess.run(arguments, in: work, timeout: timeout)
+    }
+
+    // A replay gets as long as a full run of that game would.
+    static func timeout(for game: String) -> TimeInterval {
+        MonkeyGames.named(game)?.runTimeout ?? 120
     }
 
     static func today() -> String {

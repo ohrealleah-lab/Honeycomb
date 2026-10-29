@@ -1,20 +1,8 @@
 # Monkey test report
 
-❌ **1 open problem** (newest found Oct 29, 2026).
+✅ **All clear.** No open problems.
 
-Every night a GitHub job plays Klondike, Beecell and Spider with thousands of random but legal moves and checks the rules at the bottom of this page after every step. A problem stays listed until a later night's re-check shows it's fixed, so this file only changes when something new turns up or something gets fixed. Each night's run is under GitHub → Actions → "Monkey test (nightly)".
-
-## Problem 1: Beecell: Saved settings or stats came back different after reopening the app
-
-- **Found:** Oct 29, 2026
-- **Start:** Beecell, 2 decks. The deal comes from a seed, so it can't be set up by hand, but it replays exactly.
-- **What went wrong:** The Beecell stats should be 2deck: played 3, won 0, streak 0, best streak 0 but came back as 2deck: played 2, won 0, streak 0, best streak 0.
-
-**Steps**
-
-1. Quit the app and open it again.
-
-Replay it: `make -C mac monkey-replay CASE=monkey/cases/beecell-saved-reopens-same-77252850.json`
+Every night a GitHub job plays Klondike, Beecell, Spider and Honeycomb with thousands of random but legal moves and checks the rules at the bottom of this page after every step. A problem stays listed until a later night's re-check shows it's fixed, so this file only changes when something new turns up or something gets fixed. Each night's run is under GitHub → Actions → "Monkey test (nightly)".
 
 ## Rules checked after every step
 
@@ -25,6 +13,11 @@ Replay it: `make -C mac monkey-replay CASE=monkey/cases/beecell-saved-reopens-sa
 - Restart gives back the original deal.
 - Asking for a hint never changes the board.
 - Autocomplete, whenever it's offered, finishes the game.
-- Stats add up: a new game on a played, unwon deal ends the streak; a win adds exactly one win; won never exceeds played.
+- Stats add up: a new game on a played, unwon deal ends the streak (in Honeycomb, leaving a match counts as a loss); a win adds exactly one win; won never exceeds played.
 - After quitting and reopening, settings and stats come back the same.
-- No step crashes, freezes, or takes more than a few seconds.
+- Honeycomb: the board and hands always hold the same 10 cards, five from each side.
+- Honeycomb: a move the rules allow is accepted, one they don't is refused and changes nothing, and Hint only suggests allowed moves.
+- Honeycomb: the opponent always takes its turn, and a full board always ends the match (or starts Sudden Death) with the right result.
+- Honeycomb: the Card Bank only gains a card through a real steal (one per match, never in No Stress Mode).
+- Honeycomb: a new match follows the chosen rules, bans, difficulty and deck, brings a card you don't own yet when it can, and settings changed mid-match wait for the next one.
+- No step crashes, freezes, or takes far too long.

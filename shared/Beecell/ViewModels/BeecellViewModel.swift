@@ -326,7 +326,7 @@ public final class BeecellViewModel {
         }
         
         // 2. Shuffle deck
-        DealShuffle.shuffle(&deck)
+        GameDice.shuffle(&deck)
         
         // 3. Setup pile sizes based on deck count
         let numTableaus = options.deckCount == 1 ? 8 : 10

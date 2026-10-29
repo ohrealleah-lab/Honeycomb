@@ -135,6 +135,7 @@ final class SpiderMonkey: MonkeyGame {
         case .mode: return "In Options, switch to \(action.value ?? "?") suit\(action.value == "1" ? "" : "s") and click OK."
         case .noStress: return "Turn No Stress Mode \(shared.noStressMode ? "off" : "on")."
         case .relaunch: return "Quit the app and open it again."
+        case .play, .rematch, .quit, .steal, .startOver: return "(not a Spider step)"
         }
     }
 
@@ -201,6 +202,8 @@ final class SpiderMonkey: MonkeyGame {
         case .relaunch:
             try relaunch()
             expectedStats = vm.statistics
+        case .play, .rematch, .quit, .steal, .startOver:
+            break
         }
 
         if !before.hasWon && vm.state.hasWon { wins += 1 }

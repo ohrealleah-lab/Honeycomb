@@ -127,6 +127,7 @@ final class BeecellMonkey: MonkeyGame {
         case .mode: return "In Options, switch to \(action.value == "2" ? "2 decks" : "1 deck") and click OK."
         case .noStress: return "Turn No Stress Mode \(shared.noStressMode ? "off" : "on")."
         case .relaunch: return "Quit the app and open it again."
+        case .play, .rematch, .quit, .steal, .startOver: return "(not a Beecell step)"
         }
     }
 
@@ -191,6 +192,8 @@ final class BeecellMonkey: MonkeyGame {
         case .relaunch:
             try relaunch()
             expectedStats = vm.statistics
+        case .play, .rematch, .quit, .steal, .startOver:
+            break
         }
 
         if !before.hasWon && vm.state.hasWon { wins += 1 }

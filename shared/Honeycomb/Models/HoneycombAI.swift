@@ -28,7 +28,7 @@ enum HoneycombAI {
             // turn — makes it occasionally take an obvious capture instead of never
             // doing so, without bringing it anywhere near Medium's consistency (Medium
             // is greedy 100% of the time, Easy only half). Matches the Windows port.
-            if Bool.random() {
+            if GameDice.bool() {
                 return greedyMove(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules)
             }
             return randomMove(eligibleHands: eligibleHands, empties: empties)
@@ -155,7 +155,7 @@ enum HoneycombAI {
     // "random" only has the empty board cells left to pick from.
     static func randomMove(eligibleHands: [Int], empties: [Int]) -> (handIndex: Int, boardIndex: Int)? {
         guard !empties.isEmpty, !eligibleHands.isEmpty else { return nil }
-        return (eligibleHands.randomElement()!, empties.randomElement()!)
+        return (GameDice.element(of: eligibleHands)!, GameDice.element(of: empties)!)
     }
 
     // Medium: greedy 1-step lookahead — maximize this move's own capture count only,
@@ -163,7 +163,7 @@ enum HoneycombAI {
     // randomly among equally-good moves (previously always kept the first-found move,
     // making the AI deterministically predictable/exploitable in tied situations).
     static func greedyMove(board: HoneycombBoard, opponentDeck: [HoneycombCardData], eligibleHands: [Int], empties: [Int], rules: [HoneycombRule]) -> (handIndex: Int, boardIndex: Int)? {
-        greedySearch(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules).moves.randomElement()
+        GameDice.element(of: greedySearch(board: board, opponentDeck: opponentDeck, eligibleHands: eligibleHands, empties: empties, rules: rules).moves)
     }
 
     // The deterministic part of greedyMove — the best immediate capture count and every
@@ -201,7 +201,7 @@ enum HoneycombAI {
         let result = minimaxSearch(board: board, opponentDeck: opponentDeck, playerDeck: playerDeck, unknownPlayerCardCount: unknownPlayerCardCount, eligibleHands: eligibleHands, empties: empties, rules: rules, lookaheadPlies: lookaheadPlies, weighFallenAce: weighFallenAce)
         let maxCaptures = result.moves.map(\.immediateCaptures).max() ?? 0
         let mostAggressive = result.moves.filter { $0.immediateCaptures == maxCaptures }
-        return mostAggressive.randomElement().map { ($0.handIndex, $0.boardIndex) }
+        return GameDice.element(of: mostAggressive).map { ($0.handIndex, $0.boardIndex) }
     }
 
     // The deterministic part of minimaxMove: the root minimax score (exact regardless of

@@ -418,7 +418,7 @@ public final class GameViewModel {
         }
         
         // 2. Shuffle deck
-        DealShuffle.shuffle(&deck)
+        GameDice.shuffle(&deck)
         
         // 3. Deal Tableau (7 columns)
         var tableau: [Pile] = []

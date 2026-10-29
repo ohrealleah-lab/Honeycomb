@@ -363,7 +363,7 @@ public final class SpiderViewModel {
         }
         
         // 2. Shuffle deck
-        DealShuffle.shuffle(&deck)
+        GameDice.shuffle(&deck)
         
         // 3. Deal Tableau (10 columns)
         // First 4 columns: 6 cards each (5 down, 1 up)

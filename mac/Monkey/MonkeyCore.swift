@@ -14,10 +14,12 @@ struct MonkeyAction: Codable, Equatable {
     var from: String? = nil   // pile id the card is grabbed from
     var index: Int? = nil     // card position in `from` (0 = bottom of the pile)
     var to: String? = nil     // pile id it is dropped on
-    var value: String? = nil  // the new setting, for `.mode`
+    var value: String? = nil  // the new setting, for `.mode`; "confirm"/"cancel" for `.steal`
+    var cell: Int? = nil      // Honeycomb board square, 0-8 (row by row from the top left)
 
     enum Kind: String, Codable {
         case draw, move, tap, undo, hint, autocomplete, restart, newGame, mode, noStress, relaunch
+        case play, rematch, quit, steal, startOver  // Honeycomb
     }
 }
 
@@ -32,6 +34,13 @@ enum MonkeyRule: String, Codable {
     case autocompleteWins = "autocomplete-wins"
     case statsAddUp = "stats-add-up"
     case savedReopensSame = "saved-reopens-same"
+    case turnNeverComes = "turn-never-comes"
+    case legalMoveRefused = "legal-move-refused"
+    case refusedMoveChanged = "refused-move-changed"
+    case hintIsLegal = "hint-is-legal"
+    case cardBankChanges = "card-bank-changes"
+    case settingsLocked = "settings-locked"
+    case dealFollowsSettings = "deal-follows-settings"
     case slowStep = "slow-step"
     case crash = "crash"
     case freeze = "freeze"
@@ -47,6 +56,13 @@ enum MonkeyRule: String, Codable {
         case .autocompleteWins: return "Autocomplete was offered but didn't finish the game"
         case .statsAddUp: return "The stats didn't add up"
         case .savedReopensSame: return "Saved settings or stats came back different after reopening the app"
+        case .turnNeverComes: return "The game got stuck waiting for a turn that never came"
+        case .legalMoveRefused: return "The game refused a move the rules allow"
+        case .refusedMoveChanged: return "A move the game refused still changed the board, or it allowed a move it should refuse"
+        case .hintIsLegal: return "Hint suggested a move the rules don't allow"
+        case .cardBankChanges: return "The Card Bank changed when it shouldn't have, or didn't when it should"
+        case .settingsLocked: return "A setting changed the match in progress instead of waiting for the next one"
+        case .dealFollowsSettings: return "A new match didn't follow the chosen rules, difficulty or deck"
         case .slowStep: return "One step took far too long"
         case .crash: return "The app crashed"
         case .freeze: return "The app froze"
@@ -72,13 +88,22 @@ protocol MonkeyGame: AnyObject {
     init(startMode: String)
     var setupDescription: String { get }
     var wins: Int { get }   // games won so far, to show the monkey plays deep enough to win
+    static var stepsPerRun: Int { get }
+    static var runTimeout: TimeInterval { get }
+    func timeLimit(for action: MonkeyAction) -> TimeInterval
     func randomAction(_ rng: inout SplitMix64) -> MonkeyAction
     func describe(_ action: MonkeyAction) -> String
     func perform(_ action: MonkeyAction) throws
 }
 
+extension MonkeyGame {
+    static var stepsPerRun: Int { 1500 }
+    static var runTimeout: TimeInterval { 120 }
+    func timeLimit(for action: MonkeyAction) -> TimeInterval { action.kind == .autocomplete ? 20 : 3 }
+}
+
 enum MonkeyGames {
-    static let all: [any MonkeyGame.Type] = [KlondikeMonkey.self, BeecellMonkey.self, SpiderMonkey.self]
+    static let all: [any MonkeyGame.Type] = [KlondikeMonkey.self, BeecellMonkey.self, SpiderMonkey.self, HoneycombMonkey.self]
 
     static func named(_ name: String) -> (any MonkeyGame.Type)? {
         all.first { $0.gameName.lowercased() == name.lowercased() }

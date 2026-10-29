@@ -55,19 +55,48 @@ struct UndoStack<State> {
     }
 }
 
-// Every Klondike/Beecell/Spider deal shuffles through here. The app never sets `seeded`, so
-// players get the system's random shuffle exactly as before; the overnight monkey test
-// (mac/Monkey) sets it so any deal it plays can be replayed exactly from a seed.
-enum DealShuffle {
+// Every dice roll that shapes a game goes through here: solitaire deals, and Honeycomb's
+// rule roulette, first move, Chaos, opponent decks and AI tie-breaks. The app never sets
+// `seeded`, so players get the system's randomness exactly as before; the overnight monkey
+// test (mac/Monkey) sets it so any game it plays can be replayed exactly from a seed.
+// (Honeycomb's AI runs on a background queue in the app, which is fine: with `seeded` nil
+// nothing here is shared.)
+enum GameDice {
     static var seeded: SplitMix64?
 
-    static func shuffle(_ cards: inout [Card]) {
-        if var rng = seeded {
-            cards.shuffle(using: &rng)
-            seeded = rng
-        } else {
-            cards.shuffle()
-        }
+    private static func roll<T>(_ seededRoll: (inout SplitMix64) -> T, otherwise systemRoll: () -> T) -> T {
+        guard var rng = seeded else { return systemRoll() }
+        let value = seededRoll(&rng)
+        seeded = rng
+        return value
+    }
+
+    static func int(in range: Range<Int>) -> Int {
+        roll({ Int.random(in: range, using: &$0) }, otherwise: { Int.random(in: range) })
+    }
+
+    static func double(in range: Range<Double>) -> Double {
+        roll({ Double.random(in: range, using: &$0) }, otherwise: { Double.random(in: range) })
+    }
+
+    static func bool() -> Bool {
+        roll({ Bool.random(using: &$0) }, otherwise: { Bool.random() })
+    }
+
+    static func uint64() -> UInt64 {
+        roll({ $0.next() }, otherwise: { UInt64.random(in: UInt64.min...UInt64.max) })
+    }
+
+    static func element<T>(of items: [T]) -> T? {
+        roll({ items.randomElement(using: &$0) }, otherwise: { items.randomElement() })
+    }
+
+    static func shuffled<T>(_ items: [T]) -> [T] {
+        roll({ items.shuffled(using: &$0) }, otherwise: { items.shuffled() })
+    }
+
+    static func shuffle<T>(_ items: inout [T]) {
+        items = shuffled(items)
     }
 }
 

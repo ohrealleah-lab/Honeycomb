@@ -39,7 +39,7 @@ enum MonkeyChild {
             FileHandle.standardError.write(Data("Unknown game \(gameName)\n".utf8))
             return 64
         }
-        DealShuffle.seeded = SplitMix64(seed: seed)
+        GameDice.seeded = SplitMix64(seed: seed)
         var rng = SplitMix64(seed: seed ^ 0xA5A5_5A5A_C3C3_3C3C)
         let game = gameType.init(startMode: startMode)
 
@@ -47,6 +47,7 @@ enum MonkeyChild {
         let logHandle = try? FileHandle(forWritingTo: log)
         defer { try? logHandle?.close() }
         let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
 
         var report = ChildResult(setup: game.setupDescription, steps: describe ? [] : nil)
         let total = given?.count ?? stepCount
@@ -64,8 +65,7 @@ enum MonkeyChild {
             do {
                 try game.perform(action)
                 let took = Date().timeIntervalSince(started)
-                let limit: TimeInterval = action.kind == .autocomplete ? 20 : 3
-                if took > limit {
+                if took > game.timeLimit(for: action) {
                     throw RuleBroken(rule: .slowStep, detail: "This step took \(String(format: "%.1f", took)) seconds.")
                 }
             } catch let broken as RuleBroken {

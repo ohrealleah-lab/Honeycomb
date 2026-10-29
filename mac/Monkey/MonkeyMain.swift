@@ -44,7 +44,7 @@ struct MonkeyRunner {
             let work = FileManager.default.temporaryDirectory.appendingPathComponent("honeycomb-monkey-replay-\(getpid())")
             try? FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
             defer { try? FileManager.default.removeItem(at: work) }
-            let result = MonkeyProcess.run(["child", "--case", path, "--describe"], in: work, timeout: 60)
+            let result = MonkeyProcess.run(["child", "--case", path, "--describe"], in: work, timeout: MonkeyNight.timeout(for: saved.game))
             print("\(result.setup ?? saved.game)\n")
             for (step, line) in (result.steps ?? []).enumerated() { print("\(step + 1). \(line)") }
             if let rule = result.rule {
@@ -65,7 +65,7 @@ struct MonkeyRunner {
             }
             exit(MonkeyChild.run(gameName: options["--game"] ?? "", startMode: options["--mode"] ?? "",
                                  seed: options["--seed"].flatMap { UInt64($0, radix: 16) } ?? 0, actions: nil,
-                                 stepCount: Int(options["--steps"] ?? "") ?? MonkeyNight.stepsPerGame,
+                                 stepCount: Int(options["--steps"] ?? "") ?? 1500,
                                  log: log, result: result, describe: flags.contains("--describe")))
 
         default:

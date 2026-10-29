@@ -14,7 +14,7 @@ public class HoneycombDatabase {
         if let stored = UserDefaults.standard.string(forKey: seedKey), let seed = UInt64(stored) {
             return seed
         }
-        let seed = UInt64.random(in: UInt64.min...UInt64.max)
+        let seed = GameDice.uint64()
         UserDefaults.standard.set(String(seed), forKey: seedKey)
         return seed
     }
@@ -25,7 +25,7 @@ public class HoneycombDatabase {
     // resets `unlockedCardIds`/`savedDecks` to just Deck 1's ids in the same operation, so
     // those surviving ids simply render as new cards after this call.
     public func reseed() {
-        let newSeed = UInt64.random(in: UInt64.min...UInt64.max)
+        let newSeed = GameDice.uint64()
         UserDefaults.standard.set(String(newSeed), forKey: HoneycombDatabase.seedKey)
         allCards = HoneycombCardGenerator.generateAllCards(seed: newSeed)
     }
@@ -42,7 +42,7 @@ public class HoneycombDatabase {
     public func randomCards(stars: Int, count: Int) -> [HoneycombCardData] {
         let pool = allCards.filter { $0.stars == stars }
         guard !pool.isEmpty else { return [] }
-        return Array(pool.shuffled().prefix(count))
+        return Array(GameDice.shuffled(pool).prefix(count))
     }
 
     // Same star-tier pool as randomCards, but biased toward whichever cards are
@@ -98,12 +98,12 @@ public class HoneycombDatabase {
         var result: [HoneycombCardData] = []
         for _ in 0..<count {
             guard !remaining.isEmpty else {
-                result.append(pool.randomElement()!)
+                result.append(GameDice.element(of: pool)!)
                 continue
             }
             let weights = remaining.map { suitabilityWeight($0.1) / Double(edgeCounts[dominantEdge($0.0)] + 1) }
             let totalWeight = weights.reduce(0, +)
-            var r = Double.random(in: 0..<totalWeight)
+            var r = GameDice.double(in: 0..<totalWeight)
             var chosenIndex = remaining.count - 1
             for (i, weight) in weights.enumerated() {
                 if r < weight { chosenIndex = i; break }
