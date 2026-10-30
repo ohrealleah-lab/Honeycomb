@@ -6,7 +6,9 @@ name: Monkey test (nightly)
 # problem was found, or an old one no longer happens.
 on:
   schedule:
-    - cron: '0 9 * * *'   # 09:00 UTC, overnight in the US
+    # 09:37 UTC, overnight in the US. Off the top of the hour, when GitHub's scheduler is
+    # busiest and can delay or drop scheduled runs (the first night at 09:00 never ran).
+    - cron: '37 9 * * *'
   workflow_dispatch:
     inputs:
       minutes:
