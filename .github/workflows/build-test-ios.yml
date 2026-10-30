@@ -78,8 +78,12 @@ jobs:
 
           # Give the app a few seconds to finish launching, then confirm the process is
           # still alive.
+          # The list is read into a variable first: piping it into `grep -q` let grep quit
+          # at the first match while launchctl was still writing, and under pipefail that
+          # broken pipe (signal 13) reported a crash for an app that was running fine.
           sleep 5
-          if ! xcrun simctl spawn "$UDID" launchctl list | grep -q "$BUNDLE_ID"; then
+          RUNNING=$(xcrun simctl spawn "$UDID" launchctl list)
+          if ! grep -q "$BUNDLE_ID" <<< "$RUNNING"; then
             echo "Honeycomb crashed (or exited) shortly after launch" >&2
             xcrun simctl spawn "$UDID" log show --last 30s --predicate "process == \"Honeycomb\"" || true
             exit 1
