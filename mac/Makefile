@@ -53,8 +53,9 @@ clean:
 	rm -f test_runner monkey_runner
 
 test:
-	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry)
-	swiftc -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(COVERAGE_FLAGS) $(SHARED_SRCS) $(MAC_SRCS) SoliBeeTests/*.swift
+	# Compile test runner excluding SoliBeeApp.swift (which has the GUI @main entry).
+	# -j uses every core: without it swiftc compiles on one and the build alone takes ~6 min.
+	swiftc -j $$(sysctl -n hw.ncpu) -o test_runner -sdk $$(xcrun --show-sdk-path) -target arm64-apple-macos14.0 $(COVERAGE_FLAGS) $(SHARED_SRCS) $(MAC_SRCS) SoliBeeTests/*.swift
 	# test_runner is a bare executable, not a .app bundle, so Bundle.main looks for
 	# resources right next to it rather than in a Resources/ subfolder — copy the
 	# banner catalog there so HoneycombBannerCatalogTests can actually load it.
