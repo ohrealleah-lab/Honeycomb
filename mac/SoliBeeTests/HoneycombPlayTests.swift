@@ -155,8 +155,10 @@ struct HoneycombPlayTests {
         let vm = HoneycombViewModel()
         expect(vm.opponentCardsRemainingCount == 0 && !vm.hasObtainedAllOpponentCards, "Before a match there's no opponent to count")
         vm.startNewGame()
-        // The opponent's five cards, wherever they are now (in hand, or already played).
-        let dealt = (vm.opponentHand + vm.board.cells.compactMap { $0.card }.filter { $0.originalOwner == .opponent }).map { $0.data.id }
+        // The opponent's five cards, wherever they are now (either hand, since Swap can trade
+        // one into yours, or already played).
+        let dealt = (vm.playerHand + vm.opponentHand + vm.board.cells.compactMap { $0.card })
+            .filter { $0.originalOwner == .opponent }.map { $0.data.id }
         expect(Set(dealt).count == 5, "The opponent was dealt five different cards")
         let missing = dealt.filter { !bank.unlockedCardIds.contains($0) }.count
         expect(vm.opponentCardsRemainingCount == missing, "The count is how many of those you don't own yet (\(missing))")
