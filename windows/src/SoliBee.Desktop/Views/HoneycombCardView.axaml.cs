@@ -177,6 +177,7 @@ public partial class HoneycombCardView : UserControl
             _isShowingFaceDown = true;
             CardFace.IsVisible = false;
             CardBack.IsVisible = true;
+            CardBack.Background = CardView._brushFaceBackNormal;
             CardBackImage.Source = CardView.ResolveCardBackBitmap(null);
             return;
         }

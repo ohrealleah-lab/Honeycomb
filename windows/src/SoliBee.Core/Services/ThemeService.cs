@@ -33,7 +33,7 @@ public static class ThemeService
             Name           = "Default",
             CardBackTheme  = "Solibee",
             FeltColor      = FeltColorTheme.FeltGreen,
-            ThemeFaceBackNormal   = "#FFFFFFFF",
+            ThemeFaceBackNormal   = "#FFFFFAE4", // warm cream, as on Mac
             ThemeFaceBorderNormal = "#D9000000",
             ThemeTextBlackNormal  = "#FF111111", // Black suits (Spades/Clubs)
             ThemeTextRed          = "#FFC41E1E", // Red suits (Hearts/Diamonds)

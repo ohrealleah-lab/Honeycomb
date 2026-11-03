@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using CommunityToolkit.Mvvm.Messaging;
@@ -207,29 +208,42 @@ public partial class HelpWindow : Window
         ThemesOptionsBody.Text = T(StringKey.HelpCustomizationOptions);
     }
 
-    public void ScrollToHoneycomb() => HoneycombAnchor.BringIntoView();
+    // BringIntoView only scrolls the minimum distance, so a section below the fold ended
+    // up flush with the bottom of the window. Put its heading at the top instead.
+    private void ScrollToTopOf(Control anchor)
+    {
+        // Layout may not have run yet when the window has just opened.
+        HelpScroll.UpdateLayout();
+        var point = anchor.TranslatePoint(new Point(0, 0), HelpScroll.Content as Visual ?? HelpScroll);
+        if (point.HasValue)
+            HelpScroll.Offset = new Vector(0, Math.Max(0, point.Value.Y));
+        else
+            anchor.BringIntoView();
+    }
+
+    public void ScrollToHoneycomb() => ScrollToTopOf(HoneycombAnchor);
 
     private void GoTo_Klondike(object? sender, RoutedEventArgs e) =>
-        KlondikeAnchor.BringIntoView();
+        ScrollToTopOf(KlondikeAnchor);
 
     private void GoTo_Freecell(object? sender, RoutedEventArgs e) =>
-        FreecellAnchor.BringIntoView();
+        ScrollToTopOf(FreecellAnchor);
 
     private void GoTo_Spider(object? sender, RoutedEventArgs e) =>
-        SpiderAnchor.BringIntoView();
+        ScrollToTopOf(SpiderAnchor);
 
     private void GoTo_VideoPoker(object? sender, RoutedEventArgs e) =>
-        VideoPokerAnchor.BringIntoView();
+        ScrollToTopOf(VideoPokerAnchor);
 
     private void GoTo_Blackjack(object? sender, RoutedEventArgs e) =>
-        BlackjackAnchor.BringIntoView();
+        ScrollToTopOf(BlackjackAnchor);
 
     private void GoTo_Honeycomb(object? sender, RoutedEventArgs e) =>
-        HoneycombAnchor.BringIntoView();
+        ScrollToTopOf(HoneycombAnchor);
 
 
     private void GoTo_Themes(object? sender, RoutedEventArgs e) =>
-        ThemesAnchor.BringIntoView();
+        ScrollToTopOf(ThemesAnchor);
 
     private void Close_Click(object? sender, RoutedEventArgs e) => Close();
 }
