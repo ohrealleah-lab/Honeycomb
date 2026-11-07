@@ -22,7 +22,11 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 1. **First build (now):** catch, honey, wax, bear, shop, combs, saving, offline.
 2. **Smoker + tool upgrades:** clicking builds a "calm" meter that boosts the colony for a short time; each tool gets upgrade tiers; a click also catches a small slice of the current colony. Keeps clicking relevant all game.
 3. **Hive roles:** introduced after the first comb. Includes nurses (passive bee growth). Guard Bees, Bumblebees (wax) and Clover Bees (honey) become role or strain choices.
-4. **Candles and the Chandler's Workshop:** plain beeswax candle (+20% honey for a time), sage-propolis candle (wasp repellent, duration to decide), candles sold to Hippies.
+4. **Candles, in a Crafting / Technology section:** candles are crafted from wax, and there are different types (at least two at first). Leah's notes (2026-11-07):
+   - **Hippie candle:** made to sell to the Hippies.
+   - **Wasp-repellent candle:** keeps wasps away (the sage-propolis candle; duration to decide).
+   - **Later, a bee-boost candle:** makes the bees more effective (the old idea was +20% honey for a time).
+   - This replaces the earlier "Chandler's Workshop" idea of a separate panel; see open question 11.
 5. **Sites and special bees:** Garden, Meadow, Honey Factory. Special bees can only be caught by clicking, and which kind depends on the site.
 6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them; bears reduce raids after 100 trades. Leah's notes (2026-11-07):
    - **No Stress Mode turns wasps off completely.** No wasps appear and none raid. It can be turned on or off at any time without affecting game progress (nothing is reset, lost or gained by switching). A raid already under way when it is turned on still plays out; only future raids are stopped.
@@ -56,3 +60,5 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Technology: bought or researched, what it contains besides throw upgrades, and whether it really opens right at the 2nd comb.
+11. Candles: is crafting one section together with Technology, or a tab inside it? How much wax each candle costs, whether crafting takes time, and whether anything besides wax is needed (sage, propolis).
+12. Candles: the stage order. The repellent candle needs wasps (stage 6) and the Hippie candle needs Hippies (stage 7), but candles are stage 4. Do candles move later, or do Hippies arrive with them?
