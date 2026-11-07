@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SoliBee.Core.Models;
 
@@ -33,9 +34,25 @@ public static class BeekeeperEvents
     public const string CombBuilt = "comb_built";          // Value = storage added
     public const string WelcomeBack = "welcome_back";      // Value = honey made while away
     public const string WelcomeBackNothing = "welcome_back_nothing";
+
+    // Stage 2
+    public const string WorkbenchOpened = "workbench_opened";
+    public const string FirstBeeswaxCandle = "first_beeswax_candle";
+    public const string HippiesArrive = "hippies_arrive";
+    public const string CandlesTraded = "candles_traded";    // Value = sage received
+    public const string RepellentUnlocked = "repellent_unlocked";
+    public const string UpgradeBought = "upgrade_bought";    // Text = upgrade id
+    public const string WaspArrives = "wasp_arrives";
+    public const string ShoeHit = "shoe_hit";
+    public const string ShoeMissRaid = "shoe_miss_raid";     // Value = honey taken, Value2 = bees flown off
+    public const string WaspRaid = "wasp_raid";              // Value = honey taken, Value2 = bees flown off
+    public const string Bribe = "bribe";                     // Value = honey paid
+    public const string WaspLeft = "wasp_left";              // the player stepped away; nothing lost
+    public const string CandleLit = "candle_lit";
+    public const string CandleOut = "candle_out";
 }
 
-public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null);
+public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
 
 public sealed record CatchResult(bool Stung, decimal BeesGained, IReadOnlyList<BeekeeperEvent> Events);
 
@@ -84,14 +101,27 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ numbers the screen shows
 
-    public decimal HoneyStorage => Config.StartingStorage + State.Combs * Config.StoragePerComb;
+    /// <summary>All honey storage (starting room plus combs), grown by the Bigger Combs upgrades.</summary>
+    public decimal HoneyStorage =>
+        (Config.StartingStorage + State.Combs * Config.StoragePerComb) * StorageMultiplier;
+
+    private decimal StorageMultiplier =>
+        Owns(BeekeeperUpgrades.BiggerCombs2) ? Config.BiggerCombs2Multiplier
+        : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
+        : 1m;
 
     public int BeesPerClick =>
         State.ToolLevel <= 0 ? Config.BareHandsBees : Config.Tools[State.ToolLevel - 1].BeesPerClick;
 
     public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond;
 
-    public int WaxPerBatch => State.HasWaxCatcher ? Config.WaxCatcherMultiplier : 1;
+    /// <summary>Wax per 50 honey: 1, 2 with the Wax-Catcher, 3 with the Better Wax-Catcher.</summary>
+    public decimal WaxPerBatch =>
+        !State.HasWaxCatcher ? 1m
+        : Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.WaxCatcherMultiplier * Config.BetterWaxCatcherBonus
+        : Config.WaxCatcherMultiplier;
+
+    public bool Owns(string upgradeId) => State.Upgrades.Contains(upgradeId);
 
     /// <summary>floor(50 × 1.25^N) where N = combs already built.</summary>
     public decimal CombCost
@@ -273,11 +303,259 @@ public sealed class BeekeeperEngine
         decimal cost = CombCost;
         if (State.Wax < cost) return ActionResult.Refused;
 
+        decimal storageBefore = HoneyStorage;
         State.Wax -= cost;
         State.Combs++;
         RefreshStorageFlag();
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, Config.StoragePerComb) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, HoneyStorage - storageBefore) };
+        OpenWorkbenchIfDue(events);
         return new ActionResult(true, cost, events);
+    }
+
+    // ------------------------------------------------------------------ The Workbench (stage 2)
+
+    /// <summary>For a game just loaded: opens The Workbench for an old save that already
+    /// has enough combs. Returns what to tell the player (nothing if already open).</summary>
+    public IReadOnlyList<BeekeeperEvent> RevealOnLoad()
+    {
+        var events = new List<BeekeeperEvent>();
+        OpenWorkbenchIfDue(events);
+        return events;
+    }
+
+    private void OpenWorkbenchIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.WorkbenchRevealed || State.Combs < Config.WorkbenchCombs) return;
+        State.WorkbenchRevealed = true;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.WorkbenchOpened));
+    }
+
+    public bool CanCraftBeeswax => State.WorkbenchRevealed && State.Wax >= Config.BeeswaxCandleWax;
+
+    public bool CanCraftRepellent =>
+        State.WorkbenchRevealed && State.RepellentUnlocked
+        && State.Wax >= Config.RepellentCandleWax && State.Sage >= Config.RepellentCandleSage;
+
+    /// <summary>Crafting is instant (Leah).</summary>
+    public ActionResult CraftBeeswax()
+    {
+        if (!CanCraftBeeswax) return ActionResult.Refused;
+        State.Wax -= Config.BeeswaxCandleWax;
+        State.BeeswaxCandles++;
+        var events = new List<BeekeeperEvent>();
+        if (State.CandlesCrafted == 0) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBeeswaxCandle));
+        CountCandleCrafted(events);
+        return new ActionResult(true, 1m, events);
+    }
+
+    public ActionResult CraftRepellent()
+    {
+        if (!CanCraftRepellent) return ActionResult.Refused;
+        State.Wax -= Config.RepellentCandleWax;
+        State.Sage -= Config.RepellentCandleSage;
+        State.RepellentCandles++;
+        var events = new List<BeekeeperEvent>();
+        CountCandleCrafted(events);
+        return new ActionResult(true, 1m, events);
+    }
+
+    private void CountCandleCrafted(List<BeekeeperEvent> events)
+    {
+        State.CandlesCrafted++;
+        if (!State.HippiesRevealed && State.CandlesCrafted >= Config.HippiesRevealCandles)
+        {
+            State.HippiesRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.HippiesArrive));
+        }
+    }
+
+    // ------------------------------------------------------------------ the Hippies
+
+    public bool CanTradeCandles => State.HippiesRevealed && State.BeeswaxCandles >= Config.CandlesPerSage;
+
+    /// <summary>10 beeswax candles for 1 sage.</summary>
+    public ActionResult TradeTenCandles() => TradeCandles(all: false);
+
+    /// <summary>As many bundles of 10 as possible; the rest are kept.</summary>
+    public ActionResult TradeAllCandles() => TradeCandles(all: true);
+
+    private ActionResult TradeCandles(bool all)
+    {
+        if (!CanTradeCandles) return ActionResult.Refused;
+        decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
+        State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
+        State.Sage += bundles;
+        State.HippieTrades++;
+        State.SageRevealed = true;
+
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, bundles) };
+        if (!State.RepellentUnlocked)
+        {
+            // The sage repellent candle comes once there is sage to make it with (placeholder rule).
+            State.RepellentUnlocked = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
+        }
+        return new ActionResult(true, bundles, events);
+    }
+
+    // ------------------------------------------------------------------ upgrades (in the Shop)
+
+    /// <summary>Upgrades that are unlocked and not yet bought, in Shop order. Bought and
+    /// still-locked upgrades are not listed (Leah: hide purchased upgrades).</summary>
+    public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades =>
+        Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u)).ToList();
+
+    private bool IsUnlocked(BeekeeperUpgrade u) =>
+        State.WorkbenchRevealed && u.Needs switch
+        {
+            BeekeeperUpgrades.NeedsWorkbench => true,
+            BeekeeperUpgrades.NeedsWaxCatcher => State.HasWaxCatcher,
+            BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked,
+            var other => Owns(other),
+        };
+
+    public bool CanBuyUpgrade(string id) =>
+        Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u
+        && !Owns(id) && IsUnlocked(u)
+        && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Sage >= u.Sage;
+
+    /// <summary>Takes every part of the cost at once, or nothing.</summary>
+    public ActionResult BuyUpgrade(string id)
+    {
+        if (!CanBuyUpgrade(id)) return ActionResult.Refused;
+        var u = Config.Upgrades.First(x => x.Id == id);
+        State.Beebits -= u.Beebits;
+        State.Wax -= u.Wax;
+        State.Sage -= u.Sage;
+        State.Upgrades.Add(id);
+        RefreshStorageFlag();
+        return new ActionResult(true, u.Beebits, new[] { new BeekeeperEvent(BeekeeperEvents.UpgradeBought, 0m, id) });
+    }
+
+    // ------------------------------------------------------------------ wasps
+
+    public bool WaspApproaching => State.WaspCountdown > 0m;
+
+    /// <summary>Wasp time that one repellent candle buys (longer with Stronger Candles).</summary>
+    public decimal RepellentBurnSeconds =>
+        Config.RepellentBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
+
+    /// <summary>
+    /// "Wasp time" passed: only while Beekeeper is on screen, the player is active and No
+    /// Stress Mode is off (the view model decides). A burning candle uses it up; otherwise
+    /// it counts down to the next wasp. Away time never comes here.
+    /// </summary>
+    public IReadOnlyList<BeekeeperEvent> AdvanceWaspTime(decimal seconds)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching) return events;
+
+        if (State.RepellentSecondsLeft > 0m)
+        {
+            State.RepellentSecondsLeft = Math.Max(0m, State.RepellentSecondsLeft - seconds);
+            if (State.RepellentSecondsLeft == 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.CandleOut));
+            return events;   // a candle's time is never also wasp time
+        }
+
+        if (State.NextWaspInSeconds <= 0m) RollNextWasp();
+        State.NextWaspInSeconds -= seconds;
+        if (State.NextWaspInSeconds <= 0m)
+        {
+            State.NextWaspInSeconds = 0m;
+            State.WaspCountdown = Config.WaspCountdownSeconds;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
+        }
+        return events;
+    }
+
+    private void RollNextWasp()
+    {
+        decimal span = Config.WaspMaxSeconds - Config.WaspMinSeconds;
+        State.NextWaspInSeconds = Config.WaspMinSeconds + span * (decimal)_rng.NextDouble();
+    }
+
+    /// <summary>Calls a wasp at once (debug builds only; the game never does this).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugCallWasp()
+    {
+        if (!State.WorkbenchRevealed || WaspApproaching) return Array.Empty<BeekeeperEvent>();
+        State.NextWaspInSeconds = 0m;
+        State.WaspCountdown = Config.WaspCountdownSeconds;
+        return new[] { new BeekeeperEvent(BeekeeperEvents.WaspArrives) };
+    }
+
+    /// <summary>Real seconds pass while the player watches an approaching wasp; at zero it raids.</summary>
+    public IReadOnlyList<BeekeeperEvent> AdvanceWaspCountdown(decimal seconds)
+    {
+        if (!WaspApproaching || seconds <= 0m) return Array.Empty<BeekeeperEvent>();
+        State.WaspCountdown = Math.Max(0m, State.WaspCountdown - seconds);
+        return State.WaspCountdown > 0m ? Array.Empty<BeekeeperEvent>() : new[] { Raid(BeekeeperEvents.WaspRaid) };
+    }
+
+    /// <summary>The player left Beekeeper, went idle or the computer slept: the wasp drifts off, nothing lost.</summary>
+    public IReadOnlyList<BeekeeperEvent> WaspLeaves()
+    {
+        if (!WaspApproaching) return Array.Empty<BeekeeperEvent>();
+        EndWasp();
+        return new[] { new BeekeeperEvent(BeekeeperEvents.WaspLeft) };
+    }
+
+    /// <summary>60% the wasp is driven off; 40% it raids at once. One throw per wasp.</summary>
+    public ActionResult ThrowShoe()
+    {
+        if (!WaspApproaching) return ActionResult.Refused;
+        if (_rng.NextDouble() < Config.ShoeHitChance)
+        {
+            EndWasp();
+            return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.ShoeHit) });
+        }
+        return new ActionResult(true, 0m, new[] { Raid(BeekeeperEvents.ShoeMissRaid) });
+    }
+
+    public bool CanBribe => WaspApproaching && State.Honey >= 1m;
+
+    /// <summary>The honey a bribe would cost right now.</summary>
+    public decimal BribeCost => Math.Max(1m, Math.Floor(State.Honey * Config.BribeHoneyShare));
+
+    /// <summary>Pay 25% of the stored honey (at least 1); the wasp leaves and no bees fly off.</summary>
+    public ActionResult Bribe()
+    {
+        if (!CanBribe) return ActionResult.Refused;
+        decimal paid = BribeCost;
+        State.Honey -= paid;
+        RefreshStorageFlag();
+        EndWasp();
+        return new ActionResult(true, paid, new[] { new BeekeeperEvent(BeekeeperEvents.Bribe, paid) });
+    }
+
+    public bool CanLightRepellent => State.RepellentCandles >= 1m;
+
+    /// <summary>Uses one candle: no wasps while it burns, and an approaching wasp leaves at once.
+    /// Lighting another adds its time.</summary>
+    public ActionResult LightRepellent()
+    {
+        if (!CanLightRepellent) return ActionResult.Refused;
+        State.RepellentCandles--;
+        State.RepellentSecondsLeft += RepellentBurnSeconds;
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandleLit) };
+        if (WaspApproaching) EndWasp();
+        return new ActionResult(true, 1m, events);
+    }
+
+    private BeekeeperEvent Raid(string key)
+    {
+        decimal honey = Math.Min(State.Honey, Math.Floor(HoneyPerSecond * Config.RaidHoneySeconds));
+        decimal bees = Math.Floor(State.Bees * Config.RaidBeeShare);
+        State.Honey -= honey;
+        State.Bees -= bees;
+        RefreshStorageFlag();
+        EndWasp();
+        return new BeekeeperEvent(key, honey, null, bees);
+    }
+
+    private void EndWasp()
+    {
+        State.WaspCountdown = 0m;
+        State.NextWaspInSeconds = 0m;   // rolled afresh on the next wasp time
     }
 
     // ------------------------------------------------------------------ debug

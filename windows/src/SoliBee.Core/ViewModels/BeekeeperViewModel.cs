@@ -30,6 +30,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     private decimal _carrySeconds;          // leftover fraction of a second between ticks
     private decimal _secondsSinceSave;
     private bool _disposed;
+    private readonly Func<bool> _noStressMode;
+    private DateTime _lastActivityUtc;
+
+    /// <summary>True while the Beekeeper screen is showing in a window that isn't minimised.
+    /// The view sets it; wasps only come while it is true.</summary>
+    public bool IsWatched { get; set; }
 
     public BeekeeperEngine Engine { get; private set; }
     public BeekeeperState State => Engine.State;
@@ -39,6 +45,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <param name="persist">False means never touch the disk.</param>
     /// <param name="savePath">Where to save; null uses the app's data folder.</param>
     /// <param name="initialState">Start from this instead of loading a save (tests).</param>
+    /// <param name="noStressMode">Reads No Stress Mode; null uses the app's Options.</param>
     public BeekeeperViewModel(
         bool isHeadless = false,
         BeekeeperConfig? config = null,
@@ -46,9 +53,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Func<DateTime>? clock = null,
         bool persist = true,
         string? savePath = null,
-        BeekeeperState? initialState = null)
+        BeekeeperState? initialState = null,
+        Func<bool>? noStressMode = null)
     {
         _clock = clock ?? (() => DateTime.UtcNow);
+        _noStressMode = noStressMode ?? (() => SettingsService.LoadOptions().IsNoStressMode);
         _syncContext = SynchronizationContext.Current;
         _savePath = persist ? (savePath ?? BeekeeperSaveService.SaveFilePath) : null;
 
@@ -57,6 +66,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
         var now = _clock();
         _lastTickUtc = now;
+        _lastActivityUtc = now;
 
         if (loaded is null)
         {
@@ -67,6 +77,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // Time since the last save counts as time away (closing the app, a long gap, etc.).
             decimal gap = BeekeeperSaveService.SecondsSinceSaved(loaded, now);
             if (Engine.IsAway(gap)) LogEvents(Engine.AdvanceAway(gap).Events);
+            LogEvents(Engine.RevealOnLoad());   // an older save may already have earned The Workbench
         }
 
         if (!isHeadless) StartTimer();
@@ -107,6 +118,28 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool ShopRevealed => State.ShopRevealed;
     public bool CombsRevealed => State.CombsRevealed;
 
+    // Stage 2
+    public decimal BeeswaxCandles => State.BeeswaxCandles;
+    public decimal RepellentCandles => State.RepellentCandles;
+    public long CandlesCrafted => State.CandlesCrafted;
+    public decimal Sage => State.Sage;
+    public bool WorkbenchRevealed => State.WorkbenchRevealed;
+    public bool HippiesRevealed => State.HippiesRevealed;
+    public bool SageRevealed => State.SageRevealed;
+    public bool RepellentUnlocked => State.RepellentUnlocked;
+    public bool WaspApproaching => Engine.WaspApproaching;
+    public decimal WaspSecondsLeft => State.WaspCountdown;
+    public decimal RepellentSecondsLeft => State.RepellentSecondsLeft;
+    public decimal BribeCost => Engine.BribeCost;
+    public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades => Engine.ShopUpgrades;
+    public bool CanBuyUpgrade(string id) => Engine.CanBuyUpgrade(id);
+    public bool CanCraftBeeswax => Engine.CanCraftBeeswax;
+    public bool CanCraftRepellent => Engine.CanCraftRepellent;
+    public bool CanTradeCandles => Engine.CanTradeCandles;
+    public bool CanThrowShoe => Engine.WaspApproaching;
+    public bool CanBribe => Engine.CanBribe;
+    public bool CanLightRepellent => Engine.CanLightRepellent;
+
     /// <summary>Story log, newest first.</summary>
     public IReadOnlyList<BeekeeperLogEntry> Log => State.Log;
 
@@ -125,6 +158,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand]
     public void Catch()
     {
+        NoteActivity();
         var result = Engine.Catch();
         LastCatch = result;
         CatchSerial++;
@@ -147,9 +181,46 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanBuildComb))]
     public void BuildComb() => Apply(Engine.BuildComb());
 
+    [RelayCommand(CanExecute = nameof(CanCraftBeeswax))]
+    public void CraftBeeswax() => Apply(Engine.CraftBeeswax());
+
+    [RelayCommand(CanExecute = nameof(CanCraftRepellent))]
+    public void CraftRepellent() => Apply(Engine.CraftRepellent());
+
+    [RelayCommand(CanExecute = nameof(CanTradeCandles))]
+    public void TradeTenCandles() => Apply(Engine.TradeTenCandles());
+
+    [RelayCommand(CanExecute = nameof(CanTradeCandles))]
+    public void TradeAllCandles() => Apply(Engine.TradeAllCandles());
+
+    [RelayCommand(CanExecute = nameof(CanThrowShoe))]
+    public void ThrowShoe() => Apply(Engine.ThrowShoe());
+
+    [RelayCommand(CanExecute = nameof(CanBribe))]
+    public void Bribe() => Apply(Engine.Bribe());
+
+    [RelayCommand(CanExecute = nameof(CanLightRepellent))]
+    public void LightRepellent() => Apply(Engine.LightRepellent());
+
+    /// <summary>Buys a Shop upgrade by id (the Shop draws its rows from <see cref="ShopUpgrades"/>).</summary>
+    public void BuyUpgrade(string id) => Apply(Engine.BuyUpgrade(id));
+
     private void Apply(ActionResult result)
     {
+        NoteActivity();
         if (result.Done) LogEvents(result.Events);
+        Refresh();
+    }
+
+    /// <summary>The player clicked or pressed a key on the Beekeeper screen. Wasps only come
+    /// to a player who has done this in the last few minutes.</summary>
+    public void NoteActivity() => _lastActivityUtc = _clock();
+
+    /// <summary>Debug builds only: a wasp arrives now (once The Workbench is open).</summary>
+    public void DebugCallWasp()
+    {
+        NoteActivity();
+        LogEvents(Engine.DebugCallWasp());
         Refresh();
     }
 
@@ -163,6 +234,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         var events = Engine.StartNewGame();
         _carrySeconds = 0m;
         _lastTickUtc = _clock();
+        _lastActivityUtc = _lastTickUtc;
         LogEvents(events);
         SaveNow();
         Refresh();
@@ -201,7 +273,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         _lastTickUtc = now;
         if (gap <= 0m) return;
 
-        if (Engine.IsAway(gap))
+        bool away = Engine.IsAway(gap);
+        if (away)
         {
             // The app was open the whole time, so the honey is credited quietly: only
             // reopening the app says "While you were away" (Leah, 2026-11-07).
@@ -219,10 +292,30 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             }
         }
 
+        AdvanceWasps(gap, away, now);
+
         _secondsSinceSave += gap;
         if (_secondsSinceSave >= AutosaveEverySeconds) SaveNow();
 
         Refresh();
+    }
+
+    /// <summary>
+    /// Wasps only bother a player who can respond: Beekeeper on screen and a click or key in
+    /// the last few minutes. An approaching wasp runs its countdown on real time and leaves
+    /// (nothing lost) if the player steps away, goes idle or the computer slept. Otherwise
+    /// "wasp time" passes, unless No Stress Mode is on; that stops new wasps and pauses a
+    /// burning candle, but a wasp already here still plays out (spec 010, Story 7).
+    /// </summary>
+    private void AdvanceWasps(decimal gap, bool away, DateTime now)
+    {
+        bool watching = IsWatched && (decimal)(now - _lastActivityUtc).TotalSeconds <= Config.IdleSeconds;
+        if (Engine.WaspApproaching)
+        {
+            LogEvents(away || !watching ? Engine.WaspLeaves() : Engine.AdvanceWaspCountdown(gap));
+            return;
+        }
+        if (!away && watching && !_noStressMode()) LogEvents(Engine.AdvanceWaspTime(gap));
     }
 
     /// <summary>Writes the game to disk now (also done every few seconds, on New Game and on close).</summary>
@@ -251,7 +344,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // A sting is shown as a popup only; logging every one would drown the story.
             if (e.Key == BeekeeperEvents.Sting) continue;
 
-            State.Log.Insert(0, new BeekeeperLogEntry { Key = e.Key, Value = e.Value, Text = e.Text });
+            State.Log.Insert(0, new BeekeeperLogEntry { Key = e.Key, Value = e.Value, Value2 = e.Value2, Text = e.Text });
         }
         while (State.Log.Count > BeekeeperSaveService.MaxLogEntries)
             State.Log.RemoveAt(State.Log.Count - 1);
@@ -265,6 +358,13 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         BuyNextToolCommand.NotifyCanExecuteChanged();
         BuyWaxCatcherCommand.NotifyCanExecuteChanged();
         BuildCombCommand.NotifyCanExecuteChanged();
+        CraftBeeswaxCommand.NotifyCanExecuteChanged();
+        CraftRepellentCommand.NotifyCanExecuteChanged();
+        TradeTenCandlesCommand.NotifyCanExecuteChanged();
+        TradeAllCandlesCommand.NotifyCanExecuteChanged();
+        ThrowShoeCommand.NotifyCanExecuteChanged();
+        BribeCommand.NotifyCanExecuteChanged();
+        LightRepellentCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()

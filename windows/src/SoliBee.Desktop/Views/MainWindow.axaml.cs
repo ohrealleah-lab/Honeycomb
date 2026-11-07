@@ -1737,6 +1737,7 @@ public partial class MainWindow : Window
             case "Wax":     hive.DebugGrant(0m, 100m, 0m); break;
             case "Beebits": hive.DebugGrant(0m, 0m, 100m); break;
             case "Skip":    hive.DebugSkip(600m); break;
+            case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (2 combs)
         }
     }
 

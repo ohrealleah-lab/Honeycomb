@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using Avalonia;
+using Avalonia.Input;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
@@ -45,11 +47,17 @@ public partial class BeekeeperView : UserControl
     private readonly Dictionary<string, Button> _shopButtons = new();
     private string _logSignature = "";
 
+    // Wasps only come while the player can see and use this screen (spec 010).
+    private Window? _window;
+    private bool _onScreen;
+
     public BeekeeperView()
     {
         InitializeComponent();
         _popupTimer.Tick += PopupTick;
         ApplyAccent();
+        AddHandler(PointerPressedEvent, (_, _) => _vm?.NoteActivity(), RoutingStrategies.Tunnel, handledEventsToo: true);
+        AddHandler(KeyDownEvent, (_, _) => _vm?.NoteActivity(), RoutingStrategies.Tunnel, handledEventsToo: true);
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
             _language = m.Options.Language;
@@ -59,14 +67,28 @@ public partial class BeekeeperView : UserControl
             Redraw();
         });
         DataContextChanged += (_, _) => Attach(DataContext as BeekeeperViewModel);
-        AttachedToVisualTree += (_, _) => { Attach(DataContext as BeekeeperViewModel); };
-        DetachedFromVisualTree += (_, _) => Attach(null);
+        AttachedToVisualTree += (_, _) =>
+        {
+            _onScreen = true;
+            HookWindow(TopLevel.GetTopLevel(this) as Window);
+            Attach(DataContext as BeekeeperViewModel);
+        };
+        DetachedFromVisualTree += (_, _) =>
+        {
+            _onScreen = false;
+            HookWindow(null);
+            Attach(null);
+        };
     }
 
     private void Attach(BeekeeperViewModel? vm)
     {
-        if (ReferenceEquals(vm, _vm)) { if (vm != null) Redraw(); return; }
-        if (_vm != null) _vm.PropertyChanged -= OnVmChanged;
+        if (ReferenceEquals(vm, _vm)) { if (vm != null) { UpdateWatched(); Redraw(); } return; }
+        if (_vm != null)
+        {
+            _vm.PropertyChanged -= OnVmChanged;
+            _vm.IsWatched = false;
+        }
         _vm = vm;
         if (_vm != null)
         {
@@ -75,8 +97,28 @@ public partial class BeekeeperView : UserControl
             _shopSignature = "";
             _logSignature = "";
             _vm.PropertyChanged += OnVmChanged;
+            UpdateWatched();
             Redraw();
         }
+    }
+
+    private void HookWindow(Window? window)
+    {
+        if (ReferenceEquals(window, _window)) return;
+        if (_window != null) _window.PropertyChanged -= OnWindowPropertyChanged;
+        _window = window;
+        if (_window != null) _window.PropertyChanged += OnWindowPropertyChanged;
+    }
+
+    private void OnWindowPropertyChanged(object? sender, AvaloniaPropertyChangedEventArgs e)
+    {
+        if (e.Property == Window.WindowStateProperty) UpdateWatched();
+    }
+
+    // On screen and the window not minimised.
+    private void UpdateWatched()
+    {
+        if (_vm != null) _vm.IsWatched = _onScreen && _window?.WindowState != WindowState.Minimized;
     }
 
     private void OnVmChanged(object? sender, PropertyChangedEventArgs e) => Redraw();
@@ -113,6 +155,15 @@ public partial class BeekeeperView : UserControl
         HiveBeebitsLabel.Text = BeekeeperText.HiveBeebits;
         HiveBeebitsValue.Text = N(vm.Beebits);
         HiveBeebitsLabel.IsVisible = HiveBeebitsValue.IsVisible = vm.BeebitsRevealed;
+        HiveBeeswaxLabel.Text = BeekeeperText.HiveBeeswaxCandles;
+        HiveBeeswaxValue.Text = N(vm.BeeswaxCandles);
+        HiveBeeswaxLabel.IsVisible = HiveBeeswaxValue.IsVisible = vm.CandlesCrafted > 0;
+        HiveRepellentLabel.Text = BeekeeperText.HiveRepellentCandles;
+        HiveRepellentValue.Text = N(vm.RepellentCandles);
+        HiveRepellentLabel.IsVisible = HiveRepellentValue.IsVisible = vm.RepellentUnlocked;
+        HiveSageLabel.Text = BeekeeperText.HiveSage;
+        HiveSageValue.Text = N(vm.Sage);
+        HiveSageLabel.IsVisible = HiveSageValue.IsVisible = vm.SageRevealed;
         HoneyRateText.Text = BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2));
         HiveFullText.IsVisible = vm.StorageIsFull;
         HiveFullText.Text = BeekeeperText.CombsFull;
@@ -130,10 +181,10 @@ public partial class BeekeeperView : UserControl
         SellAllButton.IsEnabled = vm.SellAllCommand.CanExecute(null);
         SellHintText.Text = BeekeeperText.SellTenHint;
 
-        // Shop
-        ShopCard.IsVisible = vm.ShopRevealed;
+        // Shop (also opens with The Workbench, so its upgrades are never out of sight)
+        ShopCard.IsVisible = vm.ShopRevealed || vm.WorkbenchRevealed;
         ShopTitleText.Text = BeekeeperText.ShopTitle;
-        if (vm.ShopRevealed) UpdateShop(vm, lang);
+        if (ShopCard.IsVisible) UpdateShop(vm, lang);
 
         // Combs
         CombsCard.IsVisible = vm.CombsRevealed;
@@ -141,6 +192,47 @@ public partial class BeekeeperView : UserControl
         CombsInfoText.Text = BeekeeperText.CombBlurb(N(vm.Config.StoragePerComb));
         BuildCombButton.Content = BeekeeperText.BuildComb(N(vm.CombCost));
         BuildCombButton.IsEnabled = vm.CanBuildComb;
+
+        // The Workbench
+        WorkbenchCard.IsVisible = vm.WorkbenchRevealed;
+        WorkbenchTitleText.Text = BeekeeperText.WorkbenchTitle;
+        BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
+        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
+        CraftBeeswaxButton.Content = BeekeeperText.Make;
+        CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
+        RepellentRow.IsVisible = vm.RepellentUnlocked;
+        RepellentNameText.Text = BeekeeperText.RepellentCandle;
+        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
+            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.Engine.RepellentBurnSeconds));
+        CraftRepellentButton.Content = BeekeeperText.Make;
+        CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
+        LightRepellentButton.Content = BeekeeperText.Light;
+        LightRepellentButton.IsEnabled = vm.CanLightRepellent;
+
+        // The Hippies
+        HippiesCard.IsVisible = vm.HippiesRevealed;
+        HippiesTitleText.Text = BeekeeperText.HippiesTitle;
+        TradeTenButton.Content = BeekeeperText.TradeTen;
+        TradeAllButton.Content = BeekeeperText.TradeAll;
+        TradeTenButton.IsEnabled = TradeAllButton.IsEnabled = vm.CanTradeCandles;
+        HippiesRateText.Text = BeekeeperText.HippiesRate;
+
+        // Wasps
+        bool burning = vm.RepellentSecondsLeft > 0m;
+        WaspCard.IsVisible = vm.WaspApproaching || burning;
+        WaspTitleText.Text = BeekeeperText.WaspsTitle;
+        WaspHerePanel.IsVisible = vm.WaspApproaching;
+        WaspHereText.Text = BeekeeperText.WaspHere;
+        WaspTimeText.Text = BeekeeperText.TimeLeft(BeekeeperText.Clock(vm.WaspSecondsLeft));
+        ThrowShoeButton.Content = BeekeeperText.ThrowShoe;
+        ThrowShoeButton.IsEnabled = vm.CanThrowShoe;
+        BribeButton.Content = BeekeeperText.Bribe(N(vm.BribeCost));
+        BribeButton.IsEnabled = vm.CanBribe;
+        WaspLightButton.Content = BeekeeperText.LightCandle;
+        WaspLightButton.IsVisible = vm.RepellentUnlocked;
+        WaspLightButton.IsEnabled = vm.CanLightRepellent;
+        CandleBurningText.IsVisible = burning && !vm.WaspApproaching;
+        CandleBurningText.Text = BeekeeperText.CandleBurning(BeekeeperText.Clock(vm.RepellentSecondsLeft));
 
         // Log
         LogTitleText.Text = BeekeeperText.LogTitle;
@@ -157,7 +249,9 @@ public partial class BeekeeperView : UserControl
     private void UpdateShop(BeekeeperViewModel vm, AppLanguage lang)
     {
         string N(decimal v) => NumberFormatter.Format(v, lang);
-        string sig = $"{vm.ToolLevel}|{vm.HasWaxCatcher}|{lang}";
+        string? Part(decimal v) => v > 0m ? N(v) : null;
+        var upgrades = vm.ShopUpgrades;
+        string sig = $"{vm.ToolLevel}|{vm.HasWaxCatcher}|{lang}|{string.Join(",", upgrades.Select(u => u.Id))}";
         if (sig != _shopSignature)
         {
             _shopSignature = sig;
@@ -170,11 +264,20 @@ public partial class BeekeeperView : UserControl
                 bool owned = vm.ToolLevel > i;
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, tool.BeesPerClick),
-                    owned, N(tool.Cost), tool.Id, vm.BuyNextToolCommand.Execute));
+                    owned, BeekeeperText.Price(N(tool.Cost), null, null), tool.Id, vm.BuyNextToolCommand.Execute));
             }
             ShopRows.Children.Add(MakeShopRow(
                 BeekeeperText.WaxCatcherName, BeekeeperText.WaxCatcherBlurb,
-                vm.HasWaxCatcher, N(vm.Config.WaxCatcherCost), "catcher", vm.BuyWaxCatcherCommand.Execute));
+                vm.HasWaxCatcher, BeekeeperText.Price(N(vm.Config.WaxCatcherCost), null, null), "catcher", vm.BuyWaxCatcherCommand.Execute));
+
+            // Upgrades: only unlocked, not-yet-bought ones are listed (bought ones leave the Shop).
+            foreach (var u in upgrades)
+            {
+                string id = u.Id;
+                ShopRows.Children.Add(MakeShopRow(
+                    BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id), false,
+                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage)), "upgrade:" + id, _ => vm.BuyUpgrade(id)));
+            }
         }
 
         // Cheap per-tick part: only the buttons' enabled state.
@@ -184,9 +287,11 @@ public partial class BeekeeperView : UserControl
             if (_shopButtons.TryGetValue(id, out var b)) b.IsEnabled = vm.ToolLevel == i && vm.CanBuyNextTool;
         }
         if (_shopButtons.TryGetValue("catcher", out var cb)) cb.IsEnabled = vm.CanBuyWaxCatcher;
+        foreach (var u in upgrades)
+            if (_shopButtons.TryGetValue("upgrade:" + u.Id, out var ub)) ub.IsEnabled = vm.CanBuyUpgrade(u.Id);
     }
 
-    private Control MakeShopRow(string name, string blurb, bool owned, string cost, string id, Action<object?> buy)
+    private Control MakeShopRow(string name, string blurb, bool owned, string price, string id, Action<object?> buy)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
@@ -200,7 +305,7 @@ public partial class BeekeeperView : UserControl
             MinWidth = 110,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalAlignment = VerticalAlignment.Center,
-            Content = owned ? "✓ " + BeekeeperText.Owned : cost + " " + BeekeeperText.BeebitsLabel.ToLowerInvariant(),
+            Content = owned ? "✓ " + BeekeeperText.Owned : price,
             IsEnabled = false,
         };
         if (!owned)
@@ -251,6 +356,13 @@ public partial class BeekeeperView : UserControl
     private void SellTen_Click(object? sender, RoutedEventArgs e) => _vm?.SellTenCommand.Execute(null);
     private void SellAll_Click(object? sender, RoutedEventArgs e) => _vm?.SellAllCommand.Execute(null);
     private void BuildComb_Click(object? sender, RoutedEventArgs e) => _vm?.BuildCombCommand.Execute(null);
+    private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
+    private void CraftRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.CraftRepellentCommand.Execute(null);
+    private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
+    private void TradeTen_Click(object? sender, RoutedEventArgs e) => _vm?.TradeTenCandlesCommand.Execute(null);
+    private void TradeAll_Click(object? sender, RoutedEventArgs e) => _vm?.TradeAllCandlesCommand.Execute(null);
+    private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
+    private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup
 

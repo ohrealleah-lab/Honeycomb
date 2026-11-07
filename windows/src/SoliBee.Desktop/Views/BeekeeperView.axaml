@@ -83,7 +83,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
                         <!-- What the hive holds. Later materials (sage, candles…) get rows here too. -->
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="2">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
                             <TextBlock x:Name="HiveBeesLabel" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeesValue" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveHoneyLabel" Grid.Row="1" Classes="bk-body" Opacity="0.75" />
@@ -92,6 +92,12 @@
                             <TextBlock x:Name="HiveWaxValue" Grid.Row="2" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveBeebitsLabel" Grid.Row="3" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeebitsValue" Grid.Row="3" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveBeeswaxLabel" Grid.Row="4" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveBeeswaxValue" Grid.Row="4" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveRepellentLabel" Grid.Row="5" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveRepellentValue" Grid.Row="5" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveSageLabel" Grid.Row="6" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveSageValue" Grid.Row="6" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
@@ -131,15 +137,74 @@
                         <Button x:Name="BuildCombButton" Classes="bk-button" HorizontalAlignment="Left" Click="BuildComb_Click" />
                     </StackPanel>
                 </Border>
+
+                <!-- THE WORKBENCH (opens with the 2nd comb): crafting only; upgrades are in the Shop -->
+                <Border x:Name="WorkbenchCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="WorkbenchTitleText" Classes="bk-title" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="BeeswaxNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="BeeswaxInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="CraftBeeswaxButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="CraftBeeswax_Click" />
+                        </Grid>
+                        <Grid x:Name="RepellentRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="RepellentNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="RepellentInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="CraftRepellentButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="CraftRepellent_Click" />
+                                <Button x:Name="LightRepellentButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- THE HIPPIES (after 5 candles): beeswax candles for sage -->
+                <Border x:Name="HippiesCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="HippiesTitleText" Classes="bk-title" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="TradeTenButton" Classes="bk-button" Click="TradeTen_Click" />
+                            <Button x:Name="TradeAllButton" Classes="bk-button" Click="TradeAll_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="HippiesRateText" Classes="bk-muted" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
-            <!-- ───────── RIGHT: story log ───────── -->
-            <Border Grid.Column="2" Classes="bk-card" VerticalAlignment="Top">
-                <StackPanel Spacing="10">
-                    <TextBlock x:Name="LogTitleText" Classes="bk-title" />
-                    <StackPanel x:Name="LogLines" Spacing="8" />
-                </StackPanel>
-            </Border>
+            <!-- ───────── RIGHT: wasps, story log ───────── -->
+            <StackPanel Grid.Column="2" Spacing="12" VerticalAlignment="Top">
+                <!-- Shown while a wasp is here or a repellent candle burns -->
+                <Border x:Name="WaspCard" Classes="bk-card" IsVisible="False" BorderBrush="#66FFA38F">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="WaspTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="WaspHerePanel" Spacing="8">
+                            <TextBlock x:Name="WaspHereText" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="WaspTimeText" Classes="bk-muted" />
+                            <Button x:Name="ThrowShoeButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" Click="ThrowShoe_Click" />
+                            <Button x:Name="BribeButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" Click="Bribe_Click" />
+                            <Button x:Name="WaspLightButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="CandleBurningText" Classes="bk-body" IsVisible="False" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="bk-card">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="LogTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="LogLines" Spacing="8" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
         </Grid>
     </ScrollViewer>
 </UserControl>

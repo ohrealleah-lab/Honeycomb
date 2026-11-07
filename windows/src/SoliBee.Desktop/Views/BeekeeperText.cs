@@ -84,7 +84,72 @@ internal static class BeekeeperText
     public static string BuildComb(string waxCost) => Fill(T(StringKey.BeekeeperBuildCombFmt), waxCost);
     public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
 
+    // ---- stage 2: The Workbench, Hippies, wasps, upgrades
+    public static string HiveBeeswaxCandles => T(StringKey.BeekeeperHiveBeeswaxCandles);
+    public static string HiveRepellentCandles => T(StringKey.BeekeeperHiveRepellentCandles);
+    public static string HiveSage => T(StringKey.BeekeeperHiveSage);
+
+    public static string WorkbenchTitle => T(StringKey.BeekeeperWorkbenchTitle);
+    public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
+    public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
+    public static string RepellentCandle => T(StringKey.BeekeeperRepellentCandle);
+    public static string RepellentBlurb(string time) => Fill(T(StringKey.BeekeeperRepellentBlurbFmt), time);
+    public static string Make => T(StringKey.BeekeeperMake);
+    public static string Light => T(StringKey.BeekeeperLight);
+
+    public static string HippiesTitle => T(StringKey.BeekeeperHippiesTitle);
+    public static string HippiesRate => T(StringKey.BeekeeperHippiesRate);
+    public static string TradeTen => T(StringKey.BeekeeperTradeTen);
+    public static string TradeAll => T(StringKey.BeekeeperTradeAll);
+
+    public static string WaspsTitle => T(StringKey.BeekeeperWaspsTitle);
+    public static string WaspHere => T(StringKey.BeekeeperWaspHere);
+    public static string TimeLeft(string time) => Fill(T(StringKey.BeekeeperTimeLeftFmt), time);
+    public static string ThrowShoe => T(StringKey.BeekeeperThrowShoe);
+    public static string Bribe(string honey) => Fill(T(StringKey.BeekeeperBribeFmt), honey);
+    public static string LightCandle => T(StringKey.BeekeeperLightCandle);
+    public static string CandleBurning(string time) => Fill(T(StringKey.BeekeeperCandleBurningFmt), time);
+
+    /// <summary>A price that may mix resources: "300 beebits · 100 wax · 2 sage".</summary>
+    public static string Price(string? beebits, string? wax, string? sage)
+    {
+        var parts = new System.Collections.Generic.List<string>();
+        if (beebits != null) parts.Add(beebits + " " + BeebitsLabel.ToLowerInvariant());
+        if (wax != null) parts.Add(Fill(T(StringKey.BeekeeperCostWaxFmt), wax));
+        if (sage != null) parts.Add(Fill(T(StringKey.BeekeeperCostSageFmt), sage));
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>Minutes and seconds, e.g. "0:42" or "14:30" (rounded up, so it never shows 0:00 early).</summary>
+    public static string Clock(decimal seconds)
+    {
+        long s = (long)System.Math.Ceiling(System.Math.Max(0m, seconds));
+        return $"{s / 60}:{s % 60:00}";
+    }
+
+    public static string UpgradeName(string id) => UpgradeNameIn(id, Lang);
+
+    public static string UpgradeBlurb(string id) => id switch
+    {
+        BeekeeperUpgrades.BiggerCombs1 => T(StringKey.BeekeeperUpgradeBiggerCombs1Blurb),
+        BeekeeperUpgrades.BiggerCombs2 => T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb),
+        BeekeeperUpgrades.BetterWaxCatcher => T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb),
+        BeekeeperUpgrades.StrongerCandles => T(StringKey.BeekeeperUpgradeStrongerCandlesBlurb),
+        _ => "",
+    };
+
     // ---- story log (saved as keys plus values, so old lines follow a language change)
+
+    // The log is drawn in the language it is asked for, which can differ from Options for a moment.
+    private static string UpgradeNameIn(string id, AppLanguage lang) => id switch
+    {
+        BeekeeperUpgrades.BiggerCombs1 => Strings.Get(StringKey.BeekeeperUpgradeBiggerCombs1, lang),
+        BeekeeperUpgrades.BiggerCombs2 => Strings.Get(StringKey.BeekeeperUpgradeBiggerCombs2, lang),
+        BeekeeperUpgrades.BetterWaxCatcher => Strings.Get(StringKey.BeekeeperUpgradeBetterWaxCatcher, lang),
+        BeekeeperUpgrades.StrongerCandles => Strings.Get(StringKey.BeekeeperUpgradeStrongerCandles, lang),
+        _ => id,
+    };
+
     public static string LogLine(BeekeeperLogEntry e, AppLanguage lang)
     {
         string L(StringKey key) => Strings.Get(key, lang);
@@ -111,6 +176,20 @@ internal static class BeekeeperText
             BeekeeperEvents.CombBuilt => Fill(L(StringKey.BeekeeperLogCombBuiltFmt), N(e.Value)),
             BeekeeperEvents.WelcomeBack => Fill(L(StringKey.BeekeeperLogWelcomeBackFmt), N(e.Value)),
             BeekeeperEvents.WelcomeBackNothing => L(StringKey.BeekeeperLogWelcomeBackNothing),
+            BeekeeperEvents.WorkbenchOpened => L(StringKey.BeekeeperLogWorkbenchOpened),
+            BeekeeperEvents.FirstBeeswaxCandle => L(StringKey.BeekeeperLogFirstBeeswaxCandle),
+            BeekeeperEvents.HippiesArrive => L(StringKey.BeekeeperLogHippiesArrive),
+            BeekeeperEvents.CandlesTraded => Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value)),
+            BeekeeperEvents.RepellentUnlocked => L(StringKey.BeekeeperLogRepellentUnlocked),
+            BeekeeperEvents.UpgradeBought => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
+            BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
+            BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
+            BeekeeperEvents.ShoeMissRaid => Fill(L(StringKey.BeekeeperLogShoeMissFmt), N(e.Value), N(e.Value2)),
+            BeekeeperEvents.WaspRaid => Fill(L(StringKey.BeekeeperLogWaspRaidFmt), N(e.Value), N(e.Value2)),
+            BeekeeperEvents.Bribe => Fill(L(StringKey.BeekeeperLogBribeFmt), N(e.Value)),
+            BeekeeperEvents.WaspLeft => L(StringKey.BeekeeperLogWaspLeft),
+            BeekeeperEvents.CandleLit => L(StringKey.BeekeeperLogCandleLit),
+            BeekeeperEvents.CandleOut => L(StringKey.BeekeeperLogCandleOut),
             _ => "",
         };
     }

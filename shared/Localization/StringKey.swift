@@ -1624,4 +1624,98 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHiveWax = "beekeeper_hive_wax"
     /// Hive card row label; Beebits is the game's made-up money, kept as-is
     case beekeeperHiveBeebits = "beekeeper_hive_beebits"
+    /// Hive card row label
+    case beekeeperHiveBeeswaxCandles = "beekeeper_hive_beeswax_candles"
+    /// Hive card row label
+    case beekeeperHiveRepellentCandles = "beekeeper_hive_repellent_candles"
+    /// Hive card row label
+    case beekeeperHiveSage = "beekeeper_hive_sage"
+    /// Card title (all caps)
+    case beekeeperWorkbenchTitle = "beekeeper_workbench_title"
+    /// Workbench item name
+    case beekeeperBeeswaxCandle = "beekeeper_beeswax_candle"
+    /// Workbench item description
+    case beekeeperBeeswaxBlurb = "beekeeper_beeswax_blurb"
+    /// Workbench item name
+    case beekeeperRepellentCandle = "beekeeper_repellent_candle"
+    /// Workbench item description; %@ = burn time, e.g. 15:00
+    case beekeeperRepellentBlurbFmt = "beekeeper_repellent_blurb_fmt"
+    /// Workbench button: craft one
+    case beekeeperMake = "beekeeper_make"
+    /// Workbench button: light a repellent candle
+    case beekeeperLight = "beekeeper_light"
+    /// Price part; %@ = amount
+    case beekeeperCostWaxFmt = "beekeeper_cost_wax_fmt"
+    /// Price part; %@ = amount
+    case beekeeperCostSageFmt = "beekeeper_cost_sage_fmt"
+    /// Card title (all caps)
+    case beekeeperHippiesTitle = "beekeeper_hippies_title"
+    /// Under the Hippies' buttons
+    case beekeeperHippiesRate = "beekeeper_hippies_rate"
+    /// Hippies button
+    case beekeeperTradeTen = "beekeeper_trade_ten"
+    /// Hippies button
+    case beekeeperTradeAll = "beekeeper_trade_all"
+    /// Wasp card title (all caps)
+    case beekeeperWaspsTitle = "beekeeper_wasps_title"
+    /// Wasp card, while a wasp is here
+    case beekeeperWaspHere = "beekeeper_wasp_here"
+    /// %@ = time left, e.g. 0:42
+    case beekeeperTimeLeftFmt = "beekeeper_time_left_fmt"
+    /// Wasp card button
+    case beekeeperThrowShoe = "beekeeper_throw_shoe"
+    /// Wasp card button; %@ = honey it costs
+    case beekeeperBribeFmt = "beekeeper_bribe_fmt"
+    /// Wasp card button
+    case beekeeperLightCandle = "beekeeper_light_candle"
+    /// Wasp card; %@ = time left, e.g. 14:30
+    case beekeeperCandleBurningFmt = "beekeeper_candle_burning_fmt"
+    /// Shop upgrade name
+    case beekeeperUpgradeBiggerCombs1 = "beekeeper_upgrade_bigger_combs_1"
+    /// Shop upgrade description
+    case beekeeperUpgradeBiggerCombs1Blurb = "beekeeper_upgrade_bigger_combs_1_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeBiggerCombs2 = "beekeeper_upgrade_bigger_combs_2"
+    /// Shop upgrade description
+    case beekeeperUpgradeBiggerCombs2Blurb = "beekeeper_upgrade_bigger_combs_2_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeBetterWaxCatcher = "beekeeper_upgrade_better_wax_catcher"
+    /// Shop upgrade description
+    case beekeeperUpgradeBetterWaxCatcherBlurb = "beekeeper_upgrade_better_wax_catcher_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeStrongerCandles = "beekeeper_upgrade_stronger_candles"
+    /// Shop upgrade description
+    case beekeeperUpgradeStrongerCandlesBlurb = "beekeeper_upgrade_stronger_candles_blurb"
+    /// Story log
+    case beekeeperLogWorkbenchOpened = "beekeeper_log_workbench_opened"
+    /// Story log
+    case beekeeperLogFirstBeeswaxCandle = "beekeeper_log_first_beeswax_candle"
+    /// Story log
+    case beekeeperLogHippiesArrive = "beekeeper_log_hippies_arrive"
+    /// Story log; %@ = sage received
+    case beekeeperLogCandlesTradedFmt = "beekeeper_log_candles_traded_fmt"
+    /// Story log
+    case beekeeperLogRepellentUnlocked = "beekeeper_log_repellent_unlocked"
+    /// Story log; %@ = upgrade name
+    case beekeeperLogUpgradeBoughtFmt = "beekeeper_log_upgrade_bought_fmt"
+    /// Story log
+    case beekeeperLogWaspArrives = "beekeeper_log_wasp_arrives"
+    /// Story log
+    case beekeeperLogShoeHit = "beekeeper_log_shoe_hit"
+    /// Story log; %@ = honey taken, %@ = bees flown off
+    case beekeeperLogShoeMissFmt = "beekeeper_log_shoe_miss_fmt"
+    /// Story log; %@ = honey taken, %@ = bees flown off
+    case beekeeperLogWaspRaidFmt = "beekeeper_log_wasp_raid_fmt"
+    /// Story log; %@ = honey paid
+    case beekeeperLogBribeFmt = "beekeeper_log_bribe_fmt"
+    /// Story log: the player stepped away, nothing lost
+    case beekeeperLogWaspLeft = "beekeeper_log_wasp_left"
+    /// Story log
+    case beekeeperLogCandleLit = "beekeeper_log_candle_lit"
+    /// Story log
+    case beekeeperLogCandleOut = "beekeeper_log_candle_out"
+    /// RuleSection title, Beekeeper
+    case helpBeekeeperWorkbenchTitle = "help_beekeeper_workbench_title"
+    /// Workbench & Wasps RuleSection body
+    case helpBeekeeperWorkbench = "help_beekeeper_workbench"
 }

@@ -210,6 +210,8 @@ public partial class HelpWindow : Window
         BeekeeperRulesBody.Text = T(StringKey.HelpBeekeeperHowToPlay);
         BeekeeperAwayHeading.Text = T(StringKey.HelpBeekeeperAwayTitle);
         BeekeeperAwayBody.Text = T(StringKey.HelpBeekeeperAway);
+        BeekeeperWorkbenchHeading.Text = T(StringKey.HelpBeekeeperWorkbenchTitle);
+        BeekeeperWorkbenchBody.Text = T(StringKey.HelpBeekeeperWorkbench);
 
         // ── Themes ───────────────────────────────────────────────────────
         ThemesCustomizationHeading.Text = T(StringKey.HelpThemesCustomizationTitle);
