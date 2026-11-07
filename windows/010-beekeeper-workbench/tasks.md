@@ -25,7 +25,18 @@ Push only when Leah says "push". Placeholder numbers are fine (tuning comes late
 - [x] T134 The screen reports on-screen and activity to the view model.
 - [x] T135 Words in the workbook (English + Spanish draft), generator, Help page section.
 - [x] T136 Debug menu: Call a wasp.
-- **Hand-test (Leah):** steps come with the build.
+- **Hand-test (Leah)** (debug build; the Banners menu is in the toolbar):
+  1. Open Beekeeper. **Banners → Beekeeper → +100 wax** twice; build two combs. The Workbench appears, the log says "You clear a space for a workbench.", and the Shop now lists **Bigger Combs**.
+  2. Add wax and press **Make** five times. The Hippies card appears; the Hive card shows Beeswax candles.
+  3. Make 10 or more candles and press **Trade 10**. Sage 1 appears on the Hive card; the Workbench shows the **Sage repellent candle**.
+  4. **Make** a repellent candle (10 wax + 1 sage).
+  5. **Banners → Beekeeper → Call a wasp.** A Wasps card appears top right with a 1:00 countdown. **Throw a shoe**: it either drives the wasp off or misses (honey and bees go down, and the log says how much).
+  6. Call a wasp and press **Bribe**: honey drops by a quarter, bees stay the same.
+  7. Call a wasp and press **Light a candle**: the wasp leaves and the card shows the candle's time left.
+  8. Call a wasp and wait a minute without doing anything: it raids.
+  9. Call a wasp, switch to Klondike, come back: the log says the wasp lost interest; nothing was taken.
+  10. Add Beebits (**+100 Beebits** ×3) and buy **Bigger Combs**: honey storage grows by half, the upgrade leaves the Shop and **Even Bigger Combs** appears.
+  11. Close and reopen the app: candles, sage, upgrades and a burning candle's time are all still there.
 
 ## Phase 5: Check
 - [ ] T140 Full test run; build; hand-test steps for Leah.
