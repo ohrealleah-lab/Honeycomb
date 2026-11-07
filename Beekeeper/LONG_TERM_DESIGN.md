@@ -26,10 +26,10 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **Crafting and Technology are the same thing**, called **The Workbench**. It replaces the earlier "Chandler's Workshop" idea. Candles and the shoe-throw upgrades (stage 6) both live there.
    - **Workbench upgrades are bought** (not researched), usually with a mix of resources: Beebits, wax, sage, depending on the upgrade. Some are locked until another upgrade is bought; which unlocks which is still being worked out.
    - **When:** the Workbench opens after the 2nd comb, together with the first wasp (see stage 6), so candles arrive with wasps rather than before them.
-   - **Candles are crafted from wax, instantly** (no crafting time): the first candles cost **10 wax** each (costs of later types to be set later). Later candles also cost **sage** or **propolis**, which the bees gather once they get the right upgrades.
-   - **At least two types at first:** a **Hippie candle**, sold to the Hippies, and a **wasp-repellent candle** that keeps wasps away (duration to decide).
+   - **Candles are crafted from wax, instantly** (no crafting time): the first candles cost **10 wax** each (costs of later types to be set later). Later candles also cost **sage** or **propolis**. For now, sage comes only from the Hippies; propolis is gathered by the bees once they get the right upgrades.
+   - **At least two types at first:** the **beeswax candle** (the first candle the player can craft, and the one the Hippies buy), and a **wasp-repellent candle** that keeps wasps away (duration to decide).
    - **Later, a bee-boost candle** that makes the bees more effective (the old idea was +20% honey for a time).
-   - **The Hippies arrive after the player has crafted 5 candles.** They buy Hippie (beeswax) candles and **pay 1 sage per 10 candles** (they are one of the stage 7 buyers).
+   - **The Hippies arrive after the player has crafted 5 candles** of any type. The beeswax candle is the first one available, so in practice 5 beeswax candles bring them. They buy beeswax candles and **pay 1 sage per 10 candles** (they are one of the stage 7 buyers).
 5. **Sites and special bees:** Garden, Meadow, Honey Factory. Special bees can only be caught by clicking, and which kind depends on the site.
 6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them; bears reduce raids after 100 trades. Leah's notes (2026-11-07):
    - **No Stress Mode turns wasps off completely.** No wasps appear and none raid. It can be turned on or off at any time without affecting game progress (nothing is reset, lost or gained by switching). A raid already under way when it is turned on still plays out; only future raids are stopped.
@@ -63,5 +63,4 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Workbench: the upgrade list, each upgrade's cost, and which upgrades unlock which (work in progress).
-11. Candles: the cost of later candle types; which later candles need sage or propolis; which bee upgrades gather them; and whether sage comes only from the Hippies or also from the bees.
-12. Hippies: whether the 5 candles that bring them can be of any type.
+11. Candles: the cost of later candle types; which later candles need sage or propolis; which bee upgrades gather propolis.
