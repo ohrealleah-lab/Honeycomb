@@ -34,8 +34,8 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 - [x] T034 Story log column with fading older lines.
 - [x] T035 Stats bar (BEES · HONEY "45 / 200" · WAX · BEEBITS) and sticky reveal.
 - [x] T036 `MainWindow`: 7th picker entry, toolbar = New Game + Options only, `SetupBeekeeperMode()`; follow the MainWindow audit table in plan.md (includes per-game window size settings).
-- [ ] T037 Themes: check every built-in theme.
-- **Hand-test (Leah):**
+- [x] T037 Themes: check every built-in theme. Passed (Leah, 2026-11-07).
+- **Hand-test (Leah):** done and passed 2026-11-07.
   1. Open Honeycomb, pick **Beekeeper** from the game list. You should see only the art frame, Catch Bee, the tool line, the log and **BEES 0**.
   2. Click Catch Bee about 10 times. Some clicks should sting (coral text, no bee). The Hive card and HONEY appear after your first bee.
   3. Keep going until HONEY reaches 10. The Bear panel appears.
@@ -49,20 +49,26 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 - [x] T040 Add the Beekeeper strings and the approved story-log lines (English) to the localization workbook.
 - [ ] T041 Spanish translations (Claude drafts, Leah reviews). Drafted 2026-11-07; waiting for Leah's review.
 - [x] T042 Run `python3 tools/generate_localization.py` and review the diff on all platforms.
-- [ ] T043 Check Spanish in the screen for cut-off text.
+- [x] T043 Check Spanish in the screen for cut-off text. Passed (Leah, 2026-11-07).
 - [x] T044 Help window: short "How to play Beekeeper".
 - [x] T045 Scan every Beekeeper string, English and Spanish, for betting or gambling words (FR-009).
-- [ ] T046 Check that changing language mid-game re-translates the whole story log.
-- **Hand-test (Leah):** switch language to Spanish in Options; every Beekeeper word should be Spanish, big numbers follow Spanish style, and nothing is cut off.
+- [x] T046 Check that changing language mid-game re-translates the whole story log. Passed (Leah, 2026-11-07).
+- **Hand-test (Leah):** done and passed 2026-11-07. Switch language to Spanish in Options; every Beekeeper word should be Spanish, big numbers follow Spanish style, and nothing is cut off.
 
 ## Phase 6: Whole-game check
-- [ ] T050 Run `/analyze` across spec, plan and tasks again against the finished code.
+- [x] T050 Run `/analyze` across spec, plan and tasks again against the finished code. Done 2026-11-07; open points below.
 - [ ] T051 Play through to a second comb, using the debug route if one is needed to skip ahead (ask first).
-- [ ] T052 Hand-test sheet for the co-designer (Windows build).
-- [ ] T053 Update `windows/CLAUDE.md` ("all six games" → seven), the repo README, and the product rules in `mac/CLAUDE.md` (exceptions: Beekeeper saves in progress on desktop and earns while away; Beekeeper's rules are Windows-referenced until Mac exists).
-- [ ] T054 Windows release build (`dotnet publish`) and a smoke test.
+- [x] T052 Hand-test sheet for the co-designer (Windows build). See `HAND_TEST.md`.
+- [x] T053 Update `windows/CLAUDE.md` ("all six games" → seven), the repo README, and the product rules in `mac/CLAUDE.md` (exceptions: Beekeeper saves in progress on desktop and earns while away; Beekeeper's rules are Windows-referenced until Mac exists).
+- [ ] T054 Windows release build (`dotnet publish`) and a smoke test. Release build made 2026-11-07 (`bin/Release/net10.0/win-x64/publish/Honeycomb.exe`); smoke test is Leah's.
 - [ ] T055 Bring the design and Gemini files in line with v3: `UI_SPEC.md` (no bee capacity, honey storage, Combs panel text, bear names, Workshop hidden in this build, "Chronicle"/"Log" naming), the mockups (a small refresh), `README.md`, `csv/`, and the workbook. Ask Leah before editing Gemini's files.
 - **Hand-test (Leah / co-designer):** play for 15 minutes; report anything confusing or unfair.
+
+### T050 open points (waiting for Leah)
+1. **Bug:** once the story log holds 50 lines, a line identical to the newest one (e.g. pressing Sell 10 twice) doesn't redraw the log, so the new line doesn't appear. Cause: `BeekeeperView.UpdateLog` only compares the line count and the newest line.
+2. The Combs card shows the cost of the comb you can build now, not "next cost" as T033 lists. The current cost is probably what's wanted; T033's wording may just be loose.
+3. The "Start over?" message says "Your hive and everything in it will be lost."; spec 5.8 says "Your hive will be lost."
+4. The spec writes shop prices with "₿"; the screen says "beebits" (Leah: keep Beebits, no ₿). Fix the spec in T055.
 
 ## Later (own specs, not now)
 See `Beekeeper/LONG_TERM_DESIGN.md`: Smoker and tool upgrades · hive roles · special bees and sites · wasps (steal honey) · candles + Workshop · reputations · seasons/blooms · swarming · Mac, iOS, Android.

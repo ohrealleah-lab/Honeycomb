@@ -10,7 +10,7 @@
 [![Latest release](https://img.shields.io/github/v/release/ohrealleah-lab/Honeycomb?label=release)](https://github.com/ohrealleah-lab/Honeycomb/releases)
 ![Platforms: macOS, iOS, Windows, Android](https://img.shields.io/badge/platforms-macOS%20%7C%20iOS%20%7C%20Windows%20%7C%20Android-blue)
 
-Six card games, four platforms, one shared rule engine, and a deep customization system. Includes a Triple Triad–style card battler (Honeycomb) plus Klondike, Freecell, Spider, Video Poker, and Blackjack.
+Six card games, four platforms, one shared rule engine, and a deep customization system. Includes a Triple Triad–style card battler (Honeycomb) plus Klondike, Freecell, Spider, Video Poker, and Blackjack. New on Windows: Beekeeper, a slow hive-keeping game.
 
 **▶ [Play it on itch.io](https://playhoneycomb.itch.io/honeycomb-card-suite)** · [Español](README.es.md)
 
@@ -43,7 +43,7 @@ Change the card decks and card art to your own pictures. Match the felt and card
 
 ## ♠️ Game Modes
 
-**Honeycomb Card Suite** supports six fully implemented, distinct games:
+**Honeycomb Card Suite** supports seven distinct games (Beekeeper is Windows only for now):
 
 > **Platform note:** On iOS and Android, Video Poker and Blackjack are free play only (no betting or credits), and Klondike has no Vegas Scoring Mode.
 
@@ -88,6 +88,11 @@ Change the card decks and card art to your own pictures. Match the felt and card
 * **Video Blackjack Betting** (Mac and Windows): Build your bet with 1, 5, 10, or 25 chips, or double it with 2X.
 
 <img width="597" height="476" alt="image" src="https://github.com/user-attachments/assets/4981aa0d-ca78-4f1d-bfa1-eb476b21e246" />
+
+### 7. Beekeeper (Windows)
+* **A Slow Hive**: Catch bees and they make honey on their own; honey turns into wax, and wax builds new combs to store more honey.
+* **The Bear and the Shop**: A friendly bear trades Beebits for your honey. Spend them on better tools and the Wax-Catcher.
+* **Keeps Working**: The hive carries on while you play other games, and even while the app is closed (up to 3 days).
 
 ---
 

@@ -11,7 +11,7 @@
 [![Cobertura de pruebas](https://codecov.io/gh/ohrealleah-lab/Honeycomb/branch/main/graph/badge.svg)](https://codecov.io/gh/ohrealleah-lab/Honeycomb)
 ![Plataformas: macOS, iOS, Windows, Android](https://img.shields.io/badge/platforms-macOS%20%7C%20iOS%20%7C%20Windows%20%7C%20Android-blue)
 
-Seis juegos de cartas, cuatro plataformas, un motor de reglas compartido y un sistema de personalización profundo. Incluye un juego de batalla de cartas al estilo Triple Triad (Honeycomb) más Klondike, Freecell, Spider, Video Poker y Blackjack.
+Seis juegos de cartas, cuatro plataformas, un motor de reglas compartido y un sistema de personalización profundo. Incluye un juego de batalla de cartas al estilo Triple Triad (Honeycomb) más Klondike, Freecell, Spider, Video Poker y Blackjack. Novedad en Windows: Beekeeper, un juego tranquilo de cuidar una colmena.
 
 **▶ [Juega en itch.io](https://playhoneycomb.itch.io/honeycomb-card-suite)** · [English](README.md)
 

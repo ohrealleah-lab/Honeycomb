@@ -21,7 +21,7 @@ Tests use a custom `TestRunner.swift` entry point (not XCTest) so the GUI `@main
 
 ## Product rules (settled — every platform follows these)
 
-Mac is the parity reference for Windows, Android and iOS; the list below is what "correct" means when a port disagrees. Don't re-litigate these in reviews.
+Mac is the parity reference for Windows, Android and iOS (except Beekeeper, see below); the list below is what "correct" means when a port disagrees. Don't re-litigate these in reviews.
 
 **Mobile (iOS + Android) — no betting, for app-store gambling rules**
 - Video Poker/Blackjack are hard-locked free play (`isFreePlay` always true): no bets, credits, payouts, Rebuy, pay table, out-of-credits toast, or money stats rows. Klondike has no Vegas scoring.
@@ -40,7 +40,14 @@ Mac is the parity reference for Windows, Android and iOS; the list below is what
 - A settings change that deals a new game (Klondike draw mode/Vegas, Spider suits, Beecell decks) asks "Start a new game?" first when a game is in progress. Desktop Video Poker/Blackjack have no New Game/Restart (menu items/shortcuts disabled there; also during a Honeycomb match).
 - Spider Autocomplete is offered only when simulating it finishes the game (capped at 1000 moves — the uncapped loop froze the app). Hint shows the "fill all empty columns" toast when that's the blocker.
 - Klondike "no moves left": immediately once the deck can't be cycled; never while Vegas allows another pass; otherwise only after the player recycles past where it was first detected.
-- Desktop timers keep running when the window is in the background; mobile pauses. Only Android saves a game in progress across launches (by decision — don't add it elsewhere).
+- Desktop timers keep running when the window is in the background; mobile pauses. Only Android saves a game in progress across launches (by decision — don't add it elsewhere). This covers the card games; Beekeeper is the exception below.
+
+**Beekeeper (7th game, Windows first) — deliberate exceptions, Leah's decisions** (spec: `windows/009-beekeeper/spec.md`)
+- Beekeeper saves its hive on desktop and restores it at launch.
+- It earns while the app is closed, up to 3 days; nothing else in Honeycomb does. Pauses while the app is open are credited quietly; only reopening the app says "While you were away".
+- Windows, not Mac, is the reference for Beekeeper's rules until a Mac version exists.
+- No Undo, Hint, Restart, statistics or idle nudge. New Game asks "Start over?" only when there are bees to lose.
+- Its money is "Beebits" in every language; no "-coin" names or ₿ sign (too close to crypto and gambling wording).
 
 **Text** — every user-visible string goes through `tools/Honeycomb_Localization.xlsx` (English + Spanish) and `python3 tools/generate_localization.py`, which regenerates Mac/iOS, Windows and Android string files together. Help text must describe what the code actually does — update it with any rules change.
 

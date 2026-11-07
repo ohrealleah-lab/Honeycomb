@@ -5,9 +5,9 @@
 Use the Context7 MCP server automatically for any question involving library or framework API usage, documentation, or version-specific behavior (e.g., Avalonia UI, .NET). Don't wait to be asked — reach for it whenever current/accurate docs would help, instead of relying on training data.
 
 ## Project overview
-Avalonia UI 12.1.3 / .NET 10 port of the **Honeycomb Card Suite** — all six games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, and Honeycomb (the card battle game). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
+Avalonia UI 12.1.3 / .NET 10 port of the **Honeycomb Card Suite** — all seven games: Klondike, Freecell (called Beecell on Mac/iOS/Android), Spider, Video Poker, Blackjack, Honeycomb (the card battle game), and Beekeeper (a slow hive-keeping game, Windows only for now; spec in `009-beekeeper/`). Lives in the monorepo's `windows/` folder alongside `mac/`, `ios/`, `android/` and the Swift `shared/` code. ("SoliBee" in namespaces/project names is legacy naming.)
 
-**Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys).
+**Parity: Mac is the source of truth.** Game rules, scoring, stats and AI must behave the same as Mac (`shared/` Swift code + `mac/src`); when Windows differs, align it to Mac. Cross-platform golden-vector tests enforce this for the deterministic engines — see "Parity tests" below. Deliberate, documented differences only (e.g. Windows keeps short internal names for two Deuces Wild pay-table rows because they double as stats keys). **Exception: Beekeeper** exists only on Windows, so Windows is the reference for its rules until a Mac version exists (see `mac/CLAUDE.md` → "Product rules").
 
 **Settled product rules** (stats/streaks, Blackjack dealer, confirm-before-new-game, Spider Autocomplete, Klondike "no moves" timing, text/localization) are listed once in `mac/CLAUDE.md` → "Product rules" — Windows follows them. Windows-specific: Help-window shortcut rows are built in `HelpWindow.axaml.cs`, so keep them in sync with the keys each view actually handles.
 
@@ -16,25 +16,27 @@ Avalonia UI 12.1.3 / .NET 10 port of the **Honeycomb Card Suite** — all six ga
 # Debug build (runs on Mac for development)
 dotnet build src/SoliBee.Desktop/SoliBee.Desktop.csproj
 
-# Windows release executable (~155 MB self-contained)
-dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj /p:PublishProfile=win-x64
-# Output: src/SoliBee.Desktop/bin/publish/win-x64/Honeycomb.exe  (+ Assets/ folder)
+# Windows release executable (~155 MB self-contained single file; same as the release workflow)
+dotnet publish src/SoliBee.Desktop/SoliBee.Desktop.csproj -c Release -r win-x64 --self-contained
+# Output: src/SoliBee.Desktop/bin/Release/net10.0/win-x64/publish/Honeycomb.exe  (+ Assets/ folder)
 ```
 
-WAV files (`shuffle.wav`, `snap.wav`, `victory.wav`) must sit in the same directory as the `.exe` — they're `Content` files copied to output, not embedded. Audio uses `winmm.dll` P/Invoke compiled in only when `WINDOWS` symbol is defined.
+WAV files (`shuffle.wav`, `snap.wav`, `victory.wav`, `tada.wav`) must ship in the `Assets/` folder next to the `.exe` — they're `Content` files copied to output, not embedded. Audio uses `winmm.dll` P/Invoke compiled in only when `WINDOWS` symbol is defined.
 
 ## Solution layout
 ```
 SoliBee.Core/
   Models/       Card, Pile, GameState/GameStatistics/ModeStats (solitaire), Blackjack*, VideoPoker*,
-                PokerHandEvaluator, Honeycomb* (Board, Card, AI, CardGenerator, Database, Deck, …)
+                PokerHandEvaluator, Honeycomb* (Board, Card, AI, CardGenerator, Database, Deck, …),
+                Beekeeper* (Config, State, Engine)
   Services/     SettingsService, StatsService, AtomicFile, BannerCatalog, ThemeService,
-                FaceCardArtService, CrashLogger, …
+                FaceCardArtService, CrashLogger, BeekeeperSaveService, NumberFormatter, …
   ViewModels/   AppCoordinator, GameViewModel (Klondike), FreecellViewModel, SpiderViewModel,
-                VideoPokerViewModel, BlackjackViewModel, HoneycombViewModel
+                VideoPokerViewModel, BlackjackViewModel, HoneycombViewModel, BeekeeperViewModel
 SoliBee.Desktop/
   Views/        MainWindow, GameView/FreecellView/SpiderView, VideoPokerView, BlackjackView,
                 HoneycombView (+ HoneycombRulesView, ManageDecksView, DeckBuilderView),
+                BeekeeperView (+ BeekeeperText: picks its localized words),
                 PreferencesView, CardView, …
   Assets/       Card-back images, font (Apple Chancery), WAV files, banner catalog JSON
   Properties/PublishProfiles/win-x64.pubxml
@@ -51,7 +53,7 @@ Mac generates shared JSON test vectors (see `mac/CLAUDE.md` → "Honeycomb captu
 If one fails after a Windows change, Windows drifted — fix Windows. If it fails after pulling a Mac rules change with regenerated vectors, port that change here.
 
 ## Persistence
-Everything persisted (settings, stats, card bank, decks, card-database seed, themes) is written through `AtomicFile.WriteAllText` (write temp, then replace) — never `File.WriteAllText` directly, since loaders fall back to defaults on a parse failure and a half-written file would silently wipe the data on the next save.
+Everything persisted (settings, stats, card bank, decks, card-database seed, themes, the Beekeeper hive) is written through `AtomicFile.WriteAllText` (write temp, then replace) — never `File.WriteAllText` directly, since loaders fall back to defaults on a parse failure and a half-written file would silently wipe the data on the next save.
 
 The data folder (`%LocalAppData%\Honeycomb`) comes from one place, `AppPaths.DataDirectory` — build file paths from it rather than calling `Environment.GetFolderPath` yourself. It's pure path math and never creates the folder (that would make `AppDataMigration` skip moving the legacy `SoliBee` folder); writers create it themselves, as `AtomicFile` does. The app ships via Velopack, never the Microsoft Store, so there is deliberately no packaged-app (`Windows.Storage`) location.
 
