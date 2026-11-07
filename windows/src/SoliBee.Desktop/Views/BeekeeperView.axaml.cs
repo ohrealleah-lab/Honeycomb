@@ -103,6 +103,13 @@ public partial class BeekeeperView : UserControl
         // Hive
         HiveCard.IsVisible = vm.HoneyRevealed;
         HiveTitleText.Text = BeekeeperText.HiveTitle;
+        HiveBeesLabel.Text = BeekeeperText.HiveBees;
+        HiveBeesValue.Text = N(vm.Bees);
+        HiveHoneyLabel.Text = BeekeeperText.HiveHoney;
+        HiveHoneyValue.Text = N(vm.Honey) + " / " + N(vm.HoneyStorage);
+        HiveWaxLabel.Text = BeekeeperText.HiveWax;
+        HiveWaxValue.Text = N(vm.Wax);
+        HiveWaxLabel.IsVisible = HiveWaxValue.IsVisible = vm.WaxRevealed;
         HoneyRateText.Text = BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2));
         HiveFullText.IsVisible = vm.StorageIsFull;
         HiveFullText.Text = BeekeeperText.CombsFull;

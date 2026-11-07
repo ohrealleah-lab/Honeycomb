@@ -838,6 +838,9 @@ object Strings {
         StringKey.HelpBeekeeperHowToPlay to "1. Catch Bee: each click adds bees to your hive. With bare hands, a bee sometimes stings you and gets away.\n2. Honey: every bee makes a little honey each second, until the combs are full.\n3. Wax: every 50 honey stored gives 1 wax.\n4. The Bear: once you hold 10 honey, a bear comes by. Sell 10 honey for 1 Beebit, or Sell All.\n5. The Shop: spend Beebits on better tools (each catches more bees, and none of them sting) and on the Wax-Catcher (twice the wax). Tools are bought in order.\n6. Combs: spend wax to build a comb. Each comb holds 200 more honey, and each new comb costs a little more wax.",
         StringKey.HelpBeekeeperAwayTitle to "🌙 While You're Away",
         StringKey.HelpBeekeeperAway to "The hive keeps working while you play another game, and even while Honeycomb is closed, for up to 3 days. When the combs are full, the bees rest until you make room. Your hive is saved automatically. New Game starts a brand-new hive, and asks first if you have bees to lose.",
+        StringKey.BeekeeperHiveBees to "Bees",
+        StringKey.BeekeeperHiveHoney to "Honey",
+        StringKey.BeekeeperHiveWax to "Wax",
     )
 
     private val Spanish = mapOf(
@@ -1646,5 +1649,8 @@ object Strings {
         StringKey.HelpBeekeeperHowToPlay to "1. Atrapar abeja: cada clic añade abejas a tu colmena. A mano limpia, a veces una abeja te pica y se escapa.\n2. Miel: cada abeja hace un poco de miel cada segundo, hasta que los panales se llenan.\n3. Cera: cada 50 de miel guardada da 1 de cera.\n4. El oso: cuando tienes 10 de miel, aparece un oso. Vende 10 de miel por 1 Beebit, o véndelo todo.\n5. La tienda: gasta Beebits en mejores herramientas (cada una atrapa más abejas y ninguna pica) y en el colector de cera (el doble de cera). Las herramientas se compran en orden.\n6. Panales: gasta cera para construir un panal. Cada panal guarda 200 de miel más, y cada panal nuevo cuesta un poco más de cera.",
         StringKey.HelpBeekeeperAwayTitle to "🌙 Mientras no estás",
         StringKey.HelpBeekeeperAway to "La colmena sigue trabajando mientras juegas a otro juego, e incluso con Honeycomb cerrado, hasta 3 días. Cuando los panales están llenos, las abejas descansan hasta que hagas sitio. Tu colmena se guarda sola. Nueva Partida empieza una colmena nueva, y antes te pregunta si tienes abejas que perder.",
+        StringKey.BeekeeperHiveBees to "Abejas",
+        StringKey.BeekeeperHiveHoney to "Miel",
+        StringKey.BeekeeperHiveWax to "Cera",
     )
 }

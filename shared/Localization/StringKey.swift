@@ -1616,4 +1616,10 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperAwayTitle = "help_beekeeper_away_title"
     /// While You're Away RuleSection body
     case helpBeekeeperAway = "help_beekeeper_away"
+    /// Hive card row label: how many bees
+    case beekeeperHiveBees = "beekeeper_hive_bees"
+    /// Hive card row label: honey stored / storage
+    case beekeeperHiveHoney = "beekeeper_hive_honey"
+    /// Hive card row label: wax held
+    case beekeeperHiveWax = "beekeeper_hive_wax"
 }

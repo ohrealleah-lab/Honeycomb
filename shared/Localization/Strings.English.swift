@@ -809,5 +809,8 @@ enum StringsEnglish {
         .helpBeekeeperHowToPlay: "1. Catch Bee: each click adds bees to your hive. With bare hands, a bee sometimes stings you and gets away.\n2. Honey: every bee makes a little honey each second, until the combs are full.\n3. Wax: every 50 honey stored gives 1 wax.\n4. The Bear: once you hold 10 honey, a bear comes by. Sell 10 honey for 1 Beebit, or Sell All.\n5. The Shop: spend Beebits on better tools (each catches more bees, and none of them sting) and on the Wax-Catcher (twice the wax). Tools are bought in order.\n6. Combs: spend wax to build a comb. Each comb holds 200 more honey, and each new comb costs a little more wax.",
         .helpBeekeeperAwayTitle: "🌙 While You're Away",
         .helpBeekeeperAway: "The hive keeps working while you play another game, and even while Honeycomb is closed, for up to 3 days. When the combs are full, the bees rest until you make room. Your hive is saved automatically. New Game starts a brand-new hive, and asks first if you have bees to lose.",
+        .beekeeperHiveBees: "Bees",
+        .beekeeperHiveHoney: "Honey",
+        .beekeeperHiveWax: "Wax",
     ]
 }

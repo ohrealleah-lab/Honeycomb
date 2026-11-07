@@ -814,4 +814,7 @@ public enum StringKey
     HelpBeekeeperHowToPlay,
     HelpBeekeeperAwayTitle,
     HelpBeekeeperAway,
+    BeekeeperHiveBees,
+    BeekeeperHiveHoney,
+    BeekeeperHiveWax,
 }

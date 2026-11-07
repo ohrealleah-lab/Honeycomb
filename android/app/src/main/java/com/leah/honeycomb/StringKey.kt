@@ -810,4 +810,7 @@ enum class StringKey {
     HelpBeekeeperHowToPlay,
     HelpBeekeeperAwayTitle,
     HelpBeekeeperAway,
+    BeekeeperHiveBees,
+    BeekeeperHiveHoney,
+    BeekeeperHiveWax,
 }
