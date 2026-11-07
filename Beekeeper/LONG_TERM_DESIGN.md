@@ -12,7 +12,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 | Part | Job in the loop |
 |---|---|
 | **Clicking: Catch Bee** | Brings in bees, forever. Gets stronger with tools, tool upgrades, a slice of the current colony per click, and the Smoker. |
-| **Hive roles** | The main choice system: split bees between foragers (honey), builders (wax and combs), guards (wasps) and nurses (hatch bees without clicking). |
+| **Bee types and flowers** | Replaces "hive roles" (Leah, 2026-11-07): with no bee limit, bees can't be assigned one by one, so roles come from kinds of bees, attracted by planting flowers. |
 | **Combs** | Honey storage (and later room for role cells). Cost grows 25% each. |
 | **Bear and other buyers** | Turn goods into Beebits. Reputations are relationships: each buyer wants and gives something different. |
 | **Tools and upgrades** | Spend Beebits to make clicking and the colony stronger. |
@@ -21,7 +21,13 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 ## Planned stages
 1. **First build (now):** catch, honey, wax, bear, shop, combs, saving, offline.
 2. **Smoker + tool upgrades:** clicking builds a "calm" meter that boosts the colony for a short time; each tool gets upgrade tiers; a click also catches a small slice of the current colony. Keeps clicking relevant all game.
-3. **Hive roles:** introduced after the first comb. Includes nurses (passive bee growth). Guard Bees, Bumblebees (wax) and Clover Bees (honey) become role or strain choices.
+3. **Bee types, flowers and guards** (replaces "hive roles"; Leah's notes, 2026-11-07):
+   - **No assigning bees.** Kittens Game can assign individual kittens because it has a small population; Beekeeper has no bee limit, so roles come from **kinds of bees** instead, each counted on the Hive card.
+   - **Forager bees bring back seeds** ("and more", to be decided).
+   - **Seeds are planted as flowers, and flowers attract new kinds of bees.** Bees are attracted, not assigned.
+   - **Guards are a permanent upgrade**: once unlocked, raids never make bees fly off. It removes the losing-bees part of raids early on; the wasp can still take honey.
+   - **No sage flowers.** Sage stays the Hippies' trade so the Hippies keep their place (Leah: planting sage "would erase hippies").
+   - Open: where the first foragers or seeds come from, which flowers attract which bees, where planting happens, and whether flowers also give passive bee growth (the old "nurses" idea).
 4. **Candles, made at the Workbench:** Leah's notes (2026-11-07):
    - **The Workbench is for crafting** (candles). It replaces the earlier "Chandler's Workshop" idea.
    - **Upgrades ("Technology") are sold in the Beekeeper's Shop** (Leah, 2026-11-07), not at The Workbench. They are bought (not researched), usually with a mix of resources: Beebits, wax, sage. Some are locked until something else is bought. **Bought upgrades disappear from the Shop.** First upgrades: Bigger Combs I/II (+50% / +100% honey storage), Better Wax-Catcher (+50%), Stronger Candles (repellent burns longer). The shoe-throw upgrades (stage 6) will be sold there too.
@@ -48,7 +54,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 ## Decisions made
 - **Build the systems first, tune later** (Leah, 2026-11-07): each stage adds its systems with placeholder numbers kept in the config; fine tuning comes once meadows and the rest are built.
 - Clicking stays "catch bees" (the game's premise) and stays relevant through scaling, the Smoker and special bees.
-- Hive roles are important, not decoration.
+- Hive roles become bee types attracted by flowers; guards are a permanent upgrade (Leah, 2026-11-07).
 - Swarming is the reset.
 - Seasons: yes, later, in a form that is not a copy of Kittens.
 - Wasps steal honey and make bees flee; they only raid during active play. A raid takes 3 minutes of honey and 15% of the bees (placeholders); a bribe costs 25% of the honey and no bees.
@@ -57,7 +63,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 ## Still open
 1. Offline rate is 100% (confirmed). Open: whether the 3-day cap grows with upgrades.
 2. How much of a click is the "slice of the colony" (needs the simulator).
-3. Exact roles list and how many roles at start.
+3. Bee types: the first list, where the first foragers or seeds come from, and which flower attracts which bee.
 4. Whether nurses are the only passive bee growth, or flowers also attract bees.
 5. What the swarm bonus is.
 6. Sage-propolis candle duration.
