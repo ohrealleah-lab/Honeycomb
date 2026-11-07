@@ -51,21 +51,6 @@ internal static class BeekeeperText
     public static string Bees(decimal n) =>
         n == 1m ? T(StringKey.BeekeeperPlusOneBee) : Fill(T(StringKey.BeekeeperPlusBeesFmt), NumberFormatter.Format(n, Lang));
 
-    /// <summary>"Hive whistle · 400 bees": the tool in use and everything one click catches.</summary>
-    public static string ToolLine(int level, decimal beesPerCatch) =>
-        T(level switch
-        {
-            1 => StringKey.BeekeeperToolGloves,
-            2 => StringKey.BeekeeperToolNet,
-            3 => StringKey.BeekeeperToolVacuum,
-            4 => StringKey.BeekeeperToolLure,
-            5 => StringKey.BeekeeperToolCart,
-            6 => StringKey.BeekeeperToolWhistle,
-            _ => StringKey.BeekeeperToolBareHands,
-        })
-        + " · " + (beesPerCatch == 1m ? T(StringKey.BeekeeperOneBee)
-                                      : Fill(T(StringKey.BeekeeperBeesFmt), NumberFormatter.Format(beesPerCatch, Lang)));
-
     public static string ToolName(string id) => id switch
     {
         "gloves" => T(StringKey.BeekeeperShopGloves),

@@ -1530,18 +1530,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperPlusOneBee = "beekeeper_plus_one_bee"
     /// Popup over Catch Bee; %@ = bees caught (2 or more)
     case beekeeperPlusBeesFmt = "beekeeper_plus_bees_fmt"
-    /// Tool line, after the tool name
-    case beekeeperOneBee = "beekeeper_one_bee"
-    /// Tool line, after the tool name; %@ = bees per click (2 or more)
-    case beekeeperBeesFmt = "beekeeper_bees_fmt"
-    /// Tool line: the starting tool
-    case beekeeperToolBareHands = "beekeeper_tool_bare_hands"
-    /// Tool line
-    case beekeeperToolGloves = "beekeeper_tool_gloves"
-    /// Tool line
-    case beekeeperToolNet = "beekeeper_tool_net"
-    /// Tool line
-    case beekeeperToolVacuum = "beekeeper_tool_vacuum"
     /// Shop item name
     case beekeeperShopGloves = "beekeeper_shop_gloves"
     /// Shop item name
@@ -1702,12 +1690,6 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperWorkbenchTitle = "help_beekeeper_workbench_title"
     /// Workbench & Wasps RuleSection body
     case helpBeekeeperWorkbench = "help_beekeeper_workbench"
-    /// Tool line
-    case beekeeperToolLure = "beekeeper_tool_lure"
-    /// Tool line
-    case beekeeperToolCart = "beekeeper_tool_cart"
-    /// Tool line
-    case beekeeperToolWhistle = "beekeeper_tool_whistle"
     /// Shop item name
     case beekeeperShopLure = "beekeeper_shop_lure"
     /// Shop item name

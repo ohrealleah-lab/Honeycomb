@@ -143,7 +143,6 @@ public partial class BeekeeperView : UserControl
 
         CatchButton.Content = BeekeeperText.Catch;
         CatchButton.IsEnabled = true;
-        ToolLineText.Text = BeekeeperText.ToolLine(vm.ToolLevel, vm.BeesPerCatch);
 
         // The Smoker
         SmokerCard.IsVisible = vm.HasSmoker;

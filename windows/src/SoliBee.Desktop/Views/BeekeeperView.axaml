@@ -44,12 +44,21 @@
         <Style Selector="Button.bk-button:disabled /template/ ContentPresenter">
             <Setter Property="Opacity" Value="0.4" />
         </Style>
+        <!-- Catch Bee always stays highlighted (Leah): no grey hover or pressed look. -->
+        <Style Selector="Button#CatchButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+            <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+        </Style>
+        <Style Selector="Button#CatchButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
+            <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
+        </Style>
     </UserControl.Styles>
 
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Grid Margin="20,12,20,20" MinWidth="980" ColumnDefinitions="340,*,260" ColumnSpacing="16">
 
-            <!-- ───────── LEFT: art, Catch Bee, tool line, Hive ───────── -->
+            <!-- ───────── LEFT: art, Catch Bee, Hive, Smoker ───────── -->
             <StackPanel Grid.Column="0" Spacing="12">
                 <!-- Pixel-art slot (170x102 shown at 2x). Art arrives later; until then a quiet placeholder. -->
                 <Border Classes="bk-card" Height="204" Padding="0" ClipToBounds="True">
@@ -76,19 +85,6 @@
                         </TextBlock.RenderTransform>
                     </TextBlock>
                 </Grid>
-                <TextBlock x:Name="ToolLineText" Classes="bk-muted" HorizontalAlignment="Center" />
-
-                <!-- THE SMOKER (once bought): clicks fill the calm meter; a puff calms the bees -->
-                <Border x:Name="SmokerCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="6">
-                        <TextBlock x:Name="SmokerTitleText" Classes="bk-title" />
-                        <TextBlock x:Name="SmokerStatusText" Classes="bk-muted" />
-                        <ProgressBar x:Name="CalmBar" Minimum="0" Maximum="1" Height="8" Foreground="#FFD300" Background="#33FFFFFF" />
-                        <Button x:Name="PuffButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center" Click="Puff_Click" />
-                    </StackPanel>
-                </Border>
-
                 <!-- THE HIVE (appears with the first bee) -->
                 <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="6">
@@ -115,6 +111,17 @@
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock x:Name="WaxRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" IsVisible="False" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
+                    </StackPanel>
+                </Border>
+
+                <!-- THE SMOKER (once bought): clicks fill the calm meter; a puff calms the bees -->
+                <Border x:Name="SmokerCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="6">
+                        <TextBlock x:Name="SmokerTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="SmokerStatusText" Classes="bk-muted" />
+                        <ProgressBar x:Name="CalmBar" Minimum="0" Maximum="1" Height="8" Foreground="#FFD300" Background="#33FFFFFF" />
+                        <Button x:Name="PuffButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" Click="Puff_Click" />
                     </StackPanel>
                 </Border>
             </StackPanel>
