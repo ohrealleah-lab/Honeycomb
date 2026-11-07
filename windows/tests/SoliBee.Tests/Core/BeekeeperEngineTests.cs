@@ -79,7 +79,7 @@ public class BeekeeperEngineTests
         var e = Make(state: new BeekeeperState { ToolLevel = 3, Bees = 1_000_000m });
         var result = e.Catch();
         Assert.False(result.Stung);
-        Assert.Equal(1_001_010m, e.State.Bees);   // 10 from the Vacuum + a 0.1% slice of the hive (stage 3)
+        Assert.Equal(1_000_110m, e.State.Bees);   // 10 from the Vacuum + the slice, capped at 10 × 10 (stage 5)
     }
 
     [Fact]

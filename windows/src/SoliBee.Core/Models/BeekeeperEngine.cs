@@ -64,15 +64,32 @@ public static class BeekeeperEvents
     public const string BeeBreadMade = "bee_bread_made";       // first time only
     public const string WoodenHive = "wooden_hive";
     public const string Crafted = "crafted";                   // a batch of more than one: Value = how many, Text = beeswax | repellent | bee_bread
+
+    // Stage 5
+    public const string QueenSettles = "queen_settles";
+    public const string PantryEmpty = "pantry_empty";          // live play only; away says WelcomeBackPantry
+    public const string QueenResumes = "queen_resumes";
+    public const string TradeAgreement = "trade_agreement";    // Text = bear name
+    public const string WelcomeBackQueen = "welcome_back_queen";   // Value = bees raised while away
+    public const string WelcomeBackBear = "welcome_back_bear";     // Value = Beebits from the agreement, Text = bear name
+    public const string WelcomeBackPantry = "welcome_back_pantry";
+
+    /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
+    public static bool IsWelcomeBack(string key) =>
+        key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry;
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
 
 public sealed record CatchResult(bool Stung, decimal BeesGained, IReadOnlyList<BeekeeperEvent> Events);
 
-public sealed record AdvanceResult(decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events);
+/// <summary><see cref="BeesRaised"/>: bees the queen raised; <see cref="AgreementBeebits"/>:
+/// whole Beebits the bear paid for honey that didn't fit.</summary>
+public sealed record AdvanceResult(decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
+    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m);
 
-public sealed record AwayResult(decimal CreditedSeconds, decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events);
+public sealed record AwayResult(decimal CreditedSeconds, decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
+    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m, bool PantryEmptied = false);
 
 /// <summary>Result of a sell, buy or build. <see cref="Done"/> is false when it was refused.</summary>
 public sealed record ActionResult(bool Done, decimal Amount, IReadOnlyList<BeekeeperEvent> Events)
@@ -138,9 +155,13 @@ public sealed class BeekeeperEngine
         : 1m;
 
     /// <summary>Everything one successful click catches: the tool's bees plus a slice of the
-    /// hive (0.1%, rounded down; Practice doesn't grow the slice). The one place this is worked
-    /// out, so the catch, the popup and the tool line agree.</summary>
-    public decimal BeesPerCatch => BeesPerClick + Math.Floor(State.Bees * Config.CatchSliceShare);
+    /// hive (0.1%, rounded down; Practice doesn't grow the slice), the slice capped at 10 × the
+    /// tool's bees (spec 013, FR-405). The one place this is worked out, so the catch, the popup
+    /// and the tool line agree.</summary>
+    public decimal BeesPerCatch => BeesPerClick + Math.Min(Math.Floor(State.Bees * Config.CatchSliceShare), SliceCap);
+
+    /// <summary>The most bees the slice can bring in on one click.</summary>
+    public decimal SliceCap => Math.Floor(BeesPerClick * Config.SliceCapMultiple);
 
     /// <summary>The colony's base rate. Raids and the like use this, never the calm boost.</summary>
     public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond * HiveMultiplier;
@@ -235,15 +256,17 @@ public sealed class BeekeeperEngine
     {
         var events = new List<BeekeeperEvent>();
         decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
-        var (stored, wax) = Produce(calm, events, Config.CalmHoneyMultiplier);
-        var (stored2, wax2) = Produce(seconds - calm, events);
+        // The calm part comes first; the hive goes on growing across both parts (FR-402).
+        var a = Produce(calm, events, Config.CalmHoneyMultiplier);
+        var b = Produce(seconds - calm, events);
         GrowGarden(seconds, events);
         if (calm > 0m)
         {
             State.CalmSecondsLeft -= calm;
             if (State.CalmSecondsLeft <= 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.CalmEnded));
         }
-        return new AdvanceResult(stored + stored2, wax + wax2, events);
+        return new AdvanceResult(a.Stored + b.Stored, a.Wax + b.Wax, events,
+            a.Raised + b.Raised, a.AgreementBeebits + b.AgreementBeebits);
     }
 
     // ------------------------------------------------------------------ the Smoker (stage 3)
@@ -275,24 +298,84 @@ public sealed class BeekeeperEngine
         if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
 
         decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
-        var (stored, wax) = Produce(credited * Config.OfflineRate, events);
+        var m = Produce(credited * Config.OfflineRate, events);
         GrowGarden(credited * Config.OfflineRate, events);
+
+        // An empty pantry while away is told in the welcome-back lines instead.
+        if (m.PantryEmptied) events.RemoveAll(e => e.Key == BeekeeperEvents.PantryEmpty);
 
         if (State.Bees > 0m)
         {
-            events.Add(stored > 0m
-                ? new BeekeeperEvent(BeekeeperEvents.WelcomeBack, stored)
+            // The log shows the newest line first, so these are added bottom line first:
+            // they then read "the bees made…", "the queen raised…", "the bear left…", "the pantry…".
+            if (m.PantryEmptied) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
+            if (m.AgreementBeebits > 0m)
+                events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
+            decimal raised = Math.Floor(m.Raised);
+            if (raised > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
+            // Honey that found a home: stored, or taken by the bear under the agreement.
+            decimal honey = m.Stored + m.Taken;
+            events.Add(honey > 0m
+                ? new BeekeeperEvent(BeekeeperEvents.WelcomeBack, honey)
                 : new BeekeeperEvent(BeekeeperEvents.WelcomeBackNothing));
         }
-        return new AwayResult(credited, stored, wax, events);
+        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.AgreementBeebits, m.PantryEmptied);
     }
 
-    private (decimal stored, decimal waxMade) Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
+    /// <summary>What one stretch made. <see cref="Taken"/> is the overflow honey the bear took.</summary>
+    private readonly record struct Made(decimal Stored, decimal Wax, decimal Raised, decimal Taken,
+                                        decimal AgreementBeebits, bool PantryEmptied);
+
+    /// <summary>
+    /// The hive works for <paramref name="seconds"/> in one exact step, so many short stretches
+    /// add up to one long one (FR-402, FR-403). While the queen lays, the bees grow in a straight
+    /// line, so the honey is the area under that line; the stretch is split where the pantry runs
+    /// out (growth before, flat after). Honey beyond the room left overflows: the bear buys it
+    /// under the trade agreement, otherwise it is lost. Wax follows all honey made.
+    /// </summary>
+    private Made Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
     {
         RefreshStorageFlag();
-        if (seconds <= 0m || State.Bees <= 0m) return (0m, 0m);
+        if (seconds <= 0m) return default;
 
-        decimal made = State.Bees * Config.HoneyPerBeePerSecond * seconds * boost * HiveMultiplier;
+        // The brood. Laying lasts until the pantry (bees it can still feed) runs out.
+        decimal perMinute = LayingBeesPerMinute;
+        decimal raised = 0m, layingSeconds = 0m;
+        bool emptied = false;
+        if (perMinute > 0m)
+        {
+            decimal canFeed = State.BeeBread * Config.BeesPerBeeBread;
+            decimal wouldRaise = perMinute * seconds / 60m;
+            if (wouldRaise >= canFeed)
+            {
+                raised = canFeed;
+                layingSeconds = Math.Min(seconds, canFeed * 60m / perMinute);
+                emptied = true;
+            }
+            else
+            {
+                raised = wouldRaise;
+                layingSeconds = seconds;
+            }
+        }
+
+        // Bee-seconds: the flat hive, plus the growing triangle, plus the new bees after laying stops.
+        decimal beeSeconds = State.Bees * seconds
+                             + perMinute * layingSeconds * layingSeconds / 120m
+                             + raised * (seconds - layingSeconds);
+
+        State.Bees += raised;
+        if (perMinute > 0m)
+            State.BeeBread = emptied ? 0m : Math.Max(0m, State.BeeBread - raised / Config.BeesPerBeeBread);
+        if (emptied && !State.PantryEmptyAnnounced)
+        {
+            State.PantryEmptyAnnounced = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.PantryEmpty));
+        }
+
+        if (beeSeconds <= 0m) return new Made(0m, 0m, raised, 0m, 0m, emptied);
+
+        decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * HiveMultiplier;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
         State.Honey += stored;
@@ -301,6 +384,21 @@ public sealed class BeekeeperEngine
         {
             State.StorageFullAnnounced = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.StorageFull));
+        }
+
+        // The trade agreement: the bear takes the overflow at half price, fractions kept (FR-404).
+        decimal taken = 0m, agreementBeebits = 0m;
+        if (State.HasTradeAgreement && made > stored)
+        {
+            taken = made - stored;
+            State.AgreementHoneyProgress += taken;
+            agreementBeebits = Math.Floor(State.AgreementHoneyProgress / Config.AgreementHoneyPerBeebit);
+            if (agreementBeebits > 0m)
+            {
+                State.AgreementHoneyProgress -= agreementBeebits * Config.AgreementHoneyPerBeebit;
+                State.Beebits += agreementBeebits;
+                State.BeebitsRevealed = true;
+            }
         }
 
         // Wax follows all the honey the bees make, so it keeps coming when the combs are
@@ -321,7 +419,67 @@ public sealed class BeekeeperEngine
         }
 
         CheckReveals(events);
-        return (stored, waxMade);
+        return new Made(stored, waxMade, raised, taken, agreementBeebits, emptied);
+    }
+
+    // ------------------------------------------------------------------ the queen (stage 5)
+
+    /// <summary>0 = the skep, 1 = the wooden hive; later hives add steps.</summary>
+    public int HiveStep => State.HasWoodenHive ? 1 : 0;
+
+    /// <summary>Bees a minute the queen raises in this hive when fed.</summary>
+    public decimal QueenRatePerMinute
+    {
+        get
+        {
+            var rates = Config.QueenBeesPerMinute;
+            return rates.Count == 0 ? 0m : rates[Math.Min(HiveStep, rates.Count - 1)];
+        }
+    }
+
+    public bool HasQueen => State.QueenSettled;
+
+    /// <summary>The queen lays while there is bee bread; otherwise she rests.</summary>
+    public bool IsQueenLaying => State.QueenSettled && State.BeeBread > 0m && QueenRatePerMinute > 0m;
+
+    private decimal LayingBeesPerMinute => IsQueenLaying ? QueenRatePerMinute : 0m;
+
+    public decimal QueenBeesPerSecondNow => LayingBeesPerMinute / 60m;
+
+    public decimal BeeBreadPerSecondNow => QueenBeesPerSecondNow / Config.BeesPerBeeBread;
+
+    /// <summary>How long the pantry lasts at this rate, or 0 when the queen is resting.</summary>
+    public decimal PantrySecondsLeft =>
+        IsQueenLaying ? State.BeeBread * Config.BeesPerBeeBread * 60m / QueenRatePerMinute : 0m;
+
+    private void SettleQueenIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.QueenSettled || !State.HasWoodenHive) return;
+        State.QueenSettled = true;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.QueenSettles));
+        // Moving in with an empty pantry: no "pantry is empty" line, but fresh bee bread says so.
+        if (State.BeeBread <= 0m) State.PantryEmptyAnnounced = true;
+    }
+
+    /// <summary>Bee bread came in: a resting queen gets back to work, and says so once.</summary>
+    private void NoteBeeBreadAdded(List<BeekeeperEvent> events)
+    {
+        if (!State.PantryEmptyAnnounced || State.BeeBread <= 0m) return;
+        State.PantryEmptyAnnounced = false;
+        if (State.QueenSettled) events.Add(new BeekeeperEvent(BeekeeperEvents.QueenResumes));
+    }
+
+    // ------------------------------------------------------------------ the trade agreement (stage 5)
+
+    /// <summary>Beebits a second the agreement brings while the combs are full.</summary>
+    public decimal AgreementBeebitsPerSecondNow =>
+        State.HasTradeAgreement && State.Honey >= HoneyStorage ? HoneyPerSecondNow / Config.AgreementHoneyPerBeebit : 0m;
+
+    private void OfferAgreementIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.HasTradeAgreement || State.Trades < Config.AgreementTrades) return;
+        State.HasTradeAgreement = true;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.TradeAgreement, 0m, State.BearName));
     }
 
     // ------------------------------------------------------------------ the bear
@@ -344,6 +502,7 @@ public sealed class BeekeeperEngine
         RefreshStorageFlag();
 
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * Config.HoneyPerBeebit) };
+        OfferAgreementIfDue(events);
         CheckReveals(events);
         return new ActionResult(true, bundles, events);
     }
@@ -391,11 +550,15 @@ public sealed class BeekeeperEngine
     // ------------------------------------------------------------------ The Workbench (stage 2)
 
     /// <summary>For a game just loaded: opens The Workbench for an old save that already
-    /// has enough combs. Returns what to tell the player (nothing if already open).</summary>
+    /// has enough combs, settles the queen into an older save's wooden hive and starts the
+    /// trade agreement for a save already past 100 bear trades. Returns what to tell the
+    /// player (nothing if all of that already happened).</summary>
     public IReadOnlyList<BeekeeperEvent> RevealOnLoad()
     {
         var events = new List<BeekeeperEvent>();
         OpenWorkbenchIfDue(events);
+        SettleQueenIfDue(events);
+        OfferAgreementIfDue(events);
         return events;
     }
 
@@ -753,6 +916,7 @@ public sealed class BeekeeperEngine
             State.BeeBreadRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
+        NoteBeeBreadAdded(events);
         return new ActionResult(true, count, events);
     }
 
@@ -768,7 +932,9 @@ public sealed class BeekeeperEngine
         State.Wax -= Config.WoodenHiveWax;
         State.BeeBread -= Config.WoodenHiveBeeBread;
         State.HasWoodenHive = true;
-        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.WoodenHive) });
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WoodenHive) };
+        SettleQueenIfDue(events);
+        return new ActionResult(true, 1m, events);
     }
 
     // ------------------------------------------------------------------ debug
@@ -805,6 +971,31 @@ public sealed class BeekeeperEngine
             State.PollenRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPollen));
         }
+        return events;
+    }
+
+    /// <summary>Debug builds only: hands out bee bread (a resting queen starts again).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveBeeBread(decimal beeBread)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (beeBread <= 0m) return events;
+        State.BeeBread += beeBread;
+        State.BeeBreadRevealed = true;
+        NoteBeeBreadAdded(events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: the bear count goes up to one short of the trade agreement,
+    /// so the next sale brings it. Brings the bear if he hasn't come yet.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugBearTradesToAlmostAgreement()
+    {
+        var events = new List<BeekeeperEvent>();
+        if (!State.BearRevealed)
+        {
+            State.BearRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.BearArrives, 0m, State.BearName));
+        }
+        State.Trades = Math.Max(State.Trades, Config.AgreementTrades - 1);
         return events;
     }
 

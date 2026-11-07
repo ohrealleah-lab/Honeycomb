@@ -199,5 +199,20 @@ public sealed class BeekeeperConfig
     /// <summary>Honey from every honeybee in a wooden hive (+25%).</summary>
     public decimal WoodenHiveHoneyMultiplier { get; init; } = 1.25m;
 
+    // ===== Stage 5 (spec 013): the queen, the brood and the trade agreement. All placeholders.
+
+    /// <summary>Bees the queen raises a minute, per hive step: index 0 is the skep (no room
+    /// for brood), 1 the wooden hive. Later hives (the meadow apiary) add entries here.</summary>
+    public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 0m, 20m };
+    /// <summary>Bees raised for every 1 bee bread the brood eats.</summary>
+    public decimal BeesPerBeeBread { get; init; } = 100m;
+    /// <summary>The slice of the hive a click brings in is never more than this many times
+    /// the bees the tool catches (after Practice).</summary>
+    public decimal SliceCapMultiple { get; init; } = 10m;
+    /// <summary>The bear offers the trade agreement on this trade (Sell All counts as one).</summary>
+    public long AgreementTrades { get; init; } = 100;
+    /// <summary>Honey that doesn't fit, per Beebit, under the agreement (Leah: half price).</summary>
+    public decimal AgreementHoneyPerBeebit { get; init; } = 20m;
+
     public static BeekeeperConfig Default { get; } = new();
 }

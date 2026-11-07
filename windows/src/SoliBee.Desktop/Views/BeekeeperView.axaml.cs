@@ -208,11 +208,32 @@ public partial class BeekeeperView : UserControl
         SetRateTip(BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2)), HiveHoneyLabel, HiveHoneyValue);
         SetRateTip(BeekeeperText.WaxPerSecond(N(vm.WaxPerSecond, 2)), HiveWaxLabel, HiveWaxValue);
 
+        // The queen: her row, and the brood's rates on the Honeybees and Bee bread rows.
+        HiveQueenLabel.Text = BeekeeperText.HiveQueen;
+        HiveQueenValue.Text = BeekeeperText.QueenStatus(vm.IsQueenLaying);
+        HiveQueenLabel.IsVisible = HiveQueenValue.IsVisible = vm.HasQueen;
+        if (vm.HasQueen)
+        {
+            SetRateTip(BeekeeperText.BeesPerSecond(N(vm.QueenBeesPerSecond, 2)), HiveBeesLabel, HiveBeesValue);
+            string breadTip = BeekeeperText.BeeBreadPerSecond(N(vm.BeeBreadPerSecond, 4));
+            if (vm.IsQueenLaying) breadTip += "\n" + BeekeeperText.PantryLasts(vm.PantrySecondsLeft);
+            SetRateTip(breadTip, HiveBeeBreadLabel, HiveBeeBreadValue);
+        }
+        else
+        {
+            SetRateTip(null, HiveBeesLabel, HiveBeesValue, HiveBeeBreadLabel, HiveBeeBreadValue);
+        }
+
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;
         TradeCard.IsVisible = offers.Count > 0;
         TradeTitleText.Text = BeekeeperText.TradingTitle;
         UpdateTrades(offers, lang);
+        if (_agreementText != null)
+        {
+            _agreementText.IsVisible = vm.HasTradeAgreement;
+            SetRateTip(BeekeeperText.BeebitsPerSecond(N(vm.AgreementBeebitsPerSecond, 2)), _agreementText);
+        }
 
         // Shop (also opens with The Workbench, so its upgrades are never out of sight)
         ShopCard.IsVisible = vm.ShopRevealed || vm.WorkbenchRevealed;
@@ -318,7 +339,7 @@ public partial class BeekeeperView : UserControl
         }
     }
 
-    private static void SetRateTip(string text, params Control[] targets)
+    private static void SetRateTip(string? text, params Control[] targets)
     {
         foreach (var t in targets) ToolTip.SetTip(t, text);
     }
@@ -396,6 +417,7 @@ public partial class BeekeeperView : UserControl
     // never swapped under the mouse; names and enabled states are refreshed every tick.
     private string _tradeSignature = "";
     private readonly Dictionary<string, (TextBlock Name, Button One, Button All)> _tradeRows = new();
+    private TextBlock? _agreementText;
 
     private void UpdateTrades(IReadOnlyList<BeekeeperTradeOffer> offers, AppLanguage lang)
     {
@@ -404,6 +426,7 @@ public partial class BeekeeperView : UserControl
         {
             _tradeSignature = sig;
             _tradeRows.Clear();
+            _agreementText = null;
             TradeRows.Children.Clear();
             foreach (var offer in offers)
             {
@@ -421,6 +444,12 @@ public partial class BeekeeperView : UserControl
                 row.Children.Add(name);
                 row.Children.Add(buttons);
                 row.Children.Add(new TextBlock { Text = BeekeeperText.TradeRate(o.Id), Classes = { "bk-muted" } });
+                if (o.Id == "bear")
+                {
+                    // The bear's trade agreement (100 trades): shown once offered, rate on hover.
+                    _agreementText = new TextBlock { Text = BeekeeperText.AgreementLine, Classes = { "bk-muted" }, IsVisible = false };
+                    row.Children.Add(_agreementText);
+                }
                 TradeRows.Children.Add(row);
                 _tradeRows[o.Id] = (name, one, all);
             }

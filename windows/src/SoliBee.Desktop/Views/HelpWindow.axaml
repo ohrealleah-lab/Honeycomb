@@ -342,6 +342,10 @@
                             <TextBlock x:Name="BeekeeperGardenHeading" Classes="help-heading"/>
                             <TextBlock x:Name="BeekeeperGardenBody" Classes="help-body" TextWrapping="Wrap"/>
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="BeekeeperQueenHeading" Classes="help-heading"/>
+                            <TextBlock x:Name="BeekeeperQueenBody" Classes="help-body" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

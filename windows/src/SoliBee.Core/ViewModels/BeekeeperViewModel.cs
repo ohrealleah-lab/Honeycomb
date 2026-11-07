@@ -201,6 +201,20 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanMakeBeeBread => Engine.CanMakeBeeBread;
     public bool CanMoveToWoodenHive => Engine.CanMoveToWoodenHive;
 
+    // Stage 5: the queen and the trade agreement
+    /// <summary>The Queen row shows once she has settled into the wooden hive.</summary>
+    public bool HasQueen => Engine.HasQueen;
+    public bool IsQueenLaying => Engine.IsQueenLaying;
+    /// <summary>Bees a second the queen raises right now (0 while she rests).</summary>
+    public decimal QueenBeesPerSecond => Engine.QueenBeesPerSecondNow;
+    /// <summary>Bee bread a second the brood eats right now (0 while she rests).</summary>
+    public decimal BeeBreadPerSecond => Engine.BeeBreadPerSecondNow;
+    /// <summary>How long the pantry lasts at this rate (0 while she rests).</summary>
+    public decimal PantrySecondsLeft => Engine.PantrySecondsLeft;
+    public bool HasTradeAgreement => State.HasTradeAgreement;
+    /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
+    public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
+
     /// <summary>Story log, newest first.</summary>
     public IReadOnlyList<BeekeeperLogEntry> Log => State.Log;
 
@@ -307,6 +321,40 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    /// <summary>Debug builds only: hands out bee bread.</summary>
+    public void DebugGiveBeeBread(decimal beeBread)
+    {
+        LogEvents(Engine.DebugGiveBeeBread(beeBread));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: one more sale to the bear brings the trade agreement.</summary>
+    public void DebugBearTradesToAlmostAgreement()
+    {
+        LogEvents(Engine.DebugBearTradesToAlmostAgreement());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: the hive has ten times the bees (or 10 if it has none).</summary>
+    public void DebugMultiplyBees()
+    {
+        decimal extra = State.Bees > 0m ? State.Bees * 9m : 10m;
+        LogEvents(Engine.DebugGrant(extra, 0m, 0m));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: credits time away as if the app had been closed, welcome-back lines included.</summary>
+    public void DebugSpendAway(decimal seconds)
+    {
+        LogEvents(Engine.AdvanceAway(seconds).Events);
+        _lastTickUtc = _clock();
+        SaveNow();
+        Refresh();
+    }
+
     /// <summary>Debug builds only: fills the Smoker's calm meter.</summary>
     public void DebugFillCalmMeter()
     {
@@ -389,9 +437,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         if (away)
         {
             // The app was open the whole time, so the honey is credited quietly: only
-            // reopening the app says "While you were away" (Leah, 2026-11-07).
-            LogEvents(Engine.AdvanceAway(gap).Events.Where(e =>
-                e.Key is not (BeekeeperEvents.WelcomeBack or BeekeeperEvents.WelcomeBackNothing)));
+            // reopening the app says "While you were away" (Leah, 2026-11-07). An empty pantry
+            // is still said, the live way.
+            LogEvents(Engine.AdvanceAway(gap).Events
+                .Select(e => e.Key == BeekeeperEvents.WelcomeBackPantry ? new BeekeeperEvent(BeekeeperEvents.PantryEmpty) : e)
+                .Where(e => !BeekeeperEvents.IsWelcomeBack(e.Key)));
         }
         else
         {

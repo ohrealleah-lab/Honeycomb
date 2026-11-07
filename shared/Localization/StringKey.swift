@@ -1824,4 +1824,40 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogCraftedBeeBreadFmt = "beekeeper_log_crafted_bee_bread_fmt"
     /// Workbench button: craft a batch; %@ = how many
     case beekeeperMakeTimesFmt = "beekeeper_make_times_fmt"
+    /// Hive card row label (stage 5)
+    case beekeeperHiveQueen = "beekeeper_hive_queen"
+    /// Hive card, Queen row value
+    case beekeeperQueenLaying = "beekeeper_queen_laying"
+    /// Hive card, Queen row value when out of bee bread
+    case beekeeperQueenResting = "beekeeper_queen_resting"
+    /// Hover on Honeybees; %@ = bees the queen raises per second
+    case beekeeperBeesPerSecFmt = "beekeeper_bees_per_sec_fmt"
+    /// Hover on Bee bread; %@ = bee bread eaten per second
+    case beekeeperBeeBreadPerSecFmt = "beekeeper_bee_bread_per_sec_fmt"
+    /// Hover on Bee bread, second line; %@ = hours
+    case beekeeperPantryHoursFmt = "beekeeper_pantry_hours_fmt"
+    /// Hover on Bee bread, second line; %@ = minutes
+    case beekeeperPantryMinutesFmt = "beekeeper_pantry_minutes_fmt"
+    /// Trading card, small line under the bear
+    case beekeeperAgreementLine = "beekeeper_agreement_line"
+    /// Hover on the trade agreement line; %@ = Beebits per second
+    case beekeeperBeebitsPerSecFmt = "beekeeper_beebits_per_sec_fmt"
+    /// Story log
+    case beekeeperLogQueenSettles = "beekeeper_log_queen_settles"
+    /// Story log
+    case beekeeperLogPantryEmpty = "beekeeper_log_pantry_empty"
+    /// Story log
+    case beekeeperLogQueenResumes = "beekeeper_log_queen_resumes"
+    /// Story log; %@ = bear name
+    case beekeeperLogTradeAgreementFmt = "beekeeper_log_trade_agreement_fmt"
+    /// Story log on reopening the app; %@ = bees raised
+    case beekeeperLogWelcomeBackQueenFmt = "beekeeper_log_welcome_back_queen_fmt"
+    /// Story log on reopening the app; %@ = bear name, then Beebits
+    case beekeeperLogWelcomeBackBearFmt = "beekeeper_log_welcome_back_bear_fmt"
+    /// Story log on reopening the app
+    case beekeeperLogWelcomeBackPantry = "beekeeper_log_welcome_back_pantry"
+    /// RuleSection title, Beekeeper
+    case helpBeekeeperQueenTitle = "help_beekeeper_queen_title"
+    /// The Queen & the Trade Agreement RuleSection body
+    case helpBeekeeperQueen = "help_beekeeper_queen"
 }

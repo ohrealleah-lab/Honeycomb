@@ -19,8 +19,9 @@ public sealed class BeekeeperLogEntry
 public sealed class BeekeeperState
 {
     /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps); 3 = stage 3
-    /// (more tools, the Smoker); 4 = stage 4 (the Garden, pollen, the wooden hive). Older files load as they are: anything newer starts at zero.</summary>
-    public int Version { get; set; } = 4;
+    /// (more tools, the Smoker); 4 = stage 4 (the Garden, pollen, the wooden hive); 5 = stage 5 (the
+    /// queen, the trade agreement). Older files load as they are: anything newer starts at zero.</summary>
+    public int Version { get; set; } = 5;
 
     // Resources
     public decimal Bees { get; set; }
@@ -95,6 +96,16 @@ public sealed class BeekeeperState
     public bool GardenRevealed { get; set; }
     public bool PollenRevealed { get; set; }
     public bool BeeBreadRevealed { get; set; }
+
+    // ----- Stage 5: the queen and the trade agreement (version 5)
+    /// <summary>True once the queen has settled into the wooden hive (announced once). She lays
+    /// whenever this is true and there is bee bread.</summary>
+    public bool QueenSettled { get; set; }
+    /// <summary>True once "the pantry is empty" has been said; cleared when bee bread comes back.</summary>
+    public bool PantryEmptyAnnounced { get; set; }
+    public bool HasTradeAgreement { get; set; }
+    /// <summary>Overflow honey the bear has taken towards the next Beebit (0 up to AgreementHoneyPerBeebit).</summary>
+    public decimal AgreementHoneyProgress { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

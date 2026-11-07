@@ -175,6 +175,24 @@ internal static class BeekeeperText
     public static string BeeBread => T(StringKey.BeekeeperBeeBread);
     public static string BeeBreadBlurb => T(StringKey.BeekeeperBeeBreadBlurb);
 
+    // ---- stage 5: the queen, the pantry, the trade agreement
+    public static string HiveQueen => T(StringKey.BeekeeperHiveQueen);
+    public static string QueenStatus(bool laying) =>
+        T(laying ? StringKey.BeekeeperQueenLaying : StringKey.BeekeeperQueenResting);
+    public static string BeesPerSecond(string n) => Fill(T(StringKey.BeekeeperBeesPerSecFmt), n);
+    public static string BeeBreadPerSecond(string n) => Fill(T(StringKey.BeekeeperBeeBreadPerSecFmt), n);
+    public static string AgreementLine => T(StringKey.BeekeeperAgreementLine);
+    public static string BeebitsPerSecond(string n) => Fill(T(StringKey.BeekeeperBeebitsPerSecFmt), n);
+
+    /// <summary>"The pantry lasts about 8 hours." Minutes under an hour and a half, hours after.</summary>
+    public static string PantryLasts(decimal seconds)
+    {
+        decimal minutes = System.Math.Ceiling(seconds / 60m);
+        if (minutes < 90m)
+            return Fill(T(StringKey.BeekeeperPantryMinutesFmt), NumberFormatter.Format(System.Math.Max(1m, minutes), Lang));
+        return Fill(T(StringKey.BeekeeperPantryHoursFmt), NumberFormatter.Format(System.Math.Round(minutes / 60m), Lang));
+    }
+
     public static string PlantName(string id) => id switch
     {
         BeekeeperPlants.Wildflowers => T(StringKey.BeekeeperPlantWildflowers),
@@ -270,6 +288,13 @@ internal static class BeekeeperText
             BeekeeperEvents.FirstPollen => L(StringKey.BeekeeperLogFirstPollen),
             BeekeeperEvents.BeeBreadMade => L(StringKey.BeekeeperLogBeeBread),
             BeekeeperEvents.WoodenHive => L(StringKey.BeekeeperLogWoodenHive),
+            BeekeeperEvents.QueenSettles => L(StringKey.BeekeeperLogQueenSettles),
+            BeekeeperEvents.PantryEmpty => L(StringKey.BeekeeperLogPantryEmpty),
+            BeekeeperEvents.QueenResumes => L(StringKey.BeekeeperLogQueenResumes),
+            BeekeeperEvents.TradeAgreement => Fill(L(StringKey.BeekeeperLogTradeAgreementFmt), e.Text ?? ""),
+            BeekeeperEvents.WelcomeBackQueen => Fill(L(StringKey.BeekeeperLogWelcomeBackQueenFmt), N(e.Value)),
+            BeekeeperEvents.WelcomeBackBear => Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
+            BeekeeperEvents.WelcomeBackPantry => L(StringKey.BeekeeperLogWelcomeBackPantry),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),

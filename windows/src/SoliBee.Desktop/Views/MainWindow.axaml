@@ -100,6 +100,10 @@
                                         <MenuItem Header="Give a seed" Click="DebugBeekeeper_Click" Tag="Seed" />
                                         <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />
                                         <MenuItem Header="+10 pollen" Click="DebugBeekeeper_Click" Tag="Pollen" />
+                                        <MenuItem Header="+10 bee bread" Click="DebugBeekeeper_Click" Tag="BeeBread" />
+                                        <MenuItem Header="Bear trades to 99" Click="DebugBeekeeper_Click" Tag="Trades" />
+                                        <MenuItem Header="Spend 8 hours away" Click="DebugBeekeeper_Click" Tag="Away" />
+                                        <MenuItem Header="Bees ×10" Click="DebugBeekeeper_Click" Tag="BeesX10" />
                                     </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">
