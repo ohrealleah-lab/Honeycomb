@@ -124,15 +124,11 @@
 
             <!-- ───────── CENTRE: Bear, Shop, Combs ───────── -->
             <StackPanel Grid.Column="1" Spacing="12">
-                <Border x:Name="BearCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="BearTitleText" Classes="bk-title" />
-                        <TextBlock x:Name="BearNameText" FontFamily="Georgia" FontSize="22" Foreground="White" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="SellTenButton" Classes="bk-button" Click="SellTen_Click" />
-                            <Button x:Name="SellAllButton" Classes="bk-button" Click="SellAll_Click" />
-                        </StackPanel>
-                        <TextBlock x:Name="SellHintText" Classes="bk-muted" />
+                <!-- TRADING: every buyer (the Bear, the Hippies, later others) as one row each -->
+                <Border x:Name="TradeCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="TradeTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="TradeRows" Spacing="14" />
                     </StackPanel>
                 </Border>
 
@@ -176,18 +172,6 @@
                                         HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                             </StackPanel>
                         </Grid>
-                    </StackPanel>
-                </Border>
-
-                <!-- THE HIPPIES (after 5 candles): beeswax candles for sage -->
-                <Border x:Name="HippiesCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="HippiesTitleText" Classes="bk-title" />
-                        <StackPanel Orientation="Horizontal" Spacing="8">
-                            <Button x:Name="TradeTenButton" Classes="bk-button" Click="TradeTen_Click" />
-                            <Button x:Name="TradeAllButton" Classes="bk-button" Click="TradeAll_Click" />
-                        </StackPanel>
-                        <TextBlock x:Name="HippiesRateText" Classes="bk-muted" />
                     </StackPanel>
                 </Border>
             </StackPanel>

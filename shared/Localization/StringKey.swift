@@ -1511,18 +1511,12 @@ public enum StringKey: String, CaseIterable {
     /// Card title (all caps)
     case beekeeperHiveTitle = "beekeeper_hive_title"
     /// Card title (all caps)
-    case beekeeperBearTitle = "beekeeper_bear_title"
-    /// Card title (all caps)
     case beekeeperShopTitle = "beekeeper_shop_title"
     /// Story log card title (all caps)
     case beekeeperLogTitle = "beekeeper_log_title"
-    /// Bear button
-    case beekeeperSellTen = "beekeeper_sell_ten"
-    /// Bear button
-    case beekeeperSellAll = "beekeeper_sell_all"
     /// Under the bear's buttons
     case beekeeperSellHint = "beekeeper_sell_hint"
-    /// %@ = bear's name, %@ = number of trades
+    /// Trading card, each buyer's line; %@ = buyer's name, %@ = number of trades
     case beekeeperBearTradesFmt = "beekeeper_bear_trades_fmt"
     /// Shop item already bought (shown after a tick mark)
     case beekeeperOwned = "beekeeper_owned"
@@ -1642,8 +1636,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperCostWaxFmt = "beekeeper_cost_wax_fmt"
     /// Price part; %@ = amount
     case beekeeperCostSageFmt = "beekeeper_cost_sage_fmt"
-    /// Card title (all caps)
-    case beekeeperHippiesTitle = "beekeeper_hippies_title"
     /// Under the Hippies' buttons
     case beekeeperHippiesRate = "beekeeper_hippies_rate"
     /// Hippies button
@@ -1764,4 +1756,8 @@ public enum StringKey: String, CaseIterable {
     case beekeeperComb = "beekeeper_comb"
     /// Workbench button: build a comb
     case beekeeperBuild = "beekeeper_build"
+    /// Trading card title (all caps)
+    case beekeeperTradingTitle = "beekeeper_trading_title"
+    /// Trading card: the Hippies as a buyer
+    case beekeeperHippiesName = "beekeeper_hippies_name"
 }

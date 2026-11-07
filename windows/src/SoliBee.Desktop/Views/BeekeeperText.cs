@@ -41,11 +41,8 @@ internal static class BeekeeperText
     public static string Comb => T(StringKey.BeekeeperComb);
     public static string Build => T(StringKey.BeekeeperBuild);
     public static string HiveBeebits => T(StringKey.BeekeeperHiveBeebits);
-    public static string BearTitle => T(StringKey.BeekeeperBearTitle);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
     public static string LogTitle => T(StringKey.BeekeeperLogTitle);
-    public static string SellTen => T(StringKey.BeekeeperSellTen);
-    public static string SellAll => T(StringKey.BeekeeperSellAll);
     public static string Owned => T(StringKey.BeekeeperOwned);
     public static string StartOver => T(StringKey.BeekeeperStartOverTitle);
     public static string StartOverBody => T(StringKey.BeekeeperStartOverBody);
@@ -85,9 +82,6 @@ internal static class BeekeeperText
     public static string HoneyPerSecond(string n) => Fill(T(StringKey.BeekeeperHoneyPerSecFmt), n);
     public static string NextWax(string progress, string needed) => Fill(T(StringKey.BeekeeperNextWaxFmt), progress, needed);
     public static string CombsFull => T(StringKey.BeekeeperCombsFull);
-    public static string BearLine(string name, long trades) =>
-        trades == 0 ? name : Fill(T(StringKey.BeekeeperBearTradesFmt), name, NumberFormatter.Format(trades, Lang));
-    public static string SellTenHint => T(StringKey.BeekeeperSellHint);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
     public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
     public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
@@ -105,10 +99,29 @@ internal static class BeekeeperText
     public static string Make => T(StringKey.BeekeeperMake);
     public static string Light => T(StringKey.BeekeeperLight);
 
-    public static string HippiesTitle => T(StringKey.BeekeeperHippiesTitle);
-    public static string HippiesRate => T(StringKey.BeekeeperHippiesRate);
+    // ---- Trading: one shared card for every buyer (Leah)
+    public static string TradingTitle => T(StringKey.BeekeeperTradingTitle);
     public static string TradeTen => T(StringKey.BeekeeperTradeTen);
     public static string TradeAll => T(StringKey.BeekeeperTradeAll);
+
+    /// <summary>"Bruno · Trades: 3", "The Hippies · Trades: 1": who, and how often you've traded.</summary>
+    public static string TraderLine(string id, string? name, long trades)
+    {
+        string who = id switch
+        {
+            "hippies" => T(StringKey.BeekeeperHippiesName),
+            _ => name ?? id,
+        };
+        return trades == 0 ? who : Fill(T(StringKey.BeekeeperBearTradesFmt), who, NumberFormatter.Format(trades, Lang));
+    }
+
+    /// <summary>What a buyer gives for what: "10 honey = 1 Beebit".</summary>
+    public static string TradeRate(string id) => id switch
+    {
+        "bear" => T(StringKey.BeekeeperSellHint),
+        "hippies" => T(StringKey.BeekeeperHippiesRate),
+        _ => "",
+    };
 
     public static string WaspsTitle => T(StringKey.BeekeeperWaspsTitle);
     public static string WaspHere => T(StringKey.BeekeeperWaspHere);

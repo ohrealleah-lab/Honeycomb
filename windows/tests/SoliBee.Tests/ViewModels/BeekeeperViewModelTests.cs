@@ -309,4 +309,30 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.Equal(0m, vm.Bees);
         Assert.Equal(BeekeeperEvents.NewGame, vm.Log[0].Key);
     }
+
+    // ============================================================ trading (one shared card)
+
+    [Fact]
+    public void TradeOffers_ListEveryBuyerMet_InOrder_AndTrade()
+    {
+        var vm = Make(new Clock(), new BeekeeperState { BearName = "Bruno" });
+        Assert.Empty(vm.TradeOffers);
+
+        vm.State.BearRevealed = true;
+        vm.State.Honey = 25m;
+        vm.State.HippiesRevealed = true;
+        vm.State.BeeswaxCandles = 10m;
+        var offers = vm.TradeOffers;
+        Assert.Equal(new[] { "bear", "hippies" }, offers.Select(o => o.Id));
+        Assert.Equal("Bruno", offers[0].Name);
+        Assert.True(offers.All(o => o.CanTrade));
+
+        offers[0].TradeAll();               // 25 honey -> 2 Beebits, 5 kept
+        Assert.Equal(2m, vm.Beebits);
+        Assert.Equal(5m, vm.Honey);
+        offers[1].TradeOne();               // 10 candles -> 1 sage
+        Assert.Equal(1m, vm.Sage);
+        Assert.False(vm.TradeOffers[1].CanTrade);
+        Assert.Equal(1, vm.TradeOffers[0].Trades);
+    }
 }

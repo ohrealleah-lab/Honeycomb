@@ -186,15 +186,11 @@ public partial class BeekeeperView : UserControl
         NextWaxText.Text = BeekeeperText.NextWax(N(vm.WaxProgress), N(vm.HoneyPerWax));
         WaxBar.Value = vm.HoneyPerWax > 0 ? (double)Math.Min(1m, vm.WaxProgress / vm.HoneyPerWax) : 0;
 
-        // Bear
-        BearCard.IsVisible = vm.BearRevealed;
-        BearTitleText.Text = BeekeeperText.BearTitle;
-        BearNameText.Text = BeekeeperText.BearLine(vm.BearName, vm.Trades);
-        SellTenButton.Content = BeekeeperText.SellTen;
-        SellAllButton.Content = BeekeeperText.SellAll;
-        SellTenButton.IsEnabled = vm.SellTenCommand.CanExecute(null);
-        SellAllButton.IsEnabled = vm.SellAllCommand.CanExecute(null);
-        SellHintText.Text = BeekeeperText.SellTenHint;
+        // Trading: one shared card, a row per buyer
+        var offers = vm.TradeOffers;
+        TradeCard.IsVisible = offers.Count > 0;
+        TradeTitleText.Text = BeekeeperText.TradingTitle;
+        UpdateTrades(offers, lang);
 
         // Shop (also opens with The Workbench, so its upgrades are never out of sight)
         ShopCard.IsVisible = vm.ShopRevealed || vm.WorkbenchRevealed;
@@ -227,13 +223,6 @@ public partial class BeekeeperView : UserControl
         LightRepellentButton.Content = BeekeeperText.Light;
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
-        // The Hippies
-        HippiesCard.IsVisible = vm.HippiesRevealed;
-        HippiesTitleText.Text = BeekeeperText.HippiesTitle;
-        TradeTenButton.Content = BeekeeperText.TradeTen;
-        TradeAllButton.Content = BeekeeperText.TradeAll;
-        TradeTenButton.IsEnabled = TradeAllButton.IsEnabled = vm.CanTradeCandles;
-        HippiesRateText.Text = BeekeeperText.HippiesRate;
 
         // Wasps
         bool burning = vm.RepellentSecondsLeft > 0m;
@@ -314,6 +303,48 @@ public partial class BeekeeperView : UserControl
             if (_shopButtons.TryGetValue("upgrade:" + u.Id, out var ub)) ub.IsEnabled = vm.CanBuyUpgrade(u.Id);
     }
 
+    // Trade rows are rebuilt only when a buyer arrives or the language changes, so a button is
+    // never swapped under the mouse; names and enabled states are refreshed every tick.
+    private string _tradeSignature = "";
+    private readonly Dictionary<string, (TextBlock Name, Button One, Button All)> _tradeRows = new();
+
+    private void UpdateTrades(IReadOnlyList<BeekeeperTradeOffer> offers, AppLanguage lang)
+    {
+        string sig = lang + "|" + string.Join(",", offers.Select(o => o.Id));
+        if (sig != _tradeSignature)
+        {
+            _tradeSignature = sig;
+            _tradeRows.Clear();
+            TradeRows.Children.Clear();
+            foreach (var offer in offers)
+            {
+                var o = offer;   // the row's buttons call the offer of the moment, looked up by id
+                var name = new TextBlock { FontFamily = new FontFamily("Georgia"), FontSize = 20, Foreground = WhiteBrush };
+                var one = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeTen };
+                var all = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeAll };
+                one.Click += (_, _) => _vm?.TradeOffers.FirstOrDefault(x => x.Id == o.Id)?.TradeOne();
+                all.Click += (_, _) => _vm?.TradeOffers.FirstOrDefault(x => x.Id == o.Id)?.TradeAll();
+
+                var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+                buttons.Children.Add(one);
+                buttons.Children.Add(all);
+                var row = new StackPanel { Spacing = 6 };
+                row.Children.Add(name);
+                row.Children.Add(buttons);
+                row.Children.Add(new TextBlock { Text = BeekeeperText.TradeRate(o.Id), Classes = { "bk-muted" } });
+                TradeRows.Children.Add(row);
+                _tradeRows[o.Id] = (name, one, all);
+            }
+        }
+
+        foreach (var o in offers)
+        {
+            if (!_tradeRows.TryGetValue(o.Id, out var r)) continue;
+            r.Name.Text = BeekeeperText.TraderLine(o.Id, o.Name, o.Trades);
+            r.One.IsEnabled = r.All.IsEnabled = o.CanTrade;
+        }
+    }
+
     private Control MakeShopRow(string name, string blurb, bool owned, string price, string id, Action<object?> buy)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
@@ -376,14 +407,10 @@ public partial class BeekeeperView : UserControl
     // ------------------------------------------------------------------ clicks
 
     private void Catch_Click(object? sender, RoutedEventArgs e) => _vm?.CatchCommand.Execute(null);
-    private void SellTen_Click(object? sender, RoutedEventArgs e) => _vm?.SellTenCommand.Execute(null);
-    private void SellAll_Click(object? sender, RoutedEventArgs e) => _vm?.SellAllCommand.Execute(null);
     private void BuildComb_Click(object? sender, RoutedEventArgs e) => _vm?.BuildCombCommand.Execute(null);
     private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
     private void CraftRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.CraftRepellentCommand.Execute(null);
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
-    private void TradeTen_Click(object? sender, RoutedEventArgs e) => _vm?.TradeTenCandlesCommand.Execute(null);
-    private void TradeAll_Click(object? sender, RoutedEventArgs e) => _vm?.TradeAllCandlesCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
     private void Puff_Click(object? sender, RoutedEventArgs e) => _vm?.PuffSmokerCommand.Execute(null);

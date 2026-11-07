@@ -17,6 +17,16 @@ namespace SoliBee.Core.ViewModels;
 /// The app coordinator owns one of these for the whole session, so the hive keeps working
 /// while the player is in another game.
 /// </summary>
+/// <summary>
+/// One buyer on the shared Trading card (the Bear, the Hippies, later others). Give and Get
+/// are resource names ("honey", "beebits", "beeswax_candles", "sage") the view turns into
+/// words: "10 honey = 1 Beebit". The view model holds no words.
+/// </summary>
+public sealed record BeekeeperTradeOffer(
+    string Id, string? Name, long Trades,
+    decimal GiveAmount, string Give, decimal GetAmount, string Get,
+    bool CanTrade, Action TradeOne, Action TradeAll);
+
 public partial class BeekeeperViewModel : ObservableObject, IDisposable
 {
     /// <summary>How often progress is saved while playing.</summary>
@@ -142,6 +152,23 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanThrowShoe => Engine.WaspApproaching;
     public bool CanBribe => Engine.CanBribe;
     public bool CanLightRepellent => Engine.CanLightRepellent;
+
+    /// <summary>Every buyer the player has met, in the order they arrived (Leah: one shared
+    /// trade interface for all trades). Each trades bundles: give 10, get 1.</summary>
+    public IReadOnlyList<BeekeeperTradeOffer> TradeOffers
+    {
+        get
+        {
+            var offers = new List<BeekeeperTradeOffer>();
+            if (State.BearRevealed)
+                offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
+                    Config.HoneyPerBeebit, "honey", 1m, "beebits", CanSell, SellTen, SellAll));
+            if (State.HippiesRevealed)
+                offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
+                    Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
+            return offers;
+        }
+    }
 
     // Stage 3
     /// <summary>Everything a successful click catches right now (tool, Practice and the slice).</summary>
