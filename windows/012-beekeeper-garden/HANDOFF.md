@@ -1,6 +1,6 @@
-# Beekeeper stage 4: handoff to a new session
+# Beekeeper stage 4: handoff to a new session (DONE: stage 4 built; kept for reference)
 
-**Where we are (2026-11-07):** Stages 1–3 of Beekeeper are built, committed and hand-tested by Leah, plus several layout changes. Stage 4 is fully specced, and Leah accepted every placeholder. **Nothing for stage 4 is built yet.** 30 local commits are not pushed; push only when Leah says "push".
+**Where we are (2026-11-07):** Stages 1–3 of Beekeeper were built, committed and hand-tested by Leah, plus several layout changes. Stage 4 is fully specced, and Leah accepted every placeholder. **Stage 4 is now built and tested** (see spec.md, "After the build"); this note is kept for the record. Next: Leah's hand-test, tuning the placeholders, then a stage 5 spec in a fresh session.
 
 ## Read first
 1. `windows/012-beekeeper-garden/spec.md` (v2): what to build. All placeholders are accepted.

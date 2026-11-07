@@ -76,5 +76,5 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Upgrades: the full list, each upgrade's cost, and which upgrades unlock which (work in progress; the first build of them uses placeholders).
-12. Wasp emissary: the guard upgrade that fends wasps off (name, cost, how it works), whether the 3 failed raids must be in a row, what paper costs and what it is used for, and what the wasps want in trade.
 11. Candles: the cost of later candle types; which later candles need sage or propolis; which bee upgrades gather propolis.
+12. Wasp emissary: the guard upgrade that fends wasps off (name, cost, how it works), whether the 3 failed raids must be in a row, what paper costs and what it is used for, and what the wasps want in trade.

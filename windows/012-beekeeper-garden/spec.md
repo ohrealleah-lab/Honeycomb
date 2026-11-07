@@ -2,13 +2,13 @@
 
 **Feature Branch**: `012-beekeeper-garden`
 **Created**: 2026-11-07
-**Status**: Draft v2, rewritten after Leah's design pivot (2026-11-07): planting a seed is how new kinds of bees are discovered; guards come from a plant, not the Shop; foragers bring back pollen. **Systems first:** numbers and plant names marked *(placeholder)* live in `BeekeeperConfig` and are tuned later.
+**Status**: BUILT (2026-11-07), with the Bees card dropped (see User Story 7). Was: Draft v2, rewritten after Leah's design pivot (2026-11-07): planting a seed is how new kinds of bees are discovered; guards come from a plant, not the Shop; foragers bring back pollen. **Systems first:** numbers and plant names marked *(placeholder)* live in `BeekeeperConfig` and are tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009 (first build), 010 (Workbench, candles, Hippies, wasps, Shop upgrades), 011 (more tools, the Smoker).
 
 **Source**: `Beekeeper/LONG_TERM_DESIGN.md`, stage 3, "Seeds, discovery and bee types". In short: with no bee limit, bees can't be assigned jobs, so **new kinds of bees are discovered by planting seeds**; each kind brings a new resource or a buff; seeds come from the Hippies (no sage plants); bee bread (from pollen) and wax pay for moving to a better hive.
 
-**In this build**: seeds from the Hippies; the Garden card (plant, grow, sprout); two plants and the bees they attract (forager bees, guard bees); pollen; bee bread at The Workbench; the first step of the ladder (skep to wooden hive); the Bees card with bee facts.
+**In this build**: seeds from the Hippies; the Garden card (plant, grow, sprout); two plants and the bees they attract (forager bees, guard bees); pollen; bee bread at The Workbench; the first step of the ladder (skep to wooden hive). The Bees card was cut after play-testing.
 **Later**: more seeds and plants (e.g. a poplar for resin foragers and propolis, with the bee-boost candle), the meadow apiary and orchard, the honey house, stronger wasps.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -58,7 +58,8 @@
 3. **Given** the move, **Then** the title becomes **"A WOODEN HIVE IN THE GARDEN"**, the log says so, and every honeybee makes **25% more honey** *(placeholder; see To confirm 3)*.
 4. **Given** the wooden hive, **Then** nothing else changes: bees, honey, combs and everything else stay. The next steps (meadow apiary, orchard) come in later builds.
 
-### User Story 7 - The Bees card (Priority: P2)
+### User Story 7 - The Bees card (Priority: P2) — DROPPED
+Leah cut this card after seeing it (2026-11-07); the words and code are removed. The draft below is kept for the record.
 **Acceptance Scenarios**:
 1. **Given** the player has bees, **Then** a **Bees** card (right column, above the story log) lists each kind of bee met so far, with what it does and a bee fact.
 2. **Given** a kind not met yet, **Then** it is not listed (discovery stays a surprise).
@@ -98,6 +99,10 @@
 | First bee bread | "You pack pollen and honey into bee bread." |
 | Wooden hive | "You move the bees into a wooden hive. They seem pleased." |
 | Raid with guards | "The wasp helps itself to {honey} honey. The guards keep every bee safe." |
+
+## After the build (Leah, 2026-11-07)
+- **Dropped:** the Bees card.
+- **Added:** Catch Bee refills the Smoker's calm time while the bees are calm; the story log card is now "THE STORY"; the story log shows trade amounts; Workbench crafting in batches (x10, x100, hidden until affordable); honey and wax per second show on hover over the Hive rows.
 
 ## Placeholders accepted (Leah, 2026-11-07: "yes to your placeholders")
 1. **Plant names and order**: wildflowers (forager bees) from the 1st seed, bramble (guard bees) from the 2nd.
