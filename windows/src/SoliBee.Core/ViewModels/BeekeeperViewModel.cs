@@ -189,7 +189,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>The plant growing now. The screen never names it before it sprouts (a surprise).</summary>
     public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
     public IReadOnlyList<BeekeeperPlant> SproutedPlants => Engine.SproutedPlants;
-    public IReadOnlyList<string> MetBeeKinds => Engine.MetBeeKinds;
     public decimal ForagerBees => State.ForagerBees;
     public decimal GuardBees => State.GuardBees;
     public decimal Pollen => State.Pollen;
@@ -266,6 +265,14 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(CanPuff))]
     public void PuffSmoker() => Apply(Engine.PuffSmoker());
+
+    // Batches (x10, x100): the screen only offers a size when the whole batch can be paid for.
+    public bool CanCraftBeeswaxTimes(int n) => Engine.CanCraftBeeswaxTimes(n);
+    public bool CanCraftRepellentTimes(int n) => Engine.CanCraftRepellentTimes(n);
+    public bool CanMakeBeeBreadTimes(int n) => Engine.CanMakeBeeBreadTimes(n);
+    public void CraftBeeswaxTimes(int n) => Apply(Engine.CraftBeeswax(n));
+    public void CraftRepellentTimes(int n) => Apply(Engine.CraftRepellent(n));
+    public void MakeBeeBreadTimes(int n) => Apply(Engine.MakeBeeBread(n));
 
     [RelayCommand(CanExecute = nameof(CanPlantSeed))]
     public void PlantSeed() => Apply(Engine.PlantSeed());

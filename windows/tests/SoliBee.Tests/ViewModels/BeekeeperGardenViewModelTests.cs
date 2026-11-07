@@ -66,7 +66,6 @@ public class BeekeeperGardenViewModelTests : IDisposable
         Assert.True(Logged(vm, BeekeeperEvents.SeedSprouted));
         Assert.True(Logged(vm, BeekeeperEvents.PlantRevealed));
         Assert.Single(vm.SproutedPlants);
-        Assert.Equal(new[] { BeekeeperBees.Forager }, vm.MetBeeKinds);
     }
 
     [Fact]

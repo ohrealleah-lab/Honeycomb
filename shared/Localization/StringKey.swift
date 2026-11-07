@@ -1782,26 +1782,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperPlantBramble = "beekeeper_plant_bramble"
     /// Garden: what the plant does
     case beekeeperPlantBrambleBlurb = "beekeeper_plant_bramble_blurb"
-    /// Card title (all caps)
-    case beekeeperBeesTitle = "beekeeper_bees_title"
-    /// Bees card: a kind of bee
-    case beekeeperBeeHoneyName = "beekeeper_bee_honey_name"
-    /// Bees card: what they do
-    case beekeeperBeeHoneyBlurb = "beekeeper_bee_honey_blurb"
-    /// Bees card: a bee fact
-    case beekeeperBeeHoneyFact = "beekeeper_bee_honey_fact"
-    /// Bees card: a kind of bee
-    case beekeeperBeeForagerName = "beekeeper_bee_forager_name"
-    /// Bees card: what they do
-    case beekeeperBeeForagerBlurb = "beekeeper_bee_forager_blurb"
-    /// Bees card: a bee fact
-    case beekeeperBeeForagerFact = "beekeeper_bee_forager_fact"
-    /// Bees card: a kind of bee
-    case beekeeperBeeGuardName = "beekeeper_bee_guard_name"
-    /// Bees card: what they do
-    case beekeeperBeeGuardBlurb = "beekeeper_bee_guard_blurb"
-    /// Bees card: a bee fact
-    case beekeeperBeeGuardFact = "beekeeper_bee_guard_fact"
     /// Workbench row
     case beekeeperBeeBread = "beekeeper_bee_bread"
     /// Workbench row blurb
@@ -1830,4 +1810,18 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperGardenTitle = "help_beekeeper_garden_title"
     /// The Garden RuleSection body
     case helpBeekeeperGarden = "help_beekeeper_garden"
+    /// Story log; %@ = bear's name, honey given, Beebits got
+    case beekeeperLogTradeBearFmt = "beekeeper_log_trade_bear_fmt"
+    /// Story log; as above, exactly 1 Beebit
+    case beekeeperLogTradeBearOneFmt = "beekeeper_log_trade_bear_one_fmt"
+    /// Story log; %@ = candles given, sage got
+    case beekeeperLogTradeHippiesFmt = "beekeeper_log_trade_hippies_fmt"
+    /// Story log; %@ = how many
+    case beekeeperLogCraftedBeeswaxFmt = "beekeeper_log_crafted_beeswax_fmt"
+    /// Story log; %@ = how many
+    case beekeeperLogCraftedRepellentFmt = "beekeeper_log_crafted_repellent_fmt"
+    /// Story log; %@ = how many
+    case beekeeperLogCraftedBeeBreadFmt = "beekeeper_log_crafted_bee_bread_fmt"
+    /// Workbench button: craft a batch; %@ = how many
+    case beekeeperMakeTimesFmt = "beekeeper_make_times_fmt"
 }

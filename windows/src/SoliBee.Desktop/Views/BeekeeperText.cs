@@ -83,6 +83,7 @@ internal static class BeekeeperText
     public static string RepellentCandle => T(StringKey.BeekeeperRepellentCandle);
     public static string RepellentBlurb(string time) => Fill(T(StringKey.BeekeeperRepellentBlurbFmt), time);
     public static string Make => T(StringKey.BeekeeperMake);
+    public static string MakeTimes(int n) => Fill(T(StringKey.BeekeeperMakeTimesFmt), n.ToString());
     public static string Light => T(StringKey.BeekeeperLight);
 
     // ---- Trading: one shared card for every buyer (Leah)
@@ -188,32 +189,6 @@ internal static class BeekeeperText
         _ => "",
     };
 
-    public static string BeesTitle => T(StringKey.BeekeeperBeesTitle);
-
-    public static string BeeName(string kind) => kind switch
-    {
-        BeekeeperBees.Honey => T(StringKey.BeekeeperBeeHoneyName),
-        BeekeeperBees.Forager => T(StringKey.BeekeeperBeeForagerName),
-        BeekeeperBees.Guard => T(StringKey.BeekeeperBeeGuardName),
-        _ => kind,
-    };
-
-    public static string BeeBlurb(string kind) => kind switch
-    {
-        BeekeeperBees.Honey => T(StringKey.BeekeeperBeeHoneyBlurb),
-        BeekeeperBees.Forager => T(StringKey.BeekeeperBeeForagerBlurb),
-        BeekeeperBees.Guard => T(StringKey.BeekeeperBeeGuardBlurb),
-        _ => "",
-    };
-
-    public static string BeeFact(string kind) => kind switch
-    {
-        BeekeeperBees.Honey => T(StringKey.BeekeeperBeeHoneyFact),
-        BeekeeperBees.Forager => T(StringKey.BeekeeperBeeForagerFact),
-        BeekeeperBees.Guard => T(StringKey.BeekeeperBeeGuardFact),
-        _ => "",
-    };
-
     // ---- story log (saved as keys plus values, so old lines follow a language change)
 
     // The log is drawn in the language it is asked for, which can differ from Options for a moment.
@@ -240,7 +215,10 @@ internal static class BeekeeperText
             BeekeeperEvents.Sting => L(StringKey.BeekeeperLogSting),
             BeekeeperEvents.StorageFull => L(StringKey.BeekeeperLogStorageFull),
             BeekeeperEvents.BearArrives => Fill(L(StringKey.BeekeeperLogBearArrivesFmt), e.Text ?? ""),
-            BeekeeperEvents.Sale => Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? ""),
+            // Lines saved before the amounts were kept (Value2 = 0) show the old short wording.
+            BeekeeperEvents.Sale => e.Value2 <= 0m ? Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? "")
+                : e.Value == 1m ? Fill(L(StringKey.BeekeeperLogTradeBearOneFmt), e.Text ?? "", N(e.Value2))
+                : Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value2), N(e.Value)),
             BeekeeperEvents.FirstWax => L(StringKey.BeekeeperLogFirstWax),
             BeekeeperEvents.ShopOpened => L(StringKey.BeekeeperLogShopOpened),
             BeekeeperEvents.ToolBought => L(e.Text switch
@@ -261,7 +239,9 @@ internal static class BeekeeperText
             BeekeeperEvents.WorkbenchOpened => L(StringKey.BeekeeperLogWorkbenchOpened),
             BeekeeperEvents.FirstBeeswaxCandle => L(StringKey.BeekeeperLogFirstBeeswaxCandle),
             BeekeeperEvents.HippiesArrive => L(StringKey.BeekeeperLogHippiesArrive),
-            BeekeeperEvents.CandlesTraded => Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value)),
+            BeekeeperEvents.CandlesTraded => e.Value2 <= 0m
+                ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
+                : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value2), N(e.Value)),
             BeekeeperEvents.RepellentUnlocked => L(StringKey.BeekeeperLogRepellentUnlocked),
             BeekeeperEvents.UpgradeBought => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
@@ -290,6 +270,13 @@ internal static class BeekeeperText
             BeekeeperEvents.FirstPollen => L(StringKey.BeekeeperLogFirstPollen),
             BeekeeperEvents.BeeBreadMade => L(StringKey.BeekeeperLogBeeBread),
             BeekeeperEvents.WoodenHive => L(StringKey.BeekeeperLogWoodenHive),
+            BeekeeperEvents.Crafted => e.Text switch
+            {
+                "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
+                "repellent" => Fill(L(StringKey.BeekeeperLogCraftedRepellentFmt), N(e.Value)),
+                "bee_bread" => Fill(L(StringKey.BeekeeperLogCraftedBeeBreadFmt), N(e.Value)),
+                _ => "",
+            },
             _ => "",
         };
     }

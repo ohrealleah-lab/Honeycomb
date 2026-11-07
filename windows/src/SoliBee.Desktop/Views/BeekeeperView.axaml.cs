@@ -68,7 +68,6 @@ public partial class BeekeeperView : UserControl
             _shopSignature = "";
             _logSignature = "";
             _plantsSignature = "";
-            _beesSignature = "";
             Redraw();
         });
         DataContextChanged += (_, _) => Attach(DataContext as BeekeeperViewModel);
@@ -201,11 +200,13 @@ public partial class BeekeeperView : UserControl
             + " · " + BeekeeperText.WoodenHiveBlurb(N((vm.Config.WoodenHiveHoneyMultiplier - 1m) * 100m));
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
-        HoneyRateText.Text = BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2));
         HiveFullText.IsVisible = vm.StorageIsFull;
         HiveFullText.Text = BeekeeperText.CombsFull;
-        WaxRateText.IsVisible = vm.WaxRevealed;
-        WaxRateText.Text = BeekeeperText.WaxPerSecond(N(vm.WaxPerSecond, 2));
+
+        // Rates of automatic resources show on hover over the row's word or total. Any new
+        // auto resource (pollen, say) does the same with one more SetRateTip line.
+        SetRateTip(BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2)), HiveHoneyLabel, HiveHoneyValue);
+        SetRateTip(BeekeeperText.WaxPerSecond(N(vm.WaxPerSecond, 2)), HiveWaxLabel, HiveWaxValue);
 
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;
@@ -235,18 +236,24 @@ public partial class BeekeeperView : UserControl
         BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
         CraftBeeswaxButton.Content = BeekeeperText.Make;
         CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
+        ShowBatch(Beeswax10Button, 10, vm.CanCraftBeeswaxTimes(10));
+        ShowBatch(Beeswax100Button, 100, vm.CanCraftBeeswaxTimes(100));
         BeeBreadRow.IsVisible = vm.PollenRevealed;
         BeeBreadNameText.Text = BeekeeperText.BeeBread;
         BeeBreadInfoText.Text = BeekeeperText.Price(null, null, null, pollen: N(vm.Config.BeeBreadPollen), honey: N(vm.Config.BeeBreadHoney))
             + " · " + BeekeeperText.BeeBreadBlurb;
         MakeBeeBreadButton.Content = BeekeeperText.Make;
         MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
+        ShowBatch(BeeBread10Button, 10, vm.CanMakeBeeBreadTimes(10));
+        ShowBatch(BeeBread100Button, 100, vm.CanMakeBeeBreadTimes(100));
         RepellentRow.IsVisible = vm.RepellentUnlocked;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
         RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
             + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.Engine.RepellentBurnSeconds));
         CraftRepellentButton.Content = BeekeeperText.Make;
         CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
+        ShowBatch(Repellent10Button, 10, vm.CanCraftRepellentTimes(10));
+        ShowBatch(Repellent100Button, 100, vm.CanCraftRepellentTimes(100));
         LightRepellentButton.Content = BeekeeperText.Light;
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
@@ -261,11 +268,6 @@ public partial class BeekeeperView : UserControl
         PlantSeedButton.IsVisible = !vm.IsGrowing && vm.Seeds > 0;
         PlantSeedButton.IsEnabled = vm.CanPlantSeed;
         UpdatePlants(vm, lang);
-
-        // Bees: only the kinds met so far
-        BeesCard.IsVisible = vm.MetBeeKinds.Count > 0;
-        BeesTitleText.Text = BeekeeperText.BeesTitle;
-        UpdateBees(vm, lang);
 
         // Wasps
         bool burning = vm.RepellentSecondsLeft > 0m;
@@ -296,8 +298,32 @@ public partial class BeekeeperView : UserControl
         }
     }
 
+    // Batch buttons (x10, x100) are hidden until the whole batch can be paid for.
+    private static void ShowBatch(Button button, int count, bool affordable)
+    {
+        button.Content = BeekeeperText.MakeTimes(count);
+        button.IsVisible = affordable;
+    }
+
+    private void Batch_Click(object? sender, RoutedEventArgs e)
+    {
+        if (_vm == null || sender is not Button { Tag: string tag }) return;
+        var parts = tag.Split(':');
+        int n = int.Parse(parts[1]);
+        switch (parts[0])
+        {
+            case "Beeswax": _vm.CraftBeeswaxTimes(n); break;
+            case "BeeBread": _vm.MakeBeeBreadTimes(n); break;
+            case "Repellent": _vm.CraftRepellentTimes(n); break;
+        }
+    }
+
+    private static void SetRateTip(string text, params Control[] targets)
+    {
+        foreach (var t in targets) ToolTip.SetTip(t, text);
+    }
+
     private string _plantsSignature = "";
-    private string _beesSignature = "";
 
     // Plain text rows, rebuilt only when what they show changes.
     private void UpdatePlants(BeekeeperViewModel vm, AppLanguage lang)
@@ -313,23 +339,6 @@ public partial class BeekeeperView : UserControl
             row.Children.Add(new TextBlock { Text = BeekeeperText.PlantName(p.Id), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
             row.Children.Add(new TextBlock { Text = BeekeeperText.PlantBlurb(p.Id), Classes = { "bk-muted" } });
             PlantRows.Children.Add(row);
-        }
-    }
-
-    private void UpdateBees(BeekeeperViewModel vm, AppLanguage lang)
-    {
-        var kinds = vm.MetBeeKinds;
-        string sig = lang + "|" + string.Join(",", kinds);
-        if (sig == _beesSignature) return;
-        _beesSignature = sig;
-        BeeRows.Children.Clear();
-        foreach (var kind in kinds)
-        {
-            var row = new StackPanel { Spacing = 2 };
-            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeName(kind), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
-            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeBlurb(kind), Classes = { "bk-body" } });
-            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeFact(kind), Classes = { "bk-muted" }, FontStyle = FontStyle.Italic });
-            BeeRows.Children.Add(row);
         }
     }
 

@@ -26,7 +26,7 @@ public static class BeekeeperEvents
     public const string StorageFull = "storage_full";
     public const string FirstWax = "first_wax";
     public const string BearArrives = "bear_arrives";      // Text = bear name
-    public const string Sale = "sale";                     // Value = Beebits earned
+    public const string Sale = "sale";                     // Value = Beebits earned, Value2 = honey given, Text = bear name
     public const string ShopOpened = "shop_opened";
     public const string ToolBought = "tool_bought";        // Value = new tool level, Text = tool id
     public const string WaxCatcherBought = "wax_catcher_bought";
@@ -39,7 +39,7 @@ public static class BeekeeperEvents
     public const string WorkbenchOpened = "workbench_opened";
     public const string FirstBeeswaxCandle = "first_beeswax_candle";
     public const string HippiesArrive = "hippies_arrive";
-    public const string CandlesTraded = "candles_traded";    // Value = sage received
+    public const string CandlesTraded = "candles_traded";    // Value = sage received, Value2 = candles given
     public const string RepellentUnlocked = "repellent_unlocked";
     public const string UpgradeBought = "upgrade_bought";    // Text = upgrade id
     public const string WaspArrives = "wasp_arrives";
@@ -63,6 +63,7 @@ public static class BeekeeperEvents
     public const string FirstPollen = "first_pollen";
     public const string BeeBreadMade = "bee_bread_made";       // first time only
     public const string WoodenHive = "wooden_hive";
+    public const string Crafted = "crafted";                   // a batch of more than one: Value = how many, Text = beeswax | repellent | bee_bread
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
@@ -338,7 +339,7 @@ public sealed class BeekeeperEngine
         State.BeebitsRevealed = true;
         RefreshStorageFlag();
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * Config.HoneyPerBeebit) };
         CheckReveals(events);
         return new ActionResult(true, bundles, events);
     }
@@ -401,38 +402,47 @@ public sealed class BeekeeperEngine
         events.Add(new BeekeeperEvent(BeekeeperEvents.WorkbenchOpened));
     }
 
-    public bool CanCraftBeeswax => State.WorkbenchRevealed && State.Wax >= Config.BeeswaxCandleWax;
+    /// <summary>Whether a batch of <paramref name="count"/> can be paid for in full.</summary>
+    public bool CanCraftBeeswaxTimes(int count) =>
+        count >= 1 && State.WorkbenchRevealed && State.Wax >= Config.BeeswaxCandleWax * count;
 
-    public bool CanCraftRepellent =>
-        State.WorkbenchRevealed && State.RepellentUnlocked
-        && State.Wax >= Config.RepellentCandleWax && State.Sage >= Config.RepellentCandleSage;
+    public bool CanCraftBeeswax => CanCraftBeeswaxTimes(1);
+
+    public bool CanCraftRepellentTimes(int count) =>
+        count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked
+        && State.Wax >= Config.RepellentCandleWax * count && State.Sage >= Config.RepellentCandleSage * count;
+
+    public bool CanCraftRepellent => CanCraftRepellentTimes(1);
 
     /// <summary>Crafting is instant (Leah).</summary>
-    public ActionResult CraftBeeswax()
+    /// <summary>Makes <paramref name="count"/> candles at once: exactly count times the cost, or nothing.</summary>
+    public ActionResult CraftBeeswax(int count = 1)
     {
-        if (!CanCraftBeeswax) return ActionResult.Refused;
-        State.Wax -= Config.BeeswaxCandleWax;
-        State.BeeswaxCandles++;
+        if (!CanCraftBeeswaxTimes(count)) return ActionResult.Refused;
+        State.Wax -= Config.BeeswaxCandleWax * count;
+        State.BeeswaxCandles += count;
         var events = new List<BeekeeperEvent>();
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "beeswax"));
         if (State.CandlesCrafted == 0) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBeeswaxCandle));
-        CountCandleCrafted(events);
-        return new ActionResult(true, 1m, events);
+        CountCandleCrafted(events, count);
+        return new ActionResult(true, count, events);
     }
 
-    public ActionResult CraftRepellent()
+    public ActionResult CraftRepellent(int count = 1)
     {
-        if (!CanCraftRepellent) return ActionResult.Refused;
-        State.Wax -= Config.RepellentCandleWax;
-        State.Sage -= Config.RepellentCandleSage;
-        State.RepellentCandles++;
+        if (!CanCraftRepellentTimes(count)) return ActionResult.Refused;
+        State.Wax -= Config.RepellentCandleWax * count;
+        State.Sage -= Config.RepellentCandleSage * count;
+        State.RepellentCandles += count;
         var events = new List<BeekeeperEvent>();
-        CountCandleCrafted(events);
-        return new ActionResult(true, 1m, events);
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "repellent"));
+        CountCandleCrafted(events, count);
+        return new ActionResult(true, count, events);
     }
 
-    private void CountCandleCrafted(List<BeekeeperEvent> events)
+    private void CountCandleCrafted(List<BeekeeperEvent> events, int count = 1)
     {
-        State.CandlesCrafted++;
+        State.CandlesCrafted += count;
         if (!State.HippiesRevealed && State.CandlesCrafted >= Config.HippiesRevealCandles)
         {
             State.HippiesRevealed = true;
@@ -459,7 +469,7 @@ public sealed class BeekeeperEngine
         State.HippieTrades++;
         State.SageRevealed = true;
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, bundles) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, bundles, null, bundles * Config.CandlesPerSage) };
         if (!State.RepellentUnlocked)
         {
             // The sage repellent candle comes once there is sage to make it with (placeholder rule).
@@ -648,19 +658,6 @@ public sealed class BeekeeperEngine
     public IReadOnlyList<BeekeeperPlant> SproutedPlants =>
         State.Plants.Select(id => Config.Plants.FirstOrDefault(p => p.Id == id)).OfType<BeekeeperPlant>().ToList();
 
-    /// <summary>Kinds of bee met so far (discovery stays a surprise): honeybees first.</summary>
-    public IReadOnlyList<string> MetBeeKinds
-    {
-        get
-        {
-            var kinds = new List<string>();
-            if (State.HoneyRevealed) kinds.Add(BeekeeperBees.Honey);
-            foreach (var p in SproutedPlants)
-                if (!kinds.Contains(p.Bee)) kinds.Add(p.Bee);
-            return kinds;
-        }
-    }
-
     private void GiveSeedIfDue(List<BeekeeperEvent> events)
     {
         if (State.SeedsGiven >= Config.Plants.Count) return;
@@ -731,24 +728,28 @@ public sealed class BeekeeperEngine
         }
     }
 
-    public bool CanMakeBeeBread =>
-        State.PollenRevealed && State.Pollen >= Config.BeeBreadPollen && State.Honey >= Config.BeeBreadHoney;
+    public bool CanMakeBeeBreadTimes(int count) =>
+        count >= 1 && State.PollenRevealed
+        && State.Pollen >= Config.BeeBreadPollen * count && State.Honey >= Config.BeeBreadHoney * count;
 
-    /// <summary>Crafting is instant: pollen and honey make 1 bee bread.</summary>
-    public ActionResult MakeBeeBread()
+    public bool CanMakeBeeBread => CanMakeBeeBreadTimes(1);
+
+    /// <summary>Crafting is instant: pollen and honey make bee bread, one or a batch.</summary>
+    public ActionResult MakeBeeBread(int count = 1)
     {
-        if (!CanMakeBeeBread) return ActionResult.Refused;
-        State.Pollen -= Config.BeeBreadPollen;
-        State.Honey -= Config.BeeBreadHoney;
-        State.BeeBread++;
+        if (!CanMakeBeeBreadTimes(count)) return ActionResult.Refused;
+        State.Pollen -= Config.BeeBreadPollen * count;
+        State.Honey -= Config.BeeBreadHoney * count;
+        State.BeeBread += count;
         RefreshStorageFlag();
         var events = new List<BeekeeperEvent>();
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "bee_bread"));
         if (!State.BeeBreadRevealed)
         {
             State.BeeBreadRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
-        return new ActionResult(true, 1m, events);
+        return new ActionResult(true, count, events);
     }
 
     /// <summary>The Hive card offers the move once the player has first made bee bread.</summary>

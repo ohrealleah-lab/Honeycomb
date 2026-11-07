@@ -41,8 +41,30 @@
             <Setter Property="BorderBrush" Value="#33FFFFFF" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
-        <Style Selector="Button.bk-button:disabled /template/ ContentPresenter">
-            <Setter Property="Opacity" Value="0.4" />
+        <!-- Disabled buttons fade their box but keep the text (the cost) easy to read. -->
+        <Style Selector="Button.bk-button:disabled">
+            <Setter Property="Foreground" Value="#CCFFFFFF" />
+        </Style>
+        <Style Selector="Button.bk-button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="BorderBrush" Value="#1AFFFFFF" />
+            <Setter Property="Foreground" Value="#CCFFFFFF" />
+        </Style>
+        <!-- Hovering or pressing keeps the glass look: a touch lighter, never dark. -->
+        <Style Selector="Button.bk-button:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#33FFFFFF" />
+            <Setter Property="BorderBrush" Value="#4DFFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.bk-button:pressed /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#40FFFFFF" />
+            <Setter Property="BorderBrush" Value="#4DFFFFFF" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="Button.bk-button:disabled:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#14FFFFFF" />
+            <Setter Property="BorderBrush" Value="#1AFFFFFF" />
+            <Setter Property="Foreground" Value="#CCFFFFFF" />
         </Style>
         <!-- Catch Bee always stays highlighted (Leah): no grey hover or pressed look. -->
         <Style Selector="Button#CatchButton:pointerover /template/ ContentPresenter#PART_ContentPresenter">
@@ -118,8 +140,6 @@
                             <TextBlock x:Name="HiveBeeBreadLabel" Grid.Row="12" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeeBreadValue" Grid.Row="12" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
-                        <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
-                        <TextBlock x:Name="WaxRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" IsVisible="False" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
                         <!-- Offered once the first bee bread is made: move to a wooden hive -->
                         <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
@@ -180,27 +200,43 @@
                                 <TextBlock x:Name="BeeswaxNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="BeeswaxInfoText" Classes="bk-muted" />
                             </StackPanel>
-                            <Button x:Name="CraftBeeswaxButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
-                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="CraftBeeswax_Click" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="Beeswax100Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:100"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="Beeswax10Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:10"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="CraftBeeswaxButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="CraftBeeswax_Click" />
+                            </StackPanel>
                         </Grid>
                         <Grid x:Name="BeeBreadRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="BeeBreadNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="BeeBreadInfoText" Classes="bk-muted" />
                             </StackPanel>
-                            <Button x:Name="MakeBeeBreadButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
-                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MakeBeeBread_Click" />
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="BeeBread100Button" Classes="bk-button" MinWidth="56" Tag="BeeBread:100"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="BeeBread10Button" Classes="bk-button" MinWidth="56" Tag="BeeBread:10"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="MakeBeeBreadButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="MakeBeeBread_Click" />
+                            </StackPanel>
                         </Grid>
                         <Grid x:Name="RepellentRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="RepellentNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="RepellentInfoText" Classes="bk-muted" />
+                                <Button x:Name="LightRepellentButton" Classes="bk-button" MinWidth="90" Margin="0,4,0,0"
+                                        HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="Repellent100Button" Classes="bk-button" MinWidth="56" Tag="Repellent:100"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="Repellent10Button" Classes="bk-button" MinWidth="56" Tag="Repellent:10"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
                                 <Button x:Name="CraftRepellentButton" Classes="bk-button" MinWidth="90"
                                         HorizontalContentAlignment="Center" Click="CraftRepellent_Click" />
-                                <Button x:Name="LightRepellentButton" Classes="bk-button" MinWidth="90"
-                                        HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                             </StackPanel>
                         </Grid>
                     </StackPanel>
@@ -235,14 +271,6 @@
                                     HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                         </StackPanel>
                         <TextBlock x:Name="CandleBurningText" Classes="bk-body" IsVisible="False" />
-                    </StackPanel>
-                </Border>
-
-                <!-- BEES: each kind met so far, what it does and a bee fact -->
-                <Border x:Name="BeesCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="10">
-                        <TextBlock x:Name="BeesTitleText" Classes="bk-title" />
-                        <StackPanel x:Name="BeeRows" Spacing="12" />
                     </StackPanel>
                 </Border>
 

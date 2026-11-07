@@ -356,21 +356,6 @@ public class BeekeeperStage4Tests : IDisposable
         Assert.Equal(2, wood.State.Combs);
     }
 
-    // ============================================================ the Bees card
-
-    [Fact]
-    public void BeeKinds_AreListedOnlyOnceMet()
-    {
-        var e = Make();
-        Assert.Empty(e.MetBeeKinds);
-        e.State.HoneyRevealed = true;
-        Assert.Equal(new[] { BeekeeperBees.Honey }, e.MetBeeKinds);
-        e.State.Plants.Add(BeekeeperPlants.Wildflowers);
-        Assert.Equal(new[] { BeekeeperBees.Honey, BeekeeperBees.Forager }, e.MetBeeKinds);
-        e.State.Plants.Add(BeekeeperPlants.Bramble);
-        Assert.Equal(new[] { BeekeeperBees.Honey, BeekeeperBees.Forager, BeekeeperBees.Guard }, e.MetBeeKinds);
-    }
-
     // ============================================================ saving
 
     [Fact]
