@@ -10,11 +10,10 @@
 2. Windows, not Mac, is the reference for Beekeeper's rules until a Mac version exists.
 3. Beekeeper earns while the app is closed (up to 3 days). The card games have nothing like this.
 
-**Sources** (all in `/Users/leah/Honeycomb/Beekeeper/`):
+**Sources** (all in the repo's `Beekeeper/` folder):
 - `EARLY_LOOP_RULES.md` (v2): approved rules; the numbers there are final (storage 200 and +200 per comb approved by Leah on 2026-11-06 after the first-hour simulation; revisit after play-testing)
 - `LONG_TERM_DESIGN.md`: where the game is going (not built now)
-- `UI_SPEC.md` and `mockup_*.html`: approved layout, tokens, reveal order (needs a small refresh for v3, see T055)
-- `README.md`, `csv/`, `Beekeeper_Game_Bible.xlsx`: Gemini's drafts. Leah's notes win where they disagree.
+- `archive/`: the early drafts (`UI_SPEC.md`, `mockup_*.html`, Gemini's `README.md`, `csv/`, `Beekeeper_Game_Bible.xlsx`). Archived and no longer kept up to date (Leah, 2026-11-07); the built screen is now the reference for layout.
 
 **Out of scope for this build**: candles, Chandler's Workshop, hive roles, the Smoker, tool upgrades, special bees and sites, hippies, hummingbirds, badgers, wasps, seasons, swarming. Leave layout room for them; build none of them.
 
@@ -50,8 +49,8 @@ When the player first reaches 15 Beebits the Beekeeper's Shop appears.
 
 **Acceptance Scenarios**:
 1. **Given** the player first reaches 15 Beebits, **Then** the shop appears and stays.
-2. **Given** the shop, **Then** tools must be bought in order: Padded Gloves (15 ₿, 2 bees), Mesh Net (75 ₿, 5 bees), Bee-Safe Vacuum (250 ₿, 10 bees). Each replaces the one before and the tool line updates.
-3. **Given** the Wax-Catcher (150 ₿), **When** bought, **Then** wax output doubles. It is independent of the tool order.
+2. **Given** the shop, **Then** tools must be bought in order: Padded Gloves (15 Beebits, 2 bees), Mesh Net (75 Beebits, 5 bees), Bee-Safe Vacuum (250 Beebits, 10 bees). Each replaces the one before and the tool line updates.
+3. **Given** the Wax-Catcher (150 Beebits), **When** bought, **Then** wax output doubles. It is independent of the tool order.
 4. **Given** an item the player cannot afford, **Then** it is shown but unavailable; owned items show "✓ Owned".
 5. **Given** the player has 80 Beebits and no Gloves, **Then** the Net and Vacuum are shown but unavailable (tools are bought in order), and pressing an unavailable item does nothing.
 
@@ -80,7 +79,7 @@ When the player first reaches 15 Beebits the Beekeeper's Shop appears.
 3. **Given** the stats bar, **Then** order is BEES · HONEY · WAX · BEEBITS, tabular figures, bees shown as a plain number ("12"), honey shown with its storage ("45 / 200"), each stat appearing when revealed. Large numbers are shortened (1.2K, 3.4M) and follow the chosen language's number style.
 4. **Given** Beekeeper is on screen, **Then** the Statistics and Reset Statistics menu entries are unavailable, and Undo, Hint and Restart are off.
 
-## Reveal order *(from UI_SPEC §4)*
+## Reveal order *(from the archived UI_SPEC §4)*
 | Trigger | Appears |
 |---|---|
 | New game | Art frame, Catch Bee, tool line, story log, BEES |
@@ -101,7 +100,7 @@ When the player first reaches 15 Beebits the Beekeeper's Shop appears.
 - **FR-005**: The Beekeeper view model stays alive while the player uses other games.
 - **FR-006**: Every visible string goes through the localization spreadsheet (English and Spanish) and the generator script. Layout must tolerate longer Spanish.
 - **FR-007**: The story log shows the newest line first at full opacity, older lines fading; it is saved as event keys plus values (so a language change re-translates it) and capped at the last 50 lines.
-- **FR-008**: Layout follows `UI_SPEC.md` (3 columns 340 / fluid / 260; tokens, fonts, Catch Bee 64px), with the v3 text changes (no bee capacity; honey storage instead). A 170×102 art frame slot is reserved.
+- **FR-008**: Layout follows `archive/UI_SPEC.md` (3 columns 340 / fluid / 260; tokens, fonts, Catch Bee 64px), with the v3 text changes (no bee capacity; honey storage instead). A 170×102 art frame slot is reserved.
 - **FR-009**: Text must stay free of betting or gambling wording on every platform (trading honey for Beebits is fine; no "bet", "jackpot", "payout").
 - **FR-010**: Leave layout room, but build no UI, for the Workshop, hive roles, Smoker, reputations, wasp panel and sites.
 - **FR-011**: Big numbers use one shared formatter (short suffixes, language-aware) everywhere they are shown.
@@ -136,7 +135,7 @@ Colony (bees, combs, honey storage), Resources (honey with fraction, wax, wax pr
 - Offline rate is 100% (confirmed by Leah, 2026-11-06).
 - One Sell All = one trade. Bear names: all 7.
 - Windows is the reference for Beekeeper rules until a Mac version exists; golden test vectors can be generated from the Windows engine later for the other platforms.
-- Duplicated numbers: the config file is the single truth in code; `EARLY_LOOP_RULES.md` is the single truth on paper. Other documents (UI_SPEC, README, CSVs, workbook) must be brought in line (T055), not copied from.
+- Duplicated numbers: the config file is the single truth in code; `EARLY_LOOP_RULES.md` is the single truth on paper. The archived drafts (UI_SPEC, README, CSVs, workbook) are not kept in line (T055) and must not be copied from.
 - Help window gets a short "How to play Beekeeper" page. No Beekeeper-specific options and no sound in this build.
 
 ## Success Criteria

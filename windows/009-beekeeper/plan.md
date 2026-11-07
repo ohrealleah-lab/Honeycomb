@@ -1,6 +1,6 @@
 # Implementation Plan: Beekeeper (Windows first)
 
-**Spec**: `spec.md` (v3) in this folder | **Design**: `/Users/leah/Honeycomb/Beekeeper/UI_SPEC.md` + `mockup_*.html` | **Future**: `/Users/leah/Honeycomb/Beekeeper/LONG_TERM_DESIGN.md`
+**Spec**: `spec.md` (v3) in this folder | **Design**: `Beekeeper/archive/UI_SPEC.md` + `mockup_*.html` (archived 2026-11-07; the built screen is now the reference) | **Future**: `Beekeeper/LONG_TERM_DESIGN.md`
 **Stack**: Avalonia 12 / .NET 10, `CommunityToolkit.Mvvm`, xUnit. Same layout as the other six Windows games.
 
 ## Approach in one paragraph

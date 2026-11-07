@@ -61,14 +61,14 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 - [x] T052 Hand-test sheet for the co-designer (Windows build). See `HAND_TEST.md`.
 - [x] T053 Update `windows/CLAUDE.md` ("all six games" → seven), the repo README, and the product rules in `mac/CLAUDE.md` (exceptions: Beekeeper saves in progress on desktop and earns while away; Beekeeper's rules are Windows-referenced until Mac exists).
 - [ ] T054 Windows release build (`dotnet publish`) and a smoke test. Release build made 2026-11-07 (`bin/Release/net10.0/win-x64/publish/Honeycomb.exe`); smoke test is Leah's.
-- [ ] T055 Bring the design and Gemini files in line with v3: `UI_SPEC.md` (no bee capacity, honey storage, Combs panel text, bear names, Workshop hidden in this build, "Chronicle"/"Log" naming), the mockups (a small refresh), `README.md`, `csv/`, and the workbook. Ask Leah before editing Gemini's files.
+- [x] T055 Replaced 2026-11-07 by Leah's decision: the early drafts were moved to `Beekeeper/archive/` (with `ARCHIVE_NOTE.md`) instead of being updated, and the spec no longer uses ₿. Original task: Bring the design and Gemini files in line with v3: `UI_SPEC.md` (no bee capacity, honey storage, Combs panel text, bear names, Workshop hidden in this build, "Chronicle"/"Log" naming), the mockups (a small refresh), `README.md`, `csv/`, and the workbook. Ask Leah before editing Gemini's files.
 - **Hand-test (Leah / co-designer):** play for 15 minutes; report anything confusing or unfair.
 
 ### T050 open points (waiting for Leah)
 1. **Fixed 2026-11-07** (the log now compares every shown line). **Bug:** once the story log holds 50 lines, a line identical to the newest one (e.g. pressing Sell 10 twice) doesn't redraw the log, so the new line doesn't appear. Cause: `BeekeeperView.UpdateLog` only compares the line count and the newest line.
 2. The Combs card shows the cost of the comb you can build now, not "next cost" as T033 lists. The current cost is probably what's wanted; T033's wording may just be loose.
 3. **Settled 2026-11-07: keep the code's wording** (spec updated; the button may be hidden or moved later). The "Start over?" message says "Your hive and everything in it will be lost."; spec 5.8 says "Your hive will be lost."
-4. The spec writes shop prices with "₿"; the screen says "beebits" (Leah: keep Beebits, no ₿). Fix the spec in T055.
+4. The spec writes shop prices with "₿"; the screen says "beebits" (Leah: keep Beebits, no ₿). Fixed in the spec 2026-11-07.
 
 ## Later (own specs, not now)
 See `Beekeeper/LONG_TERM_DESIGN.md`: Smoker and tool upgrades · hive roles · special bees and sites · wasps (steal honey) · candles + Workshop · reputations · seasons/blooms · swarming · Mac, iOS, Android.

@@ -9,7 +9,7 @@
 2. Run the app. Fix anything that crashes or looks broken on Beekeeper. Work through the hand-test list in `tasks.md` Phase 4 with Leah.
 3. **T037**: check every built-in theme for readable text.
 4. **Phase 5 (words):** move the English in `src/SoliBee.Desktop/Views/BeekeeperText.cs` into `tools/Honeycomb_Localization.xlsx`, add Spanish (draft, Leah reviews), run `python3 tools/generate_localization.py`, review the diff. Add the Help page. Scan for gambling words (FR-009). Check the log re-translates on language change.
-5. **Phase 6:** second `/analyze`, then T053 (update `windows/CLAUDE.md` six → seven games and the product-rule exceptions in `mac/CLAUDE.md`), Windows publish + smoke test, T055 (refresh stale `UI_SPEC.md`; ask Leah before editing Gemini's files).
+5. **Phase 6:** second `/analyze`, then T053 (update `windows/CLAUDE.md` six → seven games and the product-rule exceptions in `mac/CLAUDE.md`), Windows publish + smoke test, T055 (done: Leah chose to archive the early drafts in `Beekeeper/archive/` rather than update them).
 
 ## Things to know
 - Windows is the reference for Beekeeper (deliberate break from "Mac is the source of truth"). Not in this build: candles/Workshop, roles, Smoker, tool upgrades, special bees, wasps, seasons, swarming.
