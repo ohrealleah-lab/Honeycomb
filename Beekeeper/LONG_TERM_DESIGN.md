@@ -41,7 +41,8 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **Later, a bee-boost candle** that makes the bees more effective (the old idea was +20% honey for a time).
    - **The Hippies arrive after the player has crafted 5 candles** of any type. The beeswax candle is the first one available, so in practice 5 beeswax candles bring them. They buy beeswax candles and **pay 1 sage per 10 candles** (they are one of the stage 7 buyers).
 5. **Sites**: the garden, the meadow apiary, the orchard and on (see the ladder in stage 3). The "Honey Factory" becomes the honey house, an automation upgrade. Kinds of bees come from plants (stage 3), not from catching.
-6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them; bears reduce raids after 100 trades. Leah's notes (2026-11-07):
+6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them. (The old "bears reduce raids after 100 trades" is replaced by the bear's trade agreement at 100 trades; see the build roadmap.) Leah's notes (2026-11-07):
+   - **Changed (Leah, 2026-11-07, planning session): No Stress Mode will not be used in Beekeeper.** Wasps are required for play because the emissary needs failed raids. Wasps still come only during active play. To be built in stage 6 together with the emissary, so wasps never lose their off switch before they have an ending. *The rule below is what is built today:*
    - **No Stress Mode turns wasps off completely.** No wasps appear and none raid. It can be turned on or off at any time without affecting game progress (nothing is reset, lost or gained by switching). A raid already under way when it is turned on still plays out; only future raids are stopped.
    - **Active play only.** Wasps never raid while the app is closed or idle, so away earnings are safe.
    - **Raid size** (placeholders, Leah 2026-11-07): a raid takes 3 minutes' worth of honey and 15% of the bees. This replaces the earlier "at most about 10 minutes of play" rule: catching upgrades past the Vacuum will make bees quick to win back.
@@ -56,7 +57,27 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 9. **Swarming:** the reset with a bonus, and the long-term goal.
 10. **Other platforms:** Mac, iOS, Android once Windows is playable. Mobile text must stay free of betting words.
 
+## Build roadmap (planning session, 2026-11-07)
+Built so far (build stages 1–4): catching and tools, honey, wax, combs, the bear, the Shop; The Workbench, candles, Hippies, sage, single wasps; the Smoker, the slice; the Garden, foragers, guards, pollen, bee bread, the wooden hive. By rough arithmetic that is about 3–5 hours of active play, nearly all on day 1, after which nothing new unlocks. The aim: **week 1** colony and garden, **week 2** meadow and automation, **week 3** seasons and growth levelling off, then the swarm. **Pacing rule: long-term progress is gated by real time (the queen, plant growth, seasons), not clicks.** Clicking stays a burst tool.
+
+| Build stage | Theme | New systems |
+|---|---|---|
+| **5. The queen and the brood** (spec: `windows/013-beekeeper-brood/`) | The colony grows itself | Bee bread feeds the queen, who raises honeybees, live and away; the pantry; the slice cap; the bear's trade agreement at 100 trades; a fuller welcome-back message. |
+| **6. The poplar, propolis and the emissary** | Guards get a job; the wasps' story ends | More seeds (each grows longer: 10 min, 1 h, 6 h, overnight), nurse bees (laying faster), the poplar and resin foragers, propolis, the bee-boost and sage-propolis candles, a propolis-narrowed entrance (guards fend wasps off, strength from the guard count), 3 failed raids bring the emissary, the wasps sell paper. No Stress Mode stops applying to Beekeeper. |
+| **7. The meadow apiary and the honey house** | Expansion and automation | A second site with hives as a count; each hive adds laying and storage. Meadow plants. The honey house automates one job per upgrade (sell, bee bread, candles). Paper becomes labels for jarred honey. Batch comb building. |
+| **8. The bloom calendar** | A reason to come back | Seasons rotate on real time (played and away; Leah: figured out much later, maybe every 15 minutes). Each bloom boosts a kind of bee or plant and makes a named honey (clover, linden). A gentle winter cluster. |
+| **9. New buyers** | Relationships | Hummingbirds and Badgers, each wanting a named honey or a craft and giving something unique; slow standing orders; the road to the orchard. |
+| **10. The swarm** | The reset | Specced once stages 5–9 show where growth levels off. |
+
+Gaps these stages answer: time away barely grew anything (5); content ran out after the wooden hive (5–9); resources with no sink, such as guard bees, pollen and bee bread after the wooden hive, Beebits after the Whistle, and sage (5–7); the slice compounding without limit (5); storage that can't keep up with production (5, the trade agreement; 7); no long timers (6, 8); no automation (7).
+
 ## Decisions made
+- **Passive growth comes from bee bread** (Leah, 2026-11-07): bee bread feeds the queen, who raises new bees. The queen starts in the wooden hive (the skep has no room for brood).
+- **The slice gets a cap** (Leah, 2026-11-07): placeholder, never more than 10 × the tool's bees per click.
+- **The bear's trade agreement** (Leah, 2026-11-07): free at 100 bear trades; honey that doesn't fit in the combs is sold automatically at 50% of the normal rate, live and away. Selling by hand stays at the full rate.
+- **No Stress Mode will not be used in Beekeeper** (Leah, 2026-11-07): wasps are required for the emissary. Built in stage 6.
+- **Live-only boosts are intended** (Leah, 2026-11-07): the Smoker's calm and later boost candles reward live play; "same live and away" applies to growth, not to boosts.
+- **`decimal` is big enough** (2026-11-07): about 7.9 × 10²⁸, far more than a database BIGINT; with the slice cap the bee count can't run away.
 - **Build the systems first, tune later** (Leah, 2026-11-07): each stage adds its systems with placeholder numbers kept in the config; fine tuning comes once meadows and the rest are built.
 - Clicking stays "catch bees" (the game's premise) and stays relevant through scaling, the Smoker and special bees.
 - Hive roles become bee types attracted by flowers; guards are a permanent upgrade (Leah, 2026-11-07).
@@ -67,12 +88,12 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 
 ## Still open
 1. Offline rate is 100% (confirmed). Open: whether the 3-day cap grows with upgrades.
-2. How much of a click is the "slice of the colony" (needs the simulator).
-3. Bee types: the first list, where the first foragers or seeds come from, and which flower attracts which bee.
-4. Whether nurses are the only passive bee growth, or flowers also attract bees.
+2. The slice is 0.1% per click, capped (stage 5). Open: the cap's size (placeholder 10 × the tool's bees).
+3. Bee types: the seeds after the bramble and which flower attracts which bee (stage 6: nurse bees, resin foragers).
+4. ~~Whether nurses are the only passive bee growth~~ Settled: the queen, fed by bee bread; nurse bees (stage 6) make her lay faster.
 5. What the swarm bonus is.
 6. Sage-propolis candle duration.
-7. The number type for the very late game (planned `decimal`; may need a larger type).
+7. ~~The number type~~ Settled: `decimal` is big enough.
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Upgrades: the full list, each upgrade's cost, and which upgrades unlock which (work in progress; the first build of them uses placeholders).
