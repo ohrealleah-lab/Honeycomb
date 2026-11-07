@@ -107,14 +107,16 @@ public class BeekeeperViewModelTests : IDisposable
     }
 
     [Fact]
-    public void AGapOverTwoSeconds_IsCreditedAsTimeAway_AndLogged()
+    public void AGapOverTwoSeconds_IsCreditedAsTimeAway_Quietly()
     {
         var clock = new Clock();
         var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage);
         clock.Advance(7200);
         vm.Tick();
         Assert.Equal(7200m, vm.Honey);
-        Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.WelcomeBack && e.Value == 7200m);
+        // The app stayed open (sleep, a slow start), so no "While you were away" line.
+        Assert.False(Logged(vm, BeekeeperEvents.WelcomeBack));
+        Assert.False(Logged(vm, BeekeeperEvents.WelcomeBackNothing));
     }
 
     [Fact]

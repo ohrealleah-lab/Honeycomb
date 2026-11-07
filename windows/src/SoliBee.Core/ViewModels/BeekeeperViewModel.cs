@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -186,7 +187,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
         if (Engine.IsAway(gap))
         {
-            LogEvents(Engine.AdvanceAway(gap).Events);
+            // The app was open the whole time, so the honey is credited quietly: only
+            // reopening the app says "While you were away" (Leah, 2026-11-07).
+            LogEvents(Engine.AdvanceAway(gap).Events.Where(e =>
+                e.Key is not (BeekeeperEvents.WelcomeBack or BeekeeperEvents.WelcomeBackNothing)));
         }
         else
         {
