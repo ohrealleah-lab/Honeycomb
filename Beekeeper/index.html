@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Beekeeper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400;1,6..72,600&family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: radial-gradient(ellipse at 50% 30%, #3B2A14 0%, #24190A 100%);
+      --accent: #FFD300;
+      --tint: #FFD300;
+      --on-accent: #2B1D05;
+      --glass: rgba(12, 8, 3, 0.55);
+      --glass-border: rgba(255, 255, 255, 0.10);
+      --text-1: #FFFFFF;
+      --text-2: rgba(255, 255, 255, 0.72);
+      --text-3: rgba(255, 255, 255, 0.60);
+      --sting: #FFA38F;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    
+    body {
+      background: #110e0c;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text-1);
+      overflow-x: hidden;
+      padding: 16px;
+    }
+
+    /* Honeycomb App Window */
+    .win {
+      position: relative;
+      width: 1120px;
+      height: 768px;
+      max-width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.12);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+      transition: background 0.4s ease;
+    }
+
+    /* Top Chrome Titlebar */
+    .chrome {
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      color: rgba(255, 255, 255, 0.75);
+      font-size: 12px;
+      padding-right: 4px;
+      background: rgba(0, 0, 0, 0.15);
+    }
+    .chrome span { width: 46px; text-align: center; cursor: default; }
+
+    /* Honeycomb Stats & Toolbar */
+    .bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 20px 12px 20px;
+      gap: 16px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    .tools { display: flex; gap: 8px; align-items: center; }
+    .tbtn {
+      font: 700 13px/18px 'Segoe UI', system-ui, sans-serif;
+      color: var(--tint);
+      border: 1px solid var(--tint);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 6px 14px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tbtn:hover { background: rgba(255, 255, 255, 0.12); }
+    
+    .theme-select {
+      background: rgba(12, 8, 3, 0.8);
+      color: var(--text-1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      font: 600 12px 'Segoe UI', sans-serif;
+      padding: 5px 8px;
+      border-radius: 6px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    /* StatsBarPanel Pattern */
+    .stats { display: flex; gap: 24px; align-items: center; }
+    .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      min-width: 58px;
+      transition: opacity 0.4s ease;
+    }
+    .stat.hidden { display: none; }
+    .stat .l {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-3);
+      line-height: 16px;
+      letter-spacing: 0.04em;
+    }
+    .stat .v {
+      font-size: 20px;
+      font-weight: 700;
+      line-height: 24px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-1);
+    }
+    .stat .v small { font-size: 14px; color: var(--text-3); font-weight: 700; }
+
+    /* 3-Column Game Area */
+    .area {
+      display: grid;
+      grid-template-columns: 340px minmax(360px, 1fr) 260px;
+      gap: 24px;
+      padding: 12px 30px 24px 30px;
+      height: 676px;
+      flex: 1;
+      overflow: hidden;
+    }
+    .col {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+      position: relative;
+    }
+    .col.scrollable {
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    /* Glass Cards */
+    .glass {
+      background: var(--glass);
+      border: 1px solid var(--glass-border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-sizing: border-box;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .pt {
+      margin: 0 0 10px 0;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      line-height: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    .pt span { letter-spacing: 0; text-transform: none; font-weight: 400; color: var(--text-3); }
+    .who {
+      margin: 0;
+      font-family: 'Newsreader', Georgia, serif;
+      font-size: 22px;
+      line-height: 28px;
+      font-weight: 600;
+      color: var(--text-1);
+    }
+    .meta {
+      margin: 0;
+      font-size: 13px;
+      line-height: 18px;
+      color: var(--text-2);
+    }
+    .dim { color: var(--text-3); }
+    .big {
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 34px;
+      font-variant-numeric: tabular-nums;
+      color: var(--text-1);
+    }
+
+    /* Pixel Art Placeholder Frame */
+    .art {
+      height: 204px;
+      flex: none;
+      border: 1px dashed rgba(255, 255, 255, 0.32);
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.22);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      color: var(--text-3);
+      font-size: 12px;
+      line-height: 16px;
+      text-align: center;
+    }
+
+    /* Catch Bee Button & Stages */
+    .catch-wrap {
+      position: relative;
+      width: 100%;
+    }
+    .catch {
+      width: 100%;
+      height: 64px;
+      flex: none;
+      border-radius: 14px;
+      font: 700 20px/24px 'Segoe UI', system-ui, sans-serif;
+      background: var(--accent);
+      color: var(--on-accent);
+      border: none;
+      cursor: pointer;
+      outline: none;
+      transition: transform 0.09s ease, filter 0.15s ease, background 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+    .catch:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+    .catch:active:not(:disabled) {
+      transform: scale(0.97);
+    }
+    .catch.full {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: rgba(255, 255, 255, 0.85);
+      font-size: 18px;
+      cursor: default;
+      box-shadow: none;
+    }
+    .catch.nudge {
+      animation: nudgeSideways 0.16s ease-in-out;
+    }
+    @keyframes nudgeSideways {
+      0% { transform: translateX(0); }
+      30% { transform: translateX(-3px); }
+      70% { transform: translateX(3px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* Rising Catch Popups */
+    .popup-container {
+      position: absolute;
+      top: -12px;
+      right: 16px;
+      pointer-events: none;
+      z-index: 50;
+    }
+    .pop {
+      position: absolute;
+      right: 0;
+      white-space: nowrap;
+      font-family: 'Newsreader', Georgia, serif;
+      font-size: 20px;
+      line-height: 24px;
+      font-weight: 600;
+      font-style: italic;
+      color: var(--accent);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+      animation: popupRise 0.9s cubic-bezier(0.1, 0.8, 0.2, 1) forwards;
+    }
+    .pop.sting {
+      color: var(--sting);
+      font-size: 19px;
+    }
+    @keyframes popupRise {
+      0% { transform: translateY(0); opacity: 0; }
+      15% { transform: translateY(-8px); opacity: 1; }
+      60% { transform: translateY(-24px); opacity: 1; }
+      100% { transform: translateY(-36px); opacity: 0; }
+    }
+
+    /* Wax Progress Bar */
+    .track {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.14);
+      overflow: hidden;
+      margin-top: 6px;
+    }
+    .fill {
+      height: 6px;
+      border-radius: 3px;
+      background: var(--accent);
+      transition: width 0.25s ease-out;
+    }
+
+    /* Standard Action Buttons */
+    .btn {
+      height: 40px;
+      padding: 0 16px;
+      border-radius: 8px;
+      border: 1px solid var(--accent);
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--accent);
+      font: 700 14px/18px 'Segoe UI', system-ui, sans-serif;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn:hover:not(:disabled) {
+      background: rgba(255, 214, 0, 0.12);
+    }
+    .btn span { font-weight: 400; opacity: 0.75; font-size: 13px; }
+    .btn.off, .btn:disabled {
+      border-color: rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.45);
+      background: transparent;
+      cursor: default;
+    }
+
+    /* Shop Item Rows */
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 12px 0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .row:first-of-type { border-top: none; }
+    .nm { margin: 0; font-size: 15px; font-weight: 700; line-height: 20px; color: var(--text-1); }
+    .ds { margin: 2px 0 0 0; font-size: 13px; line-height: 18px; color: var(--text-2); }
+    .owned {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 13px;
+      font-weight: 700;
+      display: inline-flex;
+      gap: 6px;
+      align-items: center;
+      white-space: nowrap;
+    }
+    .right {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 3px;
+      flex: none;
+    }
+
+    /* Story Log */
+    .log {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      height: 100%;
+      overflow-y: auto;
+    }
+    .log-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 6px;
+    }
+    .log-feed p {
+      margin: 0;
+      font-family: 'Newsreader', Georgia, serif;
+      font-size: 16px;
+      line-height: 23px;
+      color: var(--text-1);
+      transition: opacity 0.3s ease;
+    }
+
+    /* Wasp Raid Banner (In Centre Column) */
+    .wasp-card {
+      border: 1px solid rgba(255, 100, 100, 0.4);
+      background: rgba(45, 12, 12, 0.7);
+      padding: 14px 18px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      animation: fadeInDown 0.3s ease-out;
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Sticky Reveal Animation */
+    .reveal-new {
+      animation: panelArrival 0.6s ease-out forwards;
+      box-shadow: 0 0 18px rgba(255, 214, 0, 0.25);
+    }
+    @keyframes panelArrival {
+      0% { opacity: 0; transform: translateY(12px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+  <!-- HONEYCOMB APP CONTAINER -->
+  <div class="win" id="app-window">
+    
+    <!-- Chrome Header -->
+    <div class="chrome" aria-hidden="true">
+      <span>—</span><span>▢</span><span>✕</span>
+    </div>
+
+    <!-- Toolbar & StatsBarPanel -->
+    <div class="bar">
+      <div class="tools">
+        <select id="theme-selector" class="theme-select" title="Theme">
+          <option value="Honey">Theme: Honey</option>
+          <option value="Default">Theme: Felt Green</option>
+          <option value="Sunset">Theme: Sunset</option>
+          <option value="Moogle">Theme: Moogle Dark</option>
+          <option value="Forest">Theme: Forest</option>
+          <option value="OceanSky">Theme: Ocean Sky</option>
+        </select>
+        <button class="tbtn" id="btn-new-game">New Game</button>
+        <button class="tbtn" id="btn-sound-toggle">Sound: ON</button>
+      </div>
+
+      <!-- Stats Bar (Order: BEES · HONEY · WAX · BEEBITS) -->
+      <div class="stats">
+        <div class="stat" id="stat-bees">
+          <span class="l">BEES</span>
+          <span class="v"><span id="hud-bees">0</span> <small id="hud-bee-cap">/ 500</small></span>
+        </div>
+        <div class="stat hidden" id="stat-honey">
+          <span class="l">HONEY</span>
+          <span class="v" id="hud-honey">0</span>
+        </div>
+        <div class="stat hidden" id="stat-wax">
+          <span class="l">WAX</span>
+          <span class="v" id="hud-wax">0</span>
+        </div>
+        <div class="stat hidden" id="stat-beebits">
+          <span class="l">BEEBITS</span>
+          <span class="v" id="hud-beebits">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3-Column Game Area -->
+    <div class="area">
+
+      <!-- LEFT COLUMN (340px Fixed): Art -> Catch Bee -> Tool line -> The Hive Card -->
+      <div class="col">
+        <!-- 170x102 px art frame shown at 2x (340x204) -->
+        <div class="art">
+          <strong style="font-size: 13px; color: rgba(255,255,255,.75)">Pixel art frame</strong>
+          <span>170 × 102 art px, shown at 2×</span>
+          <span style="font-size: 10px; color: rgba(255,255,255,.4); margin-top: 4px">░░░ ⬡ ⬡ 🐝 ⬡ ⬡ ░░░</span>
+        </div>
+
+        <!-- Catch Bee Button with Popup Container -->
+        <div class="catch-wrap">
+          <div class="popup-container" id="popup-dock"></div>
+          <button class="catch" id="btn-catch">Catch Bee</button>
+        </div>
+
+        <p class="meta" id="tool-meta-line">Bare hands · 1 bee per catch</p>
+
+        <!-- The Hive Card (Revealed on 1st bee caught) -->
+        <div class="glass hidden" id="panel-hive">
+          <h2 class="pt">The hive</h2>
+          <div style="display: flex; align-items: baseline; gap: 8px">
+            <span class="big" id="hive-rate-big">0.0</span>
+            <span class="meta">honey / sec</span>
+          </div>
+          <div class="meta" style="display: flex; justify-content: space-between; margin-top: 16px">
+            <span id="label-next-wax">Next wax</span>
+            <span id="text-wax-fraction">0 / 50 honey</span>
+          </div>
+          <div class="track">
+            <div class="fill" id="wax-progress-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CENTRE COLUMN (Fluid, Min 360px): Revealed Panels Spaced 16px apart -->
+      <div class="col scrollable">
+        
+        <!-- Wasp Incursion Threat Alert (Slides in at top of centre) -->
+        <div class="wasp-card hidden" id="panel-wasp">
+          <div>
+            <div style="font-size: 12px; font-weight: 700; color: #FFA38F; text-transform: uppercase; letter-spacing: 0.05em">
+              Wasp Raider Approaching! (<span id="wasp-countdown">15</span>s)
+            </div>
+            <div style="font-size: 13px; color: rgba(255,255,255,0.8); margin-top: 2px">
+              Bribe 10 Honey or lose 50% of your bees.
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px">
+            <button class="btn" id="btn-bribe-wasp">Bribe (10 🍯)</button>
+            <button class="btn off" id="btn-ignore-wasp">Risk</button>
+          </div>
+        </div>
+
+        <!-- 1. The Bear Panel (Revealed at 10 Honey) -->
+        <section class="glass hidden" id="panel-bear">
+          <h2 class="pt">The bear <span id="bear-trades-label">Trades: 0</span></h2>
+          <p class="who" id="bear-name-display">Barnaby</p>
+          <p class="meta" style="margin-top: 4px">10 honey buys 1 Beebit.</p>
+          <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap">
+            <button class="btn" id="btn-sell-10">Sell 10 Honey</button>
+            <button class="btn" id="btn-sell-all">Sell All <span id="sell-all-preview">· 0 → 0</span></button>
+          </div>
+        </section>
+
+        <!-- 2. The Beekeeper's Shop (Revealed at 15 Beebits) -->
+        <section class="glass hidden" id="panel-shop" style="padding-bottom: 8px">
+          <h2 class="pt">The beekeeper's shop</h2>
+          
+          <!-- Padded Gloves -->
+          <div class="row" id="row-gloves">
+            <div>
+              <p class="nm">Padded Gloves</p>
+              <p class="ds">Catch 2 bees at a time. No more stings.</p>
+            </div>
+            <div class="right" id="slot-gloves">
+              <button class="btn" id="btn-buy-gloves">15 Beebits</button>
+            </div>
+          </div>
+
+          <!-- Mesh Net -->
+          <div class="row" id="row-net">
+            <div>
+              <p class="nm">Mesh Net</p>
+              <p class="ds">Catch 5 bees at a time.</p>
+            </div>
+            <div class="right" id="slot-net">
+              <button class="btn" id="btn-buy-net">75 Beebits</button>
+            </div>
+          </div>
+
+          <!-- Bee-Safe Vacuum -->
+          <div class="row" id="row-vac">
+            <div>
+              <p class="nm">Bee-Safe Vacuum</p>
+              <p class="ds">Catch 10 bees at a time.</p>
+            </div>
+            <div class="right" id="slot-vac">
+              <button class="btn" id="btn-buy-vac">250 Beebits</button>
+              <span class="meta" id="subtext-vac"></span>
+            </div>
+          </div>
+
+          <!-- Wax-Catcher -->
+          <div class="row" id="row-wax-catcher">
+            <div>
+              <p class="nm">Wax-Catcher</p>
+              <p class="ds">2 wax for every 50 honey.</p>
+            </div>
+            <div class="right" id="slot-wax-catcher">
+              <button class="btn" id="btn-buy-wax-catcher">150 Beebits</button>
+              <span class="meta" id="subtext-wax-catcher"></span>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. Combs Panel (Revealed at 50 Wax) -->
+        <section class="glass hidden" id="panel-combs">
+          <h2 class="pt">Combs <span id="combs-built-label">0 built</span></h2>
+          <p class="who" id="combs-room-heading">Room for 500 bees</p>
+          <p class="meta" style="margin-top: 4px">+500 room for each comb. Wax cost scales by +25%.</p>
+          <div style="display: flex; gap: 10px; margin-top: 14px; align-items: center">
+            <button class="btn" id="btn-build-comb">Build Comb <span id="comb-btn-cost">50 Wax</span></button>
+            <span class="meta" id="comb-cost-ladder">Upcoming: 62, 78, 97</span>
+          </div>
+        </section>
+
+        <!-- 4. Chandler's Workshop & Hippies -->
+        <section class="glass hidden" id="panel-chandler">
+          <h2 class="pt">Chandler's Workshop <span>Candlemaking</span></h2>
+          <p class="meta" style="margin-bottom: 12px">Dip beeswax into candles or sell them to visiting hippies.</p>
+          
+          <div class="row">
+            <div>
+              <p class="nm">Plain Beeswax Candle</p>
+              <p class="ds">+20% honey speed (120s) or sell to Hippies for 25 ₿.</p>
+            </div>
+            <div class="right">
+              <button class="btn" id="btn-craft-plain">Dip (10 Wax)</button>
+              <button class="btn" id="btn-sell-plain" style="margin-top: 4px">Sell for 25 ₿</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <div>
+              <p class="nm" style="color: var(--accent)">Sage-Propolis Candle</p>
+              <p class="ds">100% Wasp Repellent smoke (180s).</p>
+            </div>
+            <div class="right">
+              <button class="btn" id="btn-craft-repel">Dip (50 Wax)</button>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center" class="meta">
+            <span>In stock: <strong id="inv-candles-plain" style="color: #fff">0</strong> plain, <strong id="inv-candles-repel" style="color: var(--accent)">0</strong> repel</span>
+            <div style="display: flex; gap: 8px">
+              <button class="btn" id="btn-light-plain" style="height: 32px; padding: 0 10px; font-size: 12px">Light Plain</button>
+              <button class="btn" id="btn-light-repel" style="height: 32px; padding: 0 10px; font-size: 12px">Light Repel</button>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- RIGHT COLUMN (260px Fixed): Story Log, Full Height, Newest on Top -->
+      <div class="col">
+        <div class="glass log">
+          <h2 class="pt">The garden</h2>
+          <div class="log-feed" id="log-list">
+            <!-- Dynamic log lines injected with fading opacity steps: 100%, 80%, 62%, 46%, 32% -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- SOUND SYNTHESIZER & ENGINE -->
+  <script>
+    // --- 1. WEB AUDIO API SYNTHESIZER ---
+    let soundEnabled = true;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    let audioCtx = null;
+
+    function playTone(freq, type = 'sine', duration = 0.08, gainVal = 0.04) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new AudioCtx();
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    const SFX = {
+      pop: () => playTone(540, 'triangle', 0.06, 0.04),
+      sting: () => { playTone(240, 'sawtooth', 0.12, 0.05); setTimeout(() => playTone(180, 'sawtooth', 0.16, 0.05), 40); },
+      coin: () => { playTone(987, 'sine', 0.06, 0.04); setTimeout(() => playTone(1318, 'sine', 0.1, 0.04), 50); },
+      waxDrop: () => { playTone(440, 'triangle', 0.12, 0.05); setTimeout(() => playTone(880, 'sine', 0.18, 0.05), 60); },
+      comb: () => { playTone(300, 'square', 0.08, 0.03); setTimeout(() => playTone(600, 'sine', 0.12, 0.04), 70); }
+    };
+
+    document.getElementById('btn-sound-toggle').addEventListener('click', () => {
+      soundEnabled = !soundEnabled;
+      document.getElementById('btn-sound-toggle').textContent = soundEnabled ? "Sound: ON" : "Sound: OFF";
+    });
+
+    // --- 2. THEME SELECTION ---
+    const themes = {
+      Honey: { bg: 'radial-gradient(ellipse at 50% 30%, #3B2A14 0%, #24190A 100%)', accent: '#FFD300', tint: '#FFD300' },
+      Default: { bg: 'radial-gradient(ellipse at 50% 30%, #008000 0%, #005A00 100%)', accent: '#FFD700', tint: '#FFFFFF' },
+      Sunset: { bg: 'radial-gradient(ellipse at 50% 30%, #1E3A48 0%, #132833 100%)', accent: '#FFB557', tint: '#FDF3E3' },
+      Moogle: { bg: 'radial-gradient(ellipse at 50% 30%, #141414 0%, #080808 100%)', accent: '#FFE500', tint: '#FFFFFF' },
+      Forest: { bg: 'radial-gradient(ellipse at 50% 30%, #5E5450 0%, #433B37 100%)', accent: '#FFD700', tint: '#FFFFFF' },
+      OceanSky: { bg: 'radial-gradient(ellipse at 50% 30%, #24788F 0%, #185566 100%)', accent: '#FFD700', tint: '#FFFFFF' }
+    };
+
+    document.getElementById('theme-selector').addEventListener('change', (e) => {
+      const t = themes[e.target.value] || themes.Honey;
+      document.documentElement.style.setProperty('--bg', t.bg);
+      document.documentElement.style.setProperty('--accent', t.accent);
+      document.documentElement.style.setProperty('--tint', t.tint);
+    });
+
+    // --- 3. GAME STATE ---
+    const bearNames = ["Barnaby", "Billy", "Berenstein", "Bruno", "Baloo", "Buster", "Bartholomew"];
+
+    let state = {
+      bees: 0,
+      beeCap: 500,
+      honey: 0,
+      wax: 0,
+      waxProgress: 0,
+      beebits: 0,
+      lifetimeBeebits: 0,
+      combsBuilt: 0,
+      
+      // Reveal Flags (Sticky)
+      revealedHive: false,
+      revealedBear: false,
+      revealedShop: false,
+      revealedCombs: false,
+      revealedWaxStat: false,
+      revealedBeebitsStat: false,
+
+      // Bear
+      bearName: bearNames[Math.floor(Math.random() * bearNames.length)],
+      bearTradesCount: 0,
+
+      // Tool Owned
+      tool: 'hands', // 'hands', 'gloves', 'net', 'vac'
+      hasGloves: false,
+      hasNet: false,
+      hasVac: false,
+      hasWaxCatcher: false,
+      everStung: false,
+
+      // Candles
+      plainCandles: 0,
+      repelCandles: 0,
+      candleActive: false,
+      candleType: null,
+      candleTimeLeft: 0,
+
+      // Wasp Threat
+      waspActive: false,
+      waspTimer: 15,
+      lastWaspCheck: Date.now(),
+
+      // Story Log
+      logHistory: [
+        "Your bees are frolicking. Catch them and bring them back.",
+        "Hello, Worker Bee."
+      ]
+    };
+
+    document.getElementById('bear-name-display').textContent = state.bearName;
+
+    // --- 4. STORY LOG SYSTEM ---
+    const opacitySteps = [1.0, 0.80, 0.62, 0.46, 0.32];
+
+    function pushLog(text) {
+      state.logHistory.unshift(text);
+      if (state.logHistory.length > 30) state.logHistory.pop();
+      renderLog();
+    }
+
+    function renderLog() {
+      const feed = document.getElementById('log-list');
+      feed.innerHTML = '';
+      state.logHistory.forEach((line, idx) => {
+        const p = document.createElement('p');
+        const op = idx < opacitySteps.length ? opacitySteps[idx] : 0.32;
+        p.style.opacity = op;
+        p.textContent = line;
+        feed.appendChild(p);
+      });
+    }
+    renderLog();
+
+    // --- 5. POPUP SYSTEM ---
+    function spawnPopup(text, isSting = false) {
+      const dock = document.getElementById('popup-dock');
+      const span = document.createElement('span');
+      span.className = `pop ${isSting ? 'sting' : ''}`;
+      span.textContent = text;
+      dock.appendChild(span);
+
+      // Keep up to 6 at once
+      const pops = dock.querySelectorAll('.pop');
+      if (pops.length > 6) pops[0].remove();
+
+      setTimeout(() => span.remove(), 900);
+    }
+
+    // --- 6. CATCH BEE ACTION ---
+    const catchBtn = document.getElementById('btn-catch');
+
+    function getBeesPerCatch() {
+      if (state.tool === 'vac') return 10;
+      if (state.tool === 'net') return 5;
+      if (state.tool === 'gloves') return 2;
+      return 1;
+    }
+
+    catchBtn.addEventListener('click', () => {
+      if (state.bees >= state.beeCap) return;
+
+      // Sting chance: Bare hands only (8% chance)
+      if (state.tool === 'hands' && Math.random() < 0.20) {
+        state.everStung = true;
+        catchBtn.classList.remove('nudge');
+        void catchBtn.offsetWidth; // re-trigger animation
+        catchBtn.classList.add('nudge');
+        spawnPopup("Stung! No bee.", true);
+        SFX.sting();
+        pushLog("Ouch! A bee stings your bare hand. You drop it.");
+        updateUI();
+        return;
+      }
+
+      const requested = getBeesPerCatch();
+      const actual = Math.min(requested, state.beeCap - state.bees);
+      state.bees += actual;
+      SFX.pop();
+
+      spawnPopup(`+${actual} Bee${actual > 1 ? 's' : ''}`);
+
+      if (state.tool === 'hands' && state.bees === 1 && !state.revealedHive) {
+        pushLog("You carry the first bee back to the hive box.");
+      }
+
+      updateUI();
+    });
+
+    // --- 7. COMMERCE (THE BEAR) ---
+    document.getElementById('btn-sell-10').addEventListener('click', () => {
+      if (state.honey >= 10) {
+        state.honey -= 10;
+        state.beebits += 1;
+        state.lifetimeBeebits += 1;
+        state.bearTradesCount += 1;
+        SFX.coin();
+        if (!state.revealedBeebitsStat) {
+          state.revealedBeebitsStat = true;
+          pushLog(`${state.bearName} hands you your first gleaming Beebit.`);
+        } else {
+          pushLog(`${state.bearName} takes 10 honey and hands you a Beebit.`);
+        }
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-sell-all').addEventListener('click', () => {
+      if (state.honey >= 10) {
+        const bundles = Math.floor(state.honey / 10);
+        state.honey -= bundles * 10;
+        state.beebits += bundles;
+        state.lifetimeBeebits += bundles;
+        state.bearTradesCount += bundles;
+        SFX.coin();
+        pushLog(`Sold ${bundles * 10} honey to ${state.bearName} for ${bundles} Beebits.`);
+        updateUI();
+      }
+    });
+
+    // --- 8. SHOP ACTIONS ---
+    document.getElementById('btn-buy-gloves').addEventListener('click', () => {
+      if (state.beebits >= 15 && !state.hasGloves) {
+        state.beebits -= 15;
+        state.hasGloves = true;
+        state.tool = 'gloves';
+        SFX.coin();
+        pushLog("You slip on the padded gloves. No more stings.");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-buy-net').addEventListener('click', () => {
+      if (state.beebits >= 75 && !state.hasNet) {
+        state.beebits -= 75;
+        state.hasNet = true;
+        state.tool = 'net';
+        SFX.coin();
+        pushLog("You take the mesh net into the garden. Catching clusters now.");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-buy-vac').addEventListener('click', () => {
+      if (state.beebits >= 250 && !state.hasVac && state.hasNet) {
+        state.beebits -= 250;
+        state.hasVac = true;
+        state.tool = 'vac';
+        SFX.coin();
+        pushLog("The Bee-Safe Vacuum hums to life with gentle suction.");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-buy-wax-catcher').addEventListener('click', () => {
+      if (state.beebits >= 150 && !state.hasWaxCatcher) {
+        state.beebits -= 150;
+        state.hasWaxCatcher = true;
+        SFX.coin();
+        pushLog("Installed the Wax-Catcher. 2 wax for every 50 honey.");
+        updateUI();
+      }
+    });
+
+    // --- 9. COMBS SCALING (Base 50 Wax, +25% per comb) ---
+    function getCombCost(n) {
+      return Math.floor(50 * Math.pow(1.25, n));
+    }
+
+    document.getElementById('btn-build-comb').addEventListener('click', () => {
+      const cost = getCombCost(state.combsBuilt);
+      if (state.wax >= cost) {
+        state.wax -= cost;
+        state.combsBuilt += 1;
+        state.beeCap += 500;
+        SFX.comb();
+        pushLog(`Built Comb #${state.combsBuilt}. Room for ${state.beeCap} bees.`);
+        updateUI();
+      }
+    });
+
+    // --- 10. CHANDLER'S WORKSHOP & CANDLES ---
+    document.getElementById('btn-craft-plain').addEventListener('click', () => {
+      if (state.wax >= 10) {
+        state.wax -= 10;
+        state.plainCandles += 1;
+        SFX.waxDrop();
+        pushLog("Dipped a Plain Beeswax Candle (10 wax).");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-craft-repel').addEventListener('click', () => {
+      if (state.wax >= 50) {
+        state.wax -= 50;
+        state.repelCandles += 1;
+        SFX.waxDrop();
+        pushLog("Crafted a Sage-Propolis Wasp Repelling Candle (50 wax).");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-sell-plain').addEventListener('click', () => {
+      if (state.plainCandles >= 1) {
+        state.plainCandles -= 1;
+        state.beebits += 25;
+        state.lifetimeBeebits += 25;
+        SFX.coin();
+        pushLog("A visiting hippie buys a beeswax candle for 25 Beebits.");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-light-plain').addEventListener('click', () => {
+      if (state.plainCandles >= 1) {
+        state.plainCandles -= 1;
+        state.candleActive = true;
+        state.candleType = 'plain';
+        state.candleTimeLeft = 120;
+        SFX.waxDrop();
+        pushLog("Lit a Plain Beeswax Candle. The hive hums faster (+20%).");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-light-repel').addEventListener('click', () => {
+      if (state.repelCandles >= 1) {
+        state.repelCandles -= 1;
+        state.candleActive = true;
+        state.candleType = 'repel';
+        state.candleTimeLeft = 180;
+        SFX.waxDrop();
+        pushLog("Lit the Sage-Propolis Candle. Thick fragrant smoke shields the hive.");
+        updateUI();
+      }
+    });
+
+    // --- 11. WASP THREAT (Slide in centre column) ---
+    document.getElementById('btn-bribe-wasp').addEventListener('click', () => {
+      if (state.honey >= 10) {
+        state.honey -= 10;
+        state.waspActive = false;
+        document.getElementById('panel-wasp').classList.add('hidden');
+        pushLog("You set out 10 honey. The wasp eats greedily and departs.");
+        updateUI();
+      }
+    });
+
+    document.getElementById('btn-ignore-wasp').addEventListener('click', () => {
+      resolveWaspDefeat();
+    });
+
+    function resolveWaspDefeat() {
+      state.waspActive = false;
+      document.getElementById('panel-wasp').classList.add('hidden');
+      const killed = Math.floor(state.bees * 0.5);
+      state.bees = Math.max(0, state.bees - killed);
+      pushLog(`The wasp raided the brood comb. ${killed} bees were killed (50% loss).`);
+      updateUI();
+    }
+
+    // --- 12. NEW GAME OVERLAY ---
+    document.getElementById('btn-new-game').addEventListener('click', () => {
+      if (confirm("Start over? Your hive will be lost.")) {
+        state = {
+          bees: 0,
+          beeCap: 500,
+          honey: 0,
+          wax: 0,
+          waxProgress: 0,
+          beebits: 0,
+          lifetimeBeebits: 0,
+          combsBuilt: 0,
+          revealedHive: false,
+          revealedBear: false,
+          revealedShop: false,
+          revealedCombs: false,
+          revealedWaxStat: false,
+          revealedBeebitsStat: false,
+          bearName: bearNames[Math.floor(Math.random() * bearNames.length)],
+          bearTradesCount: 0,
+          tool: 'hands',
+          hasGloves: false,
+          hasNet: false,
+          hasVac: false,
+          hasWaxCatcher: false,
+          everStung: false,
+          plainCandles: 0,
+          repelCandles: 0,
+          candleActive: false,
+          candleType: null,
+          candleTimeLeft: 0,
+          waspActive: false,
+          waspTimer: 15,
+          lastWaspCheck: Date.now(),
+          logHistory: ["Your bees are frolicking. Catch them and bring them back.", "Hello, Worker Bee."]
+        };
+        document.getElementById('bear-name-display').textContent = state.bearName;
+        renderLog();
+        updateUI();
+      }
+    });
+
+    // --- 13. GAME ENGINE TICK LOOP (100ms) ---
+    setInterval(() => {
+      // 1. Passive Honey Generation (0.1 honey / sec per bee)
+      let rateMultiplier = 1.0;
+      if (state.candleActive && state.candleType === 'plain') rateMultiplier *= 1.2;
+
+      const honeyPerSec = state.bees * 0.01 * rateMultiplier;
+      const honeyTick = honeyPerSec * 0.1;
+
+      if (state.bees > 0) {
+        state.honey += honeyTick;
+
+        // 2. Wax Excretion: Every 50 honey creates 1 wax (or 2 with Wax-Catcher)
+        state.waxProgress += honeyTick;
+        if (state.waxProgress >= 50) {
+          state.waxProgress -= 50;
+          const waxDrop = state.hasWaxCatcher ? 2 : 1;
+          state.wax += waxDrop;
+          SFX.waxDrop();
+
+          if (!state.revealedWaxStat) {
+            state.revealedWaxStat = true;
+            pushLog("A golden flake of beeswax drops from the comb.");
+          }
+        }
+      }
+
+      // 3. Candle Burning Countdown
+      if (state.candleActive) {
+        state.candleTimeLeft -= 0.1;
+        if (state.candleTimeLeft <= 0) {
+          state.candleActive = false;
+          state.candleType = null;
+          pushLog("The candle burned down to its stub and flickered out.");
+        }
+      }
+
+      // 4. Wasp Raid Countdown
+      if (state.waspActive) {
+        state.waspTimer -= 0.1;
+        document.getElementById('wasp-countdown').textContent = Math.ceil(state.waspTimer);
+        if (state.waspTimer <= 0) resolveWaspDefeat();
+      }
+
+      // 5. Periodic Wasp Check (Every 45s if honey >= 25)
+      const waspInterval = (state.bearTradesCount >= 100) ? 90000 : 45000;
+      if (!state.waspActive && state.honey >= 25 && Date.now() - state.lastWaspCheck > waspInterval) {
+        state.lastWaspCheck = Date.now();
+        if (Math.random() < 0.40) {
+          if (state.candleActive && state.candleType === 'repel') {
+            pushLog("A wasp scout hovered near, but was warded off by candle smoke.");
+          } else {
+            state.waspActive = true;
+            state.waspTimer = 15;
+            document.getElementById('panel-wasp').classList.remove('hidden');
+            pushLog("A harsh droning sounds. A yellowjacket scout spotted your honey!");
+          }
+        }
+      }
+
+      updateUI();
+    }, 100);
+
+    // --- 14. UI RENDERER & REVEAL SYSTEM ---
+    function updateUI() {
+      // Numbers
+      document.getElementById('hud-bees').textContent = state.bees;
+      document.getElementById('hud-bee-cap').textContent = `/ ${state.beeCap}`;
+      document.getElementById('hud-honey').textContent = Math.floor(state.honey);
+      document.getElementById('hud-wax').textContent = state.wax;
+      document.getElementById('hud-beebits').textContent = state.beebits;
+
+      // Rate display in Hive Card
+      const rateVal = state.bees * 0.01 * (state.candleActive && state.candleType === 'plain' ? 1.2 : 1.0);
+      const effectiveRate = rateVal < 1.0 && rateVal > 0 ? rateVal.toFixed(2) : rateVal.toFixed(1);
+      document.getElementById('hive-rate-big').textContent = effectiveRate;
+      document.getElementById('label-next-wax').textContent = state.hasWaxCatcher ? "Next 2 wax" : "Next wax";
+      document.getElementById('text-wax-fraction').textContent = `${Math.floor(state.waxProgress)} / 50 honey`;
+      document.getElementById('wax-progress-fill').style.width = `${Math.min(100, Math.floor((state.waxProgress / 50) * 100))}%`;
+
+      // Catch Bee Button State
+      const toolNames = { hands: "Bare hands", gloves: "Padded gloves", net: "Mesh Net", vac: "Bee-Safe Vacuum" };
+      let toolLine = `${toolNames[state.tool]} · ${getBeesPerCatch()} bee${getBeesPerCatch() > 1 ? 's' : ''} per catch`;
+      if (state.tool === 'hands' && state.everStung) toolLine += " · bees may sting";
+
+      if (state.bees >= state.beeCap) {
+        catchBtn.classList.add('full');
+        catchBtn.textContent = "The hive is full";
+        catchBtn.disabled = true;
+        toolLine = state.combsBuilt > 0 ? "Build a comb to make room." : "Your bees are busy making honey.";
+      } else {
+        catchBtn.classList.remove('full');
+        catchBtn.textContent = "Catch Bee";
+        catchBtn.disabled = false;
+      }
+      document.getElementById('tool-meta-line').textContent = toolLine;
+
+      // REVEALS (Sticky)
+      // 1. Hive Card (First bee caught)
+      if (state.bees >= 1 && !state.revealedHive) {
+        state.revealedHive = true;
+        document.getElementById('panel-hive').classList.remove('hidden');
+        document.getElementById('panel-hive').classList.add('reveal-new');
+        document.getElementById('stat-honey').classList.remove('hidden');
+      }
+
+      // 2. The Bear (Holding 10 Honey)
+      if (state.honey >= 10 && !state.revealedBear) {
+        state.revealedBear = true;
+        document.getElementById('panel-bear').classList.remove('hidden');
+        document.getElementById('panel-bear').classList.add('reveal-new');
+        pushLog(`${state.bearName} lumbers out of the woods, sniffing the air.`);
+      }
+
+      // 3. Stats Bar reveals
+      if (state.revealedWaxStat) document.getElementById('stat-wax').classList.remove('hidden');
+      if (state.revealedBeebitsStat) document.getElementById('stat-beebits').classList.remove('hidden');
+
+      // 4. The Shop (Reached 15 Beebits)
+      if (state.lifetimeBeebits >= 15 && !state.revealedShop) {
+        state.revealedShop = true;
+        document.getElementById('panel-shop').classList.remove('hidden');
+        document.getElementById('panel-shop').classList.add('reveal-new');
+        pushLog("A travelling peddler sets up a beekeeper's tool shop.");
+      }
+
+      // 5. Combs (Reached 50 Wax)
+      if (state.wax >= 50 && !state.revealedCombs) {
+        state.revealedCombs = true;
+        document.getElementById('panel-combs').classList.remove('hidden');
+        document.getElementById('panel-combs').classList.add('reveal-new');
+        document.getElementById('panel-chandler').classList.remove('hidden');
+        document.getElementById('panel-chandler').classList.add('reveal-new');
+        pushLog("You have enough wax to begin framing new combs.");
+      }
+
+      // Bear Trade Previews
+      const bundles = Math.floor(state.honey / 10);
+      document.getElementById('sell-all-preview').textContent = `· ${bundles * 10} → ${bundles}`;
+      document.getElementById('btn-sell-10').disabled = state.honey < 10;
+      document.getElementById('btn-sell-all').disabled = state.honey < 10;
+      document.getElementById('bear-trades-label').textContent = `Trades: ${state.bearTradesCount}`;
+
+      // Shop Rows State
+      // Gloves
+      const slotGloves = document.getElementById('slot-gloves');
+      if (state.hasGloves) {
+        slotGloves.innerHTML = `<span class="owned"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 7.5l3 3 6-7"/></svg>Owned</span>`;
+      } else {
+        const btnGloves = document.getElementById('btn-buy-gloves');
+        btnGloves.className = state.beebits >= 15 ? "btn" : "btn off";
+        btnGloves.disabled = state.beebits < 15;
+      }
+
+      // Net
+      const slotNet = document.getElementById('slot-net');
+      if (state.hasNet) {
+        slotNet.innerHTML = `<span class="owned"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 7.5l3 3 6-7"/></svg>Owned</span>`;
+      } else {
+        const btnNet = document.getElementById('btn-buy-net');
+        btnNet.className = state.beebits >= 75 ? "btn" : "btn off";
+        btnNet.disabled = state.beebits < 75;
+      }
+
+      // Vacuum
+      const rowVac = document.getElementById('row-vac');
+      const slotVac = document.getElementById('slot-vac');
+      const subtextVac = document.getElementById('subtext-vac');
+      if (state.hasVac) {
+        slotVac.innerHTML = `<span class="owned"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 7.5l3 3 6-7"/></svg>Owned</span>`;
+        rowVac.style.opacity = "1";
+      } else if (!state.hasNet) {
+        rowVac.style.opacity = "0.55";
+        document.getElementById('btn-buy-vac').className = "btn off";
+        document.getElementById('btn-buy-vac').disabled = true;
+        subtextVac.textContent = "After the Mesh Net";
+      } else {
+        rowVac.style.opacity = "1";
+        const canBuyVac = state.beebits >= 250;
+        document.getElementById('btn-buy-vac').className = canBuyVac ? "btn" : "btn off";
+        document.getElementById('btn-buy-vac').disabled = !canBuyVac;
+        subtextVac.textContent = canBuyVac ? "" : `${250 - state.beebits} more`;
+      }
+
+      // Wax-Catcher
+      const slotCatcher = document.getElementById('slot-wax-catcher');
+      const subtextCatcher = document.getElementById('subtext-wax-catcher');
+      if (state.hasWaxCatcher) {
+        slotCatcher.innerHTML = `<span class="owned"><svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 7.5l3 3 6-7"/></svg>Owned</span>`;
+      } else {
+        const canBuyCatcher = state.beebits >= 150;
+        document.getElementById('btn-buy-wax-catcher').className = canBuyCatcher ? "btn" : "btn off";
+        document.getElementById('btn-buy-wax-catcher').disabled = !canBuyCatcher;
+        subtextCatcher.textContent = canBuyCatcher ? "" : `${150 - state.beebits} more`;
+      }
+
+      // Combs
+      const combCost = getCombCost(state.combsBuilt);
+      document.getElementById('combs-built-label').textContent = `${state.combsBuilt} built`;
+      document.getElementById('combs-room-heading').textContent = `Room for ${state.beeCap} bees`;
+      document.getElementById('comb-btn-cost').textContent = `${combCost} Wax`;
+      const btnComb = document.getElementById('btn-build-comb');
+      btnComb.className = state.wax >= combCost ? "btn" : "btn off";
+      btnComb.disabled = state.wax < combCost;
+      document.getElementById('comb-cost-ladder').textContent = `Upcoming: ${getCombCost(state.combsBuilt+1)}, ${getCombCost(state.combsBuilt+2)}, ${getCombCost(state.combsBuilt+3)}`;
+
+      // Chandler's Workshop
+      document.getElementById('btn-craft-plain').disabled = state.wax < 10;
+      document.getElementById('btn-craft-repel').disabled = state.wax < 50;
+      document.getElementById('btn-sell-plain').disabled = state.plainCandles < 1;
+      document.getElementById('btn-light-plain').disabled = state.plainCandles < 1 || state.candleActive;
+      document.getElementById('btn-light-repel').disabled = state.repelCandles < 1 || state.candleActive;
+      document.getElementById('inv-candles-plain').textContent = state.plainCandles;
+      document.getElementById('inv-candles-repel').textContent = state.repelCandles;
+    }
+  </script>
+</body>
+</html>

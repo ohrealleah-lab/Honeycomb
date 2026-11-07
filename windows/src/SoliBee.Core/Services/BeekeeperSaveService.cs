@@ -1,0 +1,102 @@
+using System;
+using System.IO;
+using System.Linq;
+using System.Text.Json;
+using SoliBee.Core.Models;
+
+namespace SoliBee.Core.Services;
+
+/// <summary>
+/// Loads and saves a Beekeeper game (spec FR-004). Writes go through <see cref="AtomicFile"/>
+/// so a crash mid-save can't leave half a file. A missing, damaged or too-new save never
+/// crashes the game: <see cref="Load(string)"/> returns null (start a new game), and a file
+/// that couldn't be read is moved aside rather than silently overwritten by the next autosave.
+/// </summary>
+public static class BeekeeperSaveService
+{
+    public const int CurrentVersion = 1;
+
+    /// <summary>The story log keeps this many lines, newest first.</summary>
+    public const int MaxLogEntries = 50;
+
+    public static string SaveFilePath => Path.Combine(AppPaths.DataDirectory, "beekeeper.json");
+
+    public static BeekeeperState? Load() => Load(SaveFilePath);
+
+    public static bool Save(BeekeeperState state, DateTime utcNow) => Save(state, SaveFilePath, utcNow);
+
+    public static BeekeeperState? Load(string path)
+    {
+        string json;
+        try
+        {
+            if (!File.Exists(path)) return null;
+            json = File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+
+        BeekeeperState? state = null;
+        try
+        {
+            state = JsonSerializer.Deserialize<BeekeeperState>(json);
+        }
+        catch (JsonException)
+        {
+            // fall through: treated as unreadable below
+        }
+
+        if (state is null || state.Version > CurrentVersion || !LooksSane(state))
+        {
+            MoveAside(path);
+            return null;
+        }
+        return state;
+    }
+
+    public static bool Save(BeekeeperState state, string path, DateTime utcNow)
+    {
+        try
+        {
+            state.Version = CurrentVersion;
+            state.SavedAtUtc = utcNow;
+            if (state.Log.Count > MaxLogEntries)
+                state.Log = state.Log.Take(MaxLogEntries).ToList(); // newest first, so keep the front
+
+            AtomicFile.WriteAllText(path, JsonSerializer.Serialize(state));
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Seconds between the save and now. Zero when the save has no time. Negative when the
+    /// clock went backwards; the engine credits nothing for a negative gap.
+    /// </summary>
+    public static decimal SecondsSinceSaved(BeekeeperState state, DateTime utcNow)
+    {
+        if (state.SavedAtUtc is not { } saved) return 0m;
+        return (decimal)(utcNow - saved).TotalSeconds;
+    }
+
+    // Guards against a hand-edited or damaged file that parses but makes no sense.
+    private static bool LooksSane(BeekeeperState s)
+    {
+        int maxTool = BeekeeperConfig.Default.Tools.Count;
+        return s.Bees >= 0m && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
+            && s.Combs >= 0 && s.Trades >= 0
+            && s.ToolLevel >= 0 && s.ToolLevel <= maxTool
+            && s.Log is not null;
+    }
+
+    private static void MoveAside(string path)
+    {
+        try { File.Move(path, path + ".unreadable", overwrite: true); }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+}

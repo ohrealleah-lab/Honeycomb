@@ -31,6 +31,7 @@
                             <ComboBoxItem x:Name="VideoPokerModeItem"  Content="Video Poker"      Tag="VideoPoker" />
                             <ComboBoxItem x:Name="VideoBlackjackItem"  Content="Video Blackjack"  Tag="Blackjack" />
                             <ComboBoxItem x:Name="HoneycombModeItem"   Content="Honeycomb"        Tag="Honeycomb" />
+                            <ComboBoxItem x:Name="BeekeeperModeItem"   Content="Beekeeper"        Tag="Beekeeper" />
                         </ComboBox>
                         <Button x:Name="NewGameButton" Content="New Game" Click="NewGame_Click" Classes="toolbar" />
                         <Button x:Name="RestartButton" Content="Restart" Click="RestartGame_Click" Classes="toolbar" />
@@ -128,6 +129,23 @@
                         <StackPanel x:Name="HoneycombOpponentStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
                             <TextBlock Text="{Binding OpponentNameDisplay}" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
                             <TextBlock Text="{Binding OpponentScoreDisplay}" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <!-- BEEKEEPER: BEES · HONEY · WAX · BEEBITS (each shown once revealed) -->
+                        <StackPanel x:Name="BeekeeperBeesStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock x:Name="BeekeeperBeesLabelText" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="BeekeeperBeesValueText" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel x:Name="BeekeeperHoneyStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock x:Name="BeekeeperHoneyLabelText" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="BeekeeperHoneyValueText" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel x:Name="BeekeeperWaxStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock x:Name="BeekeeperWaxLabelText" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="BeekeeperWaxValueText" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
+                        </StackPanel>
+                        <StackPanel x:Name="BeekeeperBeebitsStatPanel" Spacing="2" HorizontalAlignment="Center" IsVisible="False">
+                            <TextBlock x:Name="BeekeeperBeebitsLabelText" FontSize="14" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" Opacity="0.6" HorizontalAlignment="Center" />
+                            <TextBlock x:Name="BeekeeperBeebitsValueText" FontSize="20" FontFamily="Segoe UI" FontWeight="Bold" Foreground="White" HorizontalAlignment="Center" />
                         </StackPanel>
                     </StackPanel>
                 </DockPanel>

@@ -1,0 +1,5 @@
+Upgrade ID,Name,Cost,Prerequisite,Colony Effect,Description
+UPG_GUARD_BEES,Guard Bees,50 Beebits + 1 Comb,Shop,Fights off wasps without bribe,Tough bees stationed at hive entrance.
+UPG_CLOVER_BEES,Clover Bee Strain,80 Beebits,Meadow Unlocked,+25% Honey output from all bees,Sweet wild clover nectar boosts yield.
+UPG_BUMBLEBEES,Bumblebee Genetics,120 Beebits,Meadow Unlocked,Increases wax drop frequency,Chonky fuzzy bees produce dense wax flakes.
+UPG_QUEEN_BEE,Queen Bee Awakening,"1,000 Beebits + 5 Combs",Late Game,Boosts all colony stats & automates hatching,The matriarch unites the entire apiary.

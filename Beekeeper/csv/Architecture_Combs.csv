@@ -1,0 +1,2 @@
+Comb ID,Structure Name,Base Wax Cost,Cost Growth Rate,Bee Capacity Added,Description
+COMB_EXPANSION,Hexagonal Brood Comb,50 Wax,+25% per comb owned (Cost = 50 * 1.25^N),+500 Bees Capacity,Expand the beehive size by +500 bees per comb built.

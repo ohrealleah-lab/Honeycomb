@@ -92,7 +92,7 @@ public partial class MainWindow : Window
             CardView.ApplyThemeColors(m.Options);
             ApplyToolbarColors(m.Options);
             CardView.InvalidateAllCardViews(this);
-            bool isCardGame = _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb";
+            bool isCardGame = IsCardGameTag(_currentGameTag);
             if (TimeStatPanel != null)  TimeStatPanel.IsVisible  = isCardGame && !m.Options.IsNoStressMode;
             if (ScoreStatPanel != null) ScoreStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
             if (MovesStatPanel != null) MovesStatPanel.IsVisible = isCardGame && !m.Options.IsNoStressMode;
@@ -147,7 +147,7 @@ public partial class MainWindow : Window
         // Escape internally, which silently swallowed it before it could bubble up to
         // close the Preferences/Rules panel.
         this.AddHandler(KeyDownEvent, OnWindowKeyDown, RoutingStrategies.Tunnel);
-        this.Closing += (_, _) => SaveCurrentWindowSize();
+        this.Closing += (_, _) => { SaveCurrentWindowSize(); _coordinator.SaveBeekeeper(); };
         // Re-scale the background image's offset transform to stay proportionally correct
         // as the window is resized (offsets are stored in fixed reference-width units).
         this.SizeChanged += OnWindowSizeChanged;
@@ -262,7 +262,7 @@ public partial class MainWindow : Window
         // Refresh whatever's currently showing in the stats overlay title/rows and the
         // solitaire key-hint row, since both are built from literals elsewhere in this file.
         if (StatsOverlay.IsVisible) PopulateStatsPanel();
-        UpdateSolitaireKeyHint(_currentGameTag, _currentGameTag != "VideoPoker" && _currentGameTag != "Blackjack" && _currentGameTag != "Honeycomb");
+        UpdateSolitaireKeyHint(_currentGameTag, IsCardGameTag(_currentGameTag));
     }
 
     // Custom Card Colors "Top Bar Buttons": one tint for the toolbar text, outline and
@@ -511,6 +511,8 @@ public partial class MainWindow : Window
                 bjVm.StartNewGame();
             else if (this.DataContext is HoneycombViewModel hVm)
                 hVm.InitializeGame();
+            else if (this.DataContext is BeekeeperViewModel bkVm)
+                bkVm.StartNewGame();
         });
     }
 
@@ -577,6 +579,17 @@ public partial class MainWindow : Window
 
     private void NewGame_Click(object? sender, RoutedEventArgs e)
     {
+        // Beekeeper asks "Start over?" only when there are bees to lose.
+        if (DataContext is BeekeeperViewModel bk && bk.NewGameNeedsConfirmation)
+        {
+            _pendingAction = "NewGame";
+            ConfirmActionTitle.Text = BeekeeperText.StartOver;
+            ConfirmActionMessage.Text = BeekeeperText.StartOverBody;
+            ConfirmActionMessage.IsVisible = true;
+            ConfirmActionButton.Content = Strings.Get(StringKey.NewGame, _language);
+            ConfirmActionOverlay.IsVisible = true;
+            return;
+        }
         if (IsGameInProgress())
         {
             _pendingAction = "NewGame";
@@ -1036,6 +1049,44 @@ public partial class MainWindow : Window
         StatsFastestWinText.Text  = timedGamesWon > 0 ? Mmss(fastestWinSec) : Strings.Get(StringKey.NoTimePlaceholder, _language);
     }
 
+    // True for the solitaire family (Klondike, Freecell, Spider) — the games with Score/Moves/
+    // Time, Hint, Undo and Restart. Everything else has its own toolbar and stats.
+    private static bool IsCardGameTag(string tag) =>
+        tag != "VideoPoker" && tag != "Blackjack" && tag != "Honeycomb" && tag != "Beekeeper";
+
+    // Beekeeper: toolbar is New Game + Options only, and the stats bar shows its four
+    // resources, each one only once the game has revealed it.
+    private BeekeeperViewModel? _beekeeperTracked;
+
+    private void SetupBeekeeperMode(bool on)
+    {
+        if (_beekeeperTracked != null) _beekeeperTracked.PropertyChanged -= OnBeekeeperChanged;
+        _beekeeperTracked = on ? _coordinator.BeekeeperViewModel : null;
+        if (_beekeeperTracked != null) _beekeeperTracked.PropertyChanged += OnBeekeeperChanged;
+        UpdateBeekeeperStats();
+    }
+
+    private void OnBeekeeperChanged(object? sender, PropertyChangedEventArgs e) => UpdateBeekeeperStats();
+
+    private void UpdateBeekeeperStats()
+    {
+        var vm = _beekeeperTracked;
+        bool on = vm != null;
+        BeekeeperBeesStatPanel.IsVisible    = on;
+        BeekeeperHoneyStatPanel.IsVisible   = on && vm!.HoneyRevealed;
+        BeekeeperWaxStatPanel.IsVisible     = on && vm!.WaxRevealed;
+        BeekeeperBeebitsStatPanel.IsVisible = on && vm!.BeebitsRevealed;
+        if (!on) return;
+        BeekeeperBeesLabelText.Text    = BeekeeperText.BeesLabel;
+        BeekeeperHoneyLabelText.Text   = BeekeeperText.HoneyLabel;
+        BeekeeperWaxLabelText.Text     = BeekeeperText.WaxLabel;
+        BeekeeperBeebitsLabelText.Text = BeekeeperText.BeebitsLabel;
+        BeekeeperBeesValueText.Text    = vm!.BeesDisplay;
+        BeekeeperHoneyValueText.Text   = vm.HoneyDisplay;
+        BeekeeperWaxValueText.Text     = vm.WaxDisplay;
+        BeekeeperBeebitsValueText.Text = vm.BeebitsDisplay;
+    }
+
     private void SetupHoneycombMode()
     {
         HoneycombStartMatchButton.IsVisible  = true;
@@ -1083,7 +1134,8 @@ public partial class MainWindow : Window
         // watermark behind the card grid — hide this dialog-chrome copy while it's open so
         // the two don't both render at once.
         PreferencesWatermarkWrapper.IsVisible = true;
-        ViewStatsText.IsVisible = true;
+        bool hasStats = this.DataContext is not BeekeeperViewModel; // Beekeeper keeps no statistics
+        ViewStatsText.IsVisible = hasStats;
         _preferencesView.SubPanelVisibilityChanged += (_, _) =>
         {
             bool subPanelOpen = _preferencesView?.IsSubPanelOpen ?? false;
@@ -1091,7 +1143,7 @@ public partial class MainWindow : Window
             PreferencesWatermarkWrapper.IsVisible = !(_preferencesView?.IsFaceCardsPanelOpen ?? false);
             // View Stats only makes sense on the main Preferences page — Themes, Face
             // Cards, and Card Colors are all covered by IsSubPanelOpen.
-            ViewStatsText.IsVisible = !subPanelOpen;
+            ViewStatsText.IsVisible = hasStats && !subPanelOpen;
         };
 
         if (this.DataContext is VideoPokerViewModel vpVm)
@@ -1350,6 +1402,7 @@ public partial class MainWindow : Window
         "VideoPoker"                                        => 3,
         "Blackjack"                                         => 4,
         "Honeycomb"                                         => 5,
+        "Beekeeper"                                         => 6,
         _                                                   => 0,
     };
 
@@ -1480,6 +1533,11 @@ public partial class MainWindow : Window
             cacheKey = "Honeycomb";
             _coordinator.SwitchToHoneycomb();
         }
+        else if (tag == "Beekeeper")
+        {
+            cacheKey = "Beekeeper";
+            _coordinator.SwitchToBeekeeper();
+        }
         else
         {
             return;
@@ -1503,6 +1561,7 @@ public partial class MainWindow : Window
                     "VideoPoker" => new VideoPokerView { DataContext = _coordinator.VideoPokerViewModel },
                     "Blackjack" => new BlackjackView { DataContext = _coordinator.BlackjackViewModel },
                     "Honeycomb" => new HoneycombView { DataContext = _coordinator.HoneycombViewModel },
+                    "Beekeeper" => new BeekeeperView { DataContext = _coordinator.BeekeeperViewModel },
                     _ => throw new InvalidOperationException($"Unhandled cache key: {cacheKey}")
                 };
             }
@@ -1571,7 +1630,7 @@ public partial class MainWindow : Window
         if (_hintTrackedVm != null) _hintTrackedVm.PropertyChanged += OnHintTrackedVmPropertyChanged;
         UpdateHintButtonEnabled();
 
-        bool isCardGame = tag != "VideoPoker" && tag != "Blackjack" && tag != "Honeycomb";
+        bool isCardGame = IsCardGameTag(tag);
         UpdateSolitaireKeyHint(tag, isCardGame);
         // Hint is solitaire-only (no hint logic exists for VP/Blackjack/Honeycomb).
         if (HintButton != null)    HintButton.IsVisible    = isCardGame && !_coordinator.GameViewModel.Options.HideHintButton || tag == "Honeycomb";
@@ -1584,6 +1643,7 @@ public partial class MainWindow : Window
         if (StatsBarPanel != null) StatsBarPanel.IsVisible = isCardGame || tag == "Honeycomb";
         var hcYou = this.FindControl<StackPanel>("HoneycombYouStatPanel");
         var hcOpp = this.FindControl<StackPanel>("HoneycombOpponentStatPanel");
+        SetupBeekeeperMode(tag == "Beekeeper");
         if (hcYou != null) hcYou.IsVisible = tag == "Honeycomb";
         if (hcOpp != null) hcOpp.IsVisible = tag == "Honeycomb";
         if (tag == "Honeycomb")
@@ -1890,6 +1950,10 @@ public partial class MainWindow : Window
                 if (!maximized) { opts.HoneycombWidth = Width; opts.HoneycombHeight = Height; }
                 opts.HoneycombMaximized = maximized;
                 break;
+            case "Beekeeper":
+                if (!maximized) { opts.BeekeeperWidth = Width; opts.BeekeeperHeight = Height; }
+                opts.BeekeeperMaximized = maximized;
+                break;
             default:
                 if (!maximized) { opts.KlondikeWidth = Width; opts.KlondikeHeight = Height; }
                 opts.KlondikeMaximized = maximized;
@@ -1972,6 +2036,7 @@ public partial class MainWindow : Window
             "VideoPoker" => (opts.VideoPokerWidth, opts.VideoPokerHeight, opts.VideoPokerMaximized),
             "Blackjack"  => (opts.BlackjackWidth,  opts.BlackjackHeight,  opts.BlackjackMaximized),
             "Honeycomb"  => (opts.HoneycombWidth,  opts.HoneycombHeight,  opts.HoneycombMaximized),
+            "Beekeeper"  => (opts.BeekeeperWidth,  opts.BeekeeperHeight,  opts.BeekeeperMaximized),
             _            => (opts.KlondikeWidth,   opts.KlondikeHeight,   opts.KlondikeMaximized),
         };
 
@@ -2004,12 +2069,14 @@ public partial class MainWindow : Window
         {
             "VideoPoker" => 520,
             "Blackjack"  => 340,
+            "Beekeeper"  => 700, // the screen scrolls sideways below its 3-column width
             _            => 600, // Klondike, Freecell (both deck counts), Spider
         };
         double baseMinHeight = baseTag switch
         {
             "VideoPoker" => 450,
             "Blackjack"  => 403,
+            "Beekeeper"  => 420,
             _            => 330, // Klondike, Freecell (both deck counts), Spider
         };
 
@@ -2229,6 +2296,9 @@ public partial class MainWindow : Window
             double maxWidthCapZoom = (GameAreaGrid.Bounds.Width * 0.75) / naturalW;
             effectiveZoom = Math.Min(effectiveZoom, maxWidthCapZoom);
         }
+
+        // Beekeeper is a text screen that scrolls, not a board: never scale it.
+        if (_currentGameTag == "Beekeeper") effectiveZoom = 1;
 
         _contentScale.ScaleX = effectiveZoom;
         _contentScale.ScaleY = effectiveZoom;

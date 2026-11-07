@@ -136,6 +136,9 @@ public class GameOptions
     public double HoneycombWidth     { get; set; } = 1120;
     public double HoneycombHeight    { get; set; } = 800;
     public bool   HoneycombMaximized { get; set; } = false;
+    public double BeekeeperWidth     { get; set; } = 1120;
+    public double BeekeeperHeight    { get; set; } = 760;
+    public bool   BeekeeperMaximized { get; set; } = false;
 
     // Theme editor color overrides — null means use the compiled default
     public string? ThemeFaceBackNormal { get; set; }

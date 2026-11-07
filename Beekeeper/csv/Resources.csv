@@ -1,0 +1,7 @@
+Resource ID,Name,Category,Base Cap,Cap Expanded By,Source,Drain / Sinks,Special Rules
+RES_BEES,Bees in Hive,Population,500,Combs (+500 cap per comb),Catching in Areas (Hands/Gloves/Net/Vac),Wasp raids (50% loss if unbribed),Each bee produces 0.01 honey per second (100 bees = 1.0/s).
+RES_HONEY,Sweet Honey,Liquid Gold,Unlimited,N/A,Passive generation from Hive Bees (0.01/s per bee),"Sold to Bear (10 Honey = 1 Beebit), Wasp bribes (10 honey)",Every 50 honey produced generates 1 Beeswax flake.
+RES_BEEBITS,Beebits,Currency,Unlimited,N/A,"Selling honey to Bear, selling candles to Hippies","Shop tools, upgrades, area passes",Core progression money.
+RES_WAX,Beeswax,Material,Unlimited,N/A,Passive byproduct (1 per 50 honey; 2x with Wax-Catcher),"Crafting Combs (50 wax +25%/comb), Dipping Candles",Essential structural and craft material.
+RES_CANDLE_WAX,Beeswax Candle,Crafted Item,Unlimited,N/A,Crafted at 10 wax each,Burned for +20% honey speed (120s) or sold to Hippies (25 ₿),High-value trade item.
+RES_CANDLE_REPEL,Sage-Propolis Candle,Crafted Item,Unlimited,N/A,Crafted at 50 wax each,Burned for 100% wasp defense (180s),Vital protection against bee annihilation.

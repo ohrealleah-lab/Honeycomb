@@ -1,0 +1,260 @@
+Beekeeper UI spec
+Beekeeper · UI spec (first build)
+Desktop first (Avalonia, Windows). Read alongside the mockups on this canvas and EARLY_LOOP_RULES.md. This spec covers look and behaviour only; every game number comes from the rules.
+1 · Where it lives in Honeycomb
+7th entry in
+GameSelectionBox
+: "Beekeeper".
+Toolbar buttons:
+New Game
+and
+Options
+only. Hide Restart, Hint, Undo and the Honeycomb match buttons.
+Stats use the existing
+StatsBarPanel
+pattern: label 14 Bold at 60% opacity over value 20 Bold, spacing 25. Order is always
+BEES · HONEY · WAX · BEEBITS
+. Bees shows "12 / 20", with " / 20" at 14 Bold 60%.
+Each stat appears only once revealed (see section 7). Numbers are whole, with locale grouping (1,234 in EN, 1.234 in ES). Values use tabular figures so they don't jiggle.
+The hive keeps running in the background
+while the player is in another Honeycomb game, so it earns while they play solitaire. Only quitting the app pauses it (no offline earnings). The game loop must therefore live outside the view (e.g. a Core service owned by
+AppCoordinator
+), not in
+BeekeeperView
+, which is unloaded when the player switches games.
+Beekeeper draws no background of its own. The theme's felt colour or photo, plus the existing vignette, sits behind everything.
+2 · Layout
+Game area
+(inside
+MainContent
+): padding 30 left/right, 8 top, 24 bottom. It fills the window; no scale-to-fit like the card games.
+Three columns:
+ColumnDefinitions="340,*,260"
+, column gap 24.
+Left (340, fixed):
+pixel-art frame → Catch Bee → tool line → The hive card.
+Centre (fluid, min 360):
+revealed panels in reveal order: the bear, the shop, combs. It's a
+ScrollViewer
+and panels are spaced 16 apart.
+Right (260, fixed):
+story log, full height, scrolls inside.
+Narrow windows
+(the app allows down to 600 wide):
+Under 1000: the log moves under the left column (two columns, 340 | *).
+Under 720: one column, the phone layout (section 11).
+Pixel art frame:
+art is 170 × 102 px, shown at 2× (340 × 204) with integer scaling and
+BitmapInterpolationMode="None"
+, clipped to radius 12. Until the art exists, show the dashed placeholder. It may change per site later.
+3 · Colour tokens
+Token
+Value
+Use
+Accent
+Theme's
+ThemeHintHighlight
+(Default #FFD700, Honey #FFD300, Sunset #FFB557, Moogle #FFE500). Fallback #FFD600
+Catch Bee fill, buttons you can use, popups, progress fill, reveal glow. It's always warm on every theme.
+Toolbar tint
+Existing
+ToolbarTintBrush
+Toolbar buttons, unchanged
+Glass
+#8C0C0803
+, border
+#1AFFFFFF
+Every panel and the log. Keeps text readable on photo backgrounds. No blur needed.
+Text 1 / 2 / 3
+#FFFFFFFF
+/
+#B8FFFFFF
+(72%) /
+#99FFFFFF
+(60%)
+Main text / descriptions and meta / panel titles and labels only
+On accent
+#2B1D05
+Text on the Catch Bee button
+Sting
+#FFA38F
+"Stung!" popup only. Soft coral, never red.
+Disabled
+border
+#2EFFFFFF
+, text
+#73FFFFFF
+Buttons you can't use yet
+Divider
+#14FFFFFF
+Between shop rows
+4 · Text styles
+Two families:
+Segoe UI
+(as in the rest of the app) for numbers, labels and buttons, and
+Newsreader
+(SIL Open Font License, bundle it as an
+avares://
+font) for anything that reads like a story. Fallback: Georgia. Use Bold, never Black (see the App.axaml note on Avalonia 12).
+Style
+Font
+Size / line
+Weight
+Colour
+Used for
+Panel title
+Segoe UI
+12 / 16, UPPERCASE, LetterSpacing 1
+Bold
+Text 3
+THE BEAR, THE HIVE, COMBS
+Panel side note
+Segoe UI
+12 / 16
+Regular
+Text 3
+"Trades: 23", "2 built"
+Heading
+Newsreader
+22 / 28
+SemiBold
+Text 1
+Bear's name, "Room for 120 bees"
+Big number
+Segoe UI
+28 / 34, tabular
+Bold
+Text 1
+Honey per second
+Story log
+Newsreader
+16 / 24
+Regular
+Text 1, fading
+Log lines
+Flavour line
+Newsreader
+16 / 24
+Italic
+85%
+One-off lines inside panels
+Item name
+Segoe UI
+15 / 20
+Bold
+Text 1
+Shop items
+Body / meta
+Segoe UI
+13 / 18
+Regular
+Text 2
+Descriptions, tool line, "68 more"
+Button
+Segoe UI
+14 / 18
+Bold
+Accent
+Sell, Buy, Build
+Catch Bee
+Segoe UI
+20 / 24 (17 when full)
+Bold
+On accent
+Main button
+Popup
+Newsreader
+20 / 24
+SemiBold Italic
+Accent / Sting
++1 Bee, Stung! No bee.
+5 · Spacing and shapes
+4px base. Steps used: 4, 8, 12, 16, 20, 24, 30.
+Panel: radius 12, padding 20, 1px border. Panels in a column are 16 apart.
+Panel title to content: 10. Content blocks inside a panel: 14 to 16.
+Shop rows: 12 top and bottom padding, divider on top, name block on the left, action on the right with a gap of at least 16.
+Buttons: 40 tall, 16 side padding, radius 8. Catch Bee: full column width, 64 tall, radius 14. On touch, nothing under 44.
+6 · Components
+Catch Bee
+(states on the "Catch Bee states" board)
+Idle: accent fill. Hover: 8% lighter. Press: scale 0.97 for 90ms. Re-assert colours on
+:pointerover
+like the other shared button classes, because FluentTheme overrides them.
+Catch popup: spawns at the button's top-right, rises 28px, holds full opacity for 300ms, then fades out (900ms in total). Not hit-testable. Up to 6 at once; the oldest goes first.
+Stung: coral popup "Stung! No bee." and the button nudges sideways −3 → +3 → 0 px over 160ms. Bare hands only.
+Room for only some: the popup shows what actually fit ("+1 Bee"), then the button switches to full.
+Full: transparent fill, 1px border at 30% white, label "The hive is full", disabled. The tool line under it changes to "Your bees are busy making honey." (before combs) or "Build a comb to make room." (after).
+Tool line under the button: "&lt;tool&gt; · &lt;n&gt; bees per catch". After the first sting, bare hands adds "· bees may sting".
+Secondary button
+: 1px accent border, 4% white fill, accent text. Hover: accent at 12% fill. Disabled: grey border and text, no hover. The price lives in the button ("75 Beebits"). Sell All adds a quiet preview "· 40 → 4" (honey that will go → Beebits).
+The hive card
+: honey per second (1 decimal) as a big number, then "Next wax  17 / 50 honey" with a 6px progress bar. With the Wax-Catcher it reads "Next 2 wax".
+Shop rows
+: Affordable, Too expensive (with "N more" under it, live), After the previous tool (row at 55% opacity, "After the Mesh Net"), and Owned (tick + "Owned", no button). When all four are owned, the shop folds to one line.
+Combs
+: "Room for N bees" heading, Build button with the wax cost, "+50 room" note, and a ladder of costs (built ones struck through, the next in accent, then 4 upcoming).
+Story log
+: newest line on top. Opacity steps 100, 80, 62, 46, then 32% for everything older. A new line fades in over 400ms and pushes the rest down. Keep the last 30 lines and save them with the game. Every line is a translation key.
+7 · Reveal behaviour
+Trigger
+What appears
+New game
+Art frame, Catch Bee, tool line, log. Stat: BEES
+First bee caught
+The hive card. Stat: HONEY
+Holding 10 honey
+The bear panel
+First sale
+Stat: BEEBITS
+First wax
+Stat: WAX
+Reached 15 Beebits
+The shop
+Reached 50 wax
+Combs
+Panel arrival:
+the slot grows from 0 to full height over 300ms (ease-out), then the panel fades in and rises 8px over 600ms. Then an accent border and glow (
+0 0 18 #40FFD600
+) that fades away from 3.5s to 4.7s.
+Stat arrival:
+400ms fade, with no movement in the toolbar.
+Each reveal writes one log line at the same moment.
+Reveals are
+sticky
+: save a flag for each one and never hide them again.
+If two reveals fire in the same tick, play them 400ms apart in the order of the table.
+Loading a save shows everything already revealed immediately, with no animation.
+Reveals earned while in another game
+(e.g. honey reached 10 while playing Klondike) wait and play when the player comes back to Beekeeper, 400ms apart, each with its log line. The toolbar stats simply show current values on return.
+Reduced motion: a 200ms fade only, with no height animation, rise, glow, nudge or popup rise (popups just fade).
+8 · Live updates
+Redraw numbers at most 10 times a second, whatever the game tick is. When Beekeeper isn't on screen, the game keeps ticking but nothing is drawn.
+When something becomes affordable, the button just changes state, with no flash or sound. Calm by default.
+9 · New Game and menus
+Toolbar
+New Game
+opens the existing
+ConfirmActionOverlay
+: title "Start over?", message "Your hive will be lost.", buttons "Start Over" and "Cancel", plus the ✕. Escape and ✕ cancel.
+On confirm: clear the save, pick a new bear name, reset reveal flags and the log, then show the brand-new screen.
+Options
+opens the shared Preferences panel (language, sound, Honey Mode). No Beekeeper-only settings yet.
+10 · English and Spanish
+Plan for Spanish to be about 30% longer. Nothing is fixed-width except the three columns.
+Button rows are
+WrapPanel
+s, so a second button drops to a new line instead of clipping. Item names wrap to two lines; prices and counts never wrap.
+"Beebits" is a brand word and stays "Beebits" in Spanish.
+Uppercase titles are uppercased in code with the current culture, not stored in capitals.
+Plurals need two keys each ("+1 Bee" / "+{n} Bees", "+1 abeja" / "+{n} abejas").
+Never build a sentence by joining pieces. Use whole keys with placeholders ("{name} hands you a Beebit").
+11 · Phone (later, outline only)
+One column: compact stats row (label 11, value 16) → art at 1.5× → newest log line (tap opens the full log as a sheet) → the hive → panels in reveal order, scrolling. Catch Bee docks at the bottom above the safe area. New Game and Options move into a ••• menu. Popups and reveals behave the same.
+12 · Room for later
+See the "Room for later" board. A sites row (40px) can be added above the columns. The wasp visit slides in at the top of the centre column. The bear panel becomes Visitors with four reputation tabs. The workshop goes under Combs. A burning-candle chip goes in the hive card. Stats beyond four move to a small ledger above the log so the toolbar never overflows.
+13 · Decided with Leah
+Switching to another Honeycomb game does
+not
+pause the hive. It keeps earning in the background; only quitting the app pauses it.
+"Beebits" stays "Beebits" in Spanish.
+Tools not yet unlocked stay visible but unavailable, e.g. Vacuum shows "After the Mesh Net".

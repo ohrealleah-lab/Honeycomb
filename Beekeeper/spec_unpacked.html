@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Beekeeper UI spec</title>
+<script src="b3e57e73-7fb3-4432-81e2-01adef875610"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("34f230c5-ac4b-4e59-9e98-684286303071") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("125e4d88-6c56-4ae4-9291-e1cd7e5e20b1") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("69f57934-f7d7-43a7-9cd4-5505670edc2c") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("7febe6d9-ee8d-4047-a1e0-045e28d082ad") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("f5cde136-e13c-40dc-86f6-04bf0cceb58a") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("6dc51667-e508-4762-8795-078a95c949db") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("7febe6d9-ee8d-4047-a1e0-045e28d082ad") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("f5cde136-e13c-40dc-86f6-04bf0cceb58a") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("6dc51667-e508-4762-8795-078a95c949db") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+body{margin:0}
+.doc{width:1200px;height:3600px;box-sizing:border-box;padding:64px 72px;background:#FAF7F0;color:#1F1A12;font-family:'Segoe UI',Selawik,system-ui,sans-serif;font-size:15px;line-height:23px}
+h1{margin:0 0 6px 0;font-family:Newsreader,Georgia,serif;font-size:44px;line-height:52px;font-weight:600}
+h2{margin:44px 0 12px 0;font-family:Newsreader,Georgia,serif;font-size:26px;line-height:32px;font-weight:600;padding-top:20px;border-top:1px solid #E3DCCD}
+p{margin:0 0 10px 0}
+.lead{font-size:17px;line-height:26px;color:#5A5040;margin-bottom:8px}
+ul{margin:0 0 10px 0;padding-left:20px}
+li{margin:0 0 6px 0}
+table{width:100%;border-collapse:collapse;font-size:14px;line-height:20px;margin:6px 0 10px 0}
+th{text-align:left;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#6B604E;padding:8px 10px;border-bottom:1px solid #D9D0BE}
+td{padding:8px 10px;border-bottom:1px solid #ECE5D7;vertical-align:top}
+code{font-family:Consolas,'Cascadia Mono',monospace;font-size:13px;background:#EFE8D8;border-radius:4px;padding:1px 5px}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px;border:1px solid rgba(0,0,0,.2)}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.ask{background:#FFF1C9;border:1px solid #E8CF7A;border-radius:10px;padding:14px 18px}
+</style>
+</helmet>
+<div class="doc">
+  <h1>Beekeeper · UI spec (first build)</h1>
+  <p class="lead">Desktop first (Avalonia, Windows). Read alongside the mockups on this canvas and EARLY_LOOP_RULES.md. This spec covers look and behaviour only; every game number comes from the rules.</p>
+
+  <h2>1 · Where it lives in Honeycomb</h2>
+  <ul>
+    <li>7th entry in <code>GameSelectionBox</code>: "Beekeeper".</li>
+    <li>Toolbar buttons: <b>New Game</b> and <b>Options</b> only. Hide Restart, Hint, Undo and the Honeycomb match buttons.</li>
+    <li>Stats use the existing <code>StatsBarPanel</code> pattern: label 14 Bold at 60% opacity over value 20 Bold, spacing 25. Order is always <b>BEES · HONEY · WAX · BEEBITS</b>. Bees shows "12 / 20", with " / 20" at 14 Bold 60%.</li>
+    <li>Each stat appears only once revealed (see section 7). Numbers are whole, with locale grouping (1,234 in EN, 1.234 in ES). Values use tabular figures so they don't jiggle.</li>
+    <li><b>The hive keeps running in the background</b> while the player is in another Honeycomb game, so it earns while they play solitaire. Only quitting the app pauses it (no offline earnings). The game loop must therefore live outside the view (e.g. a Core service owned by <code>AppCoordinator</code>), not in <code>BeekeeperView</code>, which is unloaded when the player switches games.</li>
+    <li>Beekeeper draws no background of its own. The theme's felt colour or photo, plus the existing vignette, sits behind everything.</li>
+  </ul>
+
+  <h2>2 · Layout</h2>
+  <div class="two">
+    <div>
+      <p><b>Game area</b> (inside <code>MainContent</code>): padding 30 left/right, 8 top, 24 bottom. It fills the window; no scale-to-fit like the card games.</p>
+      <p><b>Three columns:</b> <code>ColumnDefinitions="340,*,260"</code>, column gap 24.</p>
+      <ul>
+        <li><b>Left (340, fixed):</b> pixel-art frame → Catch Bee → tool line → The hive card.</li>
+        <li><b>Centre (fluid, min 360):</b> revealed panels in reveal order: the bear, the shop, combs. It's a <code>ScrollViewer</code> and panels are spaced 16 apart.</li>
+        <li><b>Right (260, fixed):</b> story log, full height, scrolls inside.</li>
+      </ul>
+    </div>
+    <div>
+      <p><b>Narrow windows</b> (the app allows down to 600 wide):</p>
+      <ul>
+        <li>Under 1000: the log moves under the left column (two columns, 340 | *).</li>
+        <li>Under 720: one column, the phone layout (section 11).</li>
+      </ul>
+      <p><b>Pixel art frame:</b> art is 170 × 102 px, shown at 2× (340 × 204) with integer scaling and <code>BitmapInterpolationMode="None"</code>, clipped to radius 12. Until the art exists, show the dashed placeholder. It may change per site later.</p>
+    </div>
+  </div>
+
+  <h2>3 · Colour tokens</h2>
+  <sc-raw-table>
+    <sc-raw-tr><sc-raw-th>Token</sc-raw-th><sc-raw-th>Value</sc-raw-th><sc-raw-th>Use</sc-raw-th></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Accent</sc-raw-td><sc-raw-td>Theme's <code>ThemeHintHighlight</code> (Default #FFD700, Honey #FFD300, Sunset #FFB557, Moogle #FFE500). Fallback #FFD600</sc-raw-td><sc-raw-td>Catch Bee fill, buttons you can use, popups, progress fill, reveal glow. It's always warm on every theme.</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Toolbar tint</sc-raw-td><sc-raw-td>Existing <code>ToolbarTintBrush</code></sc-raw-td><sc-raw-td>Toolbar buttons, unchanged</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Glass</sc-raw-td><sc-raw-td><span class="sw" style="background: rgba(12,8,3,.55)"></span><code>#8C0C0803</code>, border <code>#1AFFFFFF</code></sc-raw-td><sc-raw-td>Every panel and the log. Keeps text readable on photo backgrounds. No blur needed.</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Text 1 / 2 / 3</sc-raw-td><sc-raw-td><code>#FFFFFFFF</code> / <code>#B8FFFFFF</code> (72%) / <code>#99FFFFFF</code> (60%)</sc-raw-td><sc-raw-td>Main text / descriptions and meta / panel titles and labels only</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>On accent</sc-raw-td><sc-raw-td><span class="sw" style="background: #2B1D05"></span><code>#2B1D05</code></sc-raw-td><sc-raw-td>Text on the Catch Bee button</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Sting</sc-raw-td><sc-raw-td><span class="sw" style="background: #FFA38F"></span><code>#FFA38F</code></sc-raw-td><sc-raw-td>"Stung!" popup only. Soft coral, never red.</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Disabled</sc-raw-td><sc-raw-td>border <code>#2EFFFFFF</code>, text <code>#73FFFFFF</code></sc-raw-td><sc-raw-td>Buttons you can't use yet</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Divider</sc-raw-td><sc-raw-td><code>#14FFFFFF</code></sc-raw-td><sc-raw-td>Between shop rows</sc-raw-td></sc-raw-tr>
+  </sc-raw-table>
+
+  <h2>4 · Text styles</h2>
+  <p>Two families: <b>Segoe UI</b> (as in the rest of the app) for numbers, labels and buttons, and <b>Newsreader</b> (SIL Open Font License, bundle it as an <code>avares://</code> font) for anything that reads like a story. Fallback: Georgia. Use Bold, never Black (see the App.axaml note on Avalonia 12).</p>
+  <sc-raw-table>
+    <sc-raw-tr><sc-raw-th>Style</sc-raw-th><sc-raw-th>Font</sc-raw-th><sc-raw-th>Size / line</sc-raw-th><sc-raw-th>Weight</sc-raw-th><sc-raw-th>Colour</sc-raw-th><sc-raw-th>Used for</sc-raw-th></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Panel title</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>12 / 16, UPPERCASE, LetterSpacing 1</sc-raw-td><sc-raw-td>Bold</sc-raw-td><sc-raw-td>Text 3</sc-raw-td><sc-raw-td>THE BEAR, THE HIVE, COMBS</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Panel side note</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>12 / 16</sc-raw-td><sc-raw-td>Regular</sc-raw-td><sc-raw-td>Text 3</sc-raw-td><sc-raw-td>"Trades: 23", "2 built"</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Heading</sc-raw-td><sc-raw-td>Newsreader</sc-raw-td><sc-raw-td>22 / 28</sc-raw-td><sc-raw-td>SemiBold</sc-raw-td><sc-raw-td>Text 1</sc-raw-td><sc-raw-td>Bear's name, "Room for 120 bees"</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Big number</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>28 / 34, tabular</sc-raw-td><sc-raw-td>Bold</sc-raw-td><sc-raw-td>Text 1</sc-raw-td><sc-raw-td>Honey per second</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Story log</sc-raw-td><sc-raw-td>Newsreader</sc-raw-td><sc-raw-td>16 / 24</sc-raw-td><sc-raw-td>Regular</sc-raw-td><sc-raw-td>Text 1, fading</sc-raw-td><sc-raw-td>Log lines</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Flavour line</sc-raw-td><sc-raw-td>Newsreader</sc-raw-td><sc-raw-td>16 / 24</sc-raw-td><sc-raw-td>Italic</sc-raw-td><sc-raw-td>85%</sc-raw-td><sc-raw-td>One-off lines inside panels</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Item name</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>15 / 20</sc-raw-td><sc-raw-td>Bold</sc-raw-td><sc-raw-td>Text 1</sc-raw-td><sc-raw-td>Shop items</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Body / meta</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>13 / 18</sc-raw-td><sc-raw-td>Regular</sc-raw-td><sc-raw-td>Text 2</sc-raw-td><sc-raw-td>Descriptions, tool line, "68 more"</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Button</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>14 / 18</sc-raw-td><sc-raw-td>Bold</sc-raw-td><sc-raw-td>Accent</sc-raw-td><sc-raw-td>Sell, Buy, Build</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Catch Bee</sc-raw-td><sc-raw-td>Segoe UI</sc-raw-td><sc-raw-td>20 / 24 (17 when full)</sc-raw-td><sc-raw-td>Bold</sc-raw-td><sc-raw-td>On accent</sc-raw-td><sc-raw-td>Main button</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Popup</sc-raw-td><sc-raw-td>Newsreader</sc-raw-td><sc-raw-td>20 / 24</sc-raw-td><sc-raw-td>SemiBold Italic</sc-raw-td><sc-raw-td>Accent / Sting</sc-raw-td><sc-raw-td>+1 Bee, Stung! No bee.</sc-raw-td></sc-raw-tr>
+  </sc-raw-table>
+
+  <h2>5 · Spacing and shapes</h2>
+  <ul>
+    <li>4px base. Steps used: 4, 8, 12, 16, 20, 24, 30.</li>
+    <li>Panel: radius 12, padding 20, 1px border. Panels in a column are 16 apart.</li>
+    <li>Panel title to content: 10. Content blocks inside a panel: 14 to 16.</li>
+    <li>Shop rows: 12 top and bottom padding, divider on top, name block on the left, action on the right with a gap of at least 16.</li>
+    <li>Buttons: 40 tall, 16 side padding, radius 8. Catch Bee: full column width, 64 tall, radius 14. On touch, nothing under 44.</li>
+  </ul>
+
+  <h2>6 · Components</h2>
+  <p><b>Catch Bee</b> (states on the "Catch Bee states" board)</p>
+  <ul>
+    <li>Idle: accent fill. Hover: 8% lighter. Press: scale 0.97 for 90ms. Re-assert colours on <code>:pointerover</code> like the other shared button classes, because FluentTheme overrides them.</li>
+    <li>Catch popup: spawns at the button's top-right, rises 28px, holds full opacity for 300ms, then fades out (900ms in total). Not hit-testable. Up to 6 at once; the oldest goes first.</li>
+    <li>Stung: coral popup "Stung! No bee." and the button nudges sideways −3 → +3 → 0 px over 160ms. Bare hands only.</li>
+    <li>Room for only some: the popup shows what actually fit ("+1 Bee"), then the button switches to full.</li>
+    <li>Full: transparent fill, 1px border at 30% white, label "The hive is full", disabled. The tool line under it changes to "Your bees are busy making honey." (before combs) or "Build a comb to make room." (after).</li>
+    <li>Tool line under the button: "&lt;tool&gt; · &lt;n&gt; bees per catch". After the first sting, bare hands adds "· bees may sting".</li>
+  </ul>
+  <p><b>Secondary button</b>: 1px accent border, 4% white fill, accent text. Hover: accent at 12% fill. Disabled: grey border and text, no hover. The price lives in the button ("75 Beebits"). Sell All adds a quiet preview "· 40 → 4" (honey that will go → Beebits).</p>
+  <p><b>The hive card</b>: honey per second (1 decimal) as a big number, then "Next wax  17 / 50 honey" with a 6px progress bar. With the Wax-Catcher it reads "Next 2 wax".</p>
+  <p><b>Shop rows</b>: Affordable, Too expensive (with "N more" under it, live), After the previous tool (row at 55% opacity, "After the Mesh Net"), and Owned (tick + "Owned", no button). When all four are owned, the shop folds to one line.</p>
+  <p><b>Combs</b>: "Room for N bees" heading, Build button with the wax cost, "+50 room" note, and a ladder of costs (built ones struck through, the next in accent, then 4 upcoming).</p>
+  <p><b>Story log</b>: newest line on top. Opacity steps 100, 80, 62, 46, then 32% for everything older. A new line fades in over 400ms and pushes the rest down. Keep the last 30 lines and save them with the game. Every line is a translation key.</p>
+
+  <h2>7 · Reveal behaviour</h2>
+  <sc-raw-table>
+    <sc-raw-tr><sc-raw-th>Trigger</sc-raw-th><sc-raw-th>What appears</sc-raw-th></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>New game</sc-raw-td><sc-raw-td>Art frame, Catch Bee, tool line, log. Stat: BEES</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>First bee caught</sc-raw-td><sc-raw-td>The hive card. Stat: HONEY</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Holding 10 honey</sc-raw-td><sc-raw-td>The bear panel</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>First sale</sc-raw-td><sc-raw-td>Stat: BEEBITS</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>First wax</sc-raw-td><sc-raw-td>Stat: WAX</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Reached 15 Beebits</sc-raw-td><sc-raw-td>The shop</sc-raw-td></sc-raw-tr>
+    <sc-raw-tr><sc-raw-td>Reached 50 wax</sc-raw-td><sc-raw-td>Combs</sc-raw-td></sc-raw-tr>
+  </sc-raw-table>
+  <ul>
+    <li><b>Panel arrival:</b> the slot grows from 0 to full height over 300ms (ease-out), then the panel fades in and rises 8px over 600ms. Then an accent border and glow (<code>0 0 18 #40FFD600</code>) that fades away from 3.5s to 4.7s.</li>
+    <li><b>Stat arrival:</b> 400ms fade, with no movement in the toolbar.</li>
+    <li>Each reveal writes one log line at the same moment.</li>
+    <li>Reveals are <b>sticky</b>: save a flag for each one and never hide them again.</li>
+    <li>If two reveals fire in the same tick, play them 400ms apart in the order of the table.</li>
+    <li>Loading a save shows everything already revealed immediately, with no animation.</li>
+    <li><b>Reveals earned while in another game</b> (e.g. honey reached 10 while playing Klondike) wait and play when the player comes back to Beekeeper, 400ms apart, each with its log line. The toolbar stats simply show current values on return.</li>
+    <li>Reduced motion: a 200ms fade only, with no height animation, rise, glow, nudge or popup rise (popups just fade).</li>
+  </ul>
+
+  <h2>8 · Live updates</h2>
+  <ul>
+    <li>Redraw numbers at most 10 times a second, whatever the game tick is. When Beekeeper isn't on screen, the game keeps ticking but nothing is drawn.</li>
+    <li>When something becomes affordable, the button just changes state, with no flash or sound. Calm by default.</li>
+  </ul>
+
+  <h2>9 · New Game and menus</h2>
+  <ul>
+    <li>Toolbar <b>New Game</b> opens the existing <code>ConfirmActionOverlay</code>: title "Start over?", message "Your hive will be lost.", buttons "Start Over" and "Cancel", plus the ✕. Escape and ✕ cancel.</li>
+    <li>On confirm: clear the save, pick a new bear name, reset reveal flags and the log, then show the brand-new screen.</li>
+    <li><b>Options</b> opens the shared Preferences panel (language, sound, Honey Mode). No Beekeeper-only settings yet.</li>
+  </ul>
+
+  <h2>10 · English and Spanish</h2>
+  <ul>
+    <li>Plan for Spanish to be about 30% longer. Nothing is fixed-width except the three columns.</li>
+    <li>Button rows are <code>WrapPanel</code>s, so a second button drops to a new line instead of clipping. Item names wrap to two lines; prices and counts never wrap.</li>
+    <li>"Beebits" is a brand word and stays "Beebits" in Spanish.</li>
+    <li>Uppercase titles are uppercased in code with the current culture, not stored in capitals.</li>
+    <li>Plurals need two keys each ("+1 Bee" / "+{n} Bees", "+1 abeja" / "+{n} abejas").</li>
+    <li>Never build a sentence by joining pieces. Use whole keys with placeholders ("{name} hands you a Beebit").</li>
+  </ul>
+
+  <h2>11 · Phone (later, outline only)</h2>
+  <p>One column: compact stats row (label 11, value 16) → art at 1.5× → newest log line (tap opens the full log as a sheet) → the hive → panels in reveal order, scrolling. Catch Bee docks at the bottom above the safe area. New Game and Options move into a ••• menu. Popups and reveals behave the same.</p>
+
+  <h2>12 · Room for later</h2>
+  <p>See the "Room for later" board. A sites row (40px) can be added above the columns. The wasp visit slides in at the top of the centre column. The bear panel becomes Visitors with four reputation tabs. The workshop goes under Combs. A burning-candle chip goes in the hive card. Stats beyond four move to a small ledger above the log so the toolbar never overflows.</p>
+
+  <h2>13 · Decided with Leah</h2>
+  <div class="ask">
+    <ul style="margin: 0">
+      <li>Switching to another Honeycomb game does <b>not</b> pause the hive. It keeps earning in the background; only quitting the app pauses it.</li>
+      <li>"Beebits" stays "Beebits" in Spanish.</li>
+      <li>Tools not yet unlocked stay visible but unavailable, e.g. Vacuum shows "After the Mesh Net".</li>
+    </ul>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;$preview&quot;:{&quot;width&quot;:1200,&quot;height&quot;:3600}}">
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+
+
+</body></html>

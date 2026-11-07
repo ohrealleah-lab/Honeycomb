@@ -1,0 +1,3 @@
+Buyer ID,Buyer Name / Group,Trade Goods,Price / Exchange Rate,Sell All Behavior,Special Perk at Milestone
+BUYER_BEAR,"Bear (Random: Barnaby, Billy, Berenstein, Bruno, Baloo, Buster, Bartholomew)",Sweet Honey,10 Honey -> 1 Beebit,Sells max whole bundles (leaves remainder <10),"At 100 Trades: Bear guards the meadow, reducing wasp attacks by 50%!"
+BUYER_HIPPIE,Visiting Hippies,Beeswax Candles,1 Candle -> 25 Beebits,Sell All sells 100% of Plain Beeswax Candles in stock,Reliable cash injection for expensive tools & tech!

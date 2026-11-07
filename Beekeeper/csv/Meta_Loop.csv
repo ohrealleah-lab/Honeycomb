@@ -1,0 +1,8 @@
+Stage ID,Stage Name,Unlock Condition,Key Mechanics Introduced,Primary Bottleneck,Pacing Goal
+ST_01_FROLIC,Frolicking Bees,Game Start,Click 'Catch Bee' (+1 bee); Starting hive cap 500; 0.01 honey/sec per bee; Wax drops every 50 honey,Manual clicks & early stamina,0 - 3 mins
+ST_02_BEAR_TRADE,The Bear Market,Honey >= 10,"Selling interface appears; Sell 10 Honey for 1 Beebit or Sell All to Bear (Barnaby, Billy, Berenstein); 100 trades = bear ward",Accumulating 15 Beebits for Shop,3 - 8 mins
+ST_03_SHOP_OPEN,The Beekeeper's Tools,Beebits >= 15,"Shop appears; Padded Gloves (2 bees), Mesh Net (5 bees), Bee-Safe Vac (10 bees), Wax-Catcher (2x wax)",Filling 500-bee runway & buying gear,8 - 18 mins
+ST_04_COMBS_CRAFT,Combs & Candlemaking,Wax >= 10,"Craft Beeswax Candle (10 wax, +20% honey); Craft Comb (50 wax, +500 bee cap, +25% cost/comb); Sell candles to Hippies (25 ₿)",Wax drop rate & scaling comb cost,18 - 35 mins
+ST_05_WASP_CRISIS,Wasp Incursions,Honey > 30 (periodic),Wasps raid hive; Bribe 10 Honey or LOSE 50% OF BEES; Craft Sage-Propolis Candle (50 wax) to repel,Honey reserves & candle prep,30 - 60 mins
+ST_06_EXPANSION,Meadow & Honey Factory,Combs >= 2,"Unlock Meadow and Honey Factory; Clover Bees (extra honey), Bumblebees (extra wax)",Area unlock costs & logistics,1 - 2 hours
+ST_07_QUEEN_COLONY,The Queen's Dominion,Full Comb Hive,Guard Bees & Queen Bee awakening; total colony synergy & multi-hive prestige,Endgame optimization,2+ hours

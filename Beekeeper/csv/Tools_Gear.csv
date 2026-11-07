@@ -1,0 +1,6 @@
+Tool ID,Tool Name,Cost (Beebits),Bees Per Grab,Unlock Condition,Category,Description
+TOOL_BARE_HANDS,Bare Hands,0,1,Game Start,Default,Careful and gentle plucking. 1 bee at a time (20% sting chance).
+TOOL_PADDED_GLOVES,Padded Gloves,15,2,Shop Unlock (15 Beebits),Gear,Thick leather lets you safely cup 2 bees at a time. No stings.
+TOOL_MESH_NET,Mesh Net,75,5,Shop,Gear,Light sweeping net. Scoops up 5 bees per click.
+TOOL_BEE_VACUUM,Bee-Safe Vacuum,250,10,Shop,Gear,Gentle pneumatic suction. Sweeps 10 bees into cushioned hopper.
+TOOL_WAX_CATCHER,Wax-Catcher,150,Passive (2x Wax),Shop,Apparatus,Brass condenser attached to hive combs. Doubles all wax output!

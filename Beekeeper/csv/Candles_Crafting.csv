@@ -1,0 +1,3 @@
+Candle ID,Candle Name,Wax Cost,Hippie Sell Value,Burn Duration (s),Burn Effect,Description
+CANDLE_BEESWAX,Plain Beeswax Candle,10 Wax,25 Beebits,120s,+20% Honey generation rate,Keeps hive calm and speeds up honey production. Hippies pay 25 Beebits each!
+CANDLE_SAGE_PROPOLIS,Sage-Propolis Repelling Candle,50 Wax,N/A (Essential Defense),180s,100% Wasp Repellent,Pungent sage & propolis smoke completely wards off wasp attacks while lit.

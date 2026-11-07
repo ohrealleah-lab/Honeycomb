@@ -1,0 +1,4 @@
+Area ID,Area Name,Unlock Cost,Native Bee Types,Special Properties
+AREA_GARDEN,The Garden,Free (Start),Standard Honeybee,Peaceful frolicking bees; perfect starting site.
+AREA_MEADOW,Wildflower Meadow,100 Beebits,"Clover Bees, Bumblebees",Clover Bees yield extra honey; Bumblebees generate high wax.
+AREA_FACTORY,Honey Factory,500 Beebits,Industrial Turbo Bees,"Massive honey output, dense swarms, heavy machinery."

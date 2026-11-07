@@ -31,10 +31,25 @@ public partial class AppCoordinator : ObservableObject
     [ObservableProperty]
     private object _activeViewModel;
 
+    // Beekeeper is created the first time it is opened (not here with the card games),
+    // then lives for the whole session: its hive keeps working while another game is on
+    // screen, and nothing below pauses it on a game switch. Time since its last save is
+    // credited as time away when it is created, so opening it late loses nothing.
+    private BeekeeperViewModel? _beekeeperViewModel;
+    private readonly Func<DateTime>? _beekeeperClock;
+
+    public BeekeeperViewModel BeekeeperViewModel =>
+        _beekeeperViewModel ??= new BeekeeperViewModel(isHeadless: TestMode.IsHeadless, clock: _beekeeperClock);
+
+    /// <summary>True once Beekeeper has been opened this session.</summary>
+    public bool BeekeeperStarted => _beekeeperViewModel is not null;
+
     private static readonly string LastModeFile = Path.Combine(AppPaths.DataDirectory, "last_mode.txt");
 
-    public AppCoordinator()
+    /// <param name="beekeeperClock">Lets tests control Beekeeper's clock; the app passes nothing.</param>
+    public AppCoordinator(Func<DateTime>? beekeeperClock = null)
     {
+        _beekeeperClock = beekeeperClock;
         GameViewModel       = new GameViewModel();
         FreecellViewModel    = new FreecellViewModel();
         SpiderViewModel     = new SpiderViewModel();
@@ -49,6 +64,7 @@ public partial class AppCoordinator : ObservableObject
             "VideoPoker" => (object)VideoPokerViewModel,
             "Blackjack"  => (object)BlackjackViewModel,
             "Honeycomb"  => (object)HoneycombViewModel,
+            "Beekeeper"  => (object)BeekeeperViewModel,
             _            => (object)GameViewModel
         };
 
@@ -160,6 +176,20 @@ public partial class AppCoordinator : ObservableObject
         SaveLastMode("Honeycomb");
         OnPropertyChanged(nameof(CanUndo));
     }
+
+    public void SwitchToBeekeeper()
+    {
+        PauseTimer(ActiveViewModel);
+        // Beekeeper has no idle nudge, no Undo and no statistics, so there is nothing to
+        // re-arm or route here, and its own timer is never paused (the hive keeps working).
+        RearmIdleCheck(BeekeeperViewModel);
+        ActiveViewModel = BeekeeperViewModel;
+        SaveLastMode("Beekeeper");
+        OnPropertyChanged(nameof(CanUndo));
+    }
+
+    /// <summary>Saves Beekeeper now if it has been opened (called when the window closes).</summary>
+    public void SaveBeekeeper() => _beekeeperViewModel?.SaveNow();
 
     // The background game timer in GameViewModel/FreecellViewModel/SpiderViewModel keeps
     // ticking regardless of which game's View is on screen, so it must be explicitly

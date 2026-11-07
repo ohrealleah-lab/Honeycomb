@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<title>Beekeeper: mid-game</title>
+<script src="5b744f8a-cd12-4335-ab2c-fc9ea740714e"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("3dac5c76-f682-4221-a1ea-920aebfe0518") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("fe783410-42e7-4983-96bc-009fba7cacc9") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 400;
+  font-display: swap;
+  src: url("35df4405-173f-4ab2-b36d-ed6fa18d6502") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url("3dac5c76-f682-4221-a1ea-920aebfe0518") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url("fe783410-42e7-4983-96bc-009fba7cacc9") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: italic;
+  font-weight: 600;
+  font-display: swap;
+  src: url("35df4405-173f-4ab2-b36d-ed6fa18d6502") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("5a63e858-7139-4d9b-a95f-589d04906854") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("8856ce4b-c315-42c2-8d9e-8027db9d1aa8") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("891cd14d-b3f7-49a7-bd7f-94fc4bb90671") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+/* vietnamese */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("5a63e858-7139-4d9b-a95f-589d04906854") format('woff2');
+  unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
+}
+/* latin-ext */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("8856ce4b-c315-42c2-8d9e-8027db9d1aa8") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+/* latin */
+@font-face {
+  font-family: 'Newsreader';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("891cd14d-b3f7-49a7-bd7f-94fc4bb90671") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+</style>
+<style>
+body{margin:0}
+.win{position:relative;width:1120px;height:768px;overflow:hidden;box-sizing:border-box;font-family:'Segoe UI',Selawik,system-ui,-apple-system,sans-serif;color:#fff}
+.chrome{height:32px;display:flex;align-items:center;justify-content:flex-end;color:rgba(255,255,255,.75);font-size:12px}
+.chrome span{width:46px;text-align:center}
+.bar{display:flex;align-items:center;justify-content:space-between;padding:4px 15px 10px 15px;gap:16px}
+.tools{display:flex;gap:10px;align-items:center}
+.tbtn{font:700 14px/20px 'Segoe UI',system-ui,sans-serif;color:var(--tint);border:1px solid var(--tint);background:rgba(255,255,255,.06);padding:6px 12px;border-radius:4px;display:inline-flex;align-items:center;gap:8px}
+.stats{display:flex;gap:25px;align-items:center}
+.stat{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:56px}
+.stat .l{font-size:14px;font-weight:700;opacity:.6;line-height:18px}
+.stat .v{font-size:20px;font-weight:700;line-height:26px;font-variant-numeric:tabular-nums}
+.stat .v small{font-size:14px;opacity:.6}
+.area{display:grid;grid-template-columns:340px minmax(0,1fr) 260px;gap:24px;padding:8px 30px 24px 30px;height:676px;box-sizing:border-box}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0;position:relative}
+.glass{background:rgba(12,8,3,.55);border:1px solid rgba(255,255,255,.10);border-radius:12px;padding:20px;box-sizing:border-box}
+.pt{margin:0 0 10px 0;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:rgba(255,255,255,.6);line-height:16px;display:flex;justify-content:space-between}
+.pt span{letter-spacing:0;text-transform:none;font-weight:400}
+.who{margin:0;font-family:Newsreader,Georgia,serif;font-size:22px;line-height:28px;font-weight:600}
+.art{height:204px;flex:none;border:1px dashed rgba(255,255,255,.32);border-radius:12px;background:rgba(0,0,0,.18);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(255,255,255,.6);font-size:12px;line-height:16px;text-align:center}
+.catch{width:100%;height:64px;flex:none;border-radius:14px;font:700 20px/24px 'Segoe UI',system-ui,sans-serif}
+.catch.full{background:rgba(0,0,0,.2);border:1px solid rgba(255,255,255,.3);color:rgba(255,255,255,.85);font-size:18px}
+.meta{margin:0;font-size:13px;line-height:18px;color:rgba(255,255,255,.72)}
+.dim{color:rgba(255,255,255,.55)}
+.big{font-size:28px;font-weight:700;line-height:34px;font-variant-numeric:tabular-nums}
+.track{height:6px;border-radius:3px;background:rgba(255,255,255,.14);overflow:hidden}
+.fill{height:6px;border-radius:3px;background:var(--accent)}
+.btn{height:40px;padding:0 16px;border-radius:8px;border:1px solid var(--accent);background:rgba(255,255,255,.04);color:var(--accent);font:700 14px/18px 'Segoe UI',system-ui,sans-serif;white-space:nowrap}
+.btn span{font-weight:400;opacity:.75}
+.btn.off{border-color:rgba(255,255,255,.18);color:rgba(255,255,255,.45)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 0;border-top:1px solid rgba(255,255,255,.08)}
+.nm{margin:0;font-size:15px;font-weight:700;line-height:20px}
+.ds{margin:2px 0 0 0;font-size:13px;line-height:18px;color:rgba(255,255,255,.65)}
+.owned{color:rgba(255,255,255,.6);font-size:13px;font-weight:700;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex:none}
+.log p{margin:0 0 14px 0;font-family:Newsreader,Georgia,serif;font-size:16px;line-height:24px}
+</style>
+</helmet>
+<div class="win" style="background: {{bg}}; --accent: {{accent}}; --tint: {{tint}}">
+  <div class="chrome" aria-hidden="true"><span>—</span><span>▢</span><span>✕</span></div>
+  <div class="bar">
+    <div class="tools">
+      <button class="tbtn">Beekeeper <svg width="10" height="6" sc-camel-view-box="0 0 10 6" aria-hidden="true"><path d="M1 1l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.5"></path></svg></button>
+      <button class="tbtn">New Game</button>
+      <button class="tbtn">Options</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><span class="l">BEES</span><span class="v">20 <small>/ 20</small></span></div>
+      <div class="stat"><span class="l">HONEY</span><span class="v">47</span></div>
+      <div class="stat"><span class="l">WAX</span><span class="v">20</span></div>
+      <div class="stat"><span class="l">BEEBITS</span><span class="v">82</span></div>
+    </div>
+  </div>
+  <div class="area">
+    <div class="col">
+      <div class="art"><strong style="font-size: 13px; color: rgba(255,255,255,.75)">Pixel art frame</strong><span>170 × 102 art px, shown at 2×</span></div>
+      <button class="catch full" disabled="">The hive is full</button>
+      <p class="meta">Padded gloves · 2 bees per catch. Your bees are busy making honey.</p>
+      <div class="glass">
+        <h2 class="pt">The hive</h2>
+        <div style="display: flex; align-items: baseline; gap: 8px"><span class="big">2.0</span><span class="meta">honey / sec</span></div>
+        <div class="meta" style="display: flex; justify-content: space-between; margin-top: 16px"><span>Next wax</span><span>17 / 50 honey</span></div>
+        <div class="track" style="margin-top: 6px"><div class="fill" style="width: 34%"></div></div>
+      </div>
+    </div>
+    <div class="col">
+      <section class="glass">
+        <h2 class="pt">The bear <span>Trades: 23</span></h2>
+        <p class="who">Barnaby</p>
+        <p class="meta" style="margin-top: 4px">10 honey buys 1 Beebit.</p>
+        <div style="display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap">
+          <button class="btn">Sell 10 Honey</button>
+          <button class="btn">Sell All <span>· 40 → 4</span></button>
+        </div>
+      </section>
+      <section class="glass" style="padding-bottom: 8px">
+        <h2 class="pt">The beekeeper's shop</h2>
+        <div class="row">
+          <div><p class="nm">Padded Gloves</p><p class="ds">Catch 2 bees at a time. No more stings.</p></div>
+          <span class="owned"><svg width="14" height="14" sc-camel-view-box="0 0 14 14" aria-hidden="true"><path d="M2.5 7.5l3 3 6-7" fill="none" stroke="currentColor" stroke-width="2"></path></svg>Owned</span>
+        </div>
+        <div class="row">
+          <div><p class="nm">Mesh Net</p><p class="ds">Catch 5 bees at a time.</p></div>
+          <button class="btn">75 Beebits</button>
+        </div>
+        <div class="row" style="opacity: .55">
+          <div><p class="nm">Bee-Safe Vacuum</p><p class="ds">Catch 10 bees at a time.</p></div>
+          <div class="right"><button class="btn off" disabled="">250 Beebits</button><span class="meta">After the Mesh Net</span></div>
+        </div>
+        <div class="row">
+          <div><p class="nm">Wax-Catcher</p><p class="ds">2 wax for every 50 honey.</p></div>
+          <div class="right"><button class="btn off" disabled="">150 Beebits</button><span class="meta">68 more</span></div>
+        </div>
+      </section>
+    </div>
+    <div class="col">
+      <div class="glass log" style="flex: 1">
+        <h2 class="pt">The garden</h2>
+        <p>The hive is full. The bees hum, content.</p>
+        <p style="opacity: .8">You slip on the padded gloves. No more stings.</p>
+        <p style="opacity: .62">A little shop opens at the edge of the garden.</p>
+        <p style="opacity: .46">A flake of wax drops from the comb.</p>
+        <p style="opacity: .32">Barnaby counts his honey twice.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script="" data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;Honey&quot;,&quot;Default&quot;,&quot;Sunset&quot;,&quot;Moogle&quot;,&quot;Forest&quot;,&quot;OceanSky&quot;],&quot;default&quot;:&quot;Default&quot;},&quot;$preview&quot;:{&quot;width&quot;:1120,&quot;height&quot;:768}}">
+class Component extends DCLogic {
+  renderVals() {
+    const T = {Honey:['#3B2A14','#24190A','#FFD300','#FFD300'],Default:['#008000','#005A00','#FFD700','#FFFFFF'],Sunset:['#1E3A48','#132833','#FFB557','#FDF3E3'],Moogle:['#141414','#080808','#FFE500','#FFFFFF'],Forest:['#5E5450','#433B37','#FFD700','#FFFFFF'],OceanSky:['#24788F','#185566','#FFD700','#FFFFFF']};
+    const t = T[this.props.theme ?? 'Default'] || T.Default;
+    return { bg: 'radial-gradient(ellipse at 50% 30%, ' + t[0] + ' 0%, ' + t[1] + ' 100%)', accent: t[2], tint: t[3] };
+  }
+}
+</script>
+
+
+</body></html>

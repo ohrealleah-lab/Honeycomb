@@ -1,0 +1,134 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="SoliBee.Desktop.Views.BeekeeperView">
+
+    <UserControl.Styles>
+        <!-- Glass card: dark translucent panel, soft border, 12px corners (UI_SPEC §3) -->
+        <Style Selector="Border.bk-card">
+            <Setter Property="Background" Value="#8C0C0803" />
+            <Setter Property="BorderBrush" Value="#1AFFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="12" />
+            <Setter Property="Padding" Value="16" />
+        </Style>
+        <Style Selector="TextBlock.bk-title">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="Bold" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Opacity" Value="0.6" />
+        </Style>
+        <Style Selector="TextBlock.bk-body">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="14" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.bk-muted">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Opacity" Value="0.65" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Button.bk-button">
+            <Setter Property="FontFamily" Value="Segoe UI" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Background" Value="#26FFFFFF" />
+            <Setter Property="BorderBrush" Value="#33FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+        </Style>
+        <Style Selector="Button.bk-button:disabled /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="0.4" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
+        <Grid Margin="20,12,20,20" MinWidth="980" ColumnDefinitions="340,*,260" ColumnSpacing="16">
+
+            <!-- ───────── LEFT: art, Catch Bee, tool line, Hive ───────── -->
+            <StackPanel Grid.Column="0" Spacing="12">
+                <!-- Pixel-art slot (170x102 shown at 2x). Art arrives later; until then a quiet placeholder. -->
+                <Border Classes="bk-card" Height="204" Padding="0" ClipToBounds="True">
+                    <Grid>
+                        <TextBlock Text="🐝" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Image x:Name="ArtImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                    </Grid>
+                </Border>
+
+                <!-- Catch Bee + its popup layer -->
+                <Grid>
+                    <Button x:Name="CatchButton" Height="64" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                            VerticalContentAlignment="Center" CornerRadius="14" FontFamily="Segoe UI" FontSize="20"
+                            FontWeight="Bold" Foreground="#2B1D05" Background="#FFD300" Click="Catch_Click">
+                        <Button.RenderTransform>
+                            <TranslateTransform />
+                        </Button.RenderTransform>
+                    </Button>
+                    <TextBlock x:Name="CatchPopup" IsHitTestVisible="False" Opacity="0" HorizontalAlignment="Center"
+                               VerticalAlignment="Top" Margin="0,-6,0,0" FontFamily="Georgia" FontSize="18"
+                               FontWeight="Bold" Foreground="White">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform />
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
+                </Grid>
+                <TextBlock x:Name="ToolLineText" Classes="bk-muted" HorizontalAlignment="Center" />
+
+                <!-- THE HIVE (appears with the first bee) -->
+                <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="6">
+                        <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
+                        <StackPanel x:Name="WaxProgressPanel" Spacing="4" IsVisible="False">
+                            <TextBlock x:Name="NextWaxText" Classes="bk-muted" />
+                            <ProgressBar x:Name="WaxBar" Minimum="0" Maximum="1" Height="8" Foreground="#FFD300" Background="#33FFFFFF" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ───────── CENTRE: Bear, Shop, Combs ───────── -->
+            <StackPanel Grid.Column="1" Spacing="12">
+                <Border x:Name="BearCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="BearTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="BearNameText" FontFamily="Georgia" FontSize="22" Foreground="White" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button x:Name="SellTenButton" Classes="bk-button" Click="SellTen_Click" />
+                            <Button x:Name="SellAllButton" Classes="bk-button" Click="SellAll_Click" />
+                        </StackPanel>
+                        <TextBlock x:Name="SellHintText" Classes="bk-muted" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="ShopCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="ShopTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="ShopRows" Spacing="8" />
+                    </StackPanel>
+                </Border>
+
+                <Border x:Name="CombsCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="CombsTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="CombsInfoText" Classes="bk-body" />
+                        <Button x:Name="BuildCombButton" Classes="bk-button" HorizontalAlignment="Left" Click="BuildComb_Click" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ───────── RIGHT: story log ───────── -->
+            <Border Grid.Column="2" Classes="bk-card" VerticalAlignment="Top">
+                <StackPanel Spacing="10">
+                    <TextBlock x:Name="LogTitleText" Classes="bk-title" />
+                    <StackPanel x:Name="LogLines" Spacing="8" />
+                </StackPanel>
+            </Border>
+        </Grid>
+    </ScrollViewer>
+</UserControl>
