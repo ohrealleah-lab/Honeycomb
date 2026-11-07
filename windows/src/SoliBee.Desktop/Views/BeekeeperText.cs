@@ -80,7 +80,7 @@ internal static class BeekeeperText
     public static string ToolBlurb(string id, int bees) => Fill(T(StringKey.BeekeeperBeesPerClickFmt), bees.ToString());
 
     public static string HoneyPerSecond(string n) => Fill(T(StringKey.BeekeeperHoneyPerSecFmt), n);
-    public static string NextWax(string progress, string needed) => Fill(T(StringKey.BeekeeperNextWaxFmt), progress, needed);
+    public static string WaxPerSecond(string n) => Fill(T(StringKey.BeekeeperWaxPerSecFmt), n);
     public static string CombsFull => T(StringKey.BeekeeperCombsFull);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
     public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);

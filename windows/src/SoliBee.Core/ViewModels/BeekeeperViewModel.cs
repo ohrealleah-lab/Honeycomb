@@ -108,6 +108,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal HoneyStorage => Engine.HoneyStorage;
     /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
     public decimal HoneyPerSecond => Engine.HoneyPerSecondNow;
+    /// <summary>What the hive makes in wax right now.</summary>
+    public decimal WaxPerSecond => Engine.WaxPerSecondNow;
     public decimal Wax => State.Wax;
     public decimal WaxProgress => State.WaxProgress;
     public decimal HoneyPerWax => Config.HoneyPerWax;

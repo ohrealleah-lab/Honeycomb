@@ -779,7 +779,6 @@ enum StringsSpanish {
         .beekeeperWaxCatcher: "Colector de cera",
         .beekeeperWaxCatcherBlurb: "El doble de cera",
         .beekeeperHoneyPerSecFmt: "%@ miel / s",
-        .beekeeperNextWaxFmt: "Próxima cera: %@/%@",
         .beekeeperCombsFull: "Los panales están llenos",
         .beekeeperCombBlurbFmt: "+%@ de espacio para miel",
         .beekeeperLogNewGame: "El jardín zumba. Tus abejas retozan.",
@@ -881,5 +880,6 @@ enum StringsSpanish {
         .beekeeperBuild: "Construir",
         .beekeeperTradingTitle: "COMERCIO",
         .beekeeperHippiesName: "Los hippies",
+        .beekeeperWaxPerSecFmt: "%@ cera / s",
     ]
 }

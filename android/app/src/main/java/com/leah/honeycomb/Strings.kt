@@ -808,7 +808,6 @@ object Strings {
         StringKey.BeekeeperWaxCatcher to "Wax-Catcher",
         StringKey.BeekeeperWaxCatcherBlurb to "Twice the wax",
         StringKey.BeekeeperHoneyPerSecFmt to "%@ honey / sec",
-        StringKey.BeekeeperNextWaxFmt to "Next wax: %@/%@",
         StringKey.BeekeeperCombsFull to "The combs are full",
         StringKey.BeekeeperCombBlurbFmt to "+%@ honey storage",
         StringKey.BeekeeperLogNewGame to "The garden hums. Your bees are frolicking.",
@@ -910,6 +909,7 @@ object Strings {
         StringKey.BeekeeperBuild to "Build",
         StringKey.BeekeeperTradingTitle to "TRADING",
         StringKey.BeekeeperHippiesName to "The Hippies",
+        StringKey.BeekeeperWaxPerSecFmt to "%@ wax / sec",
     )
 
     private val Spanish = mapOf(
@@ -1688,7 +1688,6 @@ object Strings {
         StringKey.BeekeeperWaxCatcher to "Colector de cera",
         StringKey.BeekeeperWaxCatcherBlurb to "El doble de cera",
         StringKey.BeekeeperHoneyPerSecFmt to "%@ miel / s",
-        StringKey.BeekeeperNextWaxFmt to "Próxima cera: %@/%@",
         StringKey.BeekeeperCombsFull to "Los panales están llenos",
         StringKey.BeekeeperCombBlurbFmt to "+%@ de espacio para miel",
         StringKey.BeekeeperLogNewGame to "El jardín zumba. Tus abejas retozan.",
@@ -1790,5 +1789,6 @@ object Strings {
         StringKey.BeekeeperBuild to "Construir",
         StringKey.BeekeeperTradingTitle to "COMERCIO",
         StringKey.BeekeeperHippiesName to "Los hippies",
+        StringKey.BeekeeperWaxPerSecFmt to "%@ cera / s",
     )
 }

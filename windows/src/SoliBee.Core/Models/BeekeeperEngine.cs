@@ -138,6 +138,10 @@ public sealed class BeekeeperEngine
     /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
     public decimal HoneyPerSecondNow => HoneyPerSecond * (IsCalm ? Config.CalmHoneyMultiplier : 1m);
 
+    /// <summary>Wax the hive makes right now: follows all honey made (full combs or not),
+    /// with the Wax-Catcher, its upgrade and calm bees counted.</summary>
+    public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
+
     /// <summary>Wax per 50 honey: 1, 2 with the Wax-Catcher, 3 with the Better Wax-Catcher.</summary>
     public decimal WaxPerBatch =>
         !State.HasWaxCatcher ? 1m

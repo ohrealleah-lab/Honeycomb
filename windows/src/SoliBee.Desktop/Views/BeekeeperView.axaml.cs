@@ -182,9 +182,8 @@ public partial class BeekeeperView : UserControl
         HoneyRateText.Text = BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2));
         HiveFullText.IsVisible = vm.StorageIsFull;
         HiveFullText.Text = BeekeeperText.CombsFull;
-        WaxProgressPanel.IsVisible = vm.WaxRevealed;
-        NextWaxText.Text = BeekeeperText.NextWax(N(vm.WaxProgress), N(vm.HoneyPerWax));
-        WaxBar.Value = vm.HoneyPerWax > 0 ? (double)Math.Min(1m, vm.WaxProgress / vm.HoneyPerWax) : 0;
+        WaxRateText.IsVisible = vm.WaxRevealed;
+        WaxRateText.Text = BeekeeperText.WaxPerSecond(N(vm.WaxPerSecond, 2));
 
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;

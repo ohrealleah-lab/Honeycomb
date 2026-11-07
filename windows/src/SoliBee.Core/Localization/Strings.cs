@@ -795,7 +795,6 @@ public static class Strings
         [StringKey.BeekeeperWaxCatcher] = "Wax-Catcher",
         [StringKey.BeekeeperWaxCatcherBlurb] = "Twice the wax",
         [StringKey.BeekeeperHoneyPerSecFmt] = "%@ honey / sec",
-        [StringKey.BeekeeperNextWaxFmt] = "Next wax: %@/%@",
         [StringKey.BeekeeperCombsFull] = "The combs are full",
         [StringKey.BeekeeperCombBlurbFmt] = "+%@ honey storage",
         [StringKey.BeekeeperLogNewGame] = "The garden hums. Your bees are frolicking.",
@@ -897,6 +896,7 @@ public static class Strings
         [StringKey.BeekeeperBuild] = "Build",
         [StringKey.BeekeeperTradingTitle] = "TRADING",
         [StringKey.BeekeeperHippiesName] = "The Hippies",
+        [StringKey.BeekeeperWaxPerSecFmt] = "%@ wax / sec",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1676,7 +1676,6 @@ public static class Strings
         [StringKey.BeekeeperWaxCatcher] = "Colector de cera",
         [StringKey.BeekeeperWaxCatcherBlurb] = "El doble de cera",
         [StringKey.BeekeeperHoneyPerSecFmt] = "%@ miel / s",
-        [StringKey.BeekeeperNextWaxFmt] = "Próxima cera: %@/%@",
         [StringKey.BeekeeperCombsFull] = "Los panales están llenos",
         [StringKey.BeekeeperCombBlurbFmt] = "+%@ de espacio para miel",
         [StringKey.BeekeeperLogNewGame] = "El jardín zumba. Tus abejas retozan.",
@@ -1778,5 +1777,6 @@ public static class Strings
         [StringKey.BeekeeperBuild] = "Construir",
         [StringKey.BeekeeperTradingTitle] = "COMERCIO",
         [StringKey.BeekeeperHippiesName] = "Los hippies",
+        [StringKey.BeekeeperWaxPerSecFmt] = "%@ cera / s",
     };
 }

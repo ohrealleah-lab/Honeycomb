@@ -1556,8 +1556,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperWaxCatcherBlurb = "beekeeper_wax_catcher_blurb"
     /// Hive card; %@ = honey made per second
     case beekeeperHoneyPerSecFmt = "beekeeper_honey_per_sec_fmt"
-    /// Hive card; %@ = honey towards the next wax, %@ = honey needed
-    case beekeeperNextWaxFmt = "beekeeper_next_wax_fmt"
     /// Hive card, when honey storage is full
     case beekeeperCombsFull = "beekeeper_combs_full"
     /// Combs card; %@ = honey storage each comb adds
@@ -1760,4 +1758,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperTradingTitle = "beekeeper_trading_title"
     /// Trading card: the Hippies as a buyer
     case beekeeperHippiesName = "beekeeper_hippies_name"
+    /// Hive card; %@ = wax made per second
+    case beekeeperWaxPerSecFmt = "beekeeper_wax_per_sec_fmt"
 }

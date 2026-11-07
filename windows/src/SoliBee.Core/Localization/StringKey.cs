@@ -784,7 +784,6 @@ public enum StringKey
     BeekeeperWaxCatcher,
     BeekeeperWaxCatcherBlurb,
     BeekeeperHoneyPerSecFmt,
-    BeekeeperNextWaxFmt,
     BeekeeperCombsFull,
     BeekeeperCombBlurbFmt,
     BeekeeperLogNewGame,
@@ -886,4 +885,5 @@ public enum StringKey
     BeekeeperBuild,
     BeekeeperTradingTitle,
     BeekeeperHippiesName,
+    BeekeeperWaxPerSecFmt,
 }

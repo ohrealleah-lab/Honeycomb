@@ -185,6 +185,17 @@ public class BeekeeperStage3Tests : IDisposable
     }
 
     [Fact]
+    public void WaxPerSecond_FollowsHoney_TheCatcher_AndCalm()
+    {
+        var e = WithSmoker(s => s.Bees = 1000m);   // 10 honey/s
+        Assert.Equal(0.2m, e.WaxPerSecondNow);
+        e.State.HasWaxCatcher = true;
+        Assert.Equal(0.4m, e.WaxPerSecondNow);
+        e.State.CalmSecondsLeft = 60m;
+        Assert.Equal(0.8m, e.WaxPerSecondNow);
+    }
+
+    [Fact]
     public void TimeAway_NeitherUsesUpNorDoublesCalm()
     {
         var calm = WithSmoker(s => { s.CalmSecondsLeft = 100m; s.Honey = 0m; });

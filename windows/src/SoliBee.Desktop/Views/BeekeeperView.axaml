@@ -113,11 +113,8 @@
                             <TextBlock x:Name="HiveSageValue" Grid.Row="7" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
+                        <TextBlock x:Name="WaxRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" IsVisible="False" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
-                        <StackPanel x:Name="WaxProgressPanel" Spacing="4" IsVisible="False">
-                            <TextBlock x:Name="NextWaxText" Classes="bk-muted" />
-                            <ProgressBar x:Name="WaxBar" Minimum="0" Maximum="1" Height="8" Foreground="#FFD300" Background="#33FFFFFF" />
-                        </StackPanel>
                     </StackPanel>
                 </Border>
             </StackPanel>

@@ -779,7 +779,6 @@ enum StringsEnglish {
         .beekeeperWaxCatcher: "Wax-Catcher",
         .beekeeperWaxCatcherBlurb: "Twice the wax",
         .beekeeperHoneyPerSecFmt: "%@ honey / sec",
-        .beekeeperNextWaxFmt: "Next wax: %@/%@",
         .beekeeperCombsFull: "The combs are full",
         .beekeeperCombBlurbFmt: "+%@ honey storage",
         .beekeeperLogNewGame: "The garden hums. Your bees are frolicking.",
@@ -881,5 +880,6 @@ enum StringsEnglish {
         .beekeeperBuild: "Build",
         .beekeeperTradingTitle: "TRADING",
         .beekeeperHippiesName: "The Hippies",
+        .beekeeperWaxPerSecFmt: "%@ wax / sec",
     ]
 }
