@@ -1,4 +1,4 @@
-# Beekeeper stage 5: handoff to a build session
+# Beekeeper stage 5: handoff to a build session (DONE: stage 5 built in `d690603`; kept for reference)
 
 **Where we are (2026-11-07):** stages 1–4 are built and hand-tested. A planning session found that time away barely grows anything (honeybees only come from clicking), so stage 5 adds the queen: bee bread feeds her and she raises honeybees, live and away. It also caps the slice and adds the bear's trade agreement. Every decision is Leah's; every number is a placeholder in `BeekeeperConfig`.
 

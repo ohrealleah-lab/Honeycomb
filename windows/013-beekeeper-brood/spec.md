@@ -2,7 +2,7 @@
 
 **Feature Branch**: `013-beekeeper-brood`
 **Created**: 2026-11-07
-**Status**: Draft v1 (2026-11-07), from Leah's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
+**Status**: BUILT (2026-11-07, commit `d690603`). Was: Draft v1 (2026-11-07), from Leah's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009 (first build), 010 (Workbench, candles, wasps), 011 (tools, slice, Smoker), 012 (Garden, foragers, pollen, bee bread, wooden hive).
 
