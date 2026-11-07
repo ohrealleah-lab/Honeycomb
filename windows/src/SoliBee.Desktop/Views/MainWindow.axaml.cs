@@ -230,6 +230,7 @@ public partial class MainWindow : Window
         VideoPokerModeItem.Content = Strings.Get(StringKey.HelpVideopokerTitle, _language);
         VideoBlackjackItem.Content = Strings.Get(StringKey.HelpBlackjackTitle, _language);
         HoneycombModeItem.Content = Strings.Get(StringKey.AppName, _language);
+        BeekeeperModeItem.Content = Strings.Get(StringKey.GamemodeBeekeeperDisplay, _language);
 
         ScoreLabelText.Text = Strings.Get(StringKey.ScoreLabel, _language);
         MovesLabelText.Text = Strings.Get(StringKey.MovesLabel, _language);

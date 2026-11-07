@@ -46,12 +46,12 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
   8. Keep the app open and let honey reach its storage limit. Honey stops at the limit and the log says the combs are full once.
 
 ## Phase 5: Words
-- [ ] T040 Add the Beekeeper strings and the approved story-log lines (English) to the localization workbook.
-- [ ] T041 Spanish translations (Claude drafts, Leah reviews).
-- [ ] T042 Run `python3 tools/generate_localization.py` and review the diff on all platforms.
+- [x] T040 Add the Beekeeper strings and the approved story-log lines (English) to the localization workbook.
+- [ ] T041 Spanish translations (Claude drafts, Leah reviews). Drafted 2026-11-07; waiting for Leah's review.
+- [x] T042 Run `python3 tools/generate_localization.py` and review the diff on all platforms.
 - [ ] T043 Check Spanish in the screen for cut-off text.
-- [ ] T044 Help window: short "How to play Beekeeper".
-- [ ] T045 Scan every Beekeeper string, English and Spanish, for betting or gambling words (FR-009).
+- [x] T044 Help window: short "How to play Beekeeper".
+- [x] T045 Scan every Beekeeper string, English and Spanish, for betting or gambling words (FR-009).
 - [ ] T046 Check that changing language mid-game re-translates the whole story log.
 - **Hand-test (Leah):** switch language to Spanish in Options; every Beekeeper word should be Spanish, big numbers follow Spanish style, and nothing is cut off.
 

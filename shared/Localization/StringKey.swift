@@ -1496,4 +1496,124 @@ public enum StringKey: String, CaseIterable {
     case a11yDecrease = "a11y_decrease"
     /// Android screen-reader label on the options stepper plus button
     case a11yIncrease = "a11y_increase"
+    /// Game picker and Help heading; proper noun, kept as-is like Honeycomb
+    case gamemodeBeekeeperDisplay = "gamemode_beekeeper_display"
+    /// Big button that catches bees
+    case beekeeperCatchBee = "beekeeper_catch_bee"
+    /// Stats bar label (all caps)
+    case beekeeperBeesLabel = "beekeeper_bees_label"
+    /// Stats bar label (all caps)
+    case beekeeperHoneyLabel = "beekeeper_honey_label"
+    /// Stats bar label (all caps)
+    case beekeeperWaxLabel = "beekeeper_wax_label"
+    /// Stats bar label; Beebits is the game's made-up money, kept as-is
+    case beekeeperBeebitsLabel = "beekeeper_beebits_label"
+    /// Card title (all caps)
+    case beekeeperHiveTitle = "beekeeper_hive_title"
+    /// Card title (all caps)
+    case beekeeperBearTitle = "beekeeper_bear_title"
+    /// Card title (all caps)
+    case beekeeperShopTitle = "beekeeper_shop_title"
+    /// Story log card title (all caps)
+    case beekeeperLogTitle = "beekeeper_log_title"
+    /// Bear button
+    case beekeeperSellTen = "beekeeper_sell_ten"
+    /// Bear button
+    case beekeeperSellAll = "beekeeper_sell_all"
+    /// Under the bear's buttons
+    case beekeeperSellHint = "beekeeper_sell_hint"
+    /// %@ = bear's name, %@ = number of trades
+    case beekeeperBearTradesFmt = "beekeeper_bear_trades_fmt"
+    /// Shop item already bought (shown after a tick mark)
+    case beekeeperOwned = "beekeeper_owned"
+    /// New Game confirmation title
+    case beekeeperStartOverTitle = "beekeeper_start_over_title"
+    /// New Game confirmation message
+    case beekeeperStartOverBody = "beekeeper_start_over_body"
+    /// Popup over Catch Bee when stung
+    case beekeeperStingPopup = "beekeeper_sting_popup"
+    /// Popup over Catch Bee
+    case beekeeperPlusOneBee = "beekeeper_plus_one_bee"
+    /// Popup over Catch Bee; %@ = bees caught (2 or more)
+    case beekeeperPlusBeesFmt = "beekeeper_plus_bees_fmt"
+    /// Tool line, after the tool name
+    case beekeeperOneBee = "beekeeper_one_bee"
+    /// Tool line, after the tool name; %@ = bees per click (2 or more)
+    case beekeeperBeesFmt = "beekeeper_bees_fmt"
+    /// Tool line: the starting tool
+    case beekeeperToolBareHands = "beekeeper_tool_bare_hands"
+    /// Tool line
+    case beekeeperToolGloves = "beekeeper_tool_gloves"
+    /// Tool line
+    case beekeeperToolNet = "beekeeper_tool_net"
+    /// Tool line
+    case beekeeperToolVacuum = "beekeeper_tool_vacuum"
+    /// Shop item name
+    case beekeeperShopGloves = "beekeeper_shop_gloves"
+    /// Shop item name
+    case beekeeperShopNet = "beekeeper_shop_net"
+    /// Shop item name
+    case beekeeperShopVacuum = "beekeeper_shop_vacuum"
+    /// Shop item description; %@ = bees per click
+    case beekeeperBeesPerClickFmt = "beekeeper_bees_per_click_fmt"
+    /// Shop item name
+    case beekeeperWaxCatcher = "beekeeper_wax_catcher"
+    /// Shop item description
+    case beekeeperWaxCatcherBlurb = "beekeeper_wax_catcher_blurb"
+    /// Hive card; %@ = honey made per second
+    case beekeeperHoneyPerSecFmt = "beekeeper_honey_per_sec_fmt"
+    /// Hive card; %@ = honey towards the next wax, %@ = honey needed
+    case beekeeperNextWaxFmt = "beekeeper_next_wax_fmt"
+    /// Hive card, when honey storage is full
+    case beekeeperCombsFull = "beekeeper_combs_full"
+    /// Combs card title (all caps)
+    case beekeeperCombsBuiltOne = "beekeeper_combs_built_one"
+    /// Combs card title (all caps); %@ = combs built (0, or 2 or more)
+    case beekeeperCombsBuiltFmt = "beekeeper_combs_built_fmt"
+    /// Combs card button; %@ = wax cost
+    case beekeeperBuildCombFmt = "beekeeper_build_comb_fmt"
+    /// Combs card; %@ = honey storage each comb adds
+    case beekeeperCombBlurbFmt = "beekeeper_comb_blurb_fmt"
+    /// Story log
+    case beekeeperLogNewGame = "beekeeper_log_new_game"
+    /// Story log
+    case beekeeperLogFirstBee = "beekeeper_log_first_bee"
+    /// Story log
+    case beekeeperLogSting = "beekeeper_log_sting"
+    /// Story log
+    case beekeeperLogStorageFull = "beekeeper_log_storage_full"
+    /// Story log; %@ = bear's name
+    case beekeeperLogBearArrivesFmt = "beekeeper_log_bear_arrives_fmt"
+    /// Story log; %@ = bear's name
+    case beekeeperLogSaleFmt = "beekeeper_log_sale_fmt"
+    /// Story log
+    case beekeeperLogFirstWax = "beekeeper_log_first_wax"
+    /// Story log
+    case beekeeperLogShopOpened = "beekeeper_log_shop_opened"
+    /// Story log
+    case beekeeperLogGloves = "beekeeper_log_gloves"
+    /// Story log
+    case beekeeperLogNet = "beekeeper_log_net"
+    /// Story log
+    case beekeeperLogVacuum = "beekeeper_log_vacuum"
+    /// Story log (fallback for an unknown tool)
+    case beekeeperLogNewTool = "beekeeper_log_new_tool"
+    /// Story log
+    case beekeeperLogWaxCatcher = "beekeeper_log_wax_catcher"
+    /// Story log
+    case beekeeperLogCombsAvailable = "beekeeper_log_combs_available"
+    /// Story log; %@ = honey storage added
+    case beekeeperLogCombBuiltFmt = "beekeeper_log_comb_built_fmt"
+    /// Story log on reopening the app; %@ = honey made while away
+    case beekeeperLogWelcomeBackFmt = "beekeeper_log_welcome_back_fmt"
+    /// Story log on reopening the app when no honey was made
+    case beekeeperLogWelcomeBackNothing = "beekeeper_log_welcome_back_nothing"
+    /// Overview RuleSection body
+    case helpBeekeeperObjective = "help_beekeeper_objective"
+    /// Rules & How to Play RuleSection body
+    case helpBeekeeperHowToPlay = "help_beekeeper_how_to_play"
+    /// RuleSection title, Beekeeper
+    case helpBeekeeperAwayTitle = "help_beekeeper_away_title"
+    /// While You're Away RuleSection body
+    case helpBeekeeperAway = "help_beekeeper_away"
 }

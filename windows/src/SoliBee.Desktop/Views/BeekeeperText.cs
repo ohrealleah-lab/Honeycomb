@@ -5,82 +5,108 @@ using SoliBee.Core.Services;
 namespace SoliBee.Desktop.Views;
 
 /// <summary>
-/// Every word Beekeeper shows, in one place. English only for now; Phase 5 moves these into
-/// the localization workbook (Strings.Get) without touching the screen code.
+/// Every word Beekeeper shows, in one place. The words live in the localization workbook
+/// (Strings.Get); this class picks the right key and fills in the values, in the language
+/// chosen in Options.
 /// </summary>
 internal static class BeekeeperText
 {
-    // ---- labels
-    public const string Catch = "Catch Bee";
-    public const string BeesLabel = "BEES";
-    public const string HoneyLabel = "HONEY";
-    public const string WaxLabel = "WAX";
-    public const string BeebitsLabel = "BEEBITS";
-    public const string HiveTitle = "THE HIVE";
-    public const string BearTitle = "THE BEAR";
-    public const string ShopTitle = "THE BEEKEEPER'S SHOP";
-    public const string CombsTitle = "COMBS";
-    public const string LogTitle = "THE GARDEN";
-    public const string SellTen = "Sell 10";
-    public const string SellAll = "Sell All";
-    public const string Owned = "Owned";
-    public const string StartOver = "Start over?";
-    public const string StartOverBody = "Your hive and everything in it will be lost.";
+    private static AppLanguage Lang => SettingsService.LoadOptions().Language;
+    private static string T(StringKey key) => Strings.Get(key, Lang);
 
-    public static string Sting => "Ouch! A sting.";
-    public static string Bees(int n) => n == 1 ? "+1 bee" : $"+{n} bees";
+    // Fills each %@ in turn, left to right.
+    private static string Fill(string template, params string[] values)
+    {
+        foreach (var v in values)
+        {
+            int i = template.IndexOf("%@", System.StringComparison.Ordinal);
+            if (i < 0) break;
+            template = template.Remove(i, 2).Insert(i, v);
+        }
+        return template;
+    }
+
+    // ---- labels
+    public static string GameName => T(StringKey.GamemodeBeekeeperDisplay);
+    public static string Catch => T(StringKey.BeekeeperCatchBee);
+    public static string BeesLabel => T(StringKey.BeekeeperBeesLabel);
+    public static string HoneyLabel => T(StringKey.BeekeeperHoneyLabel);
+    public static string WaxLabel => T(StringKey.BeekeeperWaxLabel);
+    public static string BeebitsLabel => T(StringKey.BeekeeperBeebitsLabel);
+    public static string HiveTitle => T(StringKey.BeekeeperHiveTitle);
+    public static string BearTitle => T(StringKey.BeekeeperBearTitle);
+    public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
+    public static string LogTitle => T(StringKey.BeekeeperLogTitle);
+    public static string SellTen => T(StringKey.BeekeeperSellTen);
+    public static string SellAll => T(StringKey.BeekeeperSellAll);
+    public static string Owned => T(StringKey.BeekeeperOwned);
+    public static string StartOver => T(StringKey.BeekeeperStartOverTitle);
+    public static string StartOverBody => T(StringKey.BeekeeperStartOverBody);
+
+    public static string Sting => T(StringKey.BeekeeperStingPopup);
+    public static string Bees(int n) =>
+        n == 1 ? T(StringKey.BeekeeperPlusOneBee) : Fill(T(StringKey.BeekeeperPlusBeesFmt), n.ToString());
 
     public static string ToolLine(int level, int beesPerClick) =>
-        (level switch { 1 => "Padded gloves", 2 => "Mesh net", 3 => "Bee-safe vacuum", _ => "Bare hands" })
-        + " · " + (beesPerClick == 1 ? "1 bee" : beesPerClick + " bees");
+        T(level switch
+        {
+            1 => StringKey.BeekeeperToolGloves,
+            2 => StringKey.BeekeeperToolNet,
+            3 => StringKey.BeekeeperToolVacuum,
+            _ => StringKey.BeekeeperToolBareHands,
+        })
+        + " · " + (beesPerClick == 1 ? T(StringKey.BeekeeperOneBee) : Fill(T(StringKey.BeekeeperBeesFmt), beesPerClick.ToString()));
 
     public static string ToolName(string id) => id switch
     {
-        "gloves" => "Padded Gloves",
-        "net" => "Mesh Net",
-        "vacuum" => "Bee-Safe Vacuum",
+        "gloves" => T(StringKey.BeekeeperShopGloves),
+        "net" => T(StringKey.BeekeeperShopNet),
+        "vacuum" => T(StringKey.BeekeeperShopVacuum),
         _ => id,
     };
 
-    public static string ToolBlurb(string id, int bees) => bees + " bees per click";
+    public static string ToolBlurb(string id, int bees) => Fill(T(StringKey.BeekeeperBeesPerClickFmt), bees.ToString());
 
-    public static string HoneyPerSecond(string n) => n + " honey / sec";
-    public static string NextWax(string progress, string needed) => $"Next wax: {progress}/{needed}";
-    public static string CombsFull => "The combs are full";
-    public static string BearLine(string name, long trades) => trades == 0 ? name : $"{name} · Trades: {trades}";
-    public static string SellTenHint => "10 honey = 1 Beebit";
-    public static string WaxCatcherName => "Wax-Catcher";
-    public static string WaxCatcherBlurb => "Twice the wax";
-    public static string CombsBuilt(int n) => n == 1 ? "COMBS · 1 built" : $"COMBS · {n} built";
-    public static string BuildComb(string waxCost) => $"Build a comb · {waxCost} wax";
-    public static string CombBlurb(string storageAdded) => $"+{storageAdded} honey storage";
+    public static string HoneyPerSecond(string n) => Fill(T(StringKey.BeekeeperHoneyPerSecFmt), n);
+    public static string NextWax(string progress, string needed) => Fill(T(StringKey.BeekeeperNextWaxFmt), progress, needed);
+    public static string CombsFull => T(StringKey.BeekeeperCombsFull);
+    public static string BearLine(string name, long trades) =>
+        trades == 0 ? name : Fill(T(StringKey.BeekeeperBearTradesFmt), name, NumberFormatter.Format(trades, Lang));
+    public static string SellTenHint => T(StringKey.BeekeeperSellHint);
+    public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
+    public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
+    public static string CombsBuilt(int n) =>
+        n == 1 ? T(StringKey.BeekeeperCombsBuiltOne) : Fill(T(StringKey.BeekeeperCombsBuiltFmt), n.ToString());
+    public static string BuildComb(string waxCost) => Fill(T(StringKey.BeekeeperBuildCombFmt), waxCost);
+    public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
 
-    // ---- story log
+    // ---- story log (saved as keys plus values, so old lines follow a language change)
     public static string LogLine(BeekeeperLogEntry e, AppLanguage lang)
     {
+        string L(StringKey key) => Strings.Get(key, lang);
         string N(decimal v) => NumberFormatter.Format(v, lang);
         return e.Key switch
         {
-            BeekeeperEvents.NewGame => "The garden hums. Your bees are frolicking.",
-            BeekeeperEvents.FirstBee => "You cup a bee in your hands. It tickles.",
-            BeekeeperEvents.Sting => "Ouch! A sting. No bee this time.",
-            BeekeeperEvents.StorageFull => "The combs are full of honey.",
-            BeekeeperEvents.BearArrives => $"A bear wanders over. He says his name is {e.Text}.",
-            BeekeeperEvents.Sale => $"{e.Text} counts it out.",
-            BeekeeperEvents.FirstWax => "Wax drops, pale as moonlight.",
-            BeekeeperEvents.ShopOpened => "The Beekeeper's shop opens.",
-            BeekeeperEvents.ToolBought => e.Text switch
+            BeekeeperEvents.NewGame => L(StringKey.BeekeeperLogNewGame),
+            BeekeeperEvents.FirstBee => L(StringKey.BeekeeperLogFirstBee),
+            BeekeeperEvents.Sting => L(StringKey.BeekeeperLogSting),
+            BeekeeperEvents.StorageFull => L(StringKey.BeekeeperLogStorageFull),
+            BeekeeperEvents.BearArrives => Fill(L(StringKey.BeekeeperLogBearArrivesFmt), e.Text ?? ""),
+            BeekeeperEvents.Sale => Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? ""),
+            BeekeeperEvents.FirstWax => L(StringKey.BeekeeperLogFirstWax),
+            BeekeeperEvents.ShopOpened => L(StringKey.BeekeeperLogShopOpened),
+            BeekeeperEvents.ToolBought => L(e.Text switch
             {
-                "gloves" => "Padded gloves on. Much braver.",
-                "net" => "A mesh net. Sweeping, not chasing.",
-                "vacuum" => "The vacuum hums. The bees seem to like it.",
-                _ => "A new tool.",
-            },
-            BeekeeperEvents.WaxCatcherBought => "The brass catcher gleams. Wax comes twice as fast.",
-            BeekeeperEvents.CombsAvailable => "There is wax enough for a new comb.",
-            BeekeeperEvents.CombBuilt => $"A new comb. Room for {N(e.Value)} more honey.",
-            BeekeeperEvents.WelcomeBack => $"While you were away, the bees made {N(e.Value)} honey.",
-            BeekeeperEvents.WelcomeBackNothing => "The bees are glad you're back.",
+                "gloves" => StringKey.BeekeeperLogGloves,
+                "net" => StringKey.BeekeeperLogNet,
+                "vacuum" => StringKey.BeekeeperLogVacuum,
+                _ => StringKey.BeekeeperLogNewTool,
+            }),
+            BeekeeperEvents.WaxCatcherBought => L(StringKey.BeekeeperLogWaxCatcher),
+            BeekeeperEvents.CombsAvailable => L(StringKey.BeekeeperLogCombsAvailable),
+            BeekeeperEvents.CombBuilt => Fill(L(StringKey.BeekeeperLogCombBuiltFmt), N(e.Value)),
+            BeekeeperEvents.WelcomeBack => Fill(L(StringKey.BeekeeperLogWelcomeBackFmt), N(e.Value)),
+            BeekeeperEvents.WelcomeBackNothing => L(StringKey.BeekeeperLogWelcomeBackNothing),
             _ => "",
         };
     }

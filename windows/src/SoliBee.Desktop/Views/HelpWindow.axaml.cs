@@ -79,6 +79,7 @@ public partial class HelpWindow : Window
         IdxVP.Content = T(StringKey.HelpVideopokerTitle);
         IdxBJ.Content = T(StringKey.HelpBlackjackTitle);
         IdxHoneycomb.Content = T(StringKey.AppName);
+        IdxBeekeeper.Content = T(StringKey.GamemodeBeekeeperDisplay);
         IdxThemes.Content = T(StringKey.HelpThemesSettingsIndexLabel);
 
         KlondikeHeaderText.Text = T(StringKey.HelpKlondikeTitle).ToUpperInvariant();
@@ -87,6 +88,7 @@ public partial class HelpWindow : Window
         VideoPokerHeaderText.Text = T(StringKey.HelpVideopokerTitle).ToUpperInvariant();
         BlackjackHeaderText.Text = T(StringKey.HelpBlackjackTitle).ToUpperInvariant();
         HoneycombHeaderText.Text = T(StringKey.AppName).ToUpperInvariant();
+        BeekeeperHeaderText.Text = T(StringKey.GamemodeBeekeeperDisplay).ToUpperInvariant();
         ThemesHeaderText.Text = T(StringKey.HelpThemesSettingsIndexLabel).ToUpperInvariant();
 
         // ── Klondike ──────────────────────────────────────────────────────
@@ -201,6 +203,14 @@ public partial class HelpWindow : Window
         HoneycombNoStressHeading.Text = T(StringKey.HelpNoStressModeTitle);
         HoneycombNoStressBody.Text = T(StringKey.HelpHoneycombNoStress);
 
+        // ── Beekeeper ────────────────────────────────────────────────────
+        BeekeeperOverviewHeading.Text = T(StringKey.HelpOverviewObjectiveTitle);
+        BeekeeperOverviewBody.Text = T(StringKey.HelpBeekeeperObjective);
+        BeekeeperRulesHeading.Text = T(StringKey.HelpRulesHowToPlayTitle);
+        BeekeeperRulesBody.Text = T(StringKey.HelpBeekeeperHowToPlay);
+        BeekeeperAwayHeading.Text = T(StringKey.HelpBeekeeperAwayTitle);
+        BeekeeperAwayBody.Text = T(StringKey.HelpBeekeeperAway);
+
         // ── Themes ───────────────────────────────────────────────────────
         ThemesCustomizationHeading.Text = T(StringKey.HelpThemesCustomizationTitle);
         ThemesCustomizationBody.Text = T(StringKey.HelpCustomizationThemes);
@@ -240,6 +250,9 @@ public partial class HelpWindow : Window
 
     private void GoTo_Honeycomb(object? sender, RoutedEventArgs e) =>
         ScrollToTopOf(HoneycombAnchor);
+
+    private void GoTo_Beekeeper(object? sender, RoutedEventArgs e) =>
+        ScrollToTopOf(BeekeeperAnchor);
 
 
     private void GoTo_Themes(object? sender, RoutedEventArgs e) =>
