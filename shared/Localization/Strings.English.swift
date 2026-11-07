@@ -812,5 +812,6 @@ enum StringsEnglish {
         .beekeeperHiveBees: "Bees",
         .beekeeperHiveHoney: "Honey",
         .beekeeperHiveWax: "Wax",
+        .beekeeperHiveBeebits: "Beebits",
     ]
 }

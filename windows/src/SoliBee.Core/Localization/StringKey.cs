@@ -817,4 +817,5 @@ public enum StringKey
     BeekeeperHiveBees,
     BeekeeperHiveHoney,
     BeekeeperHiveWax,
+    BeekeeperHiveBeebits,
 }

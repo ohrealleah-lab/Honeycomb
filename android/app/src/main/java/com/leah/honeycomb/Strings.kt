@@ -841,6 +841,7 @@ object Strings {
         StringKey.BeekeeperHiveBees to "Bees",
         StringKey.BeekeeperHiveHoney to "Honey",
         StringKey.BeekeeperHiveWax to "Wax",
+        StringKey.BeekeeperHiveBeebits to "Beebits",
     )
 
     private val Spanish = mapOf(
@@ -1652,5 +1653,6 @@ object Strings {
         StringKey.BeekeeperHiveBees to "Abejas",
         StringKey.BeekeeperHiveHoney to "Miel",
         StringKey.BeekeeperHiveWax to "Cera",
+        StringKey.BeekeeperHiveBeebits to "Beebits",
     )
 }

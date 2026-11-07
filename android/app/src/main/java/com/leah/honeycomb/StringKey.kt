@@ -813,4 +813,5 @@ enum class StringKey {
     BeekeeperHiveBees,
     BeekeeperHiveHoney,
     BeekeeperHiveWax,
+    BeekeeperHiveBeebits,
 }

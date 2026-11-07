@@ -83,13 +83,15 @@
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
                         <!-- What the hive holds. Later materials (sage, candles…) get rows here too. -->
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto" RowSpacing="2">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto" RowSpacing="2">
                             <TextBlock x:Name="HiveBeesLabel" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeesValue" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveHoneyLabel" Grid.Row="1" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveHoneyValue" Grid.Row="1" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveWaxLabel" Grid.Row="2" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveWaxValue" Grid.Row="2" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveBeebitsLabel" Grid.Row="3" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveBeebitsValue" Grid.Row="3" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />

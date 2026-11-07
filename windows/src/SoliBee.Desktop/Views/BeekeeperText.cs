@@ -37,6 +37,7 @@ internal static class BeekeeperText
     public static string HiveBees => T(StringKey.BeekeeperHiveBees);
     public static string HiveHoney => T(StringKey.BeekeeperHiveHoney);
     public static string HiveWax => T(StringKey.BeekeeperHiveWax);
+    public static string HiveBeebits => T(StringKey.BeekeeperHiveBeebits);
     public static string BearTitle => T(StringKey.BeekeeperBearTitle);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
     public static string LogTitle => T(StringKey.BeekeeperLogTitle);

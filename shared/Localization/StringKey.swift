@@ -1622,4 +1622,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHiveHoney = "beekeeper_hive_honey"
     /// Hive card row label: wax held
     case beekeeperHiveWax = "beekeeper_hive_wax"
+    /// Hive card row label; Beebits is the game's made-up money, kept as-is
+    case beekeeperHiveBeebits = "beekeeper_hive_beebits"
 }

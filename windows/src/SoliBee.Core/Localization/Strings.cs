@@ -828,6 +828,7 @@ public static class Strings
         [StringKey.BeekeeperHiveBees] = "Bees",
         [StringKey.BeekeeperHiveHoney] = "Honey",
         [StringKey.BeekeeperHiveWax] = "Wax",
+        [StringKey.BeekeeperHiveBeebits] = "Beebits",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1640,5 +1641,6 @@ public static class Strings
         [StringKey.BeekeeperHiveBees] = "Abejas",
         [StringKey.BeekeeperHiveHoney] = "Miel",
         [StringKey.BeekeeperHiveWax] = "Cera",
+        [StringKey.BeekeeperHiveBeebits] = "Beebits",
     };
 }
