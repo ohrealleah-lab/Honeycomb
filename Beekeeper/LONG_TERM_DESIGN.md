@@ -4,7 +4,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 
 ## The shape of the game
 - **Length:** 1.5 to 4 weeks. Growth should level off around week 3, which is where the first swarm (reset) happens.
-- **Tone:** cozy. Wasps steal honey, not bees. Later pests may steal other resources.
+- **Tone:** cozy. Wasps steal honey; some bees flee during a raid (nobody is killed). Later pests may steal other resources.
 - **Offline:** the bees work while the app is closed, up to 3 days. Honey storage limits it.
 - **No bee limit.** Big, growing swarms are the fun. The limits are on honey storage and on prices.
 
@@ -24,7 +24,14 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 3. **Hive roles:** introduced after the first comb. Includes nurses (passive bee growth). Guard Bees, Bumblebees (wax) and Clover Bees (honey) become role or strain choices.
 4. **Candles and the Chandler's Workshop:** plain beeswax candle (+20% honey for a time), sage-propolis candle (wasp repellent, duration to decide), candles sold to Hippies.
 5. **Sites and special bees:** Garden, Meadow, Honey Factory. Special bees can only be caught by clicking, and which kind depends on the site.
-6. **Wasps (cozy):** raids steal honey; bribe, guards or candles stop them; bears reduce raids after 100 trades.
+6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them; bears reduce raids after 100 trades. Leah's notes (2026-11-07):
+   - **No Stress Mode turns wasps off completely.** No wasps appear and none raid. It can be turned on or off at any time without affecting game progress (nothing is reset, lost or gained by switching). A raid already under way when it is turned on still plays out; only future raids are stopped.
+   - **Active play only.** Wasps never raid while the app is closed or idle, so away earnings are safe.
+   - **Gentle penalty.** A raid (or a missed throw) never costs more than about 10 minutes of play to earn back, at the player's current rate. This scales with the hive.
+   - **The threat grows.** Wasps first appear after the 2nd comb: one wasp, then more wasps, then wasp gangs (5 wasps), then wasp bullies (tougher, could have names and return), and at high levels a wasp horde.
+   - **Throw a shoe.** The first, free defence: drives off one wasp, with a 40% chance to miss. A miss costs honey and makes some bees flee. Against a gang it takes out just one wasp and the rest still raid (the joke: "One down. The other four look annoyed.").
+   - **The throw is upgraded through Technology** (not tied to the horde). The miss chance always stays 40%; some upgrades raise how many wasps one hit takes out. Upgrade names come later. Guards and candles stay the reliable late-game answer.
+   - **Technology (placeholder).** Upgrades are bought or researched there. It opens after the 2nd comb, together with the first wasp; its exact unlock and contents are to be decided.
 7. **Reputations:** Bears, Hippies, Hummingbirds, Badgers, each with their own wants.
 8. **Seasons, as a bloom calendar:** instead of four generic seasons, different flowers bloom in turn (crocus, clover, linden, goldenrod), each rewarding different roles and honey, ending in a winter cluster. Chosen to feel like beekeeping, not like Kittens.
 9. **Swarming:** the reset with a bonus, and the long-term goal.
@@ -35,7 +42,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 - Hive roles are important, not decoration.
 - Swarming is the reset.
 - Seasons: yes, later, in a form that is not a copy of Kittens.
-- Wasps steal honey.
+- Wasps steal honey and make bees flee; they only raid during active play, and a raid costs at most about 10 minutes of play.
 - Offline earnings up to 3 days.
 
 ## Still open
@@ -47,3 +54,5 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 6. Sage-propolis candle duration.
 7. The number type for the very late game (planned `decimal`; may need a larger type).
 8. Mobile layout of the 3-column screen.
+9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
+10. Technology: bought or researched, what it contains besides throw upgrades, and whether it really opens right at the 2nd comb.
