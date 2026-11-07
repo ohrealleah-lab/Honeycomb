@@ -94,21 +94,23 @@
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
                         <!-- What the hive holds. Later materials (sage, candles…) get rows here too. -->
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
                             <TextBlock x:Name="HiveBeesLabel" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeesValue" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveHoneyLabel" Grid.Row="1" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveHoneyValue" Grid.Row="1" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveWaxLabel" Grid.Row="2" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveWaxValue" Grid.Row="2" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveBeebitsLabel" Grid.Row="3" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeebitsValue" Grid.Row="3" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveBeeswaxLabel" Grid.Row="4" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeeswaxValue" Grid.Row="4" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveRepellentLabel" Grid.Row="5" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveRepellentValue" Grid.Row="5" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveSageLabel" Grid.Row="6" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveSageValue" Grid.Row="6" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveCombsLabel" Grid.Row="3" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveCombsValue" Grid.Row="3" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveBeebitsLabel" Grid.Row="4" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveBeebitsValue" Grid.Row="4" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveBeeswaxLabel" Grid.Row="5" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveBeeswaxValue" Grid.Row="5" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveRepellentLabel" Grid.Row="6" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveRepellentValue" Grid.Row="6" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveSageLabel" Grid.Row="7" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveSageValue" Grid.Row="7" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
@@ -141,19 +143,20 @@
                     </StackPanel>
                 </Border>
 
-                <Border x:Name="CombsCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="CombsTitleText" Classes="bk-title" />
-                        <TextBlock x:Name="CombsInfoText" Classes="bk-body" />
-                        <Button x:Name="BuildCombButton" Classes="bk-button" HorizontalAlignment="Left" Click="BuildComb_Click" />
-                    </StackPanel>
-                </Border>
-
-                <!-- THE WORKBENCH (opens with the 2nd comb): crafting only; upgrades are in the Shop -->
+                <!-- THE WORKBENCH: building combs (from the first 50 wax), then candles (from the
+                     2nd comb). Upgrades are in the Shop. -->
                 <Border x:Name="WorkbenchCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="WorkbenchTitleText" Classes="bk-title" />
                         <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="CombNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="CombsInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="BuildCombButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuildComb_Click" />
+                        </Grid>
+                        <Grid x:Name="BeeswaxRow" ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="BeeswaxNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="BeeswaxInfoText" Classes="bk-muted" />

@@ -789,9 +789,6 @@ public enum StringKey
     BeekeeperHoneyPerSecFmt,
     BeekeeperNextWaxFmt,
     BeekeeperCombsFull,
-    BeekeeperCombsBuiltOne,
-    BeekeeperCombsBuiltFmt,
-    BeekeeperBuildCombFmt,
     BeekeeperCombBlurbFmt,
     BeekeeperLogNewGame,
     BeekeeperLogFirstBee,
@@ -888,4 +885,7 @@ public enum StringKey
     BeekeeperLogCalmEnded,
     HelpBeekeeperSmokerTitle,
     HelpBeekeeperSmoker,
+    BeekeeperHiveCombs,
+    BeekeeperComb,
+    BeekeeperBuild,
 }

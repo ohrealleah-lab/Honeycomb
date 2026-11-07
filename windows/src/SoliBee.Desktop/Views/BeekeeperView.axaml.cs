@@ -19,7 +19,7 @@ using SoliBee.Core.ViewModels;
 namespace SoliBee.Desktop.Views;
 
 /// <summary>
-/// The Beekeeper screen: art frame, Catch Bee, Hive, Bear, Shop, Combs and the story log.
+/// The Beekeeper screen: art frame, Catch Bee, Hive, Bear, Shop, The Workbench, Hippies, wasps and the story log.
 /// It only draws what <see cref="BeekeeperViewModel"/> says. Cards appear as the game
 /// reveals them and then stay (sticky reveals), so the game starts nearly empty.
 /// </summary>
@@ -201,16 +201,19 @@ public partial class BeekeeperView : UserControl
         ShopTitleText.Text = BeekeeperText.ShopTitle;
         if (ShopCard.IsVisible) UpdateShop(vm, lang);
 
-        // Combs
-        CombsCard.IsVisible = vm.CombsRevealed;
-        CombsTitleText.Text = BeekeeperText.CombsBuilt(vm.Combs);
-        CombsInfoText.Text = BeekeeperText.CombBlurb(N(vm.Config.StoragePerComb));
-        BuildCombButton.Content = BeekeeperText.BuildComb(N(vm.CombCost));
-        BuildCombButton.IsEnabled = vm.CanBuildComb;
+        // Combs: how many is on the Hive card; building one is The Workbench's first row (Leah).
+        HiveCombsLabel.Text = BeekeeperText.HiveCombs;
+        HiveCombsValue.Text = N(vm.Combs);
+        HiveCombsLabel.IsVisible = HiveCombsValue.IsVisible = vm.CombsRevealed;
 
-        // The Workbench
-        WorkbenchCard.IsVisible = vm.WorkbenchRevealed;
+        // The Workbench: shows from the first 50 wax (combs); candles join at the 2nd comb.
+        WorkbenchCard.IsVisible = vm.CombsRevealed || vm.WorkbenchRevealed;
         WorkbenchTitleText.Text = BeekeeperText.WorkbenchTitle;
+        CombNameText.Text = BeekeeperText.Comb;
+        CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null) + " · " + BeekeeperText.CombBlurb(N(vm.StoragePerComb));
+        BuildCombButton.Content = BeekeeperText.Build;
+        BuildCombButton.IsEnabled = vm.CanBuildComb;
+        BeeswaxRow.IsVisible = vm.WorkbenchRevealed;
         BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
         BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
         CraftBeeswaxButton.Content = BeekeeperText.Make;

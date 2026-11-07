@@ -107,6 +107,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasWaxCatcher => State.HasWaxCatcher;
     public int Combs => State.Combs;
     public decimal CombCost => Engine.CombCost;
+    /// <summary>Honey storage the next comb adds (bigger with the Bigger Combs upgrades).</summary>
+    public decimal StoragePerComb => Engine.StoragePerComb;
     public string BearName => State.BearName;
     public long Trades => State.Trades;
     public BeekeeperTool? NextTool => Engine.NextTool;

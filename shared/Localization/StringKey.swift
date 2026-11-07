@@ -1566,12 +1566,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperNextWaxFmt = "beekeeper_next_wax_fmt"
     /// Hive card, when honey storage is full
     case beekeeperCombsFull = "beekeeper_combs_full"
-    /// Combs card title (all caps)
-    case beekeeperCombsBuiltOne = "beekeeper_combs_built_one"
-    /// Combs card title (all caps); %@ = combs built (0, or 2 or more)
-    case beekeeperCombsBuiltFmt = "beekeeper_combs_built_fmt"
-    /// Combs card button; %@ = wax cost
-    case beekeeperBuildCombFmt = "beekeeper_build_comb_fmt"
     /// Combs card; %@ = honey storage each comb adds
     case beekeeperCombBlurbFmt = "beekeeper_comb_blurb_fmt"
     /// Story log
@@ -1764,4 +1758,10 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperSmokerTitle = "help_beekeeper_smoker_title"
     /// Catching More & the Smoker RuleSection body
     case helpBeekeeperSmoker = "help_beekeeper_smoker"
+    /// Hive card row label: combs built
+    case beekeeperHiveCombs = "beekeeper_hive_combs"
+    /// Workbench item name
+    case beekeeperComb = "beekeeper_comb"
+    /// Workbench button: build a comb
+    case beekeeperBuild = "beekeeper_build"
 }

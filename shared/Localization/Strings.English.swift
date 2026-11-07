@@ -784,9 +784,6 @@ enum StringsEnglish {
         .beekeeperHoneyPerSecFmt: "%@ honey / sec",
         .beekeeperNextWaxFmt: "Next wax: %@/%@",
         .beekeeperCombsFull: "The combs are full",
-        .beekeeperCombsBuiltOne: "COMBS · 1 built",
-        .beekeeperCombsBuiltFmt: "COMBS · %@ built",
-        .beekeeperBuildCombFmt: "Build a comb · %@ wax",
         .beekeeperCombBlurbFmt: "+%@ honey storage",
         .beekeeperLogNewGame: "The garden hums. Your bees are frolicking.",
         .beekeeperLogFirstBee: "You cup a bee in your hands. It tickles.",
@@ -883,5 +880,8 @@ enum StringsEnglish {
         .beekeeperLogCalmEnded: "The smoke drifts away.",
         .helpBeekeeperSmokerTitle: "💨 Catching More & the Smoker",
         .helpBeekeeperSmoker: "After the Bee-Safe Vacuum, the Shop sells more tools (Bee Lure, Flower Cart, Hive Whistle) and Practice upgrades that make every click catch more. Every catch also brings in a small slice of your hive (0.1% of your bees), so big hives grow faster.\n\nThe Smoker, also in the Shop, fills a little with every click. When it's full, press Puff the Smoker: for 2 minutes the bees are calm and make double honey.",
+        .beekeeperHiveCombs: "Combs",
+        .beekeeperComb: "Comb",
+        .beekeeperBuild: "Build",
     ]
 }

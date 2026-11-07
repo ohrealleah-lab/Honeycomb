@@ -800,9 +800,6 @@ public static class Strings
         [StringKey.BeekeeperHoneyPerSecFmt] = "%@ honey / sec",
         [StringKey.BeekeeperNextWaxFmt] = "Next wax: %@/%@",
         [StringKey.BeekeeperCombsFull] = "The combs are full",
-        [StringKey.BeekeeperCombsBuiltOne] = "COMBS · 1 built",
-        [StringKey.BeekeeperCombsBuiltFmt] = "COMBS · %@ built",
-        [StringKey.BeekeeperBuildCombFmt] = "Build a comb · %@ wax",
         [StringKey.BeekeeperCombBlurbFmt] = "+%@ honey storage",
         [StringKey.BeekeeperLogNewGame] = "The garden hums. Your bees are frolicking.",
         [StringKey.BeekeeperLogFirstBee] = "You cup a bee in your hands. It tickles.",
@@ -899,6 +896,9 @@ public static class Strings
         [StringKey.BeekeeperLogCalmEnded] = "The smoke drifts away.",
         [StringKey.HelpBeekeeperSmokerTitle] = "💨 Catching More & the Smoker",
         [StringKey.HelpBeekeeperSmoker] = "After the Bee-Safe Vacuum, the Shop sells more tools (Bee Lure, Flower Cart, Hive Whistle) and Practice upgrades that make every click catch more. Every catch also brings in a small slice of your hive (0.1% of your bees), so big hives grow faster.\n\nThe Smoker, also in the Shop, fills a little with every click. When it's full, press Puff the Smoker: for 2 minutes the bees are calm and make double honey.",
+        [StringKey.BeekeeperHiveCombs] = "Combs",
+        [StringKey.BeekeeperComb] = "Comb",
+        [StringKey.BeekeeperBuild] = "Build",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1683,9 +1683,6 @@ public static class Strings
         [StringKey.BeekeeperHoneyPerSecFmt] = "%@ miel / s",
         [StringKey.BeekeeperNextWaxFmt] = "Próxima cera: %@/%@",
         [StringKey.BeekeeperCombsFull] = "Los panales están llenos",
-        [StringKey.BeekeeperCombsBuiltOne] = "PANALES · 1 construido",
-        [StringKey.BeekeeperCombsBuiltFmt] = "PANALES · %@ construidos",
-        [StringKey.BeekeeperBuildCombFmt] = "Construir panal · %@ de cera",
         [StringKey.BeekeeperCombBlurbFmt] = "+%@ de espacio para miel",
         [StringKey.BeekeeperLogNewGame] = "El jardín zumba. Tus abejas retozan.",
         [StringKey.BeekeeperLogFirstBee] = "Atrapas una abeja entre las manos. Hace cosquillas.",
@@ -1782,5 +1779,8 @@ public static class Strings
         [StringKey.BeekeeperLogCalmEnded] = "El humo se disipa.",
         [StringKey.HelpBeekeeperSmokerTitle] = "💨 Atrapar más y el ahumador",
         [StringKey.HelpBeekeeperSmoker] = "Después de la aspiradora segura, la tienda vende más herramientas (señuelo para abejas, carro de flores, silbato de colmena) y mejoras de práctica que hacen que cada clic atrape más. Cada captura también trae una pequeña parte de tu colmena (el 0,1% de tus abejas), así que las colmenas grandes crecen más rápido.\n\nEl ahumador, también en la tienda, se llena un poco con cada clic. Cuando esté lleno, pulsa Echar humo: durante 2 minutos las abejas están tranquilas y hacen el doble de miel.",
+        [StringKey.BeekeeperHiveCombs] = "Panales",
+        [StringKey.BeekeeperComb] = "Panal",
+        [StringKey.BeekeeperBuild] = "Construir",
     };
 }

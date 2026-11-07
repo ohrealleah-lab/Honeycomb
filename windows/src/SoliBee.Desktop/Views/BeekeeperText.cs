@@ -37,6 +37,9 @@ internal static class BeekeeperText
     public static string HiveBees => T(StringKey.BeekeeperHiveBees);
     public static string HiveHoney => T(StringKey.BeekeeperHiveHoney);
     public static string HiveWax => T(StringKey.BeekeeperHiveWax);
+    public static string HiveCombs => T(StringKey.BeekeeperHiveCombs);
+    public static string Comb => T(StringKey.BeekeeperComb);
+    public static string Build => T(StringKey.BeekeeperBuild);
     public static string HiveBeebits => T(StringKey.BeekeeperHiveBeebits);
     public static string BearTitle => T(StringKey.BeekeeperBearTitle);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
@@ -87,9 +90,6 @@ internal static class BeekeeperText
     public static string SellTenHint => T(StringKey.BeekeeperSellHint);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
     public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
-    public static string CombsBuilt(int n) =>
-        n == 1 ? T(StringKey.BeekeeperCombsBuiltOne) : Fill(T(StringKey.BeekeeperCombsBuiltFmt), n.ToString());
-    public static string BuildComb(string waxCost) => Fill(T(StringKey.BeekeeperBuildCombFmt), waxCost);
     public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
 
     // ---- stage 2: The Workbench, Hippies, wasps, upgrades

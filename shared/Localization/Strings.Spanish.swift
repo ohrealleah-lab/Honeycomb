@@ -784,9 +784,6 @@ enum StringsSpanish {
         .beekeeperHoneyPerSecFmt: "%@ miel / s",
         .beekeeperNextWaxFmt: "Próxima cera: %@/%@",
         .beekeeperCombsFull: "Los panales están llenos",
-        .beekeeperCombsBuiltOne: "PANALES · 1 construido",
-        .beekeeperCombsBuiltFmt: "PANALES · %@ construidos",
-        .beekeeperBuildCombFmt: "Construir panal · %@ de cera",
         .beekeeperCombBlurbFmt: "+%@ de espacio para miel",
         .beekeeperLogNewGame: "El jardín zumba. Tus abejas retozan.",
         .beekeeperLogFirstBee: "Atrapas una abeja entre las manos. Hace cosquillas.",
@@ -883,5 +880,8 @@ enum StringsSpanish {
         .beekeeperLogCalmEnded: "El humo se disipa.",
         .helpBeekeeperSmokerTitle: "💨 Atrapar más y el ahumador",
         .helpBeekeeperSmoker: "Después de la aspiradora segura, la tienda vende más herramientas (señuelo para abejas, carro de flores, silbato de colmena) y mejoras de práctica que hacen que cada clic atrape más. Cada captura también trae una pequeña parte de tu colmena (el 0,1% de tus abejas), así que las colmenas grandes crecen más rápido.\n\nEl ahumador, también en la tienda, se llena un poco con cada clic. Cuando esté lleno, pulsa Echar humo: durante 2 minutos las abejas están tranquilas y hacen el doble de miel.",
+        .beekeeperHiveCombs: "Panales",
+        .beekeeperComb: "Panal",
+        .beekeeperBuild: "Construir",
     ]
 }

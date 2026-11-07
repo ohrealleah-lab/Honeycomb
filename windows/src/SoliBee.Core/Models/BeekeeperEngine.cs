@@ -109,6 +109,9 @@ public sealed class BeekeeperEngine
     public decimal HoneyStorage =>
         (Config.StartingStorage + State.Combs * Config.StoragePerComb) * StorageMultiplier;
 
+    /// <summary>Honey storage one comb adds right now.</summary>
+    public decimal StoragePerComb => Config.StoragePerComb * StorageMultiplier;
+
     private decimal StorageMultiplier =>
         Owns(BeekeeperUpgrades.BiggerCombs2) ? Config.BiggerCombs2Multiplier
         : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
