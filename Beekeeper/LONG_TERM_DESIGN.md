@@ -27,7 +27,11 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **Seeds are planted as flowers, and flowers attract new kinds of bees.** Bees are attracted, not assigned.
    - **Guards are a permanent upgrade**: once unlocked, raids never make bees fly off. It removes the losing-bees part of raids early on; the wasp can still take honey.
    - **No sage flowers.** Sage stays the Hippies' trade so the Hippies keep their place (Leah: planting sage "would erase hippies").
-   - Open: where the first foragers or seeds come from, which flowers attract which bees, where planting happens, and whether flowers also give passive bee growth (the old "nurses" idea).
+   - **The first seeds come from the Hippies**: they start handing out seeds after 5 trades, and different seeds after further trades (Leah, 2026-11-07).
+   - **Flowers** (Leah: yes to these): **clover** attracts ordinary honeybees over time (the old "nurses" idea, so the hive grows without clicking); **lavender** attracts forager bees (more seeds); a **later flower** attracts propolis bees (for the bee-boost candle).
+   - **Planting happens on a new Garden card** (Leah: "love it"); the story log is already called The Garden.
+   - **Guards**: sold in the Beekeeper's Shop from the 2nd comb, when wasps start; placeholder about 300 Beebits + 100 wax (Leah: yes).
+   - Open: what else foragers bring back besides seeds ("and more").
 4. **Candles, made at the Workbench:** Leah's notes (2026-11-07):
    - **The Workbench is for crafting** (candles). It replaces the earlier "Chandler's Workshop" idea.
    - **Upgrades ("Technology") are sold in the Beekeeper's Shop** (Leah, 2026-11-07), not at The Workbench. They are bought (not researched), usually with a mix of resources: Beebits, wax, sage. Some are locked until something else is bought. **Bought upgrades disappear from the Shop.** First upgrades: Bigger Combs I/II (+50% / +100% honey storage), Better Wax-Catcher (+50%), Stronger Candles (repellent burns longer). The shoe-throw upgrades (stage 6) will be sold there too.
