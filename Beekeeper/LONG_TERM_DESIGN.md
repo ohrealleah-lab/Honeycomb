@@ -21,17 +21,17 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 ## Planned stages
 1. **First build (now):** catch, honey, wax, bear, shop, combs, saving, offline.
 2. **Smoker + tool upgrades:** clicking builds a "calm" meter that boosts the colony for a short time; each tool gets upgrade tiers; a click also catches a small slice of the current colony. Keeps clicking relevant all game.
-3. **Bee types, flowers and guards** (replaces "hive roles"; Leah's notes, 2026-11-07):
-   - **No assigning bees.** Kittens Game can assign individual kittens because it has a small population; Beekeeper has no bee limit, so roles come from **kinds of bees** instead, each counted on the Hive card.
-   - **Forager bees bring back seeds** ("and more", to be decided).
-   - **Seeds are planted as flowers, and flowers attract new kinds of bees.** Bees are attracted, not assigned.
-   - **Guards are a permanent upgrade**: once unlocked, raids never make bees fly off. It removes the losing-bees part of raids early on; the wasp can still take honey.
-   - **No sage flowers.** Sage stays the Hippies' trade so the Hippies keep their place (Leah: planting sage "would erase hippies").
-   - **The first seeds come from the Hippies**: they start handing out seeds after 5 trades, and different seeds after further trades (Leah, 2026-11-07).
-   - **Flowers** (Leah: yes to these): **clover** attracts ordinary honeybees over time (the old "nurses" idea, so the hive grows without clicking); **lavender** attracts forager bees (more seeds); a **later flower** attracts propolis bees (for the bee-boost candle).
-   - **Planting happens on a new Garden card** (Leah: "love it"); the story log is already called The Garden.
-   - **Guards**: sold in the Beekeeper's Shop from the 2nd comb, when wasps start; placeholder about 300 Beebits + 100 wax (Leah: yes).
-   - Open: what else foragers bring back besides seeds ("and more").
+3. **Seeds, discovery and bee types** (replaces "hive roles"; Leah's notes and design pivot, 2026-11-07):
+   - **No assigning bees.** Kittens Game can assign individual kittens because it has a small population; Beekeeper has no bee limit, so roles come from **kinds of bees**, each counted on the Hive card.
+   - **Planting a seed is how new kinds of bees are discovered.** Each new kind unlocks a new resource or gives a buff.
+   - **Seeds come from the Hippies**: after 5 trades they give a seed; different seeds come after further trades. No sage plants: sage stays the Hippies' trade.
+   - **The Garden card** appears with the first seed: a "Plant seed?" button, which then reads "Something is growing!". About 10 minutes later the log says "Your seed has sprouted." and the Garden shows the plant and the kind of bee it attracts.
+   - **Forager bees** (from a plant) bring back **pollen**. Pollen becomes **bee bread**, used with wax for hive upgrades.
+   - **Guard bees are attracted by a plant, not bought** (design pivot): once you have them, raids never make bees fly off. The wasp can still take honey.
+   - **Propolis**: real hives have no separate propolis bee; a few older foragers collect tree resin ("resin foragers"). Later, a tree (e.g. a poplar) could attract resin foragers for propolis and the bee-boost candle.
+   - **A Bees card** explains what each kind of bee does, with bee facts.
+   - **Where the bees live (the ladder)**: a skep in the garden, then a wooden hive in the garden, then a meadow apiary, then an orchard, and on. Hive upgrades cost wax and bee bread. The honey house may come later as an upgrade that automates something.
+   - Open: what each later seed grows and attracts, what each step of the ladder gives, and what the honey house automates.
 4. **Candles, made at the Workbench:** Leah's notes (2026-11-07):
    - **The Workbench is for crafting** (candles). It replaces the earlier "Chandler's Workshop" idea.
    - **Upgrades ("Technology") are sold in the Beekeeper's Shop** (Leah, 2026-11-07), not at The Workbench. They are bought (not researched), usually with a mix of resources: Beebits, wax, sage. Some are locked until something else is bought. **Bought upgrades disappear from the Shop.** First upgrades: Bigger Combs I/II (+50% / +100% honey storage), Better Wax-Catcher (+50%), Stronger Candles (repellent burns longer). The shoe-throw upgrades (stage 6) will be sold there too.
@@ -40,7 +40,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **At least two types at first:** the **beeswax candle** (the first candle the player can craft, and the one the Hippies buy), and a **wasp-repellent candle** that keeps wasps away (duration to decide).
    - **Later, a bee-boost candle** that makes the bees more effective (the old idea was +20% honey for a time).
    - **The Hippies arrive after the player has crafted 5 candles** of any type. The beeswax candle is the first one available, so in practice 5 beeswax candles bring them. They buy beeswax candles and **pay 1 sage per 10 candles** (they are one of the stage 7 buyers).
-5. **Sites and special bees:** Garden, Meadow, Honey Factory. Special bees can only be caught by clicking, and which kind depends on the site.
+5. **Sites**: the garden, the meadow apiary, the orchard and on (see the ladder in stage 3). The "Honey Factory" becomes the honey house, an automation upgrade. Kinds of bees come from plants (stage 3), not from catching.
 6. **Wasps (cozy):** raids steal honey and make some bees flee; bribe, guards or candles stop them; bears reduce raids after 100 trades. Leah's notes (2026-11-07):
    - **No Stress Mode turns wasps off completely.** No wasps appear and none raid. It can be turned on or off at any time without affecting game progress (nothing is reset, lost or gained by switching). A raid already under way when it is turned on still plays out; only future raids are stopped.
    - **Active play only.** Wasps never raid while the app is closed or idle, so away earnings are safe.
