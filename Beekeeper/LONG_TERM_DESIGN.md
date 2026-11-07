@@ -25,7 +25,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 4. **Candles, made at the Workbench:** Leah's notes (2026-11-07):
    - **Crafting and Technology are the same thing**, probably called **the Workbench**. It replaces the earlier "Chandler's Workshop" idea. Candles and the shoe-throw upgrades (stage 6) both live there.
    - **When:** the Workbench opens after the 2nd comb, together with the first wasp (see stage 6), so candles arrive with wasps rather than before them.
-   - **Candles are crafted from wax.** Later candles also cost **sage** or **propolis**, which the bees gather once they get the right upgrades.
+   - **Candles are crafted from wax, instantly** (no crafting time). Later candles also cost **sage** or **propolis**, which the bees gather once they get the right upgrades.
    - **At least two types at first:** a **Hippie candle**, sold to the Hippies, and a **wasp-repellent candle** that keeps wasps away (duration to decide).
    - **Later, a bee-boost candle** that makes the bees more effective (the old idea was +20% honey for a time).
    - **The Hippies arrive after candles**, as the buyers for the Hippie candle (they are one of the stage 7 buyers).
@@ -62,5 +62,5 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Workbench: upgrades bought or researched; its final name ("Workbench" is the working name).
-11. Candles: how much wax each costs, whether crafting takes time, which later candles need sage or propolis, and which bee upgrades gather them.
+11. Candles: how much wax each costs, which later candles need sage or propolis, and which bee upgrades gather them.
 12. Hippies: exactly when they arrive (after the first candle is crafted?) and what they pay for a Hippie candle.
