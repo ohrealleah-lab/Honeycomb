@@ -197,9 +197,10 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.StorageFull));
         }
 
-        // Wax follows honey actually stored, never honey sold.
+        // Wax follows all the honey the bees make, so it keeps coming when the combs are
+        // full (Leah, 2026-11-07). Selling honey never touches it.
         decimal waxMade = 0m;
-        State.WaxProgress += stored;
+        State.WaxProgress += made;
         decimal batches = Math.Floor(State.WaxProgress / Config.HoneyPerWax);
         if (batches > 0m)
         {

@@ -29,7 +29,7 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 - **Honey storage:** honey lives in the combs. You start with room for **200 honey** *(approved for the first build; revisit after play-testing)*. When storage is full, the bees stop making honey (nothing is wasted or sold automatically) and the log says "The combs are full of honey."
 
 ## 3. Wax
-- Wax drops from honey **actually produced and stored** (not honey sold). Selling honey never costs you wax progress.
+- Wax drops from **all the honey the bees make**, including honey that doesn't fit because the combs are full (Leah, 2026-11-07). Selling honey never costs you wax progress.
 - **50 honey = 1 wax.**
 - **Wax-Catcher** (150 Beebits): doubles it, so 2 wax per 50 honey.
 - Wax has no storage limit in the first build.
@@ -55,7 +55,7 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 ## 7. Saving and offline earnings
 - Progress saves automatically (every few seconds and on quitting) and is restored on launch.
 - **Offline earnings:** while the app is closed, the bees keep working for up to **3 days** (72 hours). Anything beyond 3 days is not earned. They earn at the **full 100% rate** (confirmed by Leah; one number in the config).
-- Offline honey still obeys honey storage: a full set of combs stops production, so building combs is how you earn more while away.
+- Offline honey still obeys honey storage: full combs stop honey being stored, so building combs is how you earn more honey while away. Wax keeps coming while away, even with full combs (up to the 3-day limit).
 - When you come back, the log tells you what happened, e.g. "While you were away, the bees made 340 honey."
 - A computer sleeping or a frozen window counts as time away under the same rule. A clock set backwards earns nothing.
 - A **New Game** option asks "Start over? Your hive will be lost." (only if you have bees) before it does anything. A new game picks a new bear name.

@@ -112,16 +112,26 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void WhenStorageIsFull_NoHoneyOrWaxIsMade_AndItIsAnnouncedOnce()
+    public void WhenStorageIsFull_NoHoneyIsStored_AndItIsAnnouncedOnce()
     {
         var e = Make(state: new BeekeeperState { Bees = 100m, Honey = 200m });
         var first = e.Advance(1m);
         Assert.Equal(0m, first.HoneyStored);
-        Assert.Equal(0m, first.WaxMade);
         Assert.True(Has(first.Events, BeekeeperEvents.StorageFull));
 
         var second = e.Advance(1m);
         Assert.False(Has(second.Events, BeekeeperEvents.StorageFull));
+        Assert.Equal(200m, e.State.Honey);
+    }
+
+    [Fact]
+    public void WhenStorageIsFull_WaxStillComes()
+    {
+        var e = Make(state: new BeekeeperState { Bees = 100m, Honey = 200m }); // 1 honey/s made, none fits
+        var r = e.Advance(50m);
+        Assert.Equal(0m, r.HoneyStored);
+        Assert.Equal(1m, r.WaxMade);
+        Assert.Equal(1m, e.State.Wax);
         Assert.Equal(200m, e.State.Honey);
     }
 
@@ -395,13 +405,14 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void StorageFillingOneHourIn_StopsProductionThere()
+    public void StorageFillingOneHourIn_StopsHoneyThere_ButWaxKeepsComing()
     {
         var cfg = new BeekeeperConfig { StartingStorage = 3600m };
         var e = Make(cfg, state: new BeekeeperState { Bees = 100m }); // 1 honey/second
         var r = e.AdvanceAway(7200m);
         Assert.Equal(3600m, e.State.Honey);
         Assert.Equal(3600m, r.HoneyStored);
+        Assert.Equal(144m, e.State.Wax);         // 7200 honey made / 50
         Assert.True(Has(r.Events, BeekeeperEvents.StorageFull));
     }
 

@@ -30,8 +30,8 @@ A new player sees a quiet screen with a pixel-art frame, a Catch Bee button, a t
 3. **Given** the player owns Padded Gloves or better, **When** they click, **Then** a sting never happens.
 4. **Given** the hive has 12 bees and room in storage, **When** a second passes, **Then** honey rises by 12 × 0.01 = 0.12 (fractions kept, whole number shown).
 5. **Given** any number of bees (for example 1,000,000), **When** the player clicks, **Then** the bees are added; there is no cap and no "hive is full".
-6. **Given** honey storage is full, **When** time passes, **Then** no honey or wax is produced, and the log says "The combs are full of honey." once (not every second).
-7. **Given** honey produced and stored: every 50 honey gives 1 wax (2 with the Wax-Catcher). Selling honey does not change wax progress.
+6. **Given** honey storage is full, **When** time passes, **Then** no more honey is stored (wax still comes, see 7), and the log says "The combs are full of honey." once (not every second).
+7. **Given** honey made by the bees (stored or not; changed by Leah on 2026-11-07 so wax keeps coming when the combs are full): every 50 honey gives 1 wax (2 with the Wax-Catcher). Selling honey does not change wax progress.
 8. **Given** 41 honey stored and 200 storage, with 100 bees, **When** 1 second passes, **Then** honey is 42; with 199.5 honey stored, **Then** honey becomes 200 (not 200.5) and the extra is lost.
 
 ### User Story 2 - Sell honey to the bear (Priority: P1)

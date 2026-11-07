@@ -32,9 +32,9 @@ Keep all rules in a plain engine class with no UI and no clock, so it can be uni
 
 ## Decisions worth knowing
 1. **Numbers are `decimal`.** Exact for 0.01 steps and big enough for the first stages (up to about 7.9 × 10^28). If the weeks-long game ever outgrows it, we switch the engine's number type in one place; the formatter already copes with huge values.
-2. **Wax is driven by a counter of honey produced and stored**, so selling never costs wax progress, and buying the Wax-Catcher mid-game just changes what each 50 honey gives.
+2. **Wax is driven by a counter of all honey the bees make** (stored or not; changed 2026-11-07 so wax keeps coming when the combs are full), so selling never costs wax progress, and buying the Wax-Catcher mid-game just changes what each 50 honey gives.
 3. **Time away, one rule for everything.** The view model compares "now" with the last time it ran or saved. A gap over 2 seconds is "away": it is cut to 3 days (259,200 s), ignored if negative, and credited by `AdvanceAway` as one calculation (no loop over hundreds of thousands of steps). This covers closing the app, laptop sleep and a frozen window alike. Gaps under 2 seconds are normal ticks.
-4. **Storage limits what away time earns.** Production stops when honey storage is full, in the live game and away alike. `AdvanceAway` works out the exact moment storage fills, and wax follows the honey actually stored.
+4. **Storage limits the honey away time earns.** Honey stops being stored when storage is full, in the live game and away alike. `AdvanceAway` works out the exact moment storage fills; wax follows all the honey made, so it keeps coming after that (changed 2026-11-07).
 5. **Autosave** every 5 seconds and on window close and on New Game; each save stores the time.
 6. **Sting roll** happens only for Bare Hands.
 7. **The Workshop, roles, Smoker, special bees** are not built, but the centre column leaves a gap for the Workshop and roles, and the right column for the wasp panel.
