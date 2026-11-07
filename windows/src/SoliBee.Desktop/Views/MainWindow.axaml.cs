@@ -1746,6 +1746,9 @@ public partial class MainWindow : Window
             case "Trades":  hive.DebugBearTradesToAlmostAgreement(); break;   // one more sale brings the agreement
             case "Away":    hive.DebugSpendAway(8m * 60m * 60m); break;      // time away, with the welcome-back lines
             case "BeesX10": hive.DebugMultiplyBees(); break;
+            case "Honey":   hive.DebugGiveHoney(500m); break;
+            case "Bribes":  hive.DebugBribesToAlmostEmissary(); break;   // one more bribe brings the emissary
+            case "Emissary": hive.DebugBringEmissary(); break;
         }
     }
 

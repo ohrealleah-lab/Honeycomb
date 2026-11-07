@@ -14,8 +14,8 @@ namespace SoliBee.Core.Services;
 /// </summary>
 public static class BeekeeperSaveService
 {
-    /// <summary>5 = stage 5. Older files still load: the new fields start at zero.</summary>
-    public const int CurrentVersion = 5;
+    /// <summary>6 = stage 6. Older files still load: the new fields start at zero.</summary>
+    public const int CurrentVersion = 6;
 
     /// <summary>The story log keeps this many lines, newest first.</summary>
     public const int MaxLogEntries = 50;
@@ -101,7 +101,8 @@ public static class BeekeeperSaveService
             && s.SeedsGiven >= 0 && s.Seeds >= 0 && s.SeedsPlanted >= 0 && s.GrowSecondsLeft >= 0m
             && s.Plants is not null
             && s.ForagerBees >= 0m && s.GuardBees >= 0m && s.Pollen >= 0m && s.BeeBread >= 0m
-            && s.AgreementHoneyProgress >= 0m;
+            && s.AgreementHoneyProgress >= 0m
+            && s.BribesTotal >= 0 && s.WaspTrades >= 0 && s.Paper >= 0m;
     }
 
     private static void MoveAside(string path)

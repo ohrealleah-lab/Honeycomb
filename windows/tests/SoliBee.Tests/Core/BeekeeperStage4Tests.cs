@@ -154,37 +154,39 @@ public class BeekeeperStage4Tests : IDisposable
         e.PlantSeed();
         var away = e.AdvanceAway(15m * 60m);        // 10 to grow, 5 minutes of wildflowers
         Assert.True(Has(away.Events, BeekeeperEvents.SeedSprouted));
-        Assert.Equal(5m, e.State.ForagerBees);      // 1 a minute
+        Assert.Equal(15m, e.State.Pollen);          // 5 minutes of foraging at 3 a minute (stage 6)
     }
 
     // ============================================================ forager bees and pollen
 
-    [Fact]
-    public void Wildflowers_AttractOneForagerAMinute()
-    {
-        var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Wildflowers } });
-        e.Advance(60m);
-        Assert.Equal(1m, e.State.ForagerBees);
-        e.Advance(120m);
-        Assert.Equal(3m, e.State.ForagerBees);
-    }
+    // Cut in stage 6 (spec 014): tests a rule that is now commented out.
+    // [Fact]
+    // public void Wildflowers_AttractOneForagerAMinute()
+    // {
+    //     var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Wildflowers } });
+    //     e.Advance(60m);
+    //     Assert.Equal(1m, e.State.ForagerBees);
+    //     e.Advance(120m);
+    //     Assert.Equal(3m, e.State.ForagerBees);
+    // }
 
-    [Fact]
-    public void TenForagers_BringBackOnePollenAMinute()
-    {
-        var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Wildflowers }, ForagerBees = 10m });
-        // the 10 foragers stay 10 for this check: stop new arrivals
-        e.State.Plants.Clear();
-        e.Advance(60m);
-        Assert.Equal(1m, e.State.Pollen);
-        e.Advance(120m);
-        Assert.Equal(3m, e.State.Pollen);
-    }
+    // Cut in stage 6 (spec 014): tests a rule that is now commented out.
+    // [Fact]
+    // public void TenForagers_BringBackOnePollenAMinute()
+    // {
+    //     var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Wildflowers }, ForagerBees = 10m });
+    //     // the 10 foragers stay 10 for this check: stop new arrivals
+    //     e.State.Plants.Clear();
+    //     e.Advance(60m);
+    //     Assert.Equal(1m, e.State.Pollen);
+    //     e.Advance(120m);
+    //     Assert.Equal(3m, e.State.Pollen);
+    // }
 
     [Fact]
     public void PollenAndForagers_SameWhetherLiveInSecondsOrOneAwayStep()
     {
-        BeekeeperState Start() => new() { Plants = { BeekeeperPlants.Wildflowers }, ForagerBees = 4m };
+        BeekeeperState Start() => new() { Plants = { BeekeeperPlants.Wildflowers } };
 
         var live = Make(Start());
         for (int i = 0; i < 1800; i++) live.Advance(1m);
@@ -192,8 +194,8 @@ public class BeekeeperStage4Tests : IDisposable
         var away = Make(Start());
         away.AdvanceAway(1800m);
 
-        Assert.Equal((double)live.State.ForagerBees, (double)away.State.ForagerBees, 6);
-        Assert.Equal((double)live.State.Pollen, (double)away.State.Pollen, 6);
+        Assert.Equal(live.State.Pollen, away.State.Pollen);
+        Assert.Equal(90m, away.State.Pollen);       // 30 minutes at 3 a minute
     }
 
     [Fact]
@@ -207,16 +209,16 @@ public class BeekeeperStage4Tests : IDisposable
         away.PlantSeed();
         away.AdvanceAway(1500m);
 
-        Assert.Equal((double)live.State.ForagerBees, (double)away.State.ForagerBees, 6);
         Assert.Equal((double)live.State.Pollen, (double)away.State.Pollen, 6);
+        Assert.Equal(45m, away.State.Pollen);       // 15 minutes after the sprout, at 3 a minute
         Assert.Equal(live.State.Plants, away.State.Plants);
     }
 
     [Fact]
     public void TheFirstPollen_IsLogged_AndOpensBeeBread()
     {
-        var e = Make(new BeekeeperState { ForagerBees = 10m });
-        var r = e.Advance(59m);
+        var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Wildflowers } });
+        var r = e.Advance(19m);                     // 3 a minute: 1 pollen every 20 seconds
         Assert.False(e.State.PollenRevealed);
         r = e.Advance(2m);
         Assert.True(Has(r.Events, BeekeeperEvents.FirstPollen));
@@ -244,40 +246,43 @@ public class BeekeeperStage4Tests : IDisposable
 
     // ============================================================ guard bees
 
-    [Fact]
-    public void TheBramble_AttractsOneGuardAMinute()
-    {
-        var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Bramble } });
-        e.Advance(120m);
-        Assert.Equal(2m, e.State.GuardBees);
-        Assert.True(e.HasGuards);
-    }
+    // Cut in stage 6 (spec 014): tests a rule that is now commented out.
+    // [Fact]
+    // public void TheBramble_AttractsOneGuardAMinute()
+    // {
+    //     var e = Make(new BeekeeperState { Plants = { BeekeeperPlants.Bramble } });
+    //     e.Advance(120m);
+    //     Assert.Equal(2m, e.State.GuardBees);
+    //     Assert.True(e.HasGuards);
+    // }
 
-    [Fact]
-    public void WithAGuard_ARaidNeverCostsABee_ButStillTakesHoney()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, GuardBees = 1m, Honey = 5000m, WorkbenchRevealed = true });
-        e.DebugCallWasp();
-        var r = e.ThrowShoe();                     // miss -> raid
-        var raid = r.Events.Single();
-        Assert.Equal(BeekeeperEvents.ShoeMissRaid, raid.Key);
-        Assert.Equal("guards", raid.Text);
-        Assert.Equal(0m, raid.Value2);
-        Assert.Equal(1000m, e.State.Bees);
-        Assert.True(raid.Value > 0m);
-        Assert.Equal(5000m - raid.Value, e.State.Honey);
-    }
+    // Cut in stage 6 (spec 014): tests a rule that is now commented out.
+    // [Fact]
+    // public void WithAGuard_ARaidNeverCostsABee_ButStillTakesHoney()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, GuardBees = 1m, Honey = 5000m, WorkbenchRevealed = true });
+    //     e.DebugCallWasp();
+    //     var r = e.ThrowShoe();                     // miss -> raid
+    //     var raid = r.Events.Single();
+    //     Assert.Equal(BeekeeperEvents.ShoeMissRaid, raid.Key);
+    //     Assert.Equal("guards", raid.Text);
+    //     Assert.Equal(0m, raid.Value2);
+    //     Assert.Equal(1000m, e.State.Bees);
+    //     Assert.True(raid.Value > 0m);
+    //     Assert.Equal(5000m - raid.Value, e.State.Honey);
+    // }
 
-    [Fact]
-    public void WithoutAGuard_ARaidStillSendsBeesOff()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, GuardBees = 0.9m, Honey = 5000m, WorkbenchRevealed = true });
-        e.DebugCallWasp();
-        var raid = e.ThrowShoe().Events.Single();
-        Assert.Null(raid.Text);
-        Assert.Equal(150m, raid.Value2);
-        Assert.Equal(850m, e.State.Bees);
-    }
+    // Cut in stage 6 (spec 014): tests a rule that is now commented out.
+    // [Fact]
+    // public void WithoutAGuard_ARaidStillSendsBeesOff()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, GuardBees = 0.9m, Honey = 5000m, WorkbenchRevealed = true });
+    //     e.DebugCallWasp();
+    //     var raid = e.ThrowShoe().Events.Single();
+    //     Assert.Null(raid.Text);
+    //     Assert.Equal(150m, raid.Value2);
+    //     Assert.Equal(850m, e.State.Bees);
+    // }
 
     [Fact]
     public void WithAGuard_TheBribeAndTheShoeStillSaveTheHoney()

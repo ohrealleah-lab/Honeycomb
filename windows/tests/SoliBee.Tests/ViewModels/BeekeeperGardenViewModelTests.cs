@@ -81,7 +81,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
         var second = Make(clock, state: null, persist: true);
         Assert.False(second.IsGrowing);
         Assert.Single(second.SproutedPlants);
-        Assert.Equal(10m, second.ForagerBees);          // 10 minutes of wildflowers
+        Assert.Equal(30m, second.Pollen);               // 10 minutes of foraging at 3 a minute
         Assert.Equal(BeekeeperPlants.Wildflowers, second.SproutedPlants[0].Id);
     }
 

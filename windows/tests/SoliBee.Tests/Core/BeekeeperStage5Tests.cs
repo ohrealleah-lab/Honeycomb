@@ -149,7 +149,7 @@ public class BeekeeperStage5Tests : IDisposable
     }
 
     [Fact]
-    public void RaisedBees_AreOrdinaryBees_ThatFlyOffInARaid()
+    public void RaisedBees_AreOrdinaryBees_AndARaidTakesNone()
     {
         var e = Make(Queen(10m, bees: 0m));
         e.State.WorkbenchRevealed = true;
@@ -157,7 +157,7 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal(20m, e.State.Bees);
         e.DebugCallWasp();
         e.AdvanceWaspCountdown(60m);
-        Assert.Equal(17m, e.State.Bees);   // 15% of 20, rounded down
+        Assert.Equal(20m, e.State.Bees);   // stage 6: raids take only honey
     }
 
     [Fact]
@@ -392,7 +392,7 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.True(BeekeeperSaveService.Save(s, path, DateTime.UtcNow));
 
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(5, back.Version);
+        Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.True(back.QueenSettled);
         Assert.True(back.HasTradeAgreement);
         Assert.Equal(12.25m, back.AgreementHoneyProgress);

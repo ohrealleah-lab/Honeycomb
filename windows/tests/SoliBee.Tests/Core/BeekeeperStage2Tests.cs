@@ -236,9 +236,9 @@ public class BeekeeperStage2Tests : IDisposable
         var raid = e.AdvanceWaspCountdown(1m).Single();
         Assert.Equal(BeekeeperEvents.WaspRaid, raid.Key);
         Assert.Equal(500m, raid.Value);    // 3 minutes of 10 honey/s is 1,800, but only 500 stored
-        Assert.Equal(150m, raid.Value2);   // 15% of 1,000 bees
+        Assert.Equal(0m, raid.Value2);     // stage 6: raids take only honey, no bees fly off
         Assert.Equal(0m, e.State.Honey);
-        Assert.Equal(850m, e.State.Bees);
+        Assert.Equal(1000m, e.State.Bees);
         Assert.Equal(40m, e.State.Wax);            // never wax,
         Assert.Equal(3m, e.State.Sage);            // sage
         Assert.Equal(4m, e.State.BeeswaxCandles);  // or candles
@@ -252,7 +252,7 @@ public class BeekeeperStage2Tests : IDisposable
         e.AdvanceWaspTime(240m);
         e.AdvanceWaspCountdown(60m);
         Assert.Equal(410m, e.State.Honey);
-        Assert.Equal(85m, e.State.Bees);
+        Assert.Equal(100m, e.State.Bees);   // stage 6: never bees
     }
 
     [Fact]
@@ -275,7 +275,7 @@ public class BeekeeperStage2Tests : IDisposable
         var r = e.ThrowShoe();
         Assert.True(Has(r.Events, BeekeeperEvents.ShoeMissRaid));
         Assert.False(e.WaspApproaching);
-        Assert.Equal(850m, e.State.Bees);
+        Assert.Equal(1000m, e.State.Bees);   // stage 6: never bees
         Assert.False(e.ThrowShoe().Done);   // one throw per wasp
     }
 

@@ -91,12 +91,21 @@ public class BeekeeperWaspViewModelTests
     }
 
     [Fact]
-    public void NoStressMode_KeepsWaspsAway()
+    public void NoStressMode_NoLongerKeepsWaspsAway()
     {
+        // Stage 6 (spec 014): No Stress Mode no longer applies to Beekeeper.
         var h = new Hive { NoStress = true };
-        h.Play(1000);
-        Assert.False(h.Vm.WaspApproaching);
+        h.Play(240);
+        Assert.True(h.Vm.WaspApproaching);
     }
+
+    // Cut in stage 6 (spec 014): No Stress Mode kept wasps away.
+    // public void NoStressMode_KeepsWaspsAway()
+    // {
+    //     var h = new Hive { NoStress = true };
+    //     h.Play(1000);
+    //     Assert.False(h.Vm.WaspApproaching);
+    // }
 
     [Fact]
     public void NoStressMode_LetsAWaspAlreadyHerePlayOut()
@@ -107,7 +116,7 @@ public class BeekeeperWaspViewModelTests
         h.NoStress = true;
         h.Play(60);
         Assert.True(h.Logged(BeekeeperEvents.WaspRaid));
-        Assert.Equal(850m, h.Vm.Bees);
+        Assert.Equal(1000m, h.Vm.Bees);   // stage 6: raids take only honey
     }
 
     [Fact]

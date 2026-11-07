@@ -22,10 +22,60 @@ namespace SoliBee.Core.ViewModels;
 /// are resource names ("honey", "beebits", "beeswax_candles", "sage") the view turns into
 /// words: "10 honey = 1 Beebit". The view model holds no words.
 /// </summary>
+/// <remarks>A buyer with <see cref="TradeTimes"/> (the wasps) offers one trade plus x10 and x100
+/// buttons, each shown only when <see cref="CanTradeTimes"/> says the whole batch is affordable;
+/// <see cref="TradeAll"/> is then unused.</remarks>
 public sealed record BeekeeperTradeOffer(
     string Id, string? Name, long Trades,
     decimal GiveAmount, string Give, decimal GetAmount, string Get,
-    bool CanTrade, Action TradeOne, Action TradeAll);
+    bool CanTrade, Action TradeOne, Action TradeAll,
+    Func<int, bool>? CanTradeTimes = null, Action<int>? TradeTimes = null);
+
+/// <summary>
+/// One row of the Hive card (spec 014, FR-505). The view model knows no words: <see cref="Id"/>
+/// (one of <see cref="BeekeeperHiveRows"/>) tells the view which label and wording to use, and
+/// the numbers fill it in. <see cref="Rate"/> is the per-second rate shown on hover (null: no
+/// hover); <see cref="Rate2"/> a second hover number where a row needs one (the pantry's time).
+/// </summary>
+public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0m, decimal Value2 = 0m,
+    decimal? Rate = null, decimal Rate2 = 0m);
+
+/// <summary>A small heading and its rows. The heading only shows while one of its rows does.</summary>
+public sealed record BeekeeperHiveGroup(string Id, IReadOnlyList<BeekeeperHiveRow> Rows)
+{
+    public bool Visible => Rows.Any(r => r.Visible);
+}
+
+/// <summary>Group and row ids on the Hive card. A later stage adds a row with one new id here,
+/// one entry in <see cref="BeekeeperViewModel.HiveGroups"/> and its words in the view.</summary>
+public static class BeekeeperHiveRows
+{
+    public const string GroupBees = "bees";
+    public const string GroupHive = "hive";
+    public const string GroupGarden = "garden";
+    public const string GroupCrafts = "crafts";
+    public const string GroupTradeGoods = "trade_goods";
+
+    public const string Honeybees = "honeybees";          // Value = bees; Rate = bees/s from the queen
+    public const string Queen = "queen";                  // Value = 1 laying, 0 resting
+    public const string Foraging = "foraging";            // full-width line; Value = pollen a minute
+    public const string Guarding = "guarding";            // full-width line; Value = extra honey percent
+    public const string Honey = "honey";                  // Value = stored, Value2 = storage; Rate = honey/s
+    public const string Wax = "wax";                      // Rate = wax/s
+    public const string Combs = "combs";
+    public const string CombsFull = "combs_full";         // full-width warning line
+    public const string Seeds = "seeds";
+    public const string Pollen = "pollen";                // Rate = pollen/s while foraging
+    public const string BeeBread = "bee_bread";           // Rate = bee bread eaten/s, Rate2 = pantry seconds
+    public const string BeeswaxCandles = "beeswax_candles";
+    public const string RepellentCandles = "repellent_candles";
+    public const string Beebits = "beebits";
+    public const string Sage = "sage";
+    public const string Paper = "paper";
+    // Cut in stage 6 (spec 014): counts of forager and guard bees.
+    // public const string Foragers = "foragers";
+    // public const string Guards = "guards";
+}
 
 public partial class BeekeeperViewModel : ObservableObject, IDisposable
 {
@@ -40,7 +90,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     private decimal _carrySeconds;          // leftover fraction of a second between ticks
     private decimal _secondsSinceSave;
     private bool _disposed;
-    private readonly Func<bool> _noStressMode;
+    // Cut in stage 6 (spec 014): No Stress Mode no longer applies to Beekeeper.
+    // private readonly Func<bool> _noStressMode;
     private DateTime _lastActivityUtc;
 
     /// <summary>True while the Beekeeper screen is showing in a window that isn't minimised.
@@ -55,7 +106,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <param name="persist">False means never touch the disk.</param>
     /// <param name="savePath">Where to save; null uses the app's data folder.</param>
     /// <param name="initialState">Start from this instead of loading a save (tests).</param>
-    /// <param name="noStressMode">Reads No Stress Mode; null uses the app's Options.</param>
+    /// <param name="noStressMode">Unused since stage 6 (No Stress Mode no longer applies to
+    /// Beekeeper); kept so callers and tests stay as they are.</param>
     public BeekeeperViewModel(
         bool isHeadless = false,
         BeekeeperConfig? config = null,
@@ -67,7 +119,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Func<bool>? noStressMode = null)
     {
         _clock = clock ?? (() => DateTime.UtcNow);
-        _noStressMode = noStressMode ?? (() => SettingsService.LoadOptions().IsNoStressMode);
+        _ = noStressMode;
+        // Cut in stage 6 (spec 014):
+        // _noStressMode = noStressMode ?? (() => SettingsService.LoadOptions().IsNoStressMode);
         _syncContext = SynchronizationContext.Current;
         _savePath = persist ? (savePath ?? BeekeeperSaveService.SaveFilePath) : null;
 
@@ -142,6 +196,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HippiesRevealed => State.HippiesRevealed;
     public bool SageRevealed => State.SageRevealed;
     public bool RepellentUnlocked => State.RepellentUnlocked;
+    /// <summary>The repellent candle is shown (recipe, light button, Hive row): unlocked, and
+    /// not yet retired by the emissary (spec 014).</summary>
+    public bool RepellentShown => State.RepellentUnlocked && !Engine.RepellentRetired;
     public bool WaspApproaching => Engine.WaspApproaching;
     public decimal WaspSecondsLeft => State.WaspCountdown;
     public decimal RepellentSecondsLeft => State.RepellentSecondsLeft;
@@ -168,6 +225,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             if (State.HippiesRevealed)
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
                     Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
+            // Stage 6: the wasps, once their emissary has come. One paper a click, or x10 / x100.
+            if (State.EmissaryCome)
+                offers.Add(new BeekeeperTradeOffer("wasps", null, State.WaspTrades,
+                    Config.HoneyPerPaper, "honey", 1m, "paper", Engine.CanTradePaper,
+                    () => TradePaperTimes(1), () => TradePaperTimes(1), Engine.CanTradePaperTimes, TradePaperTimes));
             return offers;
         }
     }
@@ -189,8 +251,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>The plant growing now. The screen never names it before it sprouts (a surprise).</summary>
     public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
     public IReadOnlyList<BeekeeperPlant> SproutedPlants => Engine.SproutedPlants;
-    public decimal ForagerBees => State.ForagerBees;
-    public decimal GuardBees => State.GuardBees;
+    // Cut in stage 6 (spec 014): counts of forager and guard bees (now specialties).
+    // public decimal ForagerBees => State.ForagerBees;
+    // public decimal GuardBees => State.GuardBees;
     public decimal Pollen => State.Pollen;
     public decimal BeeBread => State.BeeBread;
     public bool PollenRevealed => State.PollenRevealed;
@@ -214,6 +277,74 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasTradeAgreement => State.HasTradeAgreement;
     /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
     public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
+
+    // Stage 6: specialties and the wasp emissary
+    /// <summary>The hive's specialties (foraging, guarding), from the sprouted plants.</summary>
+    public IReadOnlyList<string> Specialties => Engine.Specialties;
+    public decimal PollenPerSecond => Engine.PollenPerSecondNow;
+    public long BribesTotal => State.BribesTotal;
+    public bool EmissaryCome => Engine.EmissaryCome;
+    public long WaspTrades => State.WaspTrades;
+    public decimal Paper => State.Paper;
+    public bool CanTradePaper => Engine.CanTradePaper;
+    public bool CanTradePaperTimes(int n) => Engine.CanTradePaperTimes(n);
+    public void TradePaperTimes(int n) => Apply(Engine.TradeForPaper(n));
+
+    /// <summary>The Hive card, in groups (spec 014, FR-505): Bees, The hive, Garden, Crafts, Trade goods.</summary>
+    public IReadOnlyList<BeekeeperHiveGroup> HiveGroups
+    {
+        get
+        {
+            var specialties = Engine.Specialties;
+            var bees = new List<BeekeeperHiveRow>
+            {
+                new(BeekeeperHiveRows.Honeybees, true, State.Bees,
+                    Rate: Engine.HasQueen ? Engine.QueenBeesPerSecondNow : null),
+                new(BeekeeperHiveRows.Queen, Engine.HasQueen, Engine.IsQueenLaying ? 1m : 0m),
+            };
+            foreach (var id in specialties)
+            {
+                if (id == BeekeeperSpecialties.Foraging)
+                    bees.Add(new(BeekeeperHiveRows.Foraging, true, Engine.ForagingPollenPerMinute));
+                else if (id == BeekeeperSpecialties.Guarding)
+                    bees.Add(new(BeekeeperHiveRows.Guarding, true, (Engine.GuardingMultiplier - 1m) * 100m));
+            }
+            // Cut in stage 6 (spec 014): the forager and guard counts.
+            // bees.Add(new(BeekeeperHiveRows.Foragers, State.ForagerBees > 0m, Math.Floor(State.ForagerBees)));
+            // bees.Add(new(BeekeeperHiveRows.Guards, State.GuardBees > 0m, Math.Floor(State.GuardBees)));
+
+            return new[]
+            {
+                new BeekeeperHiveGroup(BeekeeperHiveRows.GroupBees, bees),
+                new BeekeeperHiveGroup(BeekeeperHiveRows.GroupHive, new BeekeeperHiveRow[]
+                {
+                    new(BeekeeperHiveRows.Honey, true, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
+                    new(BeekeeperHiveRows.Wax, State.WaxRevealed, State.Wax, Rate: Engine.WaxPerSecondNow),
+                    new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
+                    new(BeekeeperHiveRows.CombsFull, StorageIsFull),
+                }),
+                new BeekeeperHiveGroup(BeekeeperHiveRows.GroupGarden, new BeekeeperHiveRow[]
+                {
+                    new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.Seeds),
+                    new(BeekeeperHiveRows.Pollen, State.PollenRevealed, Math.Floor(State.Pollen),
+                        Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null),
+                    new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
+                        Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
+                }),
+                new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
+                {
+                    new(BeekeeperHiveRows.BeeswaxCandles, State.CandlesCrafted > 0, State.BeeswaxCandles),
+                    new(BeekeeperHiveRows.RepellentCandles, RepellentShown, State.RepellentCandles),
+                }),
+                new BeekeeperHiveGroup(BeekeeperHiveRows.GroupTradeGoods, new BeekeeperHiveRow[]
+                {
+                    new(BeekeeperHiveRows.Beebits, State.BeebitsRevealed, State.Beebits),
+                    new(BeekeeperHiveRows.Sage, State.SageRevealed, State.Sage),
+                    new(BeekeeperHiveRows.Paper, State.WaspTrades > 0 || State.Paper > 0m, State.Paper),
+                }),
+            };
+        }
+    }
 
     /// <summary>Story log, newest first.</summary>
     public IReadOnlyList<BeekeeperLogEntry> Log => State.Log;
@@ -333,6 +464,30 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void DebugBearTradesToAlmostAgreement()
     {
         LogEvents(Engine.DebugBearTradesToAlmostAgreement());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: one more bribe brings the emissary.</summary>
+    public void DebugBribesToAlmostEmissary()
+    {
+        Engine.DebugBribesToAlmostEmissary();
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: the emissary comes now.</summary>
+    public void DebugBringEmissary()
+    {
+        LogEvents(Engine.DebugBringEmissary());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: hands out honey.</summary>
+    public void DebugGiveHoney(decimal honey)
+    {
+        LogEvents(Engine.DebugGiveHoney(honey));
         SaveNow();
         Refresh();
     }
@@ -466,8 +621,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// Wasps only bother a player who can respond: Beekeeper on screen and a click or key in
     /// the last few minutes. An approaching wasp runs its countdown on real time and leaves
     /// (nothing lost) if the player steps away, goes idle or the computer slept. Otherwise
-    /// "wasp time" passes, unless No Stress Mode is on; that stops new wasps and pauses a
-    /// burning candle, but a wasp already here still plays out (spec 010, Story 7).
+    /// "wasp time" passes. No Stress Mode no longer stops wasps (spec 014); the emissary does,
+    /// for good (the engine ignores wasp time after it).
     /// </summary>
     private void AdvanceWasps(decimal gap, bool away, DateTime now)
     {
@@ -477,7 +632,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             LogEvents(away || !watching ? Engine.WaspLeaves() : Engine.AdvanceWaspCountdown(gap));
             return;
         }
-        if (!away && watching && !_noStressMode()) LogEvents(Engine.AdvanceWaspTime(gap));
+        if (!away && watching) LogEvents(Engine.AdvanceWaspTime(gap));
+        // Cut in stage 6 (spec 014): No Stress Mode kept wasps away.
+        // if (!away && watching && !_noStressMode()) LogEvents(Engine.AdvanceWaspTime(gap));
     }
 
     /// <summary>Writes the game to disk now (also done every few seconds, on New Game and on close).</summary>

@@ -68,6 +68,7 @@ public partial class BeekeeperView : UserControl
             _shopSignature = "";
             _logSignature = "";
             _plantsSignature = "";
+            _hiveSignature = "";
             Redraw();
         });
         DataContextChanged += (_, _) => Attach(DataContext as BeekeeperViewModel);
@@ -157,72 +158,16 @@ public partial class BeekeeperView : UserControl
         PuffButton.Content = BeekeeperText.Puff;
         PuffButton.IsEnabled = vm.CanPuff;
 
-        // Hive
+        // Hive: the title, the groups of rows (built from the view model), the move-hive row.
         HiveCard.IsVisible = vm.HoneyRevealed;
         HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive);
-        HiveBeesLabel.Text = BeekeeperText.HiveBees;
-        HiveBeesValue.Text = N(vm.Bees);
-        HiveHoneyLabel.Text = BeekeeperText.HiveHoney;
-        HiveHoneyValue.Text = N(vm.Honey) + " / " + N(vm.HoneyStorage);
-        HiveWaxLabel.Text = BeekeeperText.HiveWax;
-        HiveWaxValue.Text = N(vm.Wax);
-        HiveWaxLabel.IsVisible = HiveWaxValue.IsVisible = vm.WaxRevealed;
-        HiveBeebitsLabel.Text = BeekeeperText.HiveBeebits;
-        HiveBeebitsValue.Text = N(vm.Beebits);
-        HiveBeebitsLabel.IsVisible = HiveBeebitsValue.IsVisible = vm.BeebitsRevealed;
-        HiveBeeswaxLabel.Text = BeekeeperText.HiveBeeswaxCandles;
-        HiveBeeswaxValue.Text = N(vm.BeeswaxCandles);
-        HiveBeeswaxLabel.IsVisible = HiveBeeswaxValue.IsVisible = vm.CandlesCrafted > 0;
-        HiveRepellentLabel.Text = BeekeeperText.HiveRepellentCandles;
-        HiveRepellentValue.Text = N(vm.RepellentCandles);
-        HiveRepellentLabel.IsVisible = HiveRepellentValue.IsVisible = vm.RepellentUnlocked;
-        HiveSageLabel.Text = BeekeeperText.HiveSage;
-        HiveSageValue.Text = N(vm.Sage);
-        HiveSageLabel.IsVisible = HiveSageValue.IsVisible = vm.SageRevealed;
-        HiveSeedsLabel.Text = BeekeeperText.HiveSeeds;
-        HiveSeedsValue.Text = N(vm.Seeds);
-        HiveSeedsLabel.IsVisible = HiveSeedsValue.IsVisible = vm.GardenRevealed;
-        HiveForagersLabel.Text = BeekeeperText.HiveForagers;
-        HiveForagersValue.Text = N(Math.Floor(vm.ForagerBees));
-        HiveForagersLabel.IsVisible = HiveForagersValue.IsVisible = vm.ForagerBees > 0m;
-        HiveGuardsLabel.Text = BeekeeperText.HiveGuards;
-        HiveGuardsValue.Text = N(Math.Floor(vm.GuardBees));
-        HiveGuardsLabel.IsVisible = HiveGuardsValue.IsVisible = vm.GuardBees > 0m;
-        HivePollenLabel.Text = BeekeeperText.HivePollen;
-        HivePollenValue.Text = N(Math.Floor(vm.Pollen));
-        HivePollenLabel.IsVisible = HivePollenValue.IsVisible = vm.PollenRevealed;
-        HiveBeeBreadLabel.Text = BeekeeperText.HiveBeeBread;
-        HiveBeeBreadValue.Text = N(vm.BeeBread);
-        HiveBeeBreadLabel.IsVisible = HiveBeeBreadValue.IsVisible = vm.BeeBreadRevealed;
+        UpdateHive(vm, lang);
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
         WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
             + " · " + BeekeeperText.WoodenHiveBlurb(N((vm.Config.WoodenHiveHoneyMultiplier - 1m) * 100m));
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
-        HiveFullText.IsVisible = vm.StorageIsFull;
-        HiveFullText.Text = BeekeeperText.CombsFull;
-
-        // Rates of automatic resources show on hover over the row's word or total. Any new
-        // auto resource (pollen, say) does the same with one more SetRateTip line.
-        SetRateTip(BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2)), HiveHoneyLabel, HiveHoneyValue);
-        SetRateTip(BeekeeperText.WaxPerSecond(N(vm.WaxPerSecond, 2)), HiveWaxLabel, HiveWaxValue);
-
-        // The queen: her row, and the brood's rates on the Honeybees and Bee bread rows.
-        HiveQueenLabel.Text = BeekeeperText.HiveQueen;
-        HiveQueenValue.Text = BeekeeperText.QueenStatus(vm.IsQueenLaying);
-        HiveQueenLabel.IsVisible = HiveQueenValue.IsVisible = vm.HasQueen;
-        if (vm.HasQueen)
-        {
-            SetRateTip(BeekeeperText.BeesPerSecond(N(vm.QueenBeesPerSecond, 2)), HiveBeesLabel, HiveBeesValue);
-            string breadTip = BeekeeperText.BeeBreadPerSecond(N(vm.BeeBreadPerSecond, 4));
-            if (vm.IsQueenLaying) breadTip += "\n" + BeekeeperText.PantryLasts(vm.PantrySecondsLeft);
-            SetRateTip(breadTip, HiveBeeBreadLabel, HiveBeeBreadValue);
-        }
-        else
-        {
-            SetRateTip(null, HiveBeesLabel, HiveBeesValue, HiveBeeBreadLabel, HiveBeeBreadValue);
-        }
 
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;
@@ -241,9 +186,6 @@ public partial class BeekeeperView : UserControl
         if (ShopCard.IsVisible) UpdateShop(vm, lang);
 
         // Combs: how many is on the Hive card; building one is The Workbench's first row (Leah).
-        HiveCombsLabel.Text = BeekeeperText.HiveCombs;
-        HiveCombsValue.Text = N(vm.Combs);
-        HiveCombsLabel.IsVisible = HiveCombsValue.IsVisible = vm.CombsRevealed;
 
         // The Workbench: shows from the first 50 wax (combs); candles join at the 2nd comb.
         WorkbenchCard.IsVisible = vm.CombsRevealed || vm.WorkbenchRevealed;
@@ -267,7 +209,8 @@ public partial class BeekeeperView : UserControl
         MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
         ShowBatch(BeeBread10Button, 10, vm.CanMakeBeeBreadTimes(10));
         ShowBatch(BeeBread100Button, 100, vm.CanMakeBeeBreadTimes(100));
-        RepellentRow.IsVisible = vm.RepellentUnlocked;
+        // Repellent candles retire once the wasps' emissary has come (spec 014).
+        RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
         RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
             + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.Engine.RepellentBurnSeconds));
@@ -290,9 +233,9 @@ public partial class BeekeeperView : UserControl
         PlantSeedButton.IsEnabled = vm.CanPlantSeed;
         UpdatePlants(vm, lang);
 
-        // Wasps
+        // Wasps (never again once the emissary has come)
         bool burning = vm.RepellentSecondsLeft > 0m;
-        WaspCard.IsVisible = vm.WaspApproaching || burning;
+        WaspCard.IsVisible = !vm.EmissaryCome && (vm.WaspApproaching || burning);
         WaspTitleText.Text = BeekeeperText.WaspsTitle;
         WaspHerePanel.IsVisible = vm.WaspApproaching;
         WaspHereText.Text = BeekeeperText.WaspHere;
@@ -302,7 +245,7 @@ public partial class BeekeeperView : UserControl
         BribeButton.Content = BeekeeperText.Bribe(N(vm.BribeCost));
         BribeButton.IsEnabled = vm.CanBribe;
         WaspLightButton.Content = BeekeeperText.LightCandle;
-        WaspLightButton.IsVisible = vm.RepellentUnlocked;
+        WaspLightButton.IsVisible = vm.RepellentShown;
         WaspLightButton.IsEnabled = vm.CanLightRepellent;
         CandleBurningText.IsVisible = burning && !vm.WaspApproaching;
         CandleBurningText.Text = BeekeeperText.CandleBurning(BeekeeperText.Clock(vm.RepellentSecondsLeft));
@@ -344,6 +287,74 @@ public partial class BeekeeperView : UserControl
         foreach (var t in targets) ToolTip.SetTip(t, text);
     }
 
+    // The Hive card's groups are rebuilt only when a row appears or the language changes, so
+    // a row is never swapped under the mouse (its hover text); values refresh every tick.
+    private string _hiveSignature = "";
+    private readonly Dictionary<string, (TextBlock Label, TextBlock? Value)> _hiveRows = new();
+
+    private void UpdateHive(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var groups = vm.HiveGroups;
+        string sig = lang + "|" + string.Join(";", groups.Select(g =>
+            g.Id + ":" + string.Join(",", g.Rows.Where(r => r.Visible).Select(r => r.Id))));
+        if (sig != _hiveSignature)
+        {
+            _hiveSignature = sig;
+            _hiveRows.Clear();
+            HiveGroups.Children.Clear();
+            foreach (var g in groups)
+            {
+                if (!g.Visible) continue;
+                var panel = new StackPanel { Spacing = 2 };
+                panel.Children.Add(new TextBlock
+                {
+                    Text = BeekeeperText.HiveGroupTitle(g.Id),
+                    Classes = { "bk-muted" },
+                    FontWeight = FontWeight.SemiBold,
+                    Margin = new Thickness(0, 0, 0, 2),
+                });
+                foreach (var r in g.Rows)
+                {
+                    if (!r.Visible) continue;
+                    if (BeekeeperText.IsHiveLine(r.Id))
+                    {
+                        // A whole-line row: a specialty, or the "combs are full" warning.
+                        var line = new TextBlock { Classes = { "bk-body" } };
+                        if (r.Id == BeekeeperHiveRows.CombsFull) line.Foreground = SoftCoral;
+                        else line.Opacity = 0.9;
+                        panel.Children.Add(line);
+                        _hiveRows[r.Id] = (line, null);
+                        continue;
+                    }
+                    var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+                    var label = new TextBlock { Classes = { "bk-body" }, Opacity = 0.75 };
+                    var value = new TextBlock { Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold };
+                    Grid.SetColumn(value, 1);
+                    grid.Children.Add(label);
+                    grid.Children.Add(value);
+                    panel.Children.Add(grid);
+                    _hiveRows[r.Id] = (label, value);
+                }
+                HiveGroups.Children.Add(panel);
+            }
+        }
+
+        // Cheap per-tick part: words, numbers and hover rates.
+        foreach (var g in groups)
+            foreach (var r in g.Rows)
+            {
+                if (!r.Visible || !_hiveRows.TryGetValue(r.Id, out var c)) continue;
+                c.Label.Text = BeekeeperText.HiveRowLabel(r);
+                string? tip = BeekeeperText.HiveRowTip(r);
+                if (c.Value is { } v)
+                {
+                    v.Text = BeekeeperText.HiveRowValue(r);
+                    SetRateTip(tip, c.Label, v);
+                }
+                else SetRateTip(tip, c.Label);
+            }
+    }
+
     private string _plantsSignature = "";
 
     // Plain text rows, rebuilt only when what they show changes.
@@ -357,7 +368,7 @@ public partial class BeekeeperView : UserControl
         foreach (var p in plants)
         {
             var row = new StackPanel { Spacing = 2 };
-            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantName(p.Id), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantLine(p), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
             row.Children.Add(new TextBlock { Text = BeekeeperText.PlantBlurb(p.Id), Classes = { "bk-muted" } });
             PlantRows.Children.Add(row);
         }
@@ -416,7 +427,7 @@ public partial class BeekeeperView : UserControl
     // Trade rows are rebuilt only when a buyer arrives or the language changes, so a button is
     // never swapped under the mouse; names and enabled states are refreshed every tick.
     private string _tradeSignature = "";
-    private readonly Dictionary<string, (TextBlock Name, Button One, Button All)> _tradeRows = new();
+    private readonly Dictionary<string, (TextBlock Name, Button One, Button? All, Button? Ten, Button? Hundred)> _tradeRows = new();
     private TextBlock? _agreementText;
 
     private void UpdateTrades(IReadOnlyList<BeekeeperTradeOffer> offers, AppLanguage lang)
@@ -431,19 +442,39 @@ public partial class BeekeeperView : UserControl
             foreach (var offer in offers)
             {
                 var o = offer;   // the row's buttons call the offer of the moment, looked up by id
+                BeekeeperTradeOffer? Now() => _vm?.TradeOffers.FirstOrDefault(x => x.Id == o.Id);
                 var name = new TextBlock { FontFamily = new FontFamily("Georgia"), FontSize = 20, Foreground = WhiteBrush };
-                var one = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeTen };
-                var all = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeAll };
-                one.Click += (_, _) => _vm?.TradeOffers.FirstOrDefault(x => x.Id == o.Id)?.TradeOne();
-                all.Click += (_, _) => _vm?.TradeOffers.FirstOrDefault(x => x.Id == o.Id)?.TradeAll();
-
                 var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
-                buttons.Children.Add(one);
-                buttons.Children.Add(all);
+                Button one;
+                Button? all = null, ten = null, hundred = null;
+                if (o.TradeTimes != null)
+                {
+                    // One trade, plus x10 and x100 shown only when the whole batch is affordable
+                    // (the wasps' paper, spec 014).
+                    one = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeOne };
+                    ten = new Button { Classes = { "bk-button" }, Content = BeekeeperText.MakeTimes(10), IsVisible = false };
+                    hundred = new Button { Classes = { "bk-button" }, Content = BeekeeperText.MakeTimes(100), IsVisible = false };
+                    one.Click += (_, _) => Now()?.TradeOne();
+                    ten.Click += (_, _) => Now()?.TradeTimes?.Invoke(10);
+                    hundred.Click += (_, _) => Now()?.TradeTimes?.Invoke(100);
+                    buttons.Children.Add(one);
+                    buttons.Children.Add(ten);
+                    buttons.Children.Add(hundred);
+                }
+                else
+                {
+                    one = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeTen };
+                    all = new Button { Classes = { "bk-button" }, Content = BeekeeperText.TradeAll };
+                    one.Click += (_, _) => Now()?.TradeOne();
+                    all.Click += (_, _) => Now()?.TradeAll();
+                    buttons.Children.Add(one);
+                    buttons.Children.Add(all);
+                }
+
                 var row = new StackPanel { Spacing = 6 };
                 row.Children.Add(name);
                 row.Children.Add(buttons);
-                row.Children.Add(new TextBlock { Text = BeekeeperText.TradeRate(o.Id), Classes = { "bk-muted" } });
+                row.Children.Add(new TextBlock { Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount), Classes = { "bk-muted" } });
                 if (o.Id == "bear")
                 {
                     // The bear's trade agreement (100 trades): shown once offered, rate on hover.
@@ -451,7 +482,7 @@ public partial class BeekeeperView : UserControl
                     row.Children.Add(_agreementText);
                 }
                 TradeRows.Children.Add(row);
-                _tradeRows[o.Id] = (name, one, all);
+                _tradeRows[o.Id] = (name, one, all, ten, hundred);
             }
         }
 
@@ -459,7 +490,10 @@ public partial class BeekeeperView : UserControl
         {
             if (!_tradeRows.TryGetValue(o.Id, out var r)) continue;
             r.Name.Text = BeekeeperText.TraderLine(o.Id, o.Name, o.Trades);
-            r.One.IsEnabled = r.All.IsEnabled = o.CanTrade;
+            r.One.IsEnabled = o.CanTrade;
+            if (r.All != null) r.All.IsEnabled = o.CanTrade;
+            if (r.Ten != null) r.Ten.IsVisible = o.CanTradeTimes?.Invoke(10) == true;
+            if (r.Hundred != null) r.Hundred.IsVisible = o.CanTradeTimes?.Invoke(100) == true;
         }
     }
 

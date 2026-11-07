@@ -104,6 +104,9 @@
                                         <MenuItem Header="Bear trades to 99" Click="DebugBeekeeper_Click" Tag="Trades" />
                                         <MenuItem Header="Spend 8 hours away" Click="DebugBeekeeper_Click" Tag="Away" />
                                         <MenuItem Header="Bees ×10" Click="DebugBeekeeper_Click" Tag="BeesX10" />
+                                        <MenuItem Header="+500 honey" Click="DebugBeekeeper_Click" Tag="Honey" />
+                                        <MenuItem Header="Bribes to 4" Click="DebugBeekeeper_Click" Tag="Bribes" />
+                                        <MenuItem Header="Bring the emissary" Click="DebugBeekeeper_Click" Tag="Emissary" />
                                     </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">

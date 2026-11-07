@@ -111,39 +111,10 @@
                 <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
-                        <!-- What the hive holds. Later materials (sage, candles…) get rows here too. -->
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
-                            <TextBlock x:Name="HiveBeesLabel" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeesValue" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveHoneyLabel" Grid.Row="1" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveHoneyValue" Grid.Row="1" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveWaxLabel" Grid.Row="2" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveWaxValue" Grid.Row="2" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveCombsLabel" Grid.Row="3" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveCombsValue" Grid.Row="3" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveBeebitsLabel" Grid.Row="4" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeebitsValue" Grid.Row="4" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveBeeswaxLabel" Grid.Row="5" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeeswaxValue" Grid.Row="5" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveRepellentLabel" Grid.Row="6" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveRepellentValue" Grid.Row="6" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveSageLabel" Grid.Row="7" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveSageValue" Grid.Row="7" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveSeedsLabel" Grid.Row="8" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveSeedsValue" Grid.Row="8" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveForagersLabel" Grid.Row="9" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveForagersValue" Grid.Row="9" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveGuardsLabel" Grid.Row="10" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveGuardsValue" Grid.Row="10" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HivePollenLabel" Grid.Row="11" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HivePollenValue" Grid.Row="11" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="HiveBeeBreadLabel" Grid.Row="12" Classes="bk-body" Opacity="0.75" />
-                            <TextBlock x:Name="HiveBeeBreadValue" Grid.Row="12" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
-                            <!-- Stage 5: the queen (wooden hive onwards): laying or resting -->
-                            <TextBlock x:Name="HiveQueenLabel" Grid.Row="13" Classes="bk-body" Opacity="0.75" IsVisible="False" />
-                            <TextBlock x:Name="HiveQueenValue" Grid.Row="13" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" IsVisible="False" />
-                        </Grid>
-                        <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
+                        <!-- What the hive holds, in groups (Bees, The hive, Garden, Crafts, Trade goods).
+                             Built in code from the view model's HiveGroups (spec 014, FR-505): a new
+                             row is a new entry there, not a new line here. -->
+                        <StackPanel x:Name="HiveGroups" Spacing="10" />
                         <!-- Offered once the first bee bread is made: move to a wooden hive -->
                         <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
                             <StackPanel Spacing="2" VerticalAlignment="Center">

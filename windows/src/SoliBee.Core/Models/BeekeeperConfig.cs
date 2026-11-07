@@ -14,8 +14,13 @@ public sealed record BeekeeperTool(string Id, decimal Cost, int BeesPerClick);
 public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Sage, string Needs);
 
 /// <summary>A plant a seed grows into. <see cref="SeedAtTrade"/> is the Hippie trade that gives its seed;
-/// <see cref="Bee"/> is the kind of bee it attracts, <see cref="BeesPerMinute"/> how fast.</summary>
-public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Bee, decimal BeesPerMinute);
+/// <see cref="Specialty"/> is the job it gives the hive (<see cref="BeekeeperSpecialties"/>) and
+/// <see cref="Strength"/> how much: pollen a minute for foraging, a honey multiplier for guarding.
+/// Several plants of one specialty add up (pollen) or multiply (honey), so new plants are just
+/// new entries (spec 014, FR-502).</summary>
+public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Specialty, decimal Strength);
+// Cut in stage 6 (spec 014): plants attracted counts of bees.
+// public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Bee, decimal BeesPerMinute);
 
 public static class BeekeeperPlants
 {
@@ -27,8 +32,18 @@ public static class BeekeeperPlants
 public static class BeekeeperBees
 {
     public const string Honey = "honeybees";
-    public const string Forager = "forager";
-    public const string Guard = "guard";
+    // Cut in stage 6 (spec 014): plants give specialties, not counts of bees.
+    // public const string Forager = "forager";
+    // public const string Guard = "guard";
+}
+
+/// <summary>The jobs a plant can give the hive (spec 014). Derived from the sprouted plants, never saved.</summary>
+public static class BeekeeperSpecialties
+{
+    /// <summary>A steady trickle of pollen.</summary>
+    public const string Foraging = "foraging";
+    /// <summary>"The hive feels safe": every honeybee makes more honey.</summary>
+    public const string Guarding = "guarding";
 }
 
 /// <summary>Upgrade ids and the "needs" names that are not upgrades.</summary>
@@ -139,8 +154,9 @@ public sealed class BeekeeperConfig
     public double ShoeHitChance { get; init; } = 0.60;
     /// <summary>A raid takes this many seconds' worth of honey production (Leah: 3 minutes).</summary>
     public decimal RaidHoneySeconds { get; init; } = 3m * 60m;
-    /// <summary>Share of the bees that fly off in a raid (Leah: 15%).</summary>
-    public decimal RaidBeeShare { get; init; } = 0.15m;
+    // Cut in stage 6 (spec 014): raids take only honey, never bees.
+    // /// <summary>Share of the bees that fly off in a raid (Leah: 15%).</summary>
+    // public decimal RaidBeeShare { get; init; } = 0.15m;
     /// <summary>Share of stored honey a bribe costs (Leah: 25%).</summary>
     public decimal BribeHoneyShare { get; init; } = 0.25m;
     /// <summary>No click or key for this long and the player counts as idle: no wasps.</summary>
@@ -184,14 +200,19 @@ public sealed class BeekeeperConfig
     /// New plants are new entries here plus their effect in the engine (FR-302).</summary>
     public IReadOnlyList<BeekeeperPlant> Plants { get; init; } = new[]
     {
-        new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
-        new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
+        // Stage 6 (spec 014): foraging 3 pollen a minute (beats the queen's 2); guarding +25% honey.
+        new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperSpecialties.Foraging, 3m),
+        new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperSpecialties.Guarding, 1.25m),
+        // Cut in stage 6 (spec 014): forager and guard bees a minute.
+        // new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
+        // new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
     };
 
     /// <summary>How long a planted seed takes to sprout (Leah: 10 minutes).</summary>
     public decimal GrowSeconds { get; init; } = 10m * 60m;
-    /// <summary>Every this many forager bees bring back 1 pollen a minute.</summary>
-    public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
+    // Cut in stage 6 (spec 014): pollen comes from the foraging specialty (the plant's Strength).
+    // /// <summary>Every this many forager bees bring back 1 pollen a minute.</summary>
+    // public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
     public decimal BeeBreadPollen { get; init; } = 10m;
     public decimal BeeBreadHoney { get; init; } = 10m;
     public decimal WoodenHiveWax { get; init; } = 200m;
@@ -213,6 +234,16 @@ public sealed class BeekeeperConfig
     public long AgreementTrades { get; init; } = 100;
     /// <summary>Honey that doesn't fit, per Beebit, under the agreement (Leah: half price).</summary>
     public decimal AgreementHoneyPerBeebit { get; init; } = 20m;
+
+    // ===== Stage 6 (spec 014): specialties and the wasp emissary. All placeholders.
+    // (The specialties' strengths are on the plants above.)
+
+    /// <summary>On this bribe in total the log hints that the wasp is taking notes.</summary>
+    public long BribesForHint { get; init; } = 3;
+    /// <summary>On this bribe in total the wasp nest sends its emissary: raids end for good.</summary>
+    public long BribesForEmissary { get; init; } = 5;
+    /// <summary>Honey the wasps want for 1 paper.</summary>
+    public decimal HoneyPerPaper { get; init; } = 50m;
 
     public static BeekeeperConfig Default { get; } = new();
 }

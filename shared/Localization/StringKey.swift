@@ -1588,7 +1588,7 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperAwayTitle = "help_beekeeper_away_title"
     /// While You're Away RuleSection body
     case helpBeekeeperAway = "help_beekeeper_away"
-    /// Hive card row label: how many bees
+    /// Hive card row label (Bees group): how many honeybees
     case beekeeperHiveBees = "beekeeper_hive_bees"
     /// Hive card row label: honey stored / storage
     case beekeeperHiveHoney = "beekeeper_hive_honey"
@@ -1672,9 +1672,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogWaspArrives = "beekeeper_log_wasp_arrives"
     /// Story log
     case beekeeperLogShoeHit = "beekeeper_log_shoe_hit"
-    /// Story log; %@ = honey taken, %@ = bees flown off
+    /// Story log; %@ = honey taken, %@ = bees flown off [since stage 6 (spec 014) only for log lines saved before then]
     case beekeeperLogShoeMissFmt = "beekeeper_log_shoe_miss_fmt"
-    /// Story log; %@ = honey taken, %@ = bees flown off
+    /// Story log; %@ = honey taken, %@ = bees flown off [since stage 6 (spec 014) only for log lines saved before then]
     case beekeeperLogWaspRaidFmt = "beekeeper_log_wasp_raid_fmt"
     /// Story log; %@ = honey paid
     case beekeeperLogBribeFmt = "beekeeper_log_bribe_fmt"
@@ -1746,9 +1746,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHiveTitleWooden = "beekeeper_hive_title_wooden"
     /// Hive card row label
     case beekeeperHiveSeeds = "beekeeper_hive_seeds"
-    /// Hive card row label
+    /// Hive card row label [unused since stage 6 (spec 014); kept so it can come back]
     case beekeeperHiveForagers = "beekeeper_hive_foragers"
-    /// Hive card row label
+    /// Hive card row label [unused since stage 6 (spec 014); kept so it can come back]
     case beekeeperHiveGuards = "beekeeper_hive_guards"
     /// Hive card row label
     case beekeeperHivePollen = "beekeeper_hive_pollen"
@@ -1776,11 +1776,11 @@ public enum StringKey: String, CaseIterable {
     case beekeeperGardenEmpty = "beekeeper_garden_empty"
     /// Garden: a plant
     case beekeeperPlantWildflowers = "beekeeper_plant_wildflowers"
-    /// Garden: what the plant does
+    /// Garden: what the plant's specialty does (stage 6)
     case beekeeperPlantWildflowersBlurb = "beekeeper_plant_wildflowers_blurb"
     /// Garden: a plant
     case beekeeperPlantBramble = "beekeeper_plant_bramble"
-    /// Garden: what the plant does
+    /// Garden: what the plant's specialty does (stage 6)
     case beekeeperPlantBrambleBlurb = "beekeeper_plant_bramble_blurb"
     /// Workbench row
     case beekeeperBeeBread = "beekeeper_bee_bread"
@@ -1792,9 +1792,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogSeedPlanted = "beekeeper_log_seed_planted"
     /// Story log
     case beekeeperLogSeedSprouted = "beekeeper_log_seed_sprouted"
-    /// Story log
+    /// Story log [unused since stage 6 (spec 014); kept so it can come back]
     case beekeeperLogPlantWildflowers = "beekeeper_log_plant_wildflowers"
-    /// Story log
+    /// Story log [unused since stage 6 (spec 014); kept so it can come back]
     case beekeeperLogPlantBramble = "beekeeper_log_plant_bramble"
     /// Story log
     case beekeeperLogFirstPollen = "beekeeper_log_first_pollen"
@@ -1802,9 +1802,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogBeeBread = "beekeeper_log_bee_bread"
     /// Story log
     case beekeeperLogWoodenHive = "beekeeper_log_wooden_hive"
-    /// Story log; %@ = honey taken
+    /// Story log; %@ = honey taken [since stage 6 (spec 014) only for log lines saved before then]
     case beekeeperLogWaspRaidGuardsFmt = "beekeeper_log_wasp_raid_guards_fmt"
-    /// Story log; %@ = honey taken
+    /// Story log; %@ = honey taken [since stage 6 (spec 014) only for log lines saved before then]
     case beekeeperLogShoeMissGuardsFmt = "beekeeper_log_shoe_miss_guards_fmt"
     /// RuleSection title, Beekeeper
     case helpBeekeeperGardenTitle = "help_beekeeper_garden_title"
@@ -1860,4 +1860,52 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperQueenTitle = "help_beekeeper_queen_title"
     /// The Queen & the Trade Agreement RuleSection body
     case helpBeekeeperQueen = "help_beekeeper_queen"
+    /// Hive card group heading (stage 6)
+    case beekeeperGroupBees = "beekeeper_group_bees"
+    /// Hive card group heading (stage 6)
+    case beekeeperGroupHive = "beekeeper_group_hive"
+    /// Hive card group heading (stage 6)
+    case beekeeperGroupGarden = "beekeeper_group_garden"
+    /// Hive card group heading (stage 6)
+    case beekeeperGroupCrafts = "beekeeper_group_crafts"
+    /// Hive card group heading (stage 6)
+    case beekeeperGroupTradeGoods = "beekeeper_group_trade_goods"
+    /// Hive card, Bees group; %@ = pollen a minute
+    case beekeeperSpecialtyForagingFmt = "beekeeper_specialty_foraging_fmt"
+    /// Hive card, Bees group; %@ = extra honey percent (keep the % after it)
+    case beekeeperSpecialtyGuardingFmt = "beekeeper_specialty_guarding_fmt"
+    /// Garden card: the specialty a plant gives (lower case, after the plant's name)
+    case beekeeperSpecialtyForaging = "beekeeper_specialty_foraging"
+    /// Garden card: the specialty a plant gives (lower case, after the plant's name)
+    case beekeeperSpecialtyGuarding = "beekeeper_specialty_guarding"
+    /// Garden card; %@ = plant name, %@ = its specialty
+    case beekeeperPlantLineFmt = "beekeeper_plant_line_fmt"
+    /// Hover on Pollen; %@ = pollen gathered per second
+    case beekeeperPollenPerSecFmt = "beekeeper_pollen_per_sec_fmt"
+    /// Hive card row label (Trade goods)
+    case beekeeperHivePaper = "beekeeper_hive_paper"
+    /// Trading card: the wasps as a buyer (after the emissary)
+    case beekeeperWaspsName = "beekeeper_wasps_name"
+    /// Under the wasps' buttons; %@ = honey per paper
+    case beekeeperWaspsRateFmt = "beekeeper_wasps_rate_fmt"
+    /// Wasps button: one trade
+    case beekeeperTradeOne = "beekeeper_trade_one"
+    /// Story log, once, loading a save from before stage 6
+    case beekeeperLogOldCountsSettle = "beekeeper_log_old_counts_settle"
+    /// Story log: wildflowers sprout (stage 6)
+    case beekeeperLogPlantWildflowersForaging = "beekeeper_log_plant_wildflowers_foraging"
+    /// Story log: a bramble sprouts (stage 6)
+    case beekeeperLogPlantBrambleGuarding = "beekeeper_log_plant_bramble_guarding"
+    /// Story log (stage 6, raids take only honey); %@ = honey taken
+    case beekeeperLogWaspRaidHoneyFmt = "beekeeper_log_wasp_raid_honey_fmt"
+    /// Story log (stage 6, raids take only honey); %@ = honey taken
+    case beekeeperLogShoeMissHoneyFmt = "beekeeper_log_shoe_miss_honey_fmt"
+    /// Story log: the 3rd bribe in total
+    case beekeeperLogBribeHint = "beekeeper_log_bribe_hint"
+    /// Story log: the 5th bribe in total; raids end
+    case beekeeperLogEmissary = "beekeeper_log_emissary"
+    /// Story log: the first trade with the wasps
+    case beekeeperLogFirstPaper = "beekeeper_log_first_paper"
+    /// Story log; %@ = honey given, paper got
+    case beekeeperLogTradeWaspsFmt = "beekeeper_log_trade_wasps_fmt"
 }

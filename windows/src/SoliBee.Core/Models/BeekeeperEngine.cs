@@ -44,8 +44,9 @@ public static class BeekeeperEvents
     public const string UpgradeBought = "upgrade_bought";    // Text = upgrade id
     public const string WaspArrives = "wasp_arrives";
     public const string ShoeHit = "shoe_hit";
-    public const string ShoeMissRaid = "shoe_miss_raid";     // Value = honey taken, Value2 = bees flown off
-    public const string WaspRaid = "wasp_raid";              // Value = honey taken, Value2 = bees flown off
+    // Value = honey taken. Before stage 6, Value2 = bees flown off (Text = "guards" when guards kept them safe).
+    public const string ShoeMissRaid = "shoe_miss_raid";
+    public const string WaspRaid = "wasp_raid";
     public const string Bribe = "bribe";                     // Value = honey paid
     public const string WaspLeft = "wasp_left";              // the player stepped away; nothing lost
     public const string CandleLit = "candle_lit";
@@ -73,6 +74,13 @@ public static class BeekeeperEvents
     public const string WelcomeBackQueen = "welcome_back_queen";   // Value = bees raised while away
     public const string WelcomeBackBear = "welcome_back_bear";     // Value = Beebits from the agreement, Text = bear name
     public const string WelcomeBackPantry = "welcome_back_pantry";
+
+    // Stage 6
+    public const string OldCountsSettle = "old_counts_settle";   // an older save's bee counts became specialties
+    public const string BribeHint = "bribe_hint";                // the wasp is taking notes
+    public const string Emissary = "emissary";                   // the wasp nest sends an emissary: raids end
+    public const string WaspTrade = "wasp_trade";                // Value = paper got, Value2 = honey given
+    public const string FirstPaper = "first_paper";
 
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
@@ -166,8 +174,10 @@ public sealed class BeekeeperEngine
     /// <summary>The colony's base rate. Raids and the like use this, never the calm boost.</summary>
     public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond * HiveMultiplier;
 
-    /// <summary>A wooden hive makes every honeybee's honey go further.</summary>
-    public decimal HiveMultiplier => State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m;
+    /// <summary>Lasting boosts to every honeybee's honey: the wooden hive and guarding ("the hive
+    /// feels safe"), multiplied together. Everything that reads honey per second (production, the
+    /// queen's growing hive, raids, hover rates, the trade agreement) sees it, live and away alike.</summary>
+    public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier;
 
     /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
     public decimal HoneyPerSecondNow => HoneyPerSecond * (IsCalm ? Config.CalmHoneyMultiplier : 1m);
@@ -257,9 +267,8 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent>();
         decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
         // The calm part comes first; the hive goes on growing across both parts (FR-402).
-        var a = Produce(calm, events, Config.CalmHoneyMultiplier);
-        var b = Produce(seconds - calm, events);
-        GrowGarden(seconds, events);
+        var a = Work(calm, events, Config.CalmHoneyMultiplier);
+        var b = Work(seconds - calm, events);
         if (calm > 0m)
         {
             State.CalmSecondsLeft -= calm;
@@ -298,8 +307,7 @@ public sealed class BeekeeperEngine
         if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
 
         decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
-        var m = Produce(credited * Config.OfflineRate, events);
-        GrowGarden(credited * Config.OfflineRate, events);
+        var m = Work(credited * Config.OfflineRate, events);
 
         // An empty pantry while away is told in the welcome-back lines instead.
         if (m.PantryEmptied) events.RemoveAll(e => e.Key == BeekeeperEvents.PantryEmpty);
@@ -324,7 +332,31 @@ public sealed class BeekeeperEngine
 
     /// <summary>What one stretch made. <see cref="Taken"/> is the overflow honey the bear took.</summary>
     private readonly record struct Made(decimal Stored, decimal Wax, decimal Raised, decimal Taken,
-                                        decimal AgreementBeebits, bool PantryEmptied);
+                                        decimal AgreementBeebits, bool PantryEmptied)
+    {
+        public static Made operator +(Made x, Made y) => new(x.Stored + y.Stored, x.Wax + y.Wax, x.Raised + y.Raised,
+            x.Taken + y.Taken, x.AgreementBeebits + y.AgreementBeebits, x.PantryEmptied || y.PantryEmptied);
+    }
+
+    /// <summary>
+    /// The hive and the garden work for <paramref name="seconds"/>. If the growing seed sprouts
+    /// part-way, the stretch is split there, so a new specialty (guarding's honey, foraging's
+    /// pollen) only counts from the moment it sprouts, the same live and away (spec 014, FR-503).
+    /// </summary>
+    private Made Work(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
+    {
+        if (seconds <= 0m) return Produce(seconds, events, boost);
+        decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
+        var made = Produce(before, events, boost);
+        GrowGarden(before, events);
+        decimal after = seconds - before;
+        if (after > 0m)
+        {
+            made += Produce(after, events, boost);
+            GrowGarden(after, events);
+        }
+        return made;
+    }
 
     /// <summary>
     /// The hive works for <paramref name="seconds"/> in one exact step, so many short stretches
@@ -551,15 +583,29 @@ public sealed class BeekeeperEngine
 
     /// <summary>For a game just loaded: opens The Workbench for an old save that already
     /// has enough combs, settles the queen into an older save's wooden hive and starts the
-    /// trade agreement for a save already past 100 bear trades. Returns what to tell the
-    /// player (nothing if all of that already happened).</summary>
+    /// trade agreement for a save already past 100 bear trades. Since stage 6 it also turns an
+    /// older save's forager and guard counts into specialties (said once) and sends the emissary
+    /// to a save that somehow has enough bribes without it. Returns what to tell the player
+    /// (nothing if all of that already happened).</summary>
     public IReadOnlyList<BeekeeperEvent> RevealOnLoad()
     {
         var events = new List<BeekeeperEvent>();
         OpenWorkbenchIfDue(events);
         SettleQueenIfDue(events);
         OfferAgreementIfDue(events);
+        AnnounceOldCountsIfDue(events);
+        SendEmissaryIfDue(events);
         return events;
+    }
+
+    /// <summary>Stage 4 and 5 saves counted forager and guard bees. The specialties come from the
+    /// plants on their own; this only says so once, if there was a count to speak of.</summary>
+    private void AnnounceOldCountsIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.OldCountsAnnounced) return;
+        State.OldCountsAnnounced = true;
+        if (State.ForagerBees > 0m || State.GuardBees > 0m)
+            events.Add(new BeekeeperEvent(BeekeeperEvents.OldCountsSettle));
     }
 
     private void OpenWorkbenchIfDue(List<BeekeeperEvent> events)
@@ -575,8 +621,12 @@ public sealed class BeekeeperEngine
 
     public bool CanCraftBeeswax => CanCraftBeeswaxTimes(1);
 
+    /// <summary>Repellent candles retire once the emissary has come (spec 014): the recipe,
+    /// the light button and the Hive row are hidden; any left stay in the save, unseen.</summary>
+    public bool RepellentRetired => State.EmissaryCome;
+
     public bool CanCraftRepellentTimes(int count) =>
-        count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked
+        count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked && !RepellentRetired
         && State.Wax >= Config.RepellentCandleWax * count && State.Sage >= Config.RepellentCandleSage * count;
 
     public bool CanCraftRepellent => CanCraftRepellentTimes(1);
@@ -659,7 +709,8 @@ public sealed class BeekeeperEngine
     {
         BeekeeperUpgrades.NeedsWorkbench => State.WorkbenchRevealed,
         BeekeeperUpgrades.NeedsWaxCatcher => State.WorkbenchRevealed && State.HasWaxCatcher,
-        BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked,
+        // Stronger Candles leaves the Shop with the repellent candle (spec 014), unless bought.
+        BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked && !RepellentRetired,
         BeekeeperUpgrades.NeedsVacuum => State.ToolLevel >= VacuumLevel,
         var other => Owns(other),
     };
@@ -686,21 +737,25 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ wasps
 
-    public bool WaspApproaching => State.WaspCountdown > 0m;
+    public bool WaspApproaching => State.WaspCountdown > 0m && !State.EmissaryCome;
+
+    /// <summary>True once the wasp nest has sent its emissary: no wasp ever comes again.</summary>
+    public bool EmissaryCome => State.EmissaryCome;
 
     /// <summary>Wasp time that one repellent candle buys (longer with Stronger Candles).</summary>
     public decimal RepellentBurnSeconds =>
         Config.RepellentBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
 
     /// <summary>
-    /// "Wasp time" passed: only while Beekeeper is on screen, the player is active and No
-    /// Stress Mode is off (the view model decides). A burning candle uses it up; otherwise
-    /// it counts down to the next wasp. Away time never comes here.
+    /// "Wasp time" passed: only while Beekeeper is on screen and the player is active (the view
+    /// model decides; No Stress Mode no longer applies to Beekeeper, spec 014). A burning candle
+    /// uses it up; otherwise it counts down to the next wasp. Away time never comes here, and
+    /// after the emissary nothing happens at all.
     /// </summary>
     public IReadOnlyList<BeekeeperEvent> AdvanceWaspTime(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
-        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching) return events;
+        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return events;
 
         if (State.RepellentSecondsLeft > 0m)
         {
@@ -729,7 +784,7 @@ public sealed class BeekeeperEngine
     /// <summary>Calls a wasp at once (debug builds only; the game never does this).</summary>
     public IReadOnlyList<BeekeeperEvent> DebugCallWasp()
     {
-        if (!State.WorkbenchRevealed || WaspApproaching) return Array.Empty<BeekeeperEvent>();
+        if (!State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return Array.Empty<BeekeeperEvent>();
         State.NextWaspInSeconds = 0m;
         State.WaspCountdown = Config.WaspCountdownSeconds;
         return new[] { new BeekeeperEvent(BeekeeperEvents.WaspArrives) };
@@ -768,18 +823,34 @@ public sealed class BeekeeperEngine
     /// <summary>The honey a bribe would cost right now.</summary>
     public decimal BribeCost => Math.Max(1m, Math.Floor(State.Honey * Config.BribeHoneyShare));
 
-    /// <summary>Pay 25% of the stored honey (at least 1); the wasp leaves and no bees fly off.</summary>
+    /// <summary>Pay 25% of the stored honey (at least 1); the wasp leaves. Every bribe counts
+    /// towards the emissary, in total (spec 014): the 3rd brings a hint, the 5th the emissary.</summary>
     public ActionResult Bribe()
     {
         if (!CanBribe) return ActionResult.Refused;
         decimal paid = BribeCost;
         State.Honey -= paid;
+        State.BribesTotal++;
         RefreshStorageFlag();
         EndWasp();
-        return new ActionResult(true, paid, new[] { new BeekeeperEvent(BeekeeperEvents.Bribe, paid) });
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Bribe, paid) };
+        if (State.BribesTotal == Config.BribesForHint && State.BribesTotal < Config.BribesForEmissary)
+            events.Add(new BeekeeperEvent(BeekeeperEvents.BribeHint));
+        SendEmissaryIfDue(events);
+        return new ActionResult(true, paid, events);
     }
 
-    public bool CanLightRepellent => State.RepellentCandles >= 1m;
+    /// <summary>Enough bribes and the wasp nest sends its emissary: raids end for good, any wasp
+    /// still here leaves, and the wasps become a trading partner. A one-way switch.</summary>
+    private void SendEmissaryIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.EmissaryCome || State.BribesTotal < Config.BribesForEmissary) return;
+        State.EmissaryCome = true;
+        EndWasp();
+        events.Add(new BeekeeperEvent(BeekeeperEvents.Emissary));
+    }
+
+    public bool CanLightRepellent => State.RepellentCandles >= 1m && !RepellentRetired;
 
     /// <summary>Uses one candle: no wasps while it burns, and an approaching wasp leaves at once.
     /// Lighting another adds its time.</summary>
@@ -793,16 +864,19 @@ public sealed class BeekeeperEngine
         return new ActionResult(true, 1m, events);
     }
 
+    /// <summary>A raid takes 3 minutes' worth of honey and nothing else (spec 014: never bees).</summary>
     private BeekeeperEvent Raid(string key)
     {
         decimal honey = Math.Min(State.Honey, Math.Floor(HoneyPerSecond * Config.RaidHoneySeconds));
-        bool guarded = HasGuards;   // one guard bee and no raid ever costs a bee
-        decimal bees = guarded ? 0m : Math.Floor(State.Bees * Config.RaidBeeShare);
+        // Cut in stage 6 (spec 014): some bees flew off, unless a guard bee kept them safe.
+        // bool guarded = HasGuards;   // one guard bee and no raid ever costs a bee
+        // decimal bees = guarded ? 0m : Math.Floor(State.Bees * Config.RaidBeeShare);
+        // State.Bees -= bees;
         State.Honey -= honey;
-        State.Bees -= bees;
         RefreshStorageFlag();
         EndWasp();
-        return new BeekeeperEvent(key, honey, guarded ? "guards" : null, bees);
+        return new BeekeeperEvent(key, honey);
+        // return new BeekeeperEvent(key, honey, guarded ? "guards" : null, bees);
     }
 
     private void EndWasp()
@@ -811,9 +885,33 @@ public sealed class BeekeeperEngine
         State.NextWaspInSeconds = 0m;   // rolled afresh on the next wasp time
     }
 
+    // ------------------------------------------------------------------ the wasps' paper (stage 6)
+
+    /// <summary>Whether <paramref name="count"/> paper can be bought from the wasps in one go.</summary>
+    public bool CanTradePaperTimes(int count) =>
+        count >= 1 && State.EmissaryCome && State.Honey >= Config.HoneyPerPaper * count;
+
+    public bool CanTradePaper => CanTradePaperTimes(1);
+
+    /// <summary>Honey for paper: exactly count times the price, or nothing. One click is one
+    /// trade towards the wasps' reputation, whatever the batch.</summary>
+    public ActionResult TradeForPaper(int count = 1)
+    {
+        if (!CanTradePaperTimes(count)) return ActionResult.Refused;
+        decimal honey = Config.HoneyPerPaper * count;
+        State.Honey -= honey;
+        State.Paper += count;
+        State.WaspTrades++;
+        RefreshStorageFlag();
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WaspTrade, count, null, honey) };
+        if (State.WaspTrades == 1) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPaper));
+        return new ActionResult(true, count, events);
+    }
+
     // ------------------------------------------------------------------ the Garden (stage 4)
 
-    public bool HasGuards => State.GuardBees >= 1m;
+    // Cut in stage 6 (spec 014): guards no longer protect bees in a raid.
+    // public bool HasGuards => State.GuardBees >= 1m;
     public bool IsGrowing => State.GrowSecondsLeft > 0m;
 
     /// <summary>The plant the growing seed will become, or null when nothing grows.</summary>
@@ -824,6 +922,29 @@ public sealed class BeekeeperEngine
     /// <summary>Plants that have sprouted, in order.</summary>
     public IReadOnlyList<BeekeeperPlant> SproutedPlants =>
         State.Plants.Select(id => Config.Plants.FirstOrDefault(p => p.Id == id)).OfType<BeekeeperPlant>().ToList();
+
+    /// <summary>The hive's specialties, from the sprouted plants, in the order they first came.</summary>
+    public IReadOnlyList<string> Specialties => SproutedPlants.Select(p => p.Specialty).Distinct().ToList();
+
+    public bool HasSpecialty(string id) => SproutedPlants.Any(p => p.Specialty == id);
+
+    /// <summary>Pollen a minute from foraging: every foraging plant's strength, added up.</summary>
+    public decimal ForagingPollenPerMinute =>
+        SproutedPlants.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
+
+    public decimal PollenPerSecondNow => ForagingPollenPerMinute / 60m;
+
+    /// <summary>Guarding's honey multiplier: every guarding plant's strength, multiplied (1 = none).</summary>
+    public decimal GuardingMultiplier
+    {
+        get
+        {
+            decimal m = 1m;
+            foreach (var p in SproutedPlants)
+                if (p.Specialty == BeekeeperSpecialties.Guarding) m *= p.Strength;
+            return m;
+        }
+    }
 
     private void GiveSeedIfDue(List<BeekeeperEvent> events)
     {
@@ -848,10 +969,9 @@ public sealed class BeekeeperEngine
     }
 
     /// <summary>
-    /// Growing, attracting bees and pollen for <paramref name="seconds"/>, in one step for any
-    /// span so live ticks and time away agree. Bees arrive evenly, so pollen is the exact area
-    /// under the forager line. If the seed sprouts part-way, the span is split there and the
-    /// new plant only counts afterwards.
+    /// Growing and foraging for <paramref name="seconds"/>, in one step for any span so live ticks
+    /// and time away agree. Pollen is a straight line in time (rate × seconds; spec 014). If the
+    /// seed sprouts part-way, the span is split there and the new plant only counts afterwards.
     /// </summary>
     private void GrowGarden(decimal seconds, List<BeekeeperEvent> events)
     {
@@ -875,18 +995,22 @@ public sealed class BeekeeperEngine
     private void Attract(decimal seconds, List<BeekeeperEvent> events)
     {
         if (seconds <= 0m) return;
-        decimal foragersPerMinute = 0m, guardsPerMinute = 0m;
-        foreach (var p in SproutedPlants)
-        {
-            if (p.Bee == BeekeeperBees.Forager) foragersPerMinute += p.BeesPerMinute;
-            else if (p.Bee == BeekeeperBees.Guard) guardsPerMinute += p.BeesPerMinute;
-        }
 
         // Multiply first and divide once, so whole minutes stay exact.
-        State.Pollen += (State.ForagerBees * seconds * 120m + foragersPerMinute * seconds * seconds)
-                        / (Config.ForagersPerPollenPerMinute * 60m * 120m);
-        State.ForagerBees += foragersPerMinute * seconds / 60m;
-        State.GuardBees += guardsPerMinute * seconds / 60m;
+        State.Pollen += ForagingPollenPerMinute * seconds / 60m;
+
+        // Cut in stage 6 (spec 014): plants attracted forager and guard bees, and pollen was the
+        // area under the growing forager line.
+        // decimal foragersPerMinute = 0m, guardsPerMinute = 0m;
+        // foreach (var p in SproutedPlants)
+        // {
+        //     if (p.Bee == BeekeeperBees.Forager) foragersPerMinute += p.BeesPerMinute;
+        //     else if (p.Bee == BeekeeperBees.Guard) guardsPerMinute += p.BeesPerMinute;
+        // }
+        // State.Pollen += (State.ForagerBees * seconds * 120m + foragersPerMinute * seconds * seconds)
+        //                 / (Config.ForagersPerPollenPerMinute * 60m * 120m);
+        // State.ForagerBees += foragersPerMinute * seconds / 60m;
+        // State.GuardBees += guardsPerMinute * seconds / 60m;
 
         if (!State.PollenRevealed && State.Pollen >= 1m)
         {
@@ -996,6 +1120,35 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.BearArrives, 0m, State.BearName));
         }
         State.Trades = Math.Max(State.Trades, Config.AgreementTrades - 1);
+        return events;
+    }
+
+    /// <summary>Debug builds only: the bribe count goes up to one short of the emissary, so the
+    /// next bribe brings it.</summary>
+    public void DebugBribesToAlmostEmissary() =>
+        State.BribesTotal = Math.Max(State.BribesTotal, Config.BribesForEmissary - 1);
+
+    /// <summary>Debug builds only: the emissary comes now.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugBringEmissary()
+    {
+        var events = new List<BeekeeperEvent>();
+        State.BribesTotal = Math.Max(State.BribesTotal, Config.BribesForEmissary);
+        SendEmissaryIfDue(events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: hands out honey (it may go over the combs' room).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveHoney(decimal honey)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (honey <= 0m) return events;
+        State.Honey += honey;
+        if (!State.HoneyRevealed)
+        {
+            State.HoneyRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBee));
+        }
+        CheckReveals(events);
         return events;
     }
 

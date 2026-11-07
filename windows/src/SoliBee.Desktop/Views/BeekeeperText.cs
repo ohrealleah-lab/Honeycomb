@@ -1,6 +1,7 @@
 using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
+using SoliBee.Core.ViewModels;
 
 namespace SoliBee.Desktop.Views;
 
@@ -97,18 +98,22 @@ internal static class BeekeeperText
         string who = id switch
         {
             "hippies" => T(StringKey.BeekeeperHippiesName),
+            "wasps" => T(StringKey.BeekeeperWaspsName),
             _ => name ?? id,
         };
         return trades == 0 ? who : Fill(T(StringKey.BeekeeperBearTradesFmt), who, NumberFormatter.Format(trades, Lang));
     }
 
     /// <summary>What a buyer gives for what: "10 honey = 1 Beebit".</summary>
-    public static string TradeRate(string id) => id switch
+    public static string TradeRate(string id, decimal give = 0m) => id switch
     {
         "bear" => T(StringKey.BeekeeperSellHint),
         "hippies" => T(StringKey.BeekeeperHippiesRate),
+        "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), NumberFormatter.Format(give, Lang)),
         _ => "",
     };
+
+    public static string TradeOne => T(StringKey.BeekeeperTradeOne);
 
     public static string WaspsTitle => T(StringKey.BeekeeperWaspsTitle);
     public static string WaspHere => T(StringKey.BeekeeperWaspHere);
@@ -160,8 +165,9 @@ internal static class BeekeeperText
 
     // ---- stage 4: the Garden, bees, bee bread, the wooden hive
     public static string HiveSeeds => T(StringKey.BeekeeperHiveSeeds);
-    public static string HiveForagers => T(StringKey.BeekeeperHiveForagers);
-    public static string HiveGuards => T(StringKey.BeekeeperHiveGuards);
+    // Cut in stage 6 (spec 014): the forager and guard rows.
+    // public static string HiveForagers => T(StringKey.BeekeeperHiveForagers);
+    // public static string HiveGuards => T(StringKey.BeekeeperHiveGuards);
     public static string HivePollen => T(StringKey.BeekeeperHivePollen);
     public static string HiveBeeBread => T(StringKey.BeekeeperHiveBeeBread);
     public static string WoodenHiveName => T(StringKey.BeekeeperWoodenHiveName);
@@ -192,6 +198,91 @@ internal static class BeekeeperText
             return Fill(T(StringKey.BeekeeperPantryMinutesFmt), NumberFormatter.Format(System.Math.Max(1m, minutes), Lang));
         return Fill(T(StringKey.BeekeeperPantryHoursFmt), NumberFormatter.Format(System.Math.Round(minutes / 60m), Lang));
     }
+
+    // ---- stage 6: the Hive card in groups, specialties, the wasps' paper
+
+    public static string HiveGroupTitle(string id) => id switch
+    {
+        BeekeeperHiveRows.GroupBees => T(StringKey.BeekeeperGroupBees),
+        BeekeeperHiveRows.GroupHive => T(StringKey.BeekeeperGroupHive),
+        BeekeeperHiveRows.GroupGarden => T(StringKey.BeekeeperGroupGarden),
+        BeekeeperHiveRows.GroupCrafts => T(StringKey.BeekeeperGroupCrafts),
+        BeekeeperHiveRows.GroupTradeGoods => T(StringKey.BeekeeperGroupTradeGoods),
+        _ => id,
+    };
+
+    /// <summary>True for rows drawn as one full-width line (no label and value columns).</summary>
+    public static bool IsHiveLine(string id) =>
+        id is BeekeeperHiveRows.Foraging or BeekeeperHiveRows.Guarding or BeekeeperHiveRows.CombsFull;
+
+    /// <summary>A Hive row's label, or for a full-width row its whole line.</summary>
+    public static string HiveRowLabel(BeekeeperHiveRow r)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        return r.Id switch
+        {
+            BeekeeperHiveRows.Honeybees => T(StringKey.BeekeeperHiveBees),
+            BeekeeperHiveRows.Queen => T(StringKey.BeekeeperHiveQueen),
+            BeekeeperHiveRows.Foraging => Fill(T(StringKey.BeekeeperSpecialtyForagingFmt), N(r.Value)),
+            BeekeeperHiveRows.Guarding => Fill(T(StringKey.BeekeeperSpecialtyGuardingFmt), N(r.Value)),
+            BeekeeperHiveRows.Honey => T(StringKey.BeekeeperHiveHoney),
+            BeekeeperHiveRows.Wax => T(StringKey.BeekeeperHiveWax),
+            BeekeeperHiveRows.Combs => T(StringKey.BeekeeperHiveCombs),
+            BeekeeperHiveRows.CombsFull => T(StringKey.BeekeeperCombsFull),
+            BeekeeperHiveRows.Seeds => T(StringKey.BeekeeperHiveSeeds),
+            BeekeeperHiveRows.Pollen => T(StringKey.BeekeeperHivePollen),
+            BeekeeperHiveRows.BeeBread => T(StringKey.BeekeeperHiveBeeBread),
+            BeekeeperHiveRows.BeeswaxCandles => T(StringKey.BeekeeperHiveBeeswaxCandles),
+            BeekeeperHiveRows.RepellentCandles => T(StringKey.BeekeeperHiveRepellentCandles),
+            BeekeeperHiveRows.Beebits => T(StringKey.BeekeeperHiveBeebits),
+            BeekeeperHiveRows.Sage => T(StringKey.BeekeeperHiveSage),
+            BeekeeperHiveRows.Paper => T(StringKey.BeekeeperHivePaper),
+            _ => r.Id,
+        };
+    }
+
+    /// <summary>A Hive row's value column ("45 / 200", "laying", "12").</summary>
+    public static string HiveRowValue(BeekeeperHiveRow r)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        return r.Id switch
+        {
+            BeekeeperHiveRows.Honey => N(r.Value) + " / " + N(r.Value2),
+            BeekeeperHiveRows.Queen => QueenStatus(r.Value > 0m),
+            _ when IsHiveLine(r.Id) => "",
+            _ => N(r.Value),
+        };
+    }
+
+    /// <summary>The hover text for a row with a rate, or null for none.</summary>
+    public static string? HiveRowTip(BeekeeperHiveRow r)
+    {
+        if (r.Rate is not { } rate) return null;
+        string N(decimal v, int d) => NumberFormatter.Format(v, Lang, d);
+        return r.Id switch
+        {
+            BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.BeeBread => BeeBreadPerSecond(N(rate, 4))
+                                          + (r.Rate2 > 0m ? "\n" + PantryLasts(r.Rate2) : ""),
+            _ => null,
+        };
+    }
+
+    public static string PollenPerSecond(string n) => Fill(T(StringKey.BeekeeperPollenPerSecFmt), n);
+
+    /// <summary>The Garden card's line for a sprouted plant: "Wildflowers: foraging".</summary>
+    public static string PlantLine(BeekeeperPlant p) =>
+        Fill(T(StringKey.BeekeeperPlantLineFmt), PlantName(p.Id), SpecialtyName(p.Specialty));
+
+    public static string SpecialtyName(string id) => id switch
+    {
+        BeekeeperSpecialties.Foraging => T(StringKey.BeekeeperSpecialtyForaging),
+        BeekeeperSpecialties.Guarding => T(StringKey.BeekeeperSpecialtyGuarding),
+        _ => id,
+    };
 
     public static string PlantName(string id) => id switch
     {
@@ -264,12 +355,16 @@ internal static class BeekeeperText
             BeekeeperEvents.UpgradeBought => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
             BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
+            // Raids take only honey since stage 6 (spec 014). Lines saved before then keep their
+            // old wording (bees flown off, or the guards keeping them safe), so the story stays true.
             BeekeeperEvents.ShoeMissRaid => e.Text == "guards"
                 ? Fill(L(StringKey.BeekeeperLogShoeMissGuardsFmt), N(e.Value))
-                : Fill(L(StringKey.BeekeeperLogShoeMissFmt), N(e.Value), N(e.Value2)),
+                : e.Value2 > 0m ? Fill(L(StringKey.BeekeeperLogShoeMissFmt), N(e.Value), N(e.Value2))
+                : Fill(L(StringKey.BeekeeperLogShoeMissHoneyFmt), N(e.Value)),
             BeekeeperEvents.WaspRaid => e.Text == "guards"
                 ? Fill(L(StringKey.BeekeeperLogWaspRaidGuardsFmt), N(e.Value))
-                : Fill(L(StringKey.BeekeeperLogWaspRaidFmt), N(e.Value), N(e.Value2)),
+                : e.Value2 > 0m ? Fill(L(StringKey.BeekeeperLogWaspRaidFmt), N(e.Value), N(e.Value2))
+                : Fill(L(StringKey.BeekeeperLogWaspRaidHoneyFmt), N(e.Value)),
             BeekeeperEvents.Bribe => Fill(L(StringKey.BeekeeperLogBribeFmt), N(e.Value)),
             BeekeeperEvents.WaspLeft => L(StringKey.BeekeeperLogWaspLeft),
             BeekeeperEvents.CandleLit => L(StringKey.BeekeeperLogCandleLit),
@@ -281,8 +376,11 @@ internal static class BeekeeperText
             BeekeeperEvents.SeedSprouted => L(StringKey.BeekeeperLogSeedSprouted),
             BeekeeperEvents.PlantRevealed => e.Text switch
             {
-                BeekeeperPlants.Wildflowers => L(StringKey.BeekeeperLogPlantWildflowers),
-                BeekeeperPlants.Bramble => L(StringKey.BeekeeperLogPlantBramble),
+                BeekeeperPlants.Wildflowers => L(StringKey.BeekeeperLogPlantWildflowersForaging),
+                BeekeeperPlants.Bramble => L(StringKey.BeekeeperLogPlantBrambleGuarding),
+                // Cut in stage 6 (spec 014): the bees the plants attracted.
+                // BeekeeperPlants.Wildflowers => L(StringKey.BeekeeperLogPlantWildflowers),
+                // BeekeeperPlants.Bramble => L(StringKey.BeekeeperLogPlantBramble),
                 _ => "",
             },
             BeekeeperEvents.FirstPollen => L(StringKey.BeekeeperLogFirstPollen),
@@ -295,6 +393,11 @@ internal static class BeekeeperText
             BeekeeperEvents.WelcomeBackQueen => Fill(L(StringKey.BeekeeperLogWelcomeBackQueenFmt), N(e.Value)),
             BeekeeperEvents.WelcomeBackBear => Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
             BeekeeperEvents.WelcomeBackPantry => L(StringKey.BeekeeperLogWelcomeBackPantry),
+            BeekeeperEvents.OldCountsSettle => L(StringKey.BeekeeperLogOldCountsSettle),
+            BeekeeperEvents.BribeHint => L(StringKey.BeekeeperLogBribeHint),
+            BeekeeperEvents.Emissary => L(StringKey.BeekeeperLogEmissary),
+            BeekeeperEvents.FirstPaper => L(StringKey.BeekeeperLogFirstPaper),
+            BeekeeperEvents.WaspTrade => Fill(L(StringKey.BeekeeperLogTradeWaspsFmt), N(e.Value2), N(e.Value)),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
