@@ -50,6 +50,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **Throw a shoe.** The first, free defence: drives off one wasp, with a 40% chance to miss. A miss costs honey and makes some bees flee. Against a gang it takes out just one wasp and the rest still raid (the joke: "One down. The other four look annoyed.").
    - **The throw is upgraded through Technology** (not tied to the horde). The miss chance always stays 40%; some upgrades raise how many wasps one hit takes out. Upgrade names come later. Guards and candles stay the reliable late-game answer.
    - **The Workbench** (stage 4) opens after the 2nd comb, together with the first wasp. Upgrades ("Technology") are bought in the Beekeeper's Shop.
+   - **Long-term idea: the wasps become trade partners** (Leah, 2026-11-07). After a future guard bee upgrade fends wasps off, a wasp nest that fails to raid **3 times** sends an **emissary**. From then on **raids stop entirely**, and the wasps become a buyer on the Trading card who **sells paper** (what paper is for comes later, for example new crafts). Not in the stage 4 build.
 7. **Reputations:** Bears, Hippies, Hummingbirds, Badgers, each with their own wants.
 8. **Seasons, as a bloom calendar:** instead of four generic seasons, different flowers bloom in turn (crocus, clover, linden, goldenrod), each rewarding different roles and honey, ending in a winter cluster. Chosen to feel like beekeeping, not like Kittens.
 9. **Swarming:** the reset with a bonus, and the long-term goal.
@@ -75,4 +76,5 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
 8. Mobile layout of the 3-column screen.
 9. Wasps: horde size and when it starts, how much a miss or raid costs (needs the simulator), and the throw upgrades' names and wasps-per-hit numbers.
 10. Upgrades: the full list, each upgrade's cost, and which upgrades unlock which (work in progress; the first build of them uses placeholders).
+12. Wasp emissary: the guard upgrade that fends wasps off (name, cost, how it works), whether the 3 failed raids must be in a row, what paper costs and what it is used for, and what the wasps want in trade.
 11. Candles: the cost of later candle types; which later candles need sage or propolis; which bee upgrades gather propolis.
