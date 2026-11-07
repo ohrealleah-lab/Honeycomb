@@ -206,12 +206,19 @@ public partial class BeekeeperView : UserControl
     private void UpdateLog(BeekeeperViewModel vm, AppLanguage lang)
     {
         var log = vm.Log;
-        string sig = log.Count + "|" + (log.Count > 0 ? log[0].Key + log[0].Value + log[0].Text : "") + "|" + lang;
+        int shown = Math.Min(log.Count, MaxVisibleLines);
+
+        // Redraw only when a visible line changed. Comparing every shown line (not just the
+        // count and the newest) matters once the log is full at 50: then a new line identical
+        // to the newest one (Sell 10 twice) leaves the count and the newest line unchanged.
+        var sigBuilder = new System.Text.StringBuilder(lang.ToString());
+        for (int i = 0; i < shown; i++)
+            sigBuilder.Append('|').Append(log[i].Key).Append(':').Append(log[i].Value).Append(':').Append(log[i].Text);
+        string sig = sigBuilder.ToString();
         if (sig == _logSignature) return;
         _logSignature = sig;
 
         LogLines.Children.Clear();
-        int shown = Math.Min(log.Count, MaxVisibleLines);
         for (int i = 0; i < shown; i++)
         {
             string line = BeekeeperText.LogLine(log[i], lang);

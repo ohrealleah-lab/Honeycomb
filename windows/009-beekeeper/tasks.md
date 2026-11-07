@@ -65,7 +65,7 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 - **Hand-test (Leah / co-designer):** play for 15 minutes; report anything confusing or unfair.
 
 ### T050 open points (waiting for Leah)
-1. **Bug:** once the story log holds 50 lines, a line identical to the newest one (e.g. pressing Sell 10 twice) doesn't redraw the log, so the new line doesn't appear. Cause: `BeekeeperView.UpdateLog` only compares the line count and the newest line.
+1. **Fixed 2026-11-07** (the log now compares every shown line). **Bug:** once the story log holds 50 lines, a line identical to the newest one (e.g. pressing Sell 10 twice) doesn't redraw the log, so the new line doesn't appear. Cause: `BeekeeperView.UpdateLog` only compares the line count and the newest line.
 2. The Combs card shows the cost of the comb you can build now, not "next cost" as T033 lists. The current cost is probably what's wanted; T033's wording may just be loose.
 3. The "Start over?" message says "Your hive and everything in it will be lost."; spec 5.8 says "Your hive will be lost."
 4. The spec writes shop prices with "₿"; the screen says "beebits" (Leah: keep Beebits, no ₿). Fix the spec in T055.
