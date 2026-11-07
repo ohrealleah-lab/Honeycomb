@@ -334,6 +334,10 @@
                             <TextBlock x:Name="BeekeeperWorkbenchHeading" Classes="help-heading"/>
                             <TextBlock x:Name="BeekeeperWorkbenchBody" Classes="help-body" TextWrapping="Wrap"/>
                         </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock x:Name="BeekeeperSmokerHeading" Classes="help-heading"/>
+                            <TextBlock x:Name="BeekeeperSmokerBody" Classes="help-body" TextWrapping="Wrap"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

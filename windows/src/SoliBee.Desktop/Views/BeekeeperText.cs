@@ -48,24 +48,32 @@ internal static class BeekeeperText
     public static string StartOverBody => T(StringKey.BeekeeperStartOverBody);
 
     public static string Sting => T(StringKey.BeekeeperStingPopup);
-    public static string Bees(int n) =>
-        n == 1 ? T(StringKey.BeekeeperPlusOneBee) : Fill(T(StringKey.BeekeeperPlusBeesFmt), n.ToString());
+    public static string Bees(decimal n) =>
+        n == 1m ? T(StringKey.BeekeeperPlusOneBee) : Fill(T(StringKey.BeekeeperPlusBeesFmt), NumberFormatter.Format(n, Lang));
 
-    public static string ToolLine(int level, int beesPerClick) =>
+    /// <summary>"Hive whistle · 400 bees": the tool in use and everything one click catches.</summary>
+    public static string ToolLine(int level, decimal beesPerCatch) =>
         T(level switch
         {
             1 => StringKey.BeekeeperToolGloves,
             2 => StringKey.BeekeeperToolNet,
             3 => StringKey.BeekeeperToolVacuum,
+            4 => StringKey.BeekeeperToolLure,
+            5 => StringKey.BeekeeperToolCart,
+            6 => StringKey.BeekeeperToolWhistle,
             _ => StringKey.BeekeeperToolBareHands,
         })
-        + " · " + (beesPerClick == 1 ? T(StringKey.BeekeeperOneBee) : Fill(T(StringKey.BeekeeperBeesFmt), beesPerClick.ToString()));
+        + " · " + (beesPerCatch == 1m ? T(StringKey.BeekeeperOneBee)
+                                      : Fill(T(StringKey.BeekeeperBeesFmt), NumberFormatter.Format(beesPerCatch, Lang)));
 
     public static string ToolName(string id) => id switch
     {
         "gloves" => T(StringKey.BeekeeperShopGloves),
         "net" => T(StringKey.BeekeeperShopNet),
         "vacuum" => T(StringKey.BeekeeperShopVacuum),
+        "lure" => T(StringKey.BeekeeperShopLure),
+        "cart" => T(StringKey.BeekeeperShopCart),
+        "whistle" => T(StringKey.BeekeeperShopWhistle),
         _ => id,
     };
 
@@ -129,8 +137,16 @@ internal static class BeekeeperText
 
     public static string UpgradeName(string id) => UpgradeNameIn(id, Lang);
 
+    public static string SmokerTitle => T(StringKey.BeekeeperSmokerTitle);
+    public static string CalmMeter(int clicks, int needed) => Fill(T(StringKey.BeekeeperCalmMeterFmt), clicks.ToString(), needed.ToString());
+    public static string CalmNow(string time, string multiplier) => Fill(T(StringKey.BeekeeperCalmNowFmt), time, multiplier);
+    public static string Puff => T(StringKey.BeekeeperPuff);
+
     public static string UpgradeBlurb(string id) => id switch
     {
+        BeekeeperUpgrades.Practice => T(StringKey.BeekeeperUpgradePracticeBlurb),
+        BeekeeperUpgrades.MorePractice => T(StringKey.BeekeeperUpgradeMorePracticeBlurb),
+        BeekeeperUpgrades.Smoker => T(StringKey.BeekeeperUpgradeSmokerBlurb),
         BeekeeperUpgrades.BiggerCombs1 => T(StringKey.BeekeeperUpgradeBiggerCombs1Blurb),
         BeekeeperUpgrades.BiggerCombs2 => T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb),
         BeekeeperUpgrades.BetterWaxCatcher => T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb),
@@ -147,6 +163,9 @@ internal static class BeekeeperText
         BeekeeperUpgrades.BiggerCombs2 => Strings.Get(StringKey.BeekeeperUpgradeBiggerCombs2, lang),
         BeekeeperUpgrades.BetterWaxCatcher => Strings.Get(StringKey.BeekeeperUpgradeBetterWaxCatcher, lang),
         BeekeeperUpgrades.StrongerCandles => Strings.Get(StringKey.BeekeeperUpgradeStrongerCandles, lang),
+        BeekeeperUpgrades.Practice => Strings.Get(StringKey.BeekeeperUpgradePractice, lang),
+        BeekeeperUpgrades.MorePractice => Strings.Get(StringKey.BeekeeperUpgradeMorePractice, lang),
+        BeekeeperUpgrades.Smoker => Strings.Get(StringKey.BeekeeperUpgradeSmoker, lang),
         _ => id,
     };
 
@@ -169,6 +188,9 @@ internal static class BeekeeperText
                 "gloves" => StringKey.BeekeeperLogGloves,
                 "net" => StringKey.BeekeeperLogNet,
                 "vacuum" => StringKey.BeekeeperLogVacuum,
+                "lure" => StringKey.BeekeeperLogLure,
+                "cart" => StringKey.BeekeeperLogCart,
+                "whistle" => StringKey.BeekeeperLogWhistle,
                 _ => StringKey.BeekeeperLogNewTool,
             }),
             BeekeeperEvents.WaxCatcherBought => L(StringKey.BeekeeperLogWaxCatcher),
@@ -190,6 +212,8 @@ internal static class BeekeeperText
             BeekeeperEvents.WaspLeft => L(StringKey.BeekeeperLogWaspLeft),
             BeekeeperEvents.CandleLit => L(StringKey.BeekeeperLogCandleLit),
             BeekeeperEvents.CandleOut => L(StringKey.BeekeeperLogCandleOut),
+            BeekeeperEvents.SmokerPuffed => L(StringKey.BeekeeperLogSmokerPuffed),
+            BeekeeperEvents.CalmEnded => L(StringKey.BeekeeperLogCalmEnded),
             _ => "",
         };
     }

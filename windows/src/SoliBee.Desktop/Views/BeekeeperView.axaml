@@ -78,6 +78,17 @@
                 </Grid>
                 <TextBlock x:Name="ToolLineText" Classes="bk-muted" HorizontalAlignment="Center" />
 
+                <!-- THE SMOKER (once bought): clicks fill the calm meter; a puff calms the bees -->
+                <Border x:Name="SmokerCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="6">
+                        <TextBlock x:Name="SmokerTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="SmokerStatusText" Classes="bk-muted" />
+                        <ProgressBar x:Name="CalmBar" Minimum="0" Maximum="1" Height="8" Foreground="#FFD300" Background="#33FFFFFF" />
+                        <Button x:Name="PuffButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" Click="Puff_Click" />
+                    </StackPanel>
+                </Border>
+
                 <!-- THE HIVE (appears with the first bee) -->
                 <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="6">

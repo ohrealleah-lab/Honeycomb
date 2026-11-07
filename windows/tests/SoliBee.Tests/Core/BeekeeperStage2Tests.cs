@@ -388,7 +388,7 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.True(BeekeeperSaveService.Save(s, path, new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Utc)));
 
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(2, back.Version);
+        Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.Equal(7m, back.BeeswaxCandles);
         Assert.Equal(2m, back.RepellentCandles);
         Assert.Equal(19, back.CandlesCrafted);

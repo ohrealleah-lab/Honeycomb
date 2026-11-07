@@ -50,6 +50,10 @@ public static class BeekeeperEvents
     public const string WaspLeft = "wasp_left";              // the player stepped away; nothing lost
     public const string CandleLit = "candle_lit";
     public const string CandleOut = "candle_out";
+
+    // Stage 3
+    public const string SmokerPuffed = "smoker_puffed";
+    public const string CalmEnded = "calm_ended";
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
@@ -110,10 +114,26 @@ public sealed class BeekeeperEngine
         : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
         : 1m;
 
+    /// <summary>Bees the tool catches per click, grown by the Practice upgrades (rounded down).</summary>
     public int BeesPerClick =>
-        State.ToolLevel <= 0 ? Config.BareHandsBees : Config.Tools[State.ToolLevel - 1].BeesPerClick;
+        (int)Math.Floor((State.ToolLevel <= 0 ? Config.BareHandsBees : Config.Tools[State.ToolLevel - 1].BeesPerClick)
+                        * PracticeMultiplier);
 
+    private decimal PracticeMultiplier =>
+        Owns(BeekeeperUpgrades.MorePractice) ? Config.MorePracticeMultiplier
+        : Owns(BeekeeperUpgrades.Practice) ? Config.PracticeMultiplier
+        : 1m;
+
+    /// <summary>Everything one successful click catches: the tool's bees plus a slice of the
+    /// hive (0.1%, rounded down; Practice doesn't grow the slice). The one place this is worked
+    /// out, so the catch, the popup and the tool line agree.</summary>
+    public decimal BeesPerCatch => BeesPerClick + Math.Floor(State.Bees * Config.CatchSliceShare);
+
+    /// <summary>The colony's base rate. Raids and the like use this, never the calm boost.</summary>
     public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond;
+
+    /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
+    public decimal HoneyPerSecondNow => HoneyPerSecond * (IsCalm ? Config.CalmHoneyMultiplier : 1m);
 
     /// <summary>Wax per 50 honey: 1, 2 with the Wax-Catcher, 3 with the Better Wax-Catcher.</summary>
     public decimal WaxPerBatch =>
@@ -163,6 +183,9 @@ public sealed class BeekeeperEngine
     {
         var events = new List<BeekeeperEvent>();
 
+        // Every click calms the bees a little once the Smoker is owned, stings included.
+        if (Owns(BeekeeperUpgrades.Smoker) && State.CalmMeter < Config.CalmMeterClicks) State.CalmMeter++;
+
         // Only Bare Hands ever get stung; better tools never roll the dice.
         if (State.ToolLevel == 0 && _rng.NextDouble() < Config.StingChance)
         {
@@ -170,7 +193,7 @@ public sealed class BeekeeperEngine
             return new CatchResult(true, 0m, events);
         }
 
-        decimal gained = BeesPerClick;
+        decimal gained = BeesPerCatch;
         State.Bees += gained;
         if (!State.HoneyRevealed)
         {
@@ -182,13 +205,40 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ time passing
 
-    /// <summary>Normal play: the hive works for <paramref name="seconds"/>.</summary>
+    /// <summary>Normal play: the hive works for <paramref name="seconds"/>. Calm bees (after a
+    /// puff of the Smoker) make double honey, and only live play uses up calm time.</summary>
     public AdvanceResult Advance(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
-        var (stored, wax) = Produce(seconds, events);
-        return new AdvanceResult(stored, wax, events);
+        decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
+        var (stored, wax) = Produce(calm, events, Config.CalmHoneyMultiplier);
+        var (stored2, wax2) = Produce(seconds - calm, events);
+        if (calm > 0m)
+        {
+            State.CalmSecondsLeft -= calm;
+            if (State.CalmSecondsLeft <= 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.CalmEnded));
+        }
+        return new AdvanceResult(stored + stored2, wax + wax2, events);
     }
+
+    // ------------------------------------------------------------------ the Smoker (stage 3)
+
+    public bool IsCalm => State.CalmSecondsLeft > 0m;
+
+    public bool CanPuff =>
+        Owns(BeekeeperUpgrades.Smoker) && State.CalmMeter >= Config.CalmMeterClicks && !IsCalm;
+
+    /// <summary>A full meter, puffed by hand: the bees are calm (double honey) for a while.</summary>
+    public ActionResult PuffSmoker()
+    {
+        if (!CanPuff) return ActionResult.Refused;
+        State.CalmMeter = 0;
+        State.CalmSecondsLeft = Config.CalmSeconds;
+        return new ActionResult(true, Config.CalmSeconds, new[] { new BeekeeperEvent(BeekeeperEvents.SmokerPuffed) });
+    }
+
+    /// <summary>Debug builds only: fills the calm meter.</summary>
+    public void DebugFillCalmMeter() => State.CalmMeter = Config.CalmMeterClicks;
 
     /// <summary>
     /// Time away: the same maths as <see cref="Advance"/> in one step, capped at 3 days,
@@ -211,12 +261,12 @@ public sealed class BeekeeperEngine
         return new AwayResult(credited, stored, wax, events);
     }
 
-    private (decimal stored, decimal waxMade) Produce(decimal seconds, List<BeekeeperEvent> events)
+    private (decimal stored, decimal waxMade) Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
     {
         RefreshStorageFlag();
         if (seconds <= 0m || State.Bees <= 0m) return (0m, 0m);
 
-        decimal made = State.Bees * Config.HoneyPerBeePerSecond * seconds;
+        decimal made = State.Bees * Config.HoneyPerBeePerSecond * seconds * boost;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
         State.Honey += stored;
@@ -405,14 +455,17 @@ public sealed class BeekeeperEngine
     public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades =>
         Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u)).ToList();
 
-    private bool IsUnlocked(BeekeeperUpgrade u) =>
-        State.WorkbenchRevealed && u.Needs switch
-        {
-            BeekeeperUpgrades.NeedsWorkbench => true,
-            BeekeeperUpgrades.NeedsWaxCatcher => State.HasWaxCatcher,
-            BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked,
-            var other => Owns(other),
-        };
+    // Stage 2's upgrades come with The Workbench; stage 3's catching upgrades only need the Vacuum.
+    private bool IsUnlocked(BeekeeperUpgrade u) => u.Needs switch
+    {
+        BeekeeperUpgrades.NeedsWorkbench => State.WorkbenchRevealed,
+        BeekeeperUpgrades.NeedsWaxCatcher => State.WorkbenchRevealed && State.HasWaxCatcher,
+        BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked,
+        BeekeeperUpgrades.NeedsVacuum => State.ToolLevel >= VacuumLevel,
+        var other => Owns(other),
+    };
+
+    private int VacuumLevel => Config.Tools.ToList().FindIndex(t => t.Id == "vacuum") + 1;
 
     public bool CanBuyUpgrade(string id) =>
         Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u

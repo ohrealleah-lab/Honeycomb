@@ -47,6 +47,9 @@ public partial class BeekeeperView : UserControl
     private readonly Dictionary<string, Button> _shopButtons = new();
     private string _logSignature = "";
 
+    /// <summary>False: the Shop hides tools and the Wax-Catcher once bought, like upgrades.</summary>
+    private const bool ShowBoughtItems = false;
+
     // Wasps only come while the player can see and use this screen (spec 010).
     private Window? _window;
     private bool _onScreen;
@@ -140,7 +143,19 @@ public partial class BeekeeperView : UserControl
 
         CatchButton.Content = BeekeeperText.Catch;
         CatchButton.IsEnabled = true;
-        ToolLineText.Text = BeekeeperText.ToolLine(vm.ToolLevel, vm.BeesPerClick);
+        ToolLineText.Text = BeekeeperText.ToolLine(vm.ToolLevel, vm.BeesPerCatch);
+
+        // The Smoker
+        SmokerCard.IsVisible = vm.HasSmoker;
+        SmokerTitleText.Text = BeekeeperText.SmokerTitle;
+        SmokerStatusText.Text = vm.IsCalm
+            ? BeekeeperText.CalmNow(BeekeeperText.Clock(vm.CalmSecondsLeft), N(vm.Config.CalmHoneyMultiplier))
+            : BeekeeperText.CalmMeter(vm.CalmMeter, vm.CalmMeterClicks);
+        CalmBar.Value = vm.IsCalm
+            ? (double)(vm.CalmSecondsLeft / vm.Config.CalmSeconds)
+            : (double)vm.CalmMeter / Math.Max(1, vm.CalmMeterClicks);
+        PuffButton.Content = BeekeeperText.Puff;
+        PuffButton.IsEnabled = vm.CanPuff;
 
         // Hive
         HiveCard.IsVisible = vm.HoneyRevealed;
@@ -258,17 +273,22 @@ public partial class BeekeeperView : UserControl
             _shopButtons.Clear();
             ShopRows.Children.Clear();
 
+            // Bought things are hidden (Leah, 2026-11-07): only the next tool is listed. A
+            // "show bought things" option may come later; it would just flip ShowBoughtItems.
             for (int i = 0; i < vm.Config.Tools.Count; i++)
             {
                 var tool = vm.Config.Tools[i];
                 bool owned = vm.ToolLevel > i;
+                bool isNext = vm.ToolLevel == i;
+                if (!isNext && !(owned && ShowBoughtItems)) continue;
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, tool.BeesPerClick),
                     owned, BeekeeperText.Price(N(tool.Cost), null, null), tool.Id, vm.BuyNextToolCommand.Execute));
             }
-            ShopRows.Children.Add(MakeShopRow(
-                BeekeeperText.WaxCatcherName, BeekeeperText.WaxCatcherBlurb,
-                vm.HasWaxCatcher, BeekeeperText.Price(N(vm.Config.WaxCatcherCost), null, null), "catcher", vm.BuyWaxCatcherCommand.Execute));
+            if (!vm.HasWaxCatcher || ShowBoughtItems)
+                ShopRows.Children.Add(MakeShopRow(
+                    BeekeeperText.WaxCatcherName, BeekeeperText.WaxCatcherBlurb,
+                    vm.HasWaxCatcher, BeekeeperText.Price(N(vm.Config.WaxCatcherCost), null, null), "catcher", vm.BuyWaxCatcherCommand.Execute));
 
             // Upgrades: only unlocked, not-yet-bought ones are listed (bought ones leave the Shop).
             foreach (var u in upgrades)
@@ -363,6 +383,7 @@ public partial class BeekeeperView : UserControl
     private void TradeAll_Click(object? sender, RoutedEventArgs e) => _vm?.TradeAllCandlesCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
+    private void Puff_Click(object? sender, RoutedEventArgs e) => _vm?.PuffSmokerCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup
 
@@ -371,7 +392,7 @@ public partial class BeekeeperView : UserControl
     private void StartPopup(bool stung, decimal bees)
     {
         _popupStung = stung;
-        CatchPopup.Text = stung ? BeekeeperText.Sting : BeekeeperText.Bees((int)bees);
+        CatchPopup.Text = stung ? BeekeeperText.Sting : BeekeeperText.Bees(bees);
         CatchPopup.Foreground = stung ? SoftCoral : WhiteBrush;
         _popupClock.Restart();
         _popupTimer.Start();

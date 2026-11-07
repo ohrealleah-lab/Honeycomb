@@ -96,7 +96,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal Bees => State.Bees;
     public decimal Honey => State.Honey;
     public decimal HoneyStorage => Engine.HoneyStorage;
-    public decimal HoneyPerSecond => Engine.HoneyPerSecond;
+    /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
+    public decimal HoneyPerSecond => Engine.HoneyPerSecondNow;
     public decimal Wax => State.Wax;
     public decimal WaxProgress => State.WaxProgress;
     public decimal HoneyPerWax => Config.HoneyPerWax;
@@ -139,6 +140,16 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanThrowShoe => Engine.WaspApproaching;
     public bool CanBribe => Engine.CanBribe;
     public bool CanLightRepellent => Engine.CanLightRepellent;
+
+    // Stage 3
+    /// <summary>Everything a successful click catches right now (tool, Practice and the slice).</summary>
+    public decimal BeesPerCatch => Engine.BeesPerCatch;
+    public bool HasSmoker => Engine.Owns(BeekeeperUpgrades.Smoker);
+    public int CalmMeter => State.CalmMeter;
+    public int CalmMeterClicks => Config.CalmMeterClicks;
+    public bool IsCalm => Engine.IsCalm;
+    public decimal CalmSecondsLeft => State.CalmSecondsLeft;
+    public bool CanPuff => Engine.CanPuff;
 
     /// <summary>Story log, newest first.</summary>
     public IReadOnlyList<BeekeeperLogEntry> Log => State.Log;
@@ -201,6 +212,16 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(CanLightRepellent))]
     public void LightRepellent() => Apply(Engine.LightRepellent());
+
+    [RelayCommand(CanExecute = nameof(CanPuff))]
+    public void PuffSmoker() => Apply(Engine.PuffSmoker());
+
+    /// <summary>Debug builds only: fills the Smoker's calm meter.</summary>
+    public void DebugFillCalmMeter()
+    {
+        Engine.DebugFillCalmMeter();
+        Refresh();
+    }
 
     /// <summary>Buys a Shop upgrade by id (the Shop draws its rows from <see cref="ShopUpgrades"/>).</summary>
     public void BuyUpgrade(string id) => Apply(Engine.BuyUpgrade(id));
@@ -365,6 +386,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         ThrowShoeCommand.NotifyCanExecuteChanged();
         BribeCommand.NotifyCanExecuteChanged();
         LightRepellentCommand.NotifyCanExecuteChanged();
+        PuffSmokerCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()

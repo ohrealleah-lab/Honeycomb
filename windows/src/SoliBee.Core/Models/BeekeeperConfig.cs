@@ -21,9 +21,15 @@ public static class BeekeeperUpgrades
     public const string BetterWaxCatcher = "better_wax_catcher";
     public const string StrongerCandles = "stronger_candles";
 
+    // Stage 3
+    public const string Practice = "practice";
+    public const string MorePractice = "more_practice";
+    public const string Smoker = "smoker";
+
     public const string NeedsWorkbench = "workbench";
     public const string NeedsWaxCatcher = "wax_catcher";
     public const string NeedsRepellent = "repellent";
+    public const string NeedsVacuum = "vacuum_owned";
 }
 
 /// <summary>
@@ -54,7 +60,15 @@ public sealed class BeekeeperConfig
         new BeekeeperTool("gloves", 15m, 2),
         new BeekeeperTool("net", 75m, 5),
         new BeekeeperTool("vacuum", 250m, 10),
+        // Stage 3 (spec 011): names Leah's, numbers placeholders.
+        new BeekeeperTool("lure", 1_000m, 25),
+        new BeekeeperTool("cart", 4_000m, 60),
+        new BeekeeperTool("whistle", 15_000m, 150),
     };
+
+    /// <summary>Each catch also brings in this share of the bees already in the hive,
+    /// rounded down (Leah: 0.1%). Stings catch nothing.</summary>
+    public decimal CatchSliceShare { get; init; } = 0.001m;
 
     public decimal WaxCatcherCost { get; init; } = 150m;
 
@@ -127,7 +141,21 @@ public sealed class BeekeeperConfig
         new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 800m, 250m, 2m, BeekeeperUpgrades.BiggerCombs1),
         new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 400m, 0m, 1m, BeekeeperUpgrades.NeedsWaxCatcher),
         new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 200m, 50m, 2m, BeekeeperUpgrades.NeedsRepellent),
+        // Stage 3 (spec 011)
+        new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 600m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
+        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 2_500m, 200m, 3m, BeekeeperUpgrades.Practice),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
     };
+
+    // --- Stage 3: catching and the Smoker (spec 011) -------------------------
+    public decimal PracticeMultiplier { get; init; } = 1.5m;       // +50% (placeholder)
+    public decimal MorePracticeMultiplier { get; init; } = 2m;     // +100% (placeholder)
+    /// <summary>Clicks to fill the Smoker's calm meter (Leah: 15).</summary>
+    public int CalmMeterClicks { get; init; } = 15;
+    /// <summary>How long the bees stay calm after a puff (Leah: 2 minutes).</summary>
+    public decimal CalmSeconds { get; init; } = 2m * 60m;
+    /// <summary>Honey while calm (Leah: ×2).</summary>
+    public decimal CalmHoneyMultiplier { get; init; } = 2m;
 
     public static BeekeeperConfig Default { get; } = new();
 }

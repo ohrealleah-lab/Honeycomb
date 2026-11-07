@@ -79,7 +79,7 @@ public class BeekeeperEngineTests
         var e = Make(state: new BeekeeperState { ToolLevel = 3, Bees = 1_000_000m });
         var result = e.Catch();
         Assert.False(result.Stung);
-        Assert.Equal(1_000_010m, e.State.Bees);
+        Assert.Equal(1_001_010m, e.State.Bees);   // 10 from the Vacuum + a 0.1% slice of the hive (stage 3)
     }
 
     [Fact]
@@ -294,8 +294,8 @@ public class BeekeeperEngineTests
         Assert.True(e.BuyNextTool().Done);     // Net
         Assert.True(e.BuyNextTool().Done);     // Vacuum
         Assert.Equal(3, e.State.ToolLevel);
-        Assert.Null(e.NextTool);
-        Assert.False(e.BuyNextTool().Done);
+        Assert.Equal("lure", e.NextTool!.Id);   // stage 3 tools come after the Vacuum
+        Assert.False(e.BuyNextTool().Done);      // the Bee Lure costs 1,000
         Assert.Equal(1000m - 75m - 250m, e.State.Beebits);
     }
 

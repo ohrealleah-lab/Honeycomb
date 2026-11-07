@@ -18,9 +18,9 @@ public sealed class BeekeeperLogEntry
 /// <summary>Everything that is saved for a Beekeeper game.</summary>
 public sealed class BeekeeperState
 {
-    /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps). A version 1
-    /// file loads as is: everything added in 2 simply starts at zero.</summary>
-    public int Version { get; set; } = 2;
+    /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps); 3 = stage 3
+    /// (more tools, the Smoker). Older files load as they are: anything newer starts at zero.</summary>
+    public int Version { get; set; } = 3;
 
     // Resources
     public decimal Bees { get; set; }
@@ -69,6 +69,12 @@ public sealed class BeekeeperState
     public decimal RepellentSecondsLeft { get; set; }
     /// <summary>Wasp time until the next wasp; 0 means "not rolled yet".</summary>
     public decimal NextWaspInSeconds { get; set; }
+
+    // ----- Stage 3: the Smoker (version 3)
+    /// <summary>Clicks towards the next puff (0 up to CalmMeterClicks).</summary>
+    public int CalmMeter { get; set; }
+    /// <summary>Live seconds of calm left (honey doubled); 0 = not calm.</summary>
+    public decimal CalmSecondsLeft { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>
