@@ -99,7 +99,7 @@
 | Wooden hive | "You move the bees into a wooden hive. They seem pleased." |
 | Raid with guards | "The wasp helps itself to {honey} honey. The guards keep every bee safe." |
 
-## To confirm (placeholders are in place; building can start without answers)
+## Placeholders accepted (Leah, 2026-11-07: "yes to your placeholders")
 1. **Plant names and order**: wildflowers (forager bees) from the 1st seed, bramble (guard bees) from the 2nd.
 2. **Growing**: a surprise with no timer shown, or a quiet countdown?
 3. **The wooden hive**: +25% honey from every honeybee, for 200 wax + 10 bee bread. Or should it give something else (more storage, more bees per click)?
