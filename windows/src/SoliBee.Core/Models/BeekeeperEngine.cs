@@ -54,6 +54,15 @@ public static class BeekeeperEvents
     // Stage 3
     public const string SmokerPuffed = "smoker_puffed";
     public const string CalmEnded = "calm_ended";
+
+    // Stage 4
+    public const string SeedGiven = "seed_given";              // Value = seeds in hand
+    public const string SeedPlanted = "seed_planted";
+    public const string SeedSprouted = "seed_sprouted";
+    public const string PlantRevealed = "plant_revealed";      // Text = plant id
+    public const string FirstPollen = "first_pollen";
+    public const string BeeBreadMade = "bee_bread_made";       // first time only
+    public const string WoodenHive = "wooden_hive";
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
@@ -133,7 +142,10 @@ public sealed class BeekeeperEngine
     public decimal BeesPerCatch => BeesPerClick + Math.Floor(State.Bees * Config.CatchSliceShare);
 
     /// <summary>The colony's base rate. Raids and the like use this, never the calm boost.</summary>
-    public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond;
+    public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond * HiveMultiplier;
+
+    /// <summary>A wooden hive makes every honeybee's honey go further.</summary>
+    public decimal HiveMultiplier => State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m;
 
     /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
     public decimal HoneyPerSecondNow => HoneyPerSecond * (IsCalm ? Config.CalmHoneyMultiplier : 1m);
@@ -220,6 +232,7 @@ public sealed class BeekeeperEngine
         decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
         var (stored, wax) = Produce(calm, events, Config.CalmHoneyMultiplier);
         var (stored2, wax2) = Produce(seconds - calm, events);
+        GrowGarden(seconds, events);
         if (calm > 0m)
         {
             State.CalmSecondsLeft -= calm;
@@ -258,6 +271,7 @@ public sealed class BeekeeperEngine
 
         decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
         var (stored, wax) = Produce(credited * Config.OfflineRate, events);
+        GrowGarden(credited * Config.OfflineRate, events);
 
         if (State.Bees > 0m)
         {
@@ -273,7 +287,7 @@ public sealed class BeekeeperEngine
         RefreshStorageFlag();
         if (seconds <= 0m || State.Bees <= 0m) return (0m, 0m);
 
-        decimal made = State.Bees * Config.HoneyPerBeePerSecond * seconds * boost;
+        decimal made = State.Bees * Config.HoneyPerBeePerSecond * seconds * boost * HiveMultiplier;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
         State.Honey += stored;
@@ -452,6 +466,7 @@ public sealed class BeekeeperEngine
             State.RepellentUnlocked = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
         }
+        GiveSeedIfDue(events);
         return new ActionResult(true, bundles, events);
     }
 
@@ -604,12 +619,13 @@ public sealed class BeekeeperEngine
     private BeekeeperEvent Raid(string key)
     {
         decimal honey = Math.Min(State.Honey, Math.Floor(HoneyPerSecond * Config.RaidHoneySeconds));
-        decimal bees = Math.Floor(State.Bees * Config.RaidBeeShare);
+        bool guarded = HasGuards;   // one guard bee and no raid ever costs a bee
+        decimal bees = guarded ? 0m : Math.Floor(State.Bees * Config.RaidBeeShare);
         State.Honey -= honey;
         State.Bees -= bees;
         RefreshStorageFlag();
         EndWasp();
-        return new BeekeeperEvent(key, honey, null, bees);
+        return new BeekeeperEvent(key, honey, guarded ? "guards" : null, bees);
     }
 
     private void EndWasp()
@@ -618,7 +634,174 @@ public sealed class BeekeeperEngine
         State.NextWaspInSeconds = 0m;   // rolled afresh on the next wasp time
     }
 
+    // ------------------------------------------------------------------ the Garden (stage 4)
+
+    public bool HasGuards => State.GuardBees >= 1m;
+    public bool IsGrowing => State.GrowSecondsLeft > 0m;
+
+    /// <summary>The plant the growing seed will become, or null when nothing grows.</summary>
+    public BeekeeperPlant? GrowingPlant =>
+        IsGrowing && State.SeedsPlanted >= 1 && State.SeedsPlanted <= Config.Plants.Count
+            ? Config.Plants[State.SeedsPlanted - 1] : null;
+
+    /// <summary>Plants that have sprouted, in order.</summary>
+    public IReadOnlyList<BeekeeperPlant> SproutedPlants =>
+        State.Plants.Select(id => Config.Plants.FirstOrDefault(p => p.Id == id)).OfType<BeekeeperPlant>().ToList();
+
+    /// <summary>Kinds of bee met so far (discovery stays a surprise): honeybees first.</summary>
+    public IReadOnlyList<string> MetBeeKinds
+    {
+        get
+        {
+            var kinds = new List<string>();
+            if (State.HoneyRevealed) kinds.Add(BeekeeperBees.Honey);
+            foreach (var p in SproutedPlants)
+                if (!kinds.Contains(p.Bee)) kinds.Add(p.Bee);
+            return kinds;
+        }
+    }
+
+    private void GiveSeedIfDue(List<BeekeeperEvent> events)
+    {
+        if (State.SeedsGiven >= Config.Plants.Count) return;
+        if (State.HippieTrades < Config.Plants[State.SeedsGiven].SeedAtTrade) return;
+        State.SeedsGiven++;
+        State.Seeds++;
+        State.GardenRevealed = true;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.Seeds));
+    }
+
+    public bool CanPlantSeed => State.Seeds >= 1 && !IsGrowing && State.SeedsPlanted < Config.Plants.Count;
+
+    /// <summary>Uses a seed; what it grows stays a surprise. One plant grows at a time.</summary>
+    public ActionResult PlantSeed()
+    {
+        if (!CanPlantSeed) return ActionResult.Refused;
+        State.Seeds--;
+        State.SeedsPlanted++;
+        State.GrowSecondsLeft = Config.GrowSeconds;
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.SeedPlanted) });
+    }
+
+    /// <summary>
+    /// Growing, attracting bees and pollen for <paramref name="seconds"/>, in one step for any
+    /// span so live ticks and time away agree. Bees arrive evenly, so pollen is the exact area
+    /// under the forager line. If the seed sprouts part-way, the span is split there and the
+    /// new plant only counts afterwards.
+    /// </summary>
+    private void GrowGarden(decimal seconds, List<BeekeeperEvent> events)
+    {
+        if (seconds <= 0m) return;
+
+        decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
+        Attract(before, events);
+        if (!IsGrowing) return;
+
+        State.GrowSecondsLeft -= before;
+        if (State.GrowSecondsLeft > 0m) return;
+
+        State.GrowSecondsLeft = 0m;
+        var plant = Config.Plants[State.SeedsPlanted - 1];
+        State.Plants.Add(plant.Id);
+        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedSprouted));
+        events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, plant.Id));
+        Attract(seconds - before, events);
+    }
+
+    private void Attract(decimal seconds, List<BeekeeperEvent> events)
+    {
+        if (seconds <= 0m) return;
+        decimal foragersPerMinute = 0m, guardsPerMinute = 0m;
+        foreach (var p in SproutedPlants)
+        {
+            if (p.Bee == BeekeeperBees.Forager) foragersPerMinute += p.BeesPerMinute;
+            else if (p.Bee == BeekeeperBees.Guard) guardsPerMinute += p.BeesPerMinute;
+        }
+
+        // Multiply first and divide once, so whole minutes stay exact.
+        State.Pollen += (State.ForagerBees * seconds * 120m + foragersPerMinute * seconds * seconds)
+                        / (Config.ForagersPerPollenPerMinute * 60m * 120m);
+        State.ForagerBees += foragersPerMinute * seconds / 60m;
+        State.GuardBees += guardsPerMinute * seconds / 60m;
+
+        if (!State.PollenRevealed && State.Pollen >= 1m)
+        {
+            State.PollenRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPollen));
+        }
+    }
+
+    public bool CanMakeBeeBread =>
+        State.PollenRevealed && State.Pollen >= Config.BeeBreadPollen && State.Honey >= Config.BeeBreadHoney;
+
+    /// <summary>Crafting is instant: pollen and honey make 1 bee bread.</summary>
+    public ActionResult MakeBeeBread()
+    {
+        if (!CanMakeBeeBread) return ActionResult.Refused;
+        State.Pollen -= Config.BeeBreadPollen;
+        State.Honey -= Config.BeeBreadHoney;
+        State.BeeBread++;
+        RefreshStorageFlag();
+        var events = new List<BeekeeperEvent>();
+        if (!State.BeeBreadRevealed)
+        {
+            State.BeeBreadRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
+        }
+        return new ActionResult(true, 1m, events);
+    }
+
+    /// <summary>The Hive card offers the move once the player has first made bee bread.</summary>
+    public bool WoodenHiveOffered => State.BeeBreadRevealed && !State.HasWoodenHive;
+
+    public bool CanMoveToWoodenHive =>
+        WoodenHiveOffered && State.Wax >= Config.WoodenHiveWax && State.BeeBread >= Config.WoodenHiveBeeBread;
+
+    public ActionResult MoveToWoodenHive()
+    {
+        if (!CanMoveToWoodenHive) return ActionResult.Refused;
+        State.Wax -= Config.WoodenHiveWax;
+        State.BeeBread -= Config.WoodenHiveBeeBread;
+        State.HasWoodenHive = true;
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.WoodenHive) });
+    }
+
     // ------------------------------------------------------------------ debug
+
+    /// <summary>Debug builds only: the Hippies hand over a seed (the next in order).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveSeed()
+    {
+        var events = new List<BeekeeperEvent>();
+        if (State.SeedsGiven < Config.Plants.Count)
+        {
+            State.SeedsGiven++;
+            State.Seeds++;
+            State.GardenRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.Seeds));
+        }
+        return events;
+    }
+
+    /// <summary>Debug builds only: the growing seed sprouts now.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugFinishGrowing()
+    {
+        var events = new List<BeekeeperEvent>();
+        if (IsGrowing) GrowGarden(State.GrowSecondsLeft, events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: hands out pollen.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGivePollen(decimal pollen)
+    {
+        var events = new List<BeekeeperEvent>();
+        State.Pollen += pollen;
+        if (!State.PollenRevealed && State.Pollen >= 1m)
+        {
+            State.PollenRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPollen));
+        }
+        return events;
+    }
 
     /// <summary>
     /// Debug builds only (the Banners menu): hands out bees, wax and Beebits so later stages

@@ -216,7 +216,7 @@ public class BeekeeperStage3Tests : IDisposable
         var s = new BeekeeperState { ToolLevel = 6, CalmMeter = 9, CalmSecondsLeft = 42m, Upgrades = { BeekeeperUpgrades.Smoker } };
         Assert.True(BeekeeperSaveService.Save(s, path, new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Utc)));
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(3, back.Version);
+        Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.Equal(6, back.ToolLevel);
         Assert.Equal(9, back.CalmMeter);
         Assert.Equal(42m, back.CalmSecondsLeft);

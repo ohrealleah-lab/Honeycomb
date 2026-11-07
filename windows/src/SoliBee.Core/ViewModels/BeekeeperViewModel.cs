@@ -182,6 +182,26 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal CalmSecondsLeft => State.CalmSecondsLeft;
     public bool CanPuff => Engine.CanPuff;
 
+    // Stage 4: the Garden
+    public bool GardenRevealed => State.GardenRevealed;
+    public int Seeds => State.Seeds;
+    public bool IsGrowing => Engine.IsGrowing;
+    /// <summary>The plant growing now. The screen never names it before it sprouts (a surprise).</summary>
+    public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
+    public IReadOnlyList<BeekeeperPlant> SproutedPlants => Engine.SproutedPlants;
+    public IReadOnlyList<string> MetBeeKinds => Engine.MetBeeKinds;
+    public decimal ForagerBees => State.ForagerBees;
+    public decimal GuardBees => State.GuardBees;
+    public decimal Pollen => State.Pollen;
+    public decimal BeeBread => State.BeeBread;
+    public bool PollenRevealed => State.PollenRevealed;
+    public bool BeeBreadRevealed => State.BeeBreadRevealed;
+    public bool HasWoodenHive => State.HasWoodenHive;
+    public bool WoodenHiveOffered => Engine.WoodenHiveOffered;
+    public bool CanPlantSeed => Engine.CanPlantSeed;
+    public bool CanMakeBeeBread => Engine.CanMakeBeeBread;
+    public bool CanMoveToWoodenHive => Engine.CanMoveToWoodenHive;
+
     /// <summary>Story log, newest first.</summary>
     public IReadOnlyList<BeekeeperLogEntry> Log => State.Log;
 
@@ -246,6 +266,39 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(CanPuff))]
     public void PuffSmoker() => Apply(Engine.PuffSmoker());
+
+    [RelayCommand(CanExecute = nameof(CanPlantSeed))]
+    public void PlantSeed() => Apply(Engine.PlantSeed());
+
+    [RelayCommand(CanExecute = nameof(CanMakeBeeBread))]
+    public void MakeBeeBread() => Apply(Engine.MakeBeeBread());
+
+    [RelayCommand(CanExecute = nameof(CanMoveToWoodenHive))]
+    public void MoveToWoodenHive() => Apply(Engine.MoveToWoodenHive());
+
+    /// <summary>Debug builds only: the Hippies hand over the next seed.</summary>
+    public void DebugGiveSeed()
+    {
+        LogEvents(Engine.DebugGiveSeed());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: the growing seed sprouts now.</summary>
+    public void DebugFinishGrowing()
+    {
+        LogEvents(Engine.DebugFinishGrowing());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: hands out pollen.</summary>
+    public void DebugGivePollen(decimal pollen)
+    {
+        LogEvents(Engine.DebugGivePollen(pollen));
+        SaveNow();
+        Refresh();
+    }
 
     /// <summary>Debug builds only: fills the Smoker's calm meter.</summary>
     public void DebugFillCalmMeter()
@@ -418,6 +471,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         BribeCommand.NotifyCanExecuteChanged();
         LightRepellentCommand.NotifyCanExecuteChanged();
         PuffSmokerCommand.NotifyCanExecuteChanged();
+        PlantSeedCommand.NotifyCanExecuteChanged();
+        MakeBeeBreadCommand.NotifyCanExecuteChanged();
+        MoveToWoodenHiveCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()

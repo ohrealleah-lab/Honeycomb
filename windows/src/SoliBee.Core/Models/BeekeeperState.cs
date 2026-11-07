@@ -19,8 +19,8 @@ public sealed class BeekeeperLogEntry
 public sealed class BeekeeperState
 {
     /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps); 3 = stage 3
-    /// (more tools, the Smoker). Older files load as they are: anything newer starts at zero.</summary>
-    public int Version { get; set; } = 3;
+    /// (more tools, the Smoker); 4 = stage 4 (the Garden, pollen, the wooden hive). Older files load as they are: anything newer starts at zero.</summary>
+    public int Version { get; set; } = 4;
 
     // Resources
     public decimal Bees { get; set; }
@@ -75,6 +75,26 @@ public sealed class BeekeeperState
     public int CalmMeter { get; set; }
     /// <summary>Live seconds of calm left (honey doubled); 0 = not calm.</summary>
     public decimal CalmSecondsLeft { get; set; }
+
+    // ----- Stage 4: the Garden (version 4)
+    /// <summary>Seeds the Hippies have given in all (the Nth is the Nth plant's seed).</summary>
+    public int SeedsGiven { get; set; }
+    /// <summary>Seeds in hand, not yet planted.</summary>
+    public int Seeds { get; set; }
+    /// <summary>Seeds planted in all; the next one grows Plants[SeedsPlanted].</summary>
+    public int SeedsPlanted { get; set; }
+    /// <summary>Seconds until the growing seed sprouts; 0 = nothing growing.</summary>
+    public decimal GrowSecondsLeft { get; set; }
+    /// <summary>Plant ids that have sprouted, in order.</summary>
+    public List<string> Plants { get; set; } = new();
+    public decimal ForagerBees { get; set; }
+    public decimal GuardBees { get; set; }
+    public decimal Pollen { get; set; }
+    public decimal BeeBread { get; set; }
+    public bool HasWoodenHive { get; set; }
+    public bool GardenRevealed { get; set; }
+    public bool PollenRevealed { get; set; }
+    public bool BeeBreadRevealed { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

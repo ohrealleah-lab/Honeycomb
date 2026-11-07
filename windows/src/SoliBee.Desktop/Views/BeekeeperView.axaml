@@ -90,7 +90,7 @@
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
                         <!-- What the hive holds. Later materials (sage, candles…) get rows here too. -->
-                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
+                        <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="2">
                             <TextBlock x:Name="HiveBeesLabel" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveBeesValue" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveHoneyLabel" Grid.Row="1" Classes="bk-body" Opacity="0.75" />
@@ -107,10 +107,29 @@
                             <TextBlock x:Name="HiveRepellentValue" Grid.Row="6" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                             <TextBlock x:Name="HiveSageLabel" Grid.Row="7" Classes="bk-body" Opacity="0.75" />
                             <TextBlock x:Name="HiveSageValue" Grid.Row="7" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveSeedsLabel" Grid.Row="8" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveSeedsValue" Grid.Row="8" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveForagersLabel" Grid.Row="9" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveForagersValue" Grid.Row="9" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveGuardsLabel" Grid.Row="10" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveGuardsValue" Grid.Row="10" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HivePollenLabel" Grid.Row="11" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HivePollenValue" Grid.Row="11" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
+                            <TextBlock x:Name="HiveBeeBreadLabel" Grid.Row="12" Classes="bk-body" Opacity="0.75" />
+                            <TextBlock x:Name="HiveBeeBreadValue" Grid.Row="12" Grid.Column="1" Classes="bk-body" FontWeight="SemiBold" />
                         </Grid>
                         <TextBlock x:Name="HoneyRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" />
                         <TextBlock x:Name="WaxRateText" Classes="bk-body" FontSize="18" FontWeight="SemiBold" IsVisible="False" />
                         <TextBlock x:Name="HiveFullText" Classes="bk-body" Foreground="#FFA38F" IsVisible="False" />
+                        <!-- Offered once the first bee bread is made: move to a wooden hive -->
+                        <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="WoodenHiveNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="WoodenHiveInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="MoveHiveButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MoveHive_Click" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -164,6 +183,14 @@
                             <Button x:Name="CraftBeeswaxButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="CraftBeeswax_Click" />
                         </Grid>
+                        <Grid x:Name="BeeBreadRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="BeeBreadNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="BeeBreadInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="MakeBeeBreadButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MakeBeeBread_Click" />
+                        </Grid>
                         <Grid x:Name="RepellentRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="RepellentNameText" Classes="bk-body" FontWeight="SemiBold" />
@@ -176,6 +203,17 @@
                                         HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                             </StackPanel>
                         </Grid>
+                    </StackPanel>
+                </Border>
+
+                <!-- THE GARDEN (from the first seed): plant, wait, sprout -->
+                <Border x:Name="GardenCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="GardenTitleText" Classes="bk-title" />
+                        <TextBlock x:Name="GardenStatusText" Classes="bk-body" FontWeight="SemiBold" />
+                        <Button x:Name="PlantSeedButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" Click="PlantSeed_Click" />
+                        <StackPanel x:Name="PlantRows" Spacing="8" />
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -197,6 +235,14 @@
                                     HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                         </StackPanel>
                         <TextBlock x:Name="CandleBurningText" Classes="bk-body" IsVisible="False" />
+                    </StackPanel>
+                </Border>
+
+                <!-- BEES: each kind met so far, what it does and a bee fact -->
+                <Border x:Name="BeesCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="10">
+                        <TextBlock x:Name="BeesTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="BeeRows" Spacing="12" />
                     </StackPanel>
                 </Border>
 

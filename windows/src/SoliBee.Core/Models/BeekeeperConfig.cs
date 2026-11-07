@@ -13,6 +13,24 @@ public sealed record BeekeeperTool(string Id, decimal Cost, int BeesPerClick);
 /// </summary>
 public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Sage, string Needs);
 
+/// <summary>A plant a seed grows into. <see cref="SeedAtTrade"/> is the Hippie trade that gives its seed;
+/// <see cref="Bee"/> is the kind of bee it attracts, <see cref="BeesPerMinute"/> how fast.</summary>
+public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Bee, decimal BeesPerMinute);
+
+public static class BeekeeperPlants
+{
+    public const string Wildflowers = "wildflowers";
+    public const string Bramble = "bramble";
+}
+
+/// <summary>Kinds of bee besides the honeybees.</summary>
+public static class BeekeeperBees
+{
+    public const string Honey = "honeybees";
+    public const string Forager = "forager";
+    public const string Guard = "guard";
+}
+
 /// <summary>Upgrade ids and the "needs" names that are not upgrades.</summary>
 public static class BeekeeperUpgrades
 {
@@ -156,6 +174,27 @@ public sealed class BeekeeperConfig
     public decimal CalmSeconds { get; init; } = 2m * 60m;
     /// <summary>Honey while calm (Leah: ×2).</summary>
     public decimal CalmHoneyMultiplier { get; init; } = 2m;
+
+    // ===== Stage 4 (spec 012): the Garden. All placeholders, accepted by Leah 2026-11-07.
+
+    /// <summary>In the order the Hippies hand out seeds: the Nth seed planted grows the Nth plant.
+    /// New plants are new entries here plus their effect in the engine (FR-302).</summary>
+    public IReadOnlyList<BeekeeperPlant> Plants { get; init; } = new[]
+    {
+        new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
+        new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
+    };
+
+    /// <summary>How long a planted seed takes to sprout (Leah: 10 minutes).</summary>
+    public decimal GrowSeconds { get; init; } = 10m * 60m;
+    /// <summary>Every this many forager bees bring back 1 pollen a minute.</summary>
+    public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
+    public decimal BeeBreadPollen { get; init; } = 10m;
+    public decimal BeeBreadHoney { get; init; } = 10m;
+    public decimal WoodenHiveWax { get; init; } = 200m;
+    public decimal WoodenHiveBeeBread { get; init; } = 10m;
+    /// <summary>Honey from every honeybee in a wooden hive (+25%).</summary>
+    public decimal WoodenHiveHoneyMultiplier { get; init; } = 1.25m;
 
     public static BeekeeperConfig Default { get; } = new();
 }

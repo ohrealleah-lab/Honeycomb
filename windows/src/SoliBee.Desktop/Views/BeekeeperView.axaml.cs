@@ -67,6 +67,8 @@ public partial class BeekeeperView : UserControl
             ApplyAccent();
             _shopSignature = "";
             _logSignature = "";
+            _plantsSignature = "";
+            _beesSignature = "";
             Redraw();
         });
         DataContextChanged += (_, _) => Attach(DataContext as BeekeeperViewModel);
@@ -158,7 +160,7 @@ public partial class BeekeeperView : UserControl
 
         // Hive
         HiveCard.IsVisible = vm.HoneyRevealed;
-        HiveTitleText.Text = BeekeeperText.HiveTitle;
+        HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive);
         HiveBeesLabel.Text = BeekeeperText.HiveBees;
         HiveBeesValue.Text = N(vm.Bees);
         HiveHoneyLabel.Text = BeekeeperText.HiveHoney;
@@ -178,6 +180,27 @@ public partial class BeekeeperView : UserControl
         HiveSageLabel.Text = BeekeeperText.HiveSage;
         HiveSageValue.Text = N(vm.Sage);
         HiveSageLabel.IsVisible = HiveSageValue.IsVisible = vm.SageRevealed;
+        HiveSeedsLabel.Text = BeekeeperText.HiveSeeds;
+        HiveSeedsValue.Text = N(vm.Seeds);
+        HiveSeedsLabel.IsVisible = HiveSeedsValue.IsVisible = vm.GardenRevealed;
+        HiveForagersLabel.Text = BeekeeperText.HiveForagers;
+        HiveForagersValue.Text = N(Math.Floor(vm.ForagerBees));
+        HiveForagersLabel.IsVisible = HiveForagersValue.IsVisible = vm.ForagerBees > 0m;
+        HiveGuardsLabel.Text = BeekeeperText.HiveGuards;
+        HiveGuardsValue.Text = N(Math.Floor(vm.GuardBees));
+        HiveGuardsLabel.IsVisible = HiveGuardsValue.IsVisible = vm.GuardBees > 0m;
+        HivePollenLabel.Text = BeekeeperText.HivePollen;
+        HivePollenValue.Text = N(Math.Floor(vm.Pollen));
+        HivePollenLabel.IsVisible = HivePollenValue.IsVisible = vm.PollenRevealed;
+        HiveBeeBreadLabel.Text = BeekeeperText.HiveBeeBread;
+        HiveBeeBreadValue.Text = N(vm.BeeBread);
+        HiveBeeBreadLabel.IsVisible = HiveBeeBreadValue.IsVisible = vm.BeeBreadRevealed;
+        WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
+        WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
+        WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
+            + " · " + BeekeeperText.WoodenHiveBlurb(N((vm.Config.WoodenHiveHoneyMultiplier - 1m) * 100m));
+        MoveHiveButton.Content = BeekeeperText.Move;
+        MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
         HoneyRateText.Text = BeekeeperText.HoneyPerSecond(N(vm.HoneyPerSecond, 2));
         HiveFullText.IsVisible = vm.StorageIsFull;
         HiveFullText.Text = BeekeeperText.CombsFull;
@@ -212,6 +235,12 @@ public partial class BeekeeperView : UserControl
         BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
         CraftBeeswaxButton.Content = BeekeeperText.Make;
         CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
+        BeeBreadRow.IsVisible = vm.PollenRevealed;
+        BeeBreadNameText.Text = BeekeeperText.BeeBread;
+        BeeBreadInfoText.Text = BeekeeperText.Price(null, null, null, pollen: N(vm.Config.BeeBreadPollen), honey: N(vm.Config.BeeBreadHoney))
+            + " · " + BeekeeperText.BeeBreadBlurb;
+        MakeBeeBreadButton.Content = BeekeeperText.Make;
+        MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
         RepellentRow.IsVisible = vm.RepellentUnlocked;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
         RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
@@ -221,6 +250,22 @@ public partial class BeekeeperView : UserControl
         LightRepellentButton.Content = BeekeeperText.Light;
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
+
+        // The Garden: a surprise while growing (no timer), the plants once sprouted
+        GardenCard.IsVisible = vm.GardenRevealed;
+        GardenTitleText.Text = BeekeeperText.GardenTitle;
+        GardenStatusText.Text = vm.IsGrowing ? BeekeeperText.GardenGrowing
+            : vm.CanPlantSeed ? "" : BeekeeperText.GardenEmpty;
+        GardenStatusText.IsVisible = GardenStatusText.Text.Length > 0;
+        PlantSeedButton.Content = BeekeeperText.GardenPlant;
+        PlantSeedButton.IsVisible = !vm.IsGrowing && vm.Seeds > 0;
+        PlantSeedButton.IsEnabled = vm.CanPlantSeed;
+        UpdatePlants(vm, lang);
+
+        // Bees: only the kinds met so far
+        BeesCard.IsVisible = vm.MetBeeKinds.Count > 0;
+        BeesTitleText.Text = BeekeeperText.BeesTitle;
+        UpdateBees(vm, lang);
 
         // Wasps
         bool burning = vm.RepellentSecondsLeft > 0m;
@@ -248,6 +293,43 @@ public partial class BeekeeperView : UserControl
         {
             _shownCatchSerial = vm.CatchSerial;
             if (vm.LastCatch is { } c) StartPopup(c.Stung, c.BeesGained);
+        }
+    }
+
+    private string _plantsSignature = "";
+    private string _beesSignature = "";
+
+    // Plain text rows, rebuilt only when what they show changes.
+    private void UpdatePlants(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var plants = vm.SproutedPlants;
+        string sig = lang + "|" + string.Join(",", plants.Select(p => p.Id));
+        if (sig == _plantsSignature) return;
+        _plantsSignature = sig;
+        PlantRows.Children.Clear();
+        foreach (var p in plants)
+        {
+            var row = new StackPanel { Spacing = 2 };
+            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantName(p.Id), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantBlurb(p.Id), Classes = { "bk-muted" } });
+            PlantRows.Children.Add(row);
+        }
+    }
+
+    private void UpdateBees(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var kinds = vm.MetBeeKinds;
+        string sig = lang + "|" + string.Join(",", kinds);
+        if (sig == _beesSignature) return;
+        _beesSignature = sig;
+        BeeRows.Children.Clear();
+        foreach (var kind in kinds)
+        {
+            var row = new StackPanel { Spacing = 2 };
+            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeName(kind), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeBlurb(kind), Classes = { "bk-body" } });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeFact(kind), Classes = { "bk-muted" }, FontStyle = FontStyle.Italic });
+            BeeRows.Children.Add(row);
         }
     }
 
@@ -411,6 +493,9 @@ public partial class BeekeeperView : UserControl
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
+    private void PlantSeed_Click(object? sender, RoutedEventArgs e) => _vm?.PlantSeedCommand.Execute(null);
+    private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);
+    private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
     private void Puff_Click(object? sender, RoutedEventArgs e) => _vm?.PuffSmokerCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup

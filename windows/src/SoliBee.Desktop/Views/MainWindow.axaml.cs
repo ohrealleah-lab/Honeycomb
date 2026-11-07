@@ -1739,6 +1739,9 @@ public partial class MainWindow : Window
             case "Skip":    hive.DebugSkip(600m); break;
             case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (2 combs)
             case "Calm":    hive.DebugFillCalmMeter(); break;   // needs the Smoker
+            case "Seed":    hive.DebugGiveSeed(); break;
+            case "Grow":    hive.DebugFinishGrowing(); break;   // needs a planted seed
+            case "Pollen":  hive.DebugGivePollen(10m); break;
         }
     }
 

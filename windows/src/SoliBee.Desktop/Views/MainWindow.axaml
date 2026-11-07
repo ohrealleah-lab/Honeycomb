@@ -97,6 +97,9 @@
                                         <MenuItem Header="Skip 10 minutes" Click="DebugBeekeeper_Click" Tag="Skip" />
                                         <MenuItem Header="Call a wasp" Click="DebugBeekeeper_Click" Tag="Wasp" />
                                         <MenuItem Header="Fill the calm meter" Click="DebugBeekeeper_Click" Tag="Calm" />
+                                        <MenuItem Header="Give a seed" Click="DebugBeekeeper_Click" Tag="Seed" />
+                                        <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />
+                                        <MenuItem Header="+10 pollen" Click="DebugBeekeeper_Click" Tag="Pollen" />
                                     </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">

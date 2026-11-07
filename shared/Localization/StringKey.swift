@@ -1509,8 +1509,6 @@ public enum StringKey: String, CaseIterable {
     /// Stats bar label; Beebits is the game's made-up money, kept as-is
     case beekeeperBeebitsLabel = "beekeeper_beebits_label"
     /// Card title (all caps)
-    case beekeeperHiveTitle = "beekeeper_hive_title"
-    /// Card title (all caps)
     case beekeeperShopTitle = "beekeeper_shop_title"
     /// Story log card title (all caps)
     case beekeeperLogTitle = "beekeeper_log_title"
@@ -1742,4 +1740,94 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHippiesName = "beekeeper_hippies_name"
     /// Hive card; %@ = wax made per second
     case beekeeperWaxPerSecFmt = "beekeeper_wax_per_sec_fmt"
+    /// Card title (all caps); the starting hive
+    case beekeeperHiveTitleSkep = "beekeeper_hive_title_skep"
+    /// Card title (all caps); after moving
+    case beekeeperHiveTitleWooden = "beekeeper_hive_title_wooden"
+    /// Hive card row label
+    case beekeeperHiveSeeds = "beekeeper_hive_seeds"
+    /// Hive card row label
+    case beekeeperHiveForagers = "beekeeper_hive_foragers"
+    /// Hive card row label
+    case beekeeperHiveGuards = "beekeeper_hive_guards"
+    /// Hive card row label
+    case beekeeperHivePollen = "beekeeper_hive_pollen"
+    /// Hive card row label
+    case beekeeperHiveBeeBread = "beekeeper_hive_bee_bread"
+    /// Hive card: the upgrade to a wooden hive
+    case beekeeperWoodenHiveName = "beekeeper_wooden_hive_name"
+    /// Hive card; %@ = extra honey percent
+    case beekeeperWoodenHiveBlurbFmt = "beekeeper_wooden_hive_blurb_fmt"
+    /// Hive card button: move to the wooden hive
+    case beekeeperMove = "beekeeper_move"
+    /// Price part; %@ = amount
+    case beekeeperCostBeeBreadFmt = "beekeeper_cost_bee_bread_fmt"
+    /// Price part; %@ = amount
+    case beekeeperCostPollenFmt = "beekeeper_cost_pollen_fmt"
+    /// Price part; %@ = amount
+    case beekeeperCostHoneyFmt = "beekeeper_cost_honey_fmt"
+    /// Card title (all caps)
+    case beekeeperGardenTitle = "beekeeper_garden_title"
+    /// Garden button: plant a seed
+    case beekeeperGardenPlant = "beekeeper_garden_plant"
+    /// Garden: a seed is growing (a surprise, no timer)
+    case beekeeperGardenGrowing = "beekeeper_garden_growing"
+    /// Garden: nothing planted and no seed in hand
+    case beekeeperGardenEmpty = "beekeeper_garden_empty"
+    /// Garden: a plant
+    case beekeeperPlantWildflowers = "beekeeper_plant_wildflowers"
+    /// Garden: what the plant does
+    case beekeeperPlantWildflowersBlurb = "beekeeper_plant_wildflowers_blurb"
+    /// Garden: a plant
+    case beekeeperPlantBramble = "beekeeper_plant_bramble"
+    /// Garden: what the plant does
+    case beekeeperPlantBrambleBlurb = "beekeeper_plant_bramble_blurb"
+    /// Card title (all caps)
+    case beekeeperBeesTitle = "beekeeper_bees_title"
+    /// Bees card: a kind of bee
+    case beekeeperBeeHoneyName = "beekeeper_bee_honey_name"
+    /// Bees card: what they do
+    case beekeeperBeeHoneyBlurb = "beekeeper_bee_honey_blurb"
+    /// Bees card: a bee fact
+    case beekeeperBeeHoneyFact = "beekeeper_bee_honey_fact"
+    /// Bees card: a kind of bee
+    case beekeeperBeeForagerName = "beekeeper_bee_forager_name"
+    /// Bees card: what they do
+    case beekeeperBeeForagerBlurb = "beekeeper_bee_forager_blurb"
+    /// Bees card: a bee fact
+    case beekeeperBeeForagerFact = "beekeeper_bee_forager_fact"
+    /// Bees card: a kind of bee
+    case beekeeperBeeGuardName = "beekeeper_bee_guard_name"
+    /// Bees card: what they do
+    case beekeeperBeeGuardBlurb = "beekeeper_bee_guard_blurb"
+    /// Bees card: a bee fact
+    case beekeeperBeeGuardFact = "beekeeper_bee_guard_fact"
+    /// Workbench row
+    case beekeeperBeeBread = "beekeeper_bee_bread"
+    /// Workbench row blurb
+    case beekeeperBeeBreadBlurb = "beekeeper_bee_bread_blurb"
+    /// Story log
+    case beekeeperLogSeedGiven = "beekeeper_log_seed_given"
+    /// Story log
+    case beekeeperLogSeedPlanted = "beekeeper_log_seed_planted"
+    /// Story log
+    case beekeeperLogSeedSprouted = "beekeeper_log_seed_sprouted"
+    /// Story log
+    case beekeeperLogPlantWildflowers = "beekeeper_log_plant_wildflowers"
+    /// Story log
+    case beekeeperLogPlantBramble = "beekeeper_log_plant_bramble"
+    /// Story log
+    case beekeeperLogFirstPollen = "beekeeper_log_first_pollen"
+    /// Story log: first bee bread
+    case beekeeperLogBeeBread = "beekeeper_log_bee_bread"
+    /// Story log
+    case beekeeperLogWoodenHive = "beekeeper_log_wooden_hive"
+    /// Story log; %@ = honey taken
+    case beekeeperLogWaspRaidGuardsFmt = "beekeeper_log_wasp_raid_guards_fmt"
+    /// Story log; %@ = honey taken
+    case beekeeperLogShoeMissGuardsFmt = "beekeeper_log_shoe_miss_guards_fmt"
+    /// RuleSection title, Beekeeper
+    case helpBeekeeperGardenTitle = "help_beekeeper_garden_title"
+    /// The Garden RuleSection body
+    case helpBeekeeperGarden = "help_beekeeper_garden"
 }
