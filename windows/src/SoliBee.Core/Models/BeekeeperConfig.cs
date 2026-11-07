@@ -172,6 +172,9 @@ public sealed class BeekeeperConfig
     public int CalmMeterClicks { get; init; } = 15;
     /// <summary>How long the bees stay calm after a puff (Leah: 2 minutes).</summary>
     public decimal CalmSeconds { get; init; } = 2m * 60m;
+    /// <summary>Calm time a Catch Bee click adds back while the bees are calm, up to
+    /// <see cref="CalmSeconds"/> (Leah: a click refills it fully; lower this to soften).</summary>
+    public decimal CalmCatchRefillSeconds { get; init; } = 2m * 60m;
     /// <summary>Honey while calm (Leah: ×2).</summary>
     public decimal CalmHoneyMultiplier { get; init; } = 2m;
 

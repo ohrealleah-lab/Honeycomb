@@ -206,6 +206,10 @@ public sealed class BeekeeperEngine
         // Every click calms the bees a little once the Smoker is owned, stings included.
         if (Owns(BeekeeperUpgrades.Smoker) && State.CalmMeter < Config.CalmMeterClicks) State.CalmMeter++;
 
+        // While the bees are calm, every click tops the calm time back up: a perk for staying active.
+        if (IsCalm)
+            State.CalmSecondsLeft = Math.Min(Config.CalmSeconds, State.CalmSecondsLeft + Config.CalmCatchRefillSeconds);
+
         // Only Bare Hands ever get stung; better tools never roll the dice.
         if (State.ToolLevel == 0 && _rng.NextDouble() < Config.StingChance)
         {
