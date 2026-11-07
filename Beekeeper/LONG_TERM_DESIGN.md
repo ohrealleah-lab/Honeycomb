@@ -68,8 +68,8 @@ Built so far (build stages 1–5): catching and tools, honey, wax, combs, the be
 | Build stage | Theme | New systems |
 |---|---|---|
 | **5. The queen and the brood** (spec: `windows/013-beekeeper-brood/`) — **BUILT** (`d690603`) | The colony grows itself | Bee bread feeds the queen, who raises honeybees, live and away; the pantry; the slice cap; the bear's trade agreement at 100 trades; a fuller welcome-back message. |
-| **6. Specialties and the wasp emissary** (spec: `windows/014-beekeeper-specialties/`) — specced | Plants give the hive a job; the wasps' story ends | Specialties replace the forager and guard counts (foraging: steady pollen; guarding: "the hive feels safe", +honey). The Hive card in groups (bees, the hive, garden, crafts, trade goods). Raids take only honey. The emissary after 5 bribes in total: raids stop, the wasps trade paper for honey, repellent candles retire. No Stress Mode stops applying to Beekeeper. Old saves: counts turn into specialties. |
-| **7. More seeds, the poplar and propolis** | Discovery keeps going | More seeds (each grows longer: 10 min, 1 h, 6 h, overnight); several plants at once, several specialties; a nursing specialty (the queen lays faster); the poplar and the resin specialty; propolis; the bee-boost and sage-propolis candles; first uses for paper. Maybe the Bees card returns (from `f196a8a`). |
+| **6. Specialties and the wasp emissary** (spec: `windows/014-beekeeper-specialties/`) — **BUILT** (`2d63047`) | Plants give the hive a job; the wasps' story ends | Specialties replace the forager and guard counts (foraging: steady pollen; guarding: "the hive feels safe", +honey). The Hive card in groups (bees, the hive, garden, crafts, trade goods). Raids take only honey. The emissary after 5 bribes in total: raids stop, the wasps trade paper for honey, repellent candles retire. No Stress Mode stops applying to Beekeeper. Old saves: counts turn into specialties. |
+| **7. More seeds, the poplar and propolis** (spec: `windows/015-beekeeper-seeds/`) — specced | Discovery keeps going | Named seeds; two garden beds (a third from the Shop); each plant its own grow time. The willow (1 h, nursing: the queen lays faster), the poplar (6 h, resin: propolis; its seed from the wasps), clover (12 h, more foraging). The bee-boost candle (live-only) and the sage-propolis candle (burns while away). Paper buys the Beekeeper's Notebook (the Bees card returns) and is part of new Shop prices; the Propolis Seal (+storage). |
 | **8. The meadow and the honey house** | The hive moves; automation | The one hive moves to the meadow (the next name on the ladder; higher laying and storage). Meadow plants. The honey house automates one job per upgrade (sell, bee bread, candles). Paper becomes labels for jarred honey. Batch comb building. |
 | **9. The bloom calendar** | A reason to come back tomorrow | One bloom per real day, counting time away: crocus, clover, linden, goldenrod, a half-day winter. Each bloom favours a specialty and gives a named honey. |
 | **10. New buyers** | Relationships | Hummingbirds and Badgers, each wanting a named honey or a craft and giving something unique; slow standing orders; the road to the orchard. |
@@ -92,6 +92,12 @@ Gaps these stages answer: time away barely grew anything (5, built); content ran
 - **Repellent candles retire after the emissary** (Leah, 2026-11-07): hidden, with their stock kept in the save.
 - **The wasps trade paper for honey** (Leah, 2026-11-07): placeholder 50 honey a paper.
 - **The growing wasp threat is dropped** (Leah, 2026-11-07): gangs, bullies, the horde and the shoe-throw upgrades.
+- **Two garden beds, a third from the Shop** (Leah, 2026-11-07, stage 7 planning): beds are for growing; sprouted plants move into the garden.
+- **Stage 7 seeds** (Leah, 2026-11-07): the willow (nursing), the poplar (resin, propolis), clover (more foraging), growing 1 h, 6 h and overnight.
+- **The wasps give the poplar seed** (Leah, 2026-11-07): the first thing their reputation gives beyond paper. The Hippies give the willow and clover seeds.
+- **Paper's first uses** (Leah, 2026-11-07): the Beekeeper's Notebook (brings back the Bees card as notes on the specialties) and a share of new Shop prices.
+- **The bee-boost candle is live-only; the sage-propolis candle burns while away** (Leah, 2026-11-07): the sage-propolis candle is no longer a wasp repellent (the wasps are gone after the emissary); it is a smaller, slow honey boost that rewards time away.
+- **Propolis** (Leah, 2026-11-07): gathered by the resin specialty; used in the two candles and the Propolis Seal upgrade (more honey storage).
 - **Comment out, don't delete** (Leah, 2026-11-07): cut features (like the Bees card) should be easy to bring back.
 - **Live-only boosts are intended** (Leah, 2026-11-07): the Smoker's calm and later boost candles reward live play; "same live and away" applies to growth, not to boosts.
 - **`decimal` is big enough** (2026-11-07): about 7.9 × 10²⁸, far more than a database BIGINT; with the slice cap the bee count can't run away.
@@ -106,13 +112,13 @@ Gaps these stages answer: time away barely grew anything (5, built); content ran
 ## Still open
 1. Offline rate is 100% (confirmed). Open: whether the 3-day cap grows with upgrades.
 2. The slice is 0.1% per click, capped (stage 5). Open: the cap's size (placeholder 10 × the tool's bees).
-3. Specialties: the seeds after the bramble and which plant gives which specialty (stage 7: nursing, resin); how big the guarding boost is.
+3. ~~Specialties: the seeds after the bramble~~ Settled for stage 7 (willow, poplar, clover). Open: the size of every specialty's strength.
 4. ~~Whether nurses are the only passive bee growth~~ Settled: the queen, fed by bee bread; a nursing specialty (stage 7) makes her lay faster.
 5. Which production bonuses the swarm gives (it is a full wipe otherwise).
-6. Sage-propolis candle duration.
+6. ~~Sage-propolis candle duration~~ Settled as a slow boost that burns while away (placeholder 4 h, capped at 24 h). Open: its on-screen name.
 7. ~~The number type~~ Settled: `decimal` is big enough.
 8. Mobile layout of the 3-column screen.
 9. ~~Wasps: horde size, throw upgrades~~ Dropped: the emissary ends raids. Open: the bribe cost (placeholder 25%).
 10. Upgrades: the full list, each upgrade's cost, and which upgrades unlock which (work in progress; the first build of them uses placeholders).
-11. Candles: the cost of later candle types; which later candles need sage or propolis; which bee upgrades gather propolis.
-12. Wasp emissary: settled that it comes after 5 bribes in total. Settled: the wasps trade paper for honey (placeholder 50 honey each). Open: what paper is used for (stage 7) and what their reputation gives beyond paper.
+11. Candles: settled for stage 7 (bee-boost: wax + propolis; sage-propolis: wax + sage + propolis; propolis comes from the poplar's resin specialty). Open: their prices and boosts.
+12. Wasp emissary: settled that it comes after 5 bribes in total. Settled: the wasps trade paper for honey (placeholder 50 honey each). Settled (stage 7): paper buys the Notebook and is part of new Shop prices; the wasps give the poplar seed. Open: labels for jarred honey (stage 8) and anything more their reputation gives.
