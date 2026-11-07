@@ -70,7 +70,7 @@ When the player first reaches 15 Beebits the Beekeeper's Shop appears.
 5. **Given** storage fills 1 hour into an away period, **Then** production stops there; the rest of the time earns nothing.
 6. **Given** the computer sleeps for 30 minutes with the app open, **Then** that gap is credited under the same rule as being closed.
 7. **Given** the player switches to another Honeycomb game, **Then** the hive keeps running in the background.
-8. **Given** a hive with at least one bee, **When** New Game is pressed, **Then** it first asks "Start over? Your hive will be lost."; on confirm everything resets and a new bear name is chosen. **Given** a brand-new hive with no bees, **Then** New Game starts over without asking.
+8. **Given** a hive with at least one bee, **When** New Game is pressed, **Then** it first asks "Start over? Your hive and everything in it will be lost." (Leah kept this wording on 2026-11-07; the button may later be hidden or moved for Beekeeper); on confirm everything resets and a new bear name is chosen. **Given** a brand-new hive with no bees, **Then** New Game starts over without asking.
 9. **Given** the player changes language in Options, **Then** every story-log line, including old ones, shows in the new language (the log is saved as event keys plus values, not as finished sentences).
 
 ### User Story 6 - Fits inside Honeycomb (Priority: P2)

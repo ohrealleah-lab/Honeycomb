@@ -90,6 +90,12 @@
                                         <MenuItem Header="Popup: Queen's Fall" Click="DebugBanner_Click" Tag="Honeycomb:FallenAce" />
                                         <MenuItem Header="Popup: Combo" Click="DebugBanner_Click" Tag="Honeycomb:Combo" />
                                     </MenuItem>
+                                    <MenuItem Header="Beekeeper">
+                                        <MenuItem Header="+100 bees" Click="DebugBeekeeper_Click" Tag="Bees" />
+                                        <MenuItem Header="+100 wax" Click="DebugBeekeeper_Click" Tag="Wax" />
+                                        <MenuItem Header="+100 Beebits" Click="DebugBeekeeper_Click" Tag="Beebits" />
+                                        <MenuItem Header="Skip 10 minutes" Click="DebugBeekeeper_Click" Tag="Skip" />
+                                    </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">
                                         <MenuItem Header="Loading" Click="DebugBannerCategory_Click" Tag="Loading" />

@@ -426,6 +426,22 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
+    public void DebugGrant_AddsWhatItSays_AndRevealsTheCardsItUnlocks()
+    {
+        var e = Make();
+        var events = e.DebugGrant(100m, 100m, 100m);
+
+        Assert.Equal(100m, e.State.Bees);
+        Assert.Equal(100m, e.State.Wax);
+        Assert.Equal(100m, e.State.Beebits);
+        Assert.True(e.State.HoneyRevealed && e.State.WaxRevealed && e.State.BeebitsRevealed);
+        Assert.True(e.State.ShopRevealed);    // 100 Beebits ≥ 15
+        Assert.True(e.State.CombsRevealed);   // 100 wax ≥ 50
+        Assert.True(Has(events, BeekeeperEvents.ShopOpened));
+        Assert.True(e.CanBuildComb);
+    }
+
+    [Fact]
     public void AGapOverTwoSeconds_CountsAsAway()
     {
         var e = Make();

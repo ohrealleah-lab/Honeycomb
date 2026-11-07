@@ -279,6 +279,42 @@ public sealed class BeekeeperEngine
         return new ActionResult(true, cost, events);
     }
 
+    // ------------------------------------------------------------------ debug
+
+    /// <summary>
+    /// Debug builds only (the Banners menu): hands out bees, wax and Beebits so later stages
+    /// can be reached without hours of play. The game itself never calls this.
+    /// </summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGrant(decimal bees, decimal wax, decimal beebits)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (bees > 0m)
+        {
+            State.Bees += bees;
+            if (!State.HoneyRevealed)
+            {
+                State.HoneyRevealed = true;
+                events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBee));
+            }
+        }
+        if (wax > 0m)
+        {
+            State.Wax += wax;
+            if (!State.WaxRevealed)
+            {
+                State.WaxRevealed = true;
+                events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWax));
+            }
+        }
+        if (beebits > 0m)
+        {
+            State.Beebits += beebits;
+            State.BeebitsRevealed = true;
+        }
+        CheckReveals(events);
+        return events;
+    }
+
     // ------------------------------------------------------------------ reveals
 
     private void CheckReveals(List<BeekeeperEvent> events)

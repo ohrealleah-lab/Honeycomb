@@ -168,6 +168,22 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    /// <summary>Debug builds only: see <see cref="BeekeeperEngine.DebugGrant"/>. Saved at once.</summary>
+    public void DebugGrant(decimal bees, decimal wax, decimal beebits)
+    {
+        LogEvents(Engine.DebugGrant(bees, wax, beebits));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: the hive works for <paramref name="seconds"/> at once, as in live play.</summary>
+    public void DebugSkip(decimal seconds)
+    {
+        LogEvents(Engine.Advance(seconds).Events);
+        SaveNow();
+        Refresh();
+    }
+
     // ------------------------------------------------------------------ time
 
     /// <summary>

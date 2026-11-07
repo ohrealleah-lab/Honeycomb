@@ -57,7 +57,7 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 
 ## Phase 6: Whole-game check
 - [x] T050 Run `/analyze` across spec, plan and tasks again against the finished code. Done 2026-11-07; open points below.
-- [ ] T051 Play through to a second comb, using the debug route if one is needed to skip ahead (ask first).
+- [ ] T051 Play through to a second comb, using the debug route if one is needed to skip ahead (ask first). Debug route added 2026-11-07 (Leah said yes): Debug builds → Banners menu → Beekeeper (+100 bees / wax / Beebits, Skip 10 minutes). Leah plays it through.
 - [x] T052 Hand-test sheet for the co-designer (Windows build). See `HAND_TEST.md`.
 - [x] T053 Update `windows/CLAUDE.md` ("all six games" → seven), the repo README, and the product rules in `mac/CLAUDE.md` (exceptions: Beekeeper saves in progress on desktop and earns while away; Beekeeper's rules are Windows-referenced until Mac exists).
 - [ ] T054 Windows release build (`dotnet publish`) and a smoke test. Release build made 2026-11-07 (`bin/Release/net10.0/win-x64/publish/Honeycomb.exe`); smoke test is Leah's.
@@ -67,7 +67,7 @@ Nothing is committed until you say so; nothing is pushed unless you say "push".
 ### T050 open points (waiting for Leah)
 1. **Fixed 2026-11-07** (the log now compares every shown line). **Bug:** once the story log holds 50 lines, a line identical to the newest one (e.g. pressing Sell 10 twice) doesn't redraw the log, so the new line doesn't appear. Cause: `BeekeeperView.UpdateLog` only compares the line count and the newest line.
 2. The Combs card shows the cost of the comb you can build now, not "next cost" as T033 lists. The current cost is probably what's wanted; T033's wording may just be loose.
-3. The "Start over?" message says "Your hive and everything in it will be lost."; spec 5.8 says "Your hive will be lost."
+3. **Settled 2026-11-07: keep the code's wording** (spec updated; the button may be hidden or moved later). The "Start over?" message says "Your hive and everything in it will be lost."; spec 5.8 says "Your hive will be lost."
 4. The spec writes shop prices with "₿"; the screen says "beebits" (Leah: keep Beebits, no ₿). Fix the spec in T055.
 
 ## Later (own specs, not now)

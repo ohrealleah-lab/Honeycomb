@@ -1724,6 +1724,22 @@ public partial class MainWindow : Window
         FireDebugBanner(kind);
     }
 
+    // Local-dev-only skip-ahead for Beekeeper (same hidden menu): hands the hive bees, wax or
+    // Beebits, or lets it work 10 minutes at once, so later stages can be checked quickly.
+    // The changes are saved into the real hive; New Game clears them.
+    private void DebugBeekeeper_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not MenuItem { Tag: string tag }) return;
+        var hive = _coordinator.BeekeeperViewModel;
+        switch (tag)
+        {
+            case "Bees":    hive.DebugGrant(100m, 0m, 0m); break;
+            case "Wax":     hive.DebugGrant(0m, 100m, 0m); break;
+            case "Beebits": hive.DebugGrant(0m, 0m, 100m); break;
+            case "Skip":    hive.DebugSkip(600m); break;
+        }
+    }
+
     private void FireDebugBanner(string kind)
     {
         switch (MainContent.Content)
