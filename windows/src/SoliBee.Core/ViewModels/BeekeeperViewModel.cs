@@ -102,6 +102,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     private readonly Func<DateTime> _clock;
     private readonly string? _savePath;
+    /// <summary>True when a save file exists but could not be read or set aside: never write over it.</summary>
+    private readonly bool _saveBlocked;
     private readonly SynchronizationContext? _syncContext;
     private Timer? _timer;
     private DateTime _lastTickUtc;
@@ -143,7 +145,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         _syncContext = SynchronizationContext.Current;
         _savePath = persist ? (savePath ?? BeekeeperSaveService.SaveFilePath) : null;
 
-        var loaded = initialState ?? (_savePath is null ? null : BeekeeperSaveService.Load(_savePath));
+        BeekeeperState? loaded = initialState;
+        if (loaded is null && _savePath is not null)
+            loaded = BeekeeperSaveService.Load(_savePath, out _saveBlocked);
         Engine = new BeekeeperEngine(config, loaded, rng);
 
         var now = _clock();
@@ -157,9 +161,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         else
         {
             // Time since the last save counts as time away (closing the app, a long gap, etc.).
+            // The load reveals come first, so an older save's wooden hive (the queen) and trade
+            // agreement already count for the time away.
+            LogEvents(Engine.RevealOnLoad());   // an older save may already have earned The Workbench
             decimal gap = BeekeeperSaveService.SecondsSinceSaved(loaded, now);
             if (Engine.IsAway(gap)) LogEvents(Engine.AdvanceAway(gap).Events);
-            LogEvents(Engine.RevealOnLoad());   // an older save may already have earned The Workbench
         }
 
         if (!isHeadless) StartTimer();
@@ -716,7 +722,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // reopening the app says "While you were away" (Leah, 2026-11-07). An empty pantry
             // is still said, the live way.
             LogEvents(Engine.AdvanceAway(gap).Events
-                .Select(e => e.Key == BeekeeperEvents.WelcomeBackPantry ? new BeekeeperEvent(BeekeeperEvents.PantryEmpty) : e)
+                .Select(e => e.Key switch
+                {
+                    BeekeeperEvents.WelcomeBackPantry => new BeekeeperEvent(BeekeeperEvents.PantryEmpty),
+                    BeekeeperEvents.WelcomeBackSageOut => new BeekeeperEvent(BeekeeperEvents.SagePropolisOut),
+                    _ => e,
+                })
                 .Where(e => !BeekeeperEvents.IsWelcomeBack(e.Key)));
         }
         else
@@ -762,7 +773,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool SaveNow()
     {
         _secondsSinceSave = 0m;
-        return _savePath is not null && BeekeeperSaveService.Save(State, _savePath, _clock());
+        return _savePath is not null && !_saveBlocked && BeekeeperSaveService.Save(State, _savePath, _clock());
     }
 
     private void StartTimer()

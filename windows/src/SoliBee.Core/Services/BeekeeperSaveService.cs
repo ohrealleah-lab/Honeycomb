@@ -27,16 +27,23 @@ public static class BeekeeperSaveService
 
     public static bool Save(BeekeeperState state, DateTime utcNow) => Save(state, SaveFilePath, utcNow);
 
-    public static BeekeeperState? Load(string path)
+    public static BeekeeperState? Load(string path) => Load(path, out _);
+
+    /// <summary>As <see cref="Load(string)"/>, but <paramref name="keepFile"/> is true when a file
+    /// exists that could not be read or moved aside (locked by another program, say). The caller
+    /// must then not save over it: starting a new game and autosaving would destroy the real hive.</summary>
+    public static BeekeeperState? Load(string path, out bool keepFile)
     {
+        keepFile = false;
         string json;
         try
         {
             if (!File.Exists(path)) return null;
-            json = File.ReadAllText(path);
+            json = ReadWithRetries(path);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
+            keepFile = true;
             return null;
         }
 
@@ -52,10 +59,24 @@ public static class BeekeeperSaveService
 
         if (state is null || state.Version > CurrentVersion || !LooksSane(state))
         {
-            MoveAside(path);
+            if (!MoveAside(path)) keepFile = true;
             return null;
         }
         return state;
+    }
+
+    // A scanner or backup tool may hold the file for a moment at launch: try a few times.
+    private static string ReadWithRetries(string path)
+    {
+        for (int attempt = 0; ; attempt++)
+        {
+            try { return File.ReadAllText(path); }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                if (attempt >= 4) throw;
+                System.Threading.Thread.Sleep(150);
+            }
+        }
     }
 
     public static bool Save(BeekeeperState state, string path, DateTime utcNow)
@@ -112,9 +133,9 @@ public static class BeekeeperSaveService
             && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m;
     }
 
-    private static void MoveAside(string path)
+    private static bool MoveAside(string path)
     {
-        try { File.Move(path, path + ".unreadable", overwrite: true); }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        try { File.Move(path, path + ".unreadable", overwrite: true); return true; }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 }
