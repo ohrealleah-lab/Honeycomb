@@ -14,8 +14,9 @@ namespace SoliBee.Core.Services;
 /// </summary>
 public static class BeekeeperSaveService
 {
-    /// <summary>6 = stage 6. Older files still load: the new fields start at zero.</summary>
-    public const int CurrentVersion = 6;
+    /// <summary>7 = stage 7. Older files still load: the new fields start at zero, and the engine
+    /// turns an older file's seeds into named seeds and a bed.</summary>
+    public const int CurrentVersion = 7;
 
     /// <summary>The story log keeps this many lines, newest first.</summary>
     public const int MaxLogEntries = 50;
@@ -102,7 +103,13 @@ public static class BeekeeperSaveService
             && s.Plants is not null
             && s.ForagerBees >= 0m && s.GuardBees >= 0m && s.Pollen >= 0m && s.BeeBread >= 0m
             && s.AgreementHoneyProgress >= 0m
-            && s.BribesTotal >= 0 && s.WaspTrades >= 0 && s.Paper >= 0m;
+            && s.BribesTotal >= 0 && s.WaspTrades >= 0 && s.Paper >= 0m
+            // Stage 7: no negative amounts or times. (Too many beds and unknown plant ids are
+            // trimmed by the engine instead, so one odd entry never costs the whole hive.)
+            && s.SeedsInHand is not null && s.SeedsGivenIds is not null && s.Beds is not null
+            && s.Beds.All(b => b is not null && b.SecondsLeft >= 0m)
+            && s.Propolis >= 0m && s.BeeBoostCandles >= 0m && s.SagePropolisCandles >= 0m
+            && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m;
     }
 
     private static void MoveAside(string path)

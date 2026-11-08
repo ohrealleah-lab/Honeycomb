@@ -125,7 +125,8 @@ internal static class BeekeeperText
 
     /// <summary>A price that may mix resources: "300 beebits · 100 wax · 2 sage".</summary>
     public static string Price(string? beebits, string? wax, string? sage,
-                               string? pollen = null, string? honey = null, string? beeBread = null)
+                               string? pollen = null, string? honey = null, string? beeBread = null,
+                               string? paper = null, string? propolis = null)
     {
         var parts = new System.Collections.Generic.List<string>();
         if (beebits != null) parts.Add(beebits + " " + BeebitsLabel.ToLowerInvariant());
@@ -134,6 +135,8 @@ internal static class BeekeeperText
         if (pollen != null) parts.Add(Fill(T(StringKey.BeekeeperCostPollenFmt), pollen));
         if (honey != null) parts.Add(Fill(T(StringKey.BeekeeperCostHoneyFmt), honey));
         if (beeBread != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeeBreadFmt), beeBread));
+        if (paper != null) parts.Add(Fill(T(StringKey.BeekeeperCostPaperFmt), paper));
+        if (propolis != null) parts.Add(Fill(T(StringKey.BeekeeperCostPropolisFmt), propolis));
         return string.Join(" · ", parts);
     }
 
@@ -160,6 +163,9 @@ internal static class BeekeeperText
         BeekeeperUpgrades.BiggerCombs2 => T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb),
         BeekeeperUpgrades.BetterWaxCatcher => T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb),
         BeekeeperUpgrades.StrongerCandles => T(StringKey.BeekeeperUpgradeStrongerCandlesBlurb),
+        BeekeeperUpgrades.Notebook => T(StringKey.BeekeeperUpgradeNotebookBlurb),
+        BeekeeperUpgrades.ThirdBed => T(StringKey.BeekeeperUpgradeThirdBedBlurb),
+        BeekeeperUpgrades.PropolisSeal => T(StringKey.BeekeeperUpgradePropolisSealBlurb),
         _ => "",
     };
 
@@ -176,7 +182,52 @@ internal static class BeekeeperText
 
     public static string GardenTitle => T(StringKey.BeekeeperGardenTitle);
     public static string GardenPlant => T(StringKey.BeekeeperGardenPlant);
-    public static string GardenGrowing => T(StringKey.BeekeeperGardenGrowing);
+    // Cut in stage 7 (spec 015): the growing seed was a surprise; beds now name what grows.
+    // public static string GardenGrowing => T(StringKey.BeekeeperGardenGrowing);
+    public static string GardenEmptyBed => T(StringKey.BeekeeperGardenEmptyBed);
+    public static string BedGrowing(BeekeeperPlant p, decimal secondsLeft) =>
+        Fill(T(StringKey.BeekeeperGardenBedGrowingFmt), PlantName(p.Id), Roughly(secondsLeft));
+    /// <summary>"Willow seed": a seed in hand.</summary>
+    public static string SeedLine(string plantId) => CapFirst(Fill(T(StringKey.BeekeeperGardenSeedFmt), SeedName(plantId, Lang)));
+    /// <summary>The Plant button's hover: "Takes about 6 hours to grow."</summary>
+    public static string TakesToGrow(decimal seconds) => Fill(T(StringKey.BeekeeperGardenTakesFmt), Roughly(seconds));
+
+    private static string CapFirst(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
+
+    /// <summary>A rough time: whole minutes under an hour, whole hours above ("about 40 minutes").</summary>
+    public static string Roughly(decimal seconds) => RoughlyIn(seconds, Lang);
+
+    private static string RoughlyIn(decimal seconds, AppLanguage lang)
+    {
+        decimal minutes = System.Math.Ceiling(System.Math.Max(0m, seconds) / 60m);
+        if (minutes < 60m)
+        {
+            if (minutes <= 1m) return Strings.Get(StringKey.BeekeeperDurationMinute, lang);
+            return Fill(Strings.Get(StringKey.BeekeeperDurationMinutesFmt, lang), NumberFormatter.Format(minutes, lang));
+        }
+        decimal hours = System.Math.Max(1m, System.Math.Round(minutes / 60m));
+        if (hours == 1m) return Strings.Get(StringKey.BeekeeperDurationHour, lang);
+        return Fill(Strings.Get(StringKey.BeekeeperDurationHoursFmt, lang), NumberFormatter.Format(hours, lang));
+    }
+
+    // ---- stage 7: the poplar, propolis, the two candles, the Notebook
+    public static string BeeBoostCandle => T(StringKey.BeekeeperBeeBoostCandle);
+    public static string BeeBoostBlurb(string percent, string time) => Fill(T(StringKey.BeekeeperBeeBoostBlurbFmt), percent, time);
+    public static string SagePropolisCandle => T(StringKey.BeekeeperSagePropolisCandle);
+    public static string SagePropolisBlurb(string percent, string time) => Fill(T(StringKey.BeekeeperSagePropolisBlurbFmt), percent, time);
+    public static string LightBeeBoost => T(StringKey.BeekeeperLightBeeBoost);
+    public static string LightSagePropolis => T(StringKey.BeekeeperLightSagePropolis);
+    public static string NotebookTitle => T(StringKey.BeekeeperNotebookTitle);
+
+    public static string NotebookNote(string id) => id switch
+    {
+        BeekeeperNotes.Queen => T(StringKey.BeekeeperNoteQueen),
+        BeekeeperSpecialties.Foraging => T(StringKey.BeekeeperNoteForaging),
+        BeekeeperSpecialties.Guarding => T(StringKey.BeekeeperNoteGuarding),
+        BeekeeperSpecialties.Nursing => T(StringKey.BeekeeperNoteNursing),
+        BeekeeperSpecialties.Resin => T(StringKey.BeekeeperNoteResin),
+        _ => "",
+    };
     public static string GardenEmpty => T(StringKey.BeekeeperGardenEmpty);
     public static string BeeBread => T(StringKey.BeekeeperBeeBread);
     public static string BeeBreadBlurb => T(StringKey.BeekeeperBeeBreadBlurb);
@@ -213,7 +264,9 @@ internal static class BeekeeperText
 
     /// <summary>True for rows drawn as one full-width line (no label and value columns).</summary>
     public static bool IsHiveLine(string id) =>
-        id is BeekeeperHiveRows.Foraging or BeekeeperHiveRows.Guarding or BeekeeperHiveRows.CombsFull;
+        id is BeekeeperHiveRows.Foraging or BeekeeperHiveRows.Guarding or BeekeeperHiveRows.CombsFull
+            or BeekeeperHiveRows.Nursing or BeekeeperHiveRows.Resin
+            or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
 
     /// <summary>A Hive row's label, or for a full-width row its whole line.</summary>
     public static string HiveRowLabel(BeekeeperHiveRow r)
@@ -225,6 +278,13 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Queen => T(StringKey.BeekeeperHiveQueen),
             BeekeeperHiveRows.Foraging => Fill(T(StringKey.BeekeeperSpecialtyForagingFmt), N(r.Value)),
             BeekeeperHiveRows.Guarding => Fill(T(StringKey.BeekeeperSpecialtyGuardingFmt), N(r.Value)),
+            BeekeeperHiveRows.Nursing => Fill(T(StringKey.BeekeeperSpecialtyNursingFmt), N(r.Value)),
+            BeekeeperHiveRows.Resin => Fill(T(StringKey.BeekeeperSpecialtyResinFmt), N(r.Value)),
+            BeekeeperHiveRows.Propolis => T(StringKey.BeekeeperHivePropolis),
+            BeekeeperHiveRows.BeeBoostCandles => T(StringKey.BeekeeperHiveBeeBoostCandles),
+            BeekeeperHiveRows.SagePropolisCandles => T(StringKey.BeekeeperHiveSagePropolisCandles),
+            BeekeeperHiveRows.BeeBoostBurning => Fill(T(StringKey.BeekeeperBeeBoostBurningFmt), Roughly(r.Value)),
+            BeekeeperHiveRows.SagePropolisBurning => Fill(T(StringKey.BeekeeperSagePropolisBurningFmt), Roughly(r.Value)),
             BeekeeperHiveRows.Honey => T(StringKey.BeekeeperHiveHoney),
             BeekeeperHiveRows.Wax => T(StringKey.BeekeeperHiveWax),
             BeekeeperHiveRows.Combs => T(StringKey.BeekeeperHiveCombs),
@@ -265,6 +325,7 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)),
             BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)),
             BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.Propolis => Fill(T(StringKey.BeekeeperPropolisPerSecFmt), N(rate, 3)),
             BeekeeperHiveRows.BeeBread => BeeBreadPerSecond(N(rate, 4))
                                           + (r.Rate2 > 0m ? "\n" + PantryLasts(r.Rate2) : ""),
             _ => null,
@@ -281,6 +342,8 @@ internal static class BeekeeperText
     {
         BeekeeperSpecialties.Foraging => T(StringKey.BeekeeperSpecialtyForaging),
         BeekeeperSpecialties.Guarding => T(StringKey.BeekeeperSpecialtyGuarding),
+        BeekeeperSpecialties.Nursing => T(StringKey.BeekeeperSpecialtyNursing),
+        BeekeeperSpecialties.Resin => T(StringKey.BeekeeperSpecialtyResin),
         _ => id,
     };
 
@@ -288,6 +351,20 @@ internal static class BeekeeperText
     {
         BeekeeperPlants.Wildflowers => T(StringKey.BeekeeperPlantWildflowers),
         BeekeeperPlants.Bramble => T(StringKey.BeekeeperPlantBramble),
+        BeekeeperPlants.Willow => T(StringKey.BeekeeperPlantWillow),
+        BeekeeperPlants.Poplar => T(StringKey.BeekeeperPlantPoplar),
+        BeekeeperPlants.Clover => T(StringKey.BeekeeperPlantClover),
+        _ => id,
+    };
+
+    /// <summary>A plant as it is named before "seed": "wildflower", "willow" (lower case).</summary>
+    private static string SeedName(string id, AppLanguage lang) => id switch
+    {
+        BeekeeperPlants.Wildflowers => Strings.Get(StringKey.BeekeeperSeedNameWildflowers, lang),
+        BeekeeperPlants.Bramble => Strings.Get(StringKey.BeekeeperSeedNameBramble, lang),
+        BeekeeperPlants.Willow => Strings.Get(StringKey.BeekeeperSeedNameWillow, lang),
+        BeekeeperPlants.Poplar => Strings.Get(StringKey.BeekeeperSeedNamePoplar, lang),
+        BeekeeperPlants.Clover => Strings.Get(StringKey.BeekeeperSeedNameClover, lang),
         _ => id,
     };
 
@@ -295,6 +372,9 @@ internal static class BeekeeperText
     {
         BeekeeperPlants.Wildflowers => T(StringKey.BeekeeperPlantWildflowersBlurb),
         BeekeeperPlants.Bramble => T(StringKey.BeekeeperPlantBrambleBlurb),
+        BeekeeperPlants.Willow => T(StringKey.BeekeeperPlantWillowBlurb),
+        BeekeeperPlants.Poplar => T(StringKey.BeekeeperPlantPoplarBlurb),
+        BeekeeperPlants.Clover => T(StringKey.BeekeeperPlantCloverBlurb),
         _ => "",
     };
 
@@ -310,6 +390,9 @@ internal static class BeekeeperText
         BeekeeperUpgrades.Practice => Strings.Get(StringKey.BeekeeperUpgradePractice, lang),
         BeekeeperUpgrades.MorePractice => Strings.Get(StringKey.BeekeeperUpgradeMorePractice, lang),
         BeekeeperUpgrades.Smoker => Strings.Get(StringKey.BeekeeperUpgradeSmoker, lang),
+        BeekeeperUpgrades.Notebook => Strings.Get(StringKey.BeekeeperUpgradeNotebook, lang),
+        BeekeeperUpgrades.ThirdBed => Strings.Get(StringKey.BeekeeperUpgradeThirdBed, lang),
+        BeekeeperUpgrades.PropolisSeal => Strings.Get(StringKey.BeekeeperUpgradePropolisSeal, lang),
         _ => id,
     };
 
@@ -352,7 +435,13 @@ internal static class BeekeeperText
                 ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
                 : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value2), N(e.Value)),
             BeekeeperEvents.RepellentUnlocked => L(StringKey.BeekeeperLogRepellentUnlocked),
-            BeekeeperEvents.UpgradeBought => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
+            BeekeeperEvents.UpgradeBought => e.Text switch
+            {
+                BeekeeperUpgrades.Notebook => L(StringKey.BeekeeperLogNotebookBought),
+                BeekeeperUpgrades.ThirdBed => L(StringKey.BeekeeperLogThirdBedBought),
+                BeekeeperUpgrades.PropolisSeal => L(StringKey.BeekeeperLogPropolisSealBought),
+                _ => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
+            },
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
             BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
             // Raids take only honey since stage 6 (spec 014). Lines saved before then keep their
@@ -371,13 +460,20 @@ internal static class BeekeeperText
             BeekeeperEvents.CandleOut => L(StringKey.BeekeeperLogCandleOut),
             BeekeeperEvents.SmokerPuffed => L(StringKey.BeekeeperLogSmokerPuffed),
             BeekeeperEvents.CalmEnded => L(StringKey.BeekeeperLogCalmEnded),
-            BeekeeperEvents.SeedGiven => L(StringKey.BeekeeperLogSeedGiven),
-            BeekeeperEvents.SeedPlanted => L(StringKey.BeekeeperLogSeedPlanted),
+            // Lines saved before seeds had names (no plant in Text) keep the old wording.
+            BeekeeperEvents.SeedGiven => string.IsNullOrEmpty(e.Text) ? L(StringKey.BeekeeperLogSeedGiven)
+                : Fill(L(StringKey.BeekeeperLogSeedGivenFmt), SeedName(e.Text, lang)),
+            BeekeeperEvents.WaspSeedGiven => Fill(L(StringKey.BeekeeperLogWaspSeedGivenFmt), SeedName(e.Text ?? "", lang)),
+            BeekeeperEvents.SeedPlanted => string.IsNullOrEmpty(e.Text) ? L(StringKey.BeekeeperLogSeedPlanted)
+                : Fill(L(StringKey.BeekeeperLogSeedPlantedFmt), SeedName(e.Text, lang)),
             BeekeeperEvents.SeedSprouted => L(StringKey.BeekeeperLogSeedSprouted),
             BeekeeperEvents.PlantRevealed => e.Text switch
             {
                 BeekeeperPlants.Wildflowers => L(StringKey.BeekeeperLogPlantWildflowersForaging),
                 BeekeeperPlants.Bramble => L(StringKey.BeekeeperLogPlantBrambleGuarding),
+                BeekeeperPlants.Willow => L(StringKey.BeekeeperLogPlantWillowNursing),
+                BeekeeperPlants.Poplar => L(StringKey.BeekeeperLogPlantPoplarResin),
+                BeekeeperPlants.Clover => L(StringKey.BeekeeperLogPlantCloverForaging),
                 // Cut in stage 6 (spec 014): the bees the plants attracted.
                 // BeekeeperPlants.Wildflowers => L(StringKey.BeekeeperLogPlantWildflowers),
                 // BeekeeperPlants.Bramble => L(StringKey.BeekeeperLogPlantBramble),
@@ -397,12 +493,21 @@ internal static class BeekeeperText
             BeekeeperEvents.BribeHint => L(StringKey.BeekeeperLogBribeHint),
             BeekeeperEvents.Emissary => L(StringKey.BeekeeperLogEmissary),
             BeekeeperEvents.FirstPaper => L(StringKey.BeekeeperLogFirstPaper),
+            BeekeeperEvents.FirstPropolis => L(StringKey.BeekeeperLogFirstPropolis),
+            BeekeeperEvents.BeeBoostLit => L(StringKey.BeekeeperLogBeeBoostLit),
+            BeekeeperEvents.BeeBoostOut => L(StringKey.BeekeeperLogBeeBoostOut),
+            BeekeeperEvents.SagePropolisLit => L(StringKey.BeekeeperLogSagePropolisLit),
+            BeekeeperEvents.SagePropolisOut => L(StringKey.BeekeeperLogSagePropolisOut),
+            BeekeeperEvents.WelcomeBackSageOut => L(StringKey.BeekeeperLogWelcomeBackSageOut),
+            BeekeeperEvents.WelcomeBackPropolis => Fill(L(StringKey.BeekeeperLogWelcomeBackPropolisFmt), N(e.Value)),
             BeekeeperEvents.WaspTrade => Fill(L(StringKey.BeekeeperLogTradeWaspsFmt), N(e.Value2), N(e.Value)),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
                 "repellent" => Fill(L(StringKey.BeekeeperLogCraftedRepellentFmt), N(e.Value)),
                 "bee_bread" => Fill(L(StringKey.BeekeeperLogCraftedBeeBreadFmt), N(e.Value)),
+                "bee_boost" => Fill(L(StringKey.BeekeeperLogCraftedBeeBoostFmt), N(e.Value)),
+                "sage_propolis" => Fill(L(StringKey.BeekeeperLogCraftedSagePropolisFmt), N(e.Value)),
                 _ => "",
             },
             _ => "",

@@ -57,8 +57,8 @@ public static class BeekeeperEvents
     public const string CalmEnded = "calm_ended";
 
     // Stage 4
-    public const string SeedGiven = "seed_given";              // Value = seeds in hand
-    public const string SeedPlanted = "seed_planted";
+    public const string SeedGiven = "seed_given";              // Value = seeds in hand; since stage 7 Text = plant id (from the Hippies)
+    public const string SeedPlanted = "seed_planted";          // since stage 7 Text = plant id
     public const string SeedSprouted = "seed_sprouted";
     public const string PlantRevealed = "plant_revealed";      // Text = plant id
     public const string FirstPollen = "first_pollen";
@@ -82,9 +82,20 @@ public static class BeekeeperEvents
     public const string WaspTrade = "wasp_trade";                // Value = paper got, Value2 = honey given
     public const string FirstPaper = "first_paper";
 
+    // Stage 7
+    public const string WaspSeedGiven = "wasp_seed_given";       // Text = plant id (the wasps leave a seed)
+    public const string FirstPropolis = "first_propolis";
+    public const string BeeBoostLit = "bee_boost_lit";
+    public const string BeeBoostOut = "bee_boost_out";
+    public const string SagePropolisLit = "sage_propolis_lit";
+    public const string SagePropolisOut = "sage_propolis_out";   // live play; away says WelcomeBackSageOut
+    public const string WelcomeBackPropolis = "welcome_back_propolis";   // Value = propolis gathered while away
+    public const string WelcomeBackSageOut = "welcome_back_sage_out";
+
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
-        key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry;
+        key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry
+            or WelcomeBackPropolis or WelcomeBackSageOut;
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
@@ -121,6 +132,43 @@ public sealed class BeekeeperEngine
         Config = config ?? BeekeeperConfig.Default;
         _rng = rng ?? new SystemRandomSource();
         State = state ?? NewState();
+        if (state is not null)
+        {
+            if (state.Version < 7) ConvertOldSeeds(state);
+            Tidy(state);
+        }
+    }
+
+    /// <summary>A file older than version 7 counted seeds; seed N was plant N (spec 015, FR-609).
+    /// The sprouted plants are already in the list; the growing seed (if any) goes into bed 1 with its
+    /// time left, the seeds in hand become named, and every seed given counts as given.</summary>
+    private void ConvertOldSeeds(BeekeeperState s)
+    {
+        var plants = Config.Plants;
+        for (int i = 0; i < s.SeedsGiven && i < plants.Count; i++)
+        {
+            if (!s.SeedsGivenIds.Contains(plants[i].Id)) s.SeedsGivenIds.Add(plants[i].Id);
+            if (i >= s.SeedsPlanted && !s.SeedsInHand.Contains(plants[i].Id)) s.SeedsInHand.Add(plants[i].Id);
+        }
+        if (s.GrowSecondsLeft > 0m && s.SeedsPlanted >= 1 && s.SeedsPlanted <= plants.Count && s.Beds.Count == 0)
+        {
+            var growing = plants[s.SeedsPlanted - 1];
+            s.Beds.Add(new BeekeeperBed { PlantId = growing.Id, SecondsLeft = s.GrowSecondsLeft });
+            if (!s.SeedsGivenIds.Contains(growing.Id)) s.SeedsGivenIds.Add(growing.Id);
+        }
+        if (s.SeedsGiven > 0 || s.SeedsPlanted > 0) s.GardenRevealed = true;
+        s.Version = 7;
+    }
+
+    /// <summary>Sanity for a loaded file: unknown plant ids dropped, no more beds than owned.</summary>
+    private void Tidy(BeekeeperState s)
+    {
+        bool Known(string id) => Config.Plants.Any(p => p.Id == id);
+        s.SeedsInHand.RemoveAll(id => !Known(id));
+        s.SeedsGivenIds.RemoveAll(id => !Known(id));
+        s.Beds.RemoveAll(b => !Known(b.PlantId));
+        int owned = Config.StartingBeds + (s.Upgrades.Contains(BeekeeperUpgrades.ThirdBed) ? Config.ThirdBedBeds : 0);
+        if (s.Beds.Count > owned) s.Beds.RemoveRange(owned, s.Beds.Count - owned);
     }
 
     private BeekeeperState NewState() => new() { BearName = PickBearName() };
@@ -148,9 +196,10 @@ public sealed class BeekeeperEngine
     public decimal StoragePerComb => Config.StoragePerComb * StorageMultiplier;
 
     private decimal StorageMultiplier =>
-        Owns(BeekeeperUpgrades.BiggerCombs2) ? Config.BiggerCombs2Multiplier
-        : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
-        : 1m;
+        (Owns(BeekeeperUpgrades.BiggerCombs2) ? Config.BiggerCombs2Multiplier
+         : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
+         : 1m)
+        * (Owns(BeekeeperUpgrades.PropolisSeal) ? Config.PropolisSealStorageMultiplier : 1m);   // stage 7
 
     /// <summary>Bees the tool catches per click, grown by the Practice upgrades (rounded down).</summary>
     public int BeesPerClick =>
@@ -179,8 +228,17 @@ public sealed class BeekeeperEngine
     /// queen's growing hive, raids, hover rates, the trade agreement) sees it, live and away alike.</summary>
     public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier;
 
-    /// <summary>What the hive makes right now (doubled while the bees are calm).</summary>
-    public decimal HoneyPerSecondNow => HoneyPerSecond * (IsCalm ? Config.CalmHoneyMultiplier : 1m);
+    /// <summary>What the hive makes right now: the base rate with whichever boosts are on (calm
+    /// bees, a bee-boost candle, a sage-propolis candle).</summary>
+    public decimal HoneyPerSecondNow => HoneyPerSecond * LiveBoostNow * SagePropolisBoostNow;
+
+    /// <summary>The boosts that only work while the app is open, multiplied: calm bees and a
+    /// bee-boost candle (stage 7). Time away never has them.</summary>
+    public decimal LiveBoostNow =>
+        (IsCalm ? Config.CalmHoneyMultiplier : 1m) * (IsBeeBoosted ? Config.BeeBoostHoneyMultiplier : 1m);
+
+    /// <summary>The sage-propolis candle's boost, on while it burns, live or away.</summary>
+    public decimal SagePropolisBoostNow => IsSagePropolisBurning ? Config.SagePropolisHoneyMultiplier : 1m;
 
     /// <summary>Wax the hive makes right now: follows all honey made (full combs or not),
     /// with the Wax-Catcher, its upgrade and calm bees counted.</summary>
@@ -265,17 +323,34 @@ public sealed class BeekeeperEngine
     public AdvanceResult Advance(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
-        decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
-        // The calm part comes first; the hive goes on growing across both parts (FR-402).
-        var a = Work(calm, events, Config.CalmHoneyMultiplier);
-        var b = Work(seconds - calm, events);
-        if (calm > 0m)
+        // Cut in stage 7 (spec 015): one calm part then the rest. Now the stretch is split at
+        // whichever live boost (calm, bee-boost candle) ends first, again and again (FR-604).
+        // decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
+        // var a = Work(calm, events, Config.CalmHoneyMultiplier);
+        // var b = Work(seconds - calm, events);
+        Made total = default;
+        decimal left = seconds;
+        if (left <= 0m) total = Work(left, events);
+        while (left > 0m)
         {
-            State.CalmSecondsLeft -= calm;
-            if (State.CalmSecondsLeft <= 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.CalmEnded));
+            bool calm = State.CalmSecondsLeft > 0m, beeBoost = State.BeeBoostSecondsLeft > 0m;
+            decimal step = left;
+            if (calm) step = Math.Min(step, State.CalmSecondsLeft);
+            if (beeBoost) step = Math.Min(step, State.BeeBoostSecondsLeft);
+            total += Work(step, events, LiveBoostNow);   // the hive goes on growing across the parts (FR-402)
+            left -= step;
+            if (calm)
+            {
+                State.CalmSecondsLeft -= step;
+                if (State.CalmSecondsLeft <= 0m) { State.CalmSecondsLeft = 0m; events.Add(new BeekeeperEvent(BeekeeperEvents.CalmEnded)); }
+            }
+            if (beeBoost)
+            {
+                State.BeeBoostSecondsLeft -= step;
+                if (State.BeeBoostSecondsLeft <= 0m) { State.BeeBoostSecondsLeft = 0m; events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBoostOut)); }
+            }
         }
-        return new AdvanceResult(a.Stored + b.Stored, a.Wax + b.Wax, events,
-            a.Raised + b.Raised, a.AgreementBeebits + b.AgreementBeebits);
+        return new AdvanceResult(total.Stored, total.Wax, events, total.Raised, total.AgreementBeebits);
     }
 
     // ------------------------------------------------------------------ the Smoker (stage 3)
@@ -307,18 +382,25 @@ public sealed class BeekeeperEngine
         if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
 
         decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
-        var m = Work(credited * Config.OfflineRate, events);
+        decimal propolisBefore = State.Propolis;
+        var m = Work(credited * Config.OfflineRate, events);   // the bee-boost candle waits: no live boost here
 
-        // An empty pantry while away is told in the welcome-back lines instead.
+        // An empty pantry while away is told in the welcome-back lines instead (and so is a
+        // sage-propolis candle burning down).
         if (m.PantryEmptied) events.RemoveAll(e => e.Key == BeekeeperEvents.PantryEmpty);
+        bool sageOut = events.RemoveAll(e => e.Key == BeekeeperEvents.SagePropolisOut) > 0;
 
         if (State.Bees > 0m)
         {
             // The log shows the newest line first, so these are added bottom line first:
-            // they then read "the bees made…", "the queen raised…", "the bear left…", "the pantry…".
+            // they then read "the bees made…", "the queen raised…", "propolis…", "the bear left…",
+            // "the pantry…", "the candle…".
+            if (sageOut) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackSageOut));
             if (m.PantryEmptied) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
             if (m.AgreementBeebits > 0m)
                 events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
+            decimal gathered = Math.Floor(State.Propolis - propolisBefore);
+            if (gathered > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPropolis, gathered));
             decimal raised = Math.Floor(m.Raised);
             if (raised > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
             // Honey that found a home: stored, or taken by the bear under the agreement.
@@ -346,16 +428,61 @@ public sealed class BeekeeperEngine
     private Made Work(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
     {
         if (seconds <= 0m) return Produce(seconds, events, boost);
-        decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
-        var made = Produce(before, events, boost);
-        GrowGarden(before, events);
-        decimal after = seconds - before;
-        if (after > 0m)
+
+        // Cut in stage 7 (spec 015): the stretch was split once, at the one growing seed's sprout.
+        // decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
+        // var made = Produce(before, events, boost);
+        // GrowGarden(before, events);
+        // decimal after = seconds - before;
+        // if (after > 0m) { made += Produce(after, events, boost); GrowGarden(after, events); }
+        // return made;
+
+        // Now it is split at every change, soonest first (FR-603): each bed's sprout and the
+        // sage-propolis candle burning out. Between splits nothing changes, so every piece is
+        // exact and many short stretches equal one long one, live or away.
+        Made made = default;
+        decimal left = seconds;
+        while (left > 0m)
         {
-            made += Produce(after, events, boost);
-            GrowGarden(after, events);
+            decimal step = left;
+            foreach (var bed in State.Beds) step = Math.Min(step, bed.SecondsLeft);
+            if (State.SagePropolisSecondsLeft > 0m) step = Math.Min(step, State.SagePropolisSecondsLeft);
+
+            made += Produce(step, events, boost);
+            Attract(step, events);
+            left -= step;
+
+            // Apply whatever happened at the end of the piece (ties in one instant: any order).
+            if (State.SagePropolisSecondsLeft > 0m)
+            {
+                State.SagePropolisSecondsLeft -= step;
+                if (State.SagePropolisSecondsLeft <= 0m)
+                {
+                    State.SagePropolisSecondsLeft = 0m;
+                    events.Add(new BeekeeperEvent(BeekeeperEvents.SagePropolisOut));
+                }
+            }
+            GrowBeds(step, events);
         }
         return made;
+    }
+
+    /// <summary>Beds grow for <paramref name="step"/> seconds; those that reach zero sprout.</summary>
+    private void GrowBeds(decimal step, List<BeekeeperEvent> events)
+    {
+        foreach (var bed in State.Beds.ToList())
+        {
+            bed.SecondsLeft -= step;
+            if (bed.SecondsLeft <= 0m) Sprout(bed, events);
+        }
+    }
+
+    private void Sprout(BeekeeperBed bed, List<BeekeeperEvent> events)
+    {
+        State.Beds.Remove(bed);
+        State.Plants.Add(bed.PlantId);
+        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedSprouted, 0m, bed.PlantId));
+        events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, bed.PlantId));
     }
 
     /// <summary>
@@ -407,7 +534,7 @@ public sealed class BeekeeperEngine
 
         if (beeSeconds <= 0m) return new Made(0m, 0m, raised, 0m, 0m, emptied);
 
-        decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * HiveMultiplier;
+        decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * SagePropolisBoostNow * HiveMultiplier;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
         State.Honey += stored;
@@ -459,13 +586,14 @@ public sealed class BeekeeperEngine
     /// <summary>0 = the skep, 1 = the wooden hive; later hives add steps.</summary>
     public int HiveStep => State.HasWoodenHive ? 1 : 0;
 
-    /// <summary>Bees a minute the queen raises in this hive when fed.</summary>
+    /// <summary>Bees a minute the queen raises in this hive when fed, faster with nursing (stage 7).
+    /// Everything that reads her rate (the brood, the pantry, hover rates, welcome-back) sees it.</summary>
     public decimal QueenRatePerMinute
     {
         get
         {
             var rates = Config.QueenBeesPerMinute;
-            return rates.Count == 0 ? 0m : rates[Math.Min(HiveStep, rates.Count - 1)];
+            return (rates.Count == 0 ? 0m : rates[Math.Min(HiveStep, rates.Count - 1)]) * NursingMultiplier;
         }
     }
 
@@ -595,6 +723,7 @@ public sealed class BeekeeperEngine
         OfferAgreementIfDue(events);
         AnnounceOldCountsIfDue(events);
         SendEmissaryIfDue(events);
+        GiveSeedsIfDue(events);   // an older save past a seed's trade count gets that seed (stage 7)
         return events;
     }
 
@@ -657,6 +786,76 @@ public sealed class BeekeeperEngine
         return new ActionResult(true, count, events);
     }
 
+    // ------------------------------------------------------------------ the propolis candles (stage 7)
+
+    /// <summary>The two propolis candles' recipes show at The Workbench once the poplar has sprouted.</summary>
+    public bool PropolisCandlesShown => State.WorkbenchRevealed && HasSpecialty(BeekeeperSpecialties.Resin);
+
+    public bool CanCraftBeeBoostTimes(int count) =>
+        count >= 1 && PropolisCandlesShown
+        && State.Wax >= Config.BeeBoostCandleWax * count && State.Propolis >= Config.BeeBoostCandlePropolis * count;
+
+    public bool CanCraftBeeBoost => CanCraftBeeBoostTimes(1);
+
+    public bool CanCraftSagePropolisTimes(int count) =>
+        count >= 1 && PropolisCandlesShown
+        && State.Wax >= Config.SagePropolisCandleWax * count && State.Sage >= Config.SagePropolisCandleSage * count
+        && State.Propolis >= Config.SagePropolisCandlePropolis * count;
+
+    public bool CanCraftSagePropolis => CanCraftSagePropolisTimes(1);
+
+    public ActionResult CraftBeeBoost(int count = 1)
+    {
+        if (!CanCraftBeeBoostTimes(count)) return ActionResult.Refused;
+        State.Wax -= Config.BeeBoostCandleWax * count;
+        State.Propolis -= Config.BeeBoostCandlePropolis * count;
+        State.BeeBoostCandles += count;
+        var events = new List<BeekeeperEvent>();
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "bee_boost"));
+        CountCandleCrafted(events, count);
+        return new ActionResult(true, count, events);
+    }
+
+    public ActionResult CraftSagePropolis(int count = 1)
+    {
+        if (!CanCraftSagePropolisTimes(count)) return ActionResult.Refused;
+        State.Wax -= Config.SagePropolisCandleWax * count;
+        State.Sage -= Config.SagePropolisCandleSage * count;
+        State.Propolis -= Config.SagePropolisCandlePropolis * count;
+        State.SagePropolisCandles += count;
+        var events = new List<BeekeeperEvent>();
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "sage_propolis"));
+        CountCandleCrafted(events, count);
+        return new ActionResult(true, count, events);
+    }
+
+    /// <summary>A bee-boost candle burns (honey up) in live play only.</summary>
+    public bool IsBeeBoosted => State.BeeBoostSecondsLeft > 0m;
+    public bool IsSagePropolisBurning => State.SagePropolisSecondsLeft > 0m;
+
+    public bool CanLightBeeBoost =>
+        State.BeeBoostCandles >= 1m && State.BeeBoostSecondsLeft < Config.BeeBoostCapSeconds;
+
+    public bool CanLightSagePropolis =>
+        State.SagePropolisCandles >= 1m && State.SagePropolisSecondsLeft < Config.SagePropolisCapSeconds;
+
+    /// <summary>Lighting another adds its time, up to the cap.</summary>
+    public ActionResult LightBeeBoost()
+    {
+        if (!CanLightBeeBoost) return ActionResult.Refused;
+        State.BeeBoostCandles--;
+        State.BeeBoostSecondsLeft = Math.Min(Config.BeeBoostCapSeconds, State.BeeBoostSecondsLeft + Config.BeeBoostBurnSeconds);
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.BeeBoostLit) });
+    }
+
+    public ActionResult LightSagePropolis()
+    {
+        if (!CanLightSagePropolis) return ActionResult.Refused;
+        State.SagePropolisCandles--;
+        State.SagePropolisSecondsLeft = Math.Min(Config.SagePropolisCapSeconds, State.SagePropolisSecondsLeft + Config.SagePropolisBurnSeconds);
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.SagePropolisLit) });
+    }
+
     private void CountCandleCrafted(List<BeekeeperEvent> events, int count = 1)
     {
         State.CandlesCrafted += count;
@@ -693,7 +892,7 @@ public sealed class BeekeeperEngine
             State.RepellentUnlocked = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
         }
-        GiveSeedIfDue(events);
+        GiveSeedsIfDue(events);
         return new ActionResult(true, bundles, events);
     }
 
@@ -712,15 +911,26 @@ public sealed class BeekeeperEngine
         // Stronger Candles leaves the Shop with the repellent candle (spec 014), unless bought.
         BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked && !RepellentRetired,
         BeekeeperUpgrades.NeedsVacuum => State.ToolLevel >= VacuumLevel,
+        // Stage 7 (spec 015)
+        BeekeeperUpgrades.NeedsPaper => PaperSeen,
+        BeekeeperUpgrades.NeedsGardenAndPaper => State.GardenRevealed && PaperSeen,
+        BeekeeperUpgrades.NeedsPropolis => PropolisSeen,
         var other => Owns(other),
     };
+
+    /// <summary>Paper has been seen: a wasp trade, or any paper held (also an older save's).</summary>
+    public bool PaperSeen => State.PaperRevealed || State.WaspTrades > 0 || State.Paper > 0m;
+
+    /// <summary>Propolis has been seen: the poplar has sprouted, or any propolis was held.</summary>
+    public bool PropolisSeen => State.PropolisRevealed || State.Propolis > 0m;
 
     private int VacuumLevel => Config.Tools.ToList().FindIndex(t => t.Id == "vacuum") + 1;
 
     public bool CanBuyUpgrade(string id) =>
         Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u
         && !Owns(id) && IsUnlocked(u)
-        && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Sage >= u.Sage;
+        && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Sage >= u.Sage
+        && State.Paper >= u.Paper && State.Propolis >= u.Propolis;
 
     /// <summary>Takes every part of the cost at once, or nothing.</summary>
     public ActionResult BuyUpgrade(string id)
@@ -730,6 +940,8 @@ public sealed class BeekeeperEngine
         State.Beebits -= u.Beebits;
         State.Wax -= u.Wax;
         State.Sage -= u.Sage;
+        State.Paper -= u.Paper;
+        State.Propolis -= u.Propolis;
         State.Upgrades.Add(id);
         RefreshStorageFlag();
         return new ActionResult(true, u.Beebits, new[] { new BeekeeperEvent(BeekeeperEvents.UpgradeBought, 0m, id) });
@@ -903,8 +1115,10 @@ public sealed class BeekeeperEngine
         State.Paper += count;
         State.WaspTrades++;
         RefreshStorageFlag();
+        State.PaperRevealed = true;
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WaspTrade, count, null, honey) };
         if (State.WaspTrades == 1) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPaper));
+        GiveSeedsIfDue(events);   // the wasps' reputation brings the poplar seed
         return new ActionResult(true, count, events);
     }
 
@@ -912,12 +1126,25 @@ public sealed class BeekeeperEngine
 
     // Cut in stage 6 (spec 014): guards no longer protect bees in a raid.
     // public bool HasGuards => State.GuardBees >= 1m;
-    public bool IsGrowing => State.GrowSecondsLeft > 0m;
+    // Cut in stage 7 (spec 015): one growing seed, and "the Nth seed is the Nth plant".
+    // public bool IsGrowing => State.GrowSecondsLeft > 0m;
+    // public BeekeeperPlant? GrowingPlant =>
+    //     IsGrowing && State.SeedsPlanted >= 1 && State.SeedsPlanted <= Config.Plants.Count
+    //         ? Config.Plants[State.SeedsPlanted - 1] : null;
 
-    /// <summary>The plant the growing seed will become, or null when nothing grows.</summary>
-    public BeekeeperPlant? GrowingPlant =>
-        IsGrowing && State.SeedsPlanted >= 1 && State.SeedsPlanted <= Config.Plants.Count
-            ? Config.Plants[State.SeedsPlanted - 1] : null;
+    /// <summary>Garden beds owned: two, three with the Third Bed.</summary>
+    public int BedCount => Config.StartingBeds + (Owns(BeekeeperUpgrades.ThirdBed) ? Config.ThirdBedBeds : 0);
+
+    /// <summary>Beds with a seed growing.</summary>
+    public bool IsGrowing => State.Beds.Count > 0;
+
+    public int FreeBeds => Math.Max(0, BedCount - State.Beds.Count);
+
+    public BeekeeperPlant? PlantById(string id) => Config.Plants.FirstOrDefault(p => p.Id == id);
+
+    /// <summary>Seeds in hand, as plants (in the order they were given).</summary>
+    public IReadOnlyList<BeekeeperPlant> SeedsInHand =>
+        State.SeedsInHand.Select(PlantById).OfType<BeekeeperPlant>().ToList();
 
     /// <summary>Plants that have sprouted, in order.</summary>
     public IReadOnlyList<BeekeeperPlant> SproutedPlants =>
@@ -927,6 +1154,24 @@ public sealed class BeekeeperEngine
     public IReadOnlyList<string> Specialties => SproutedPlants.Select(p => p.Specialty).Distinct().ToList();
 
     public bool HasSpecialty(string id) => SproutedPlants.Any(p => p.Specialty == id);
+
+    /// <summary>Nursing's laying multiplier: every nursing plant's strength, multiplied (1 = none).</summary>
+    public decimal NursingMultiplier
+    {
+        get
+        {
+            decimal m = 1m;
+            foreach (var p in SproutedPlants)
+                if (p.Specialty == BeekeeperSpecialties.Nursing) m *= p.Strength;
+            return m;
+        }
+    }
+
+    /// <summary>Propolis a minute from resin: every resin plant's strength, added up.</summary>
+    public decimal ResinPropolisPerMinute =>
+        SproutedPlants.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
+
+    public decimal PropolisPerSecondNow => ResinPropolisPerMinute / 60m;
 
     /// <summary>Pollen a minute from foraging: every foraging plant's strength, added up.</summary>
     public decimal ForagingPollenPerMinute =>
@@ -946,58 +1191,78 @@ public sealed class BeekeeperEngine
         }
     }
 
-    private void GiveSeedIfDue(List<BeekeeperEvent> events)
+    // Cut in stage 7 (spec 015): the Nth Hippie seed was the Nth plant, one at a time.
+    // private void GiveSeedIfDue(List<BeekeeperEvent> events)
+    // {
+    //     if (State.SeedsGiven >= Config.Plants.Count) return;
+    //     if (State.HippieTrades < Config.Plants[State.SeedsGiven].SeedAtTrade) return;
+    //     State.SeedsGiven++;
+    //     State.Seeds++;
+    //     State.GardenRevealed = true;
+    //     events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.Seeds));
+    // }
+
+    /// <summary>Gives every seed whose giver has traded enough and that was not given yet: the
+    /// Hippies' plants by Hippie trades, the wasps' by wasp trades. Each plant is given once, by
+    /// id. Checked after a trade and on load (so an older save past a count gets its seed).</summary>
+    private void GiveSeedsIfDue(List<BeekeeperEvent> events)
     {
-        if (State.SeedsGiven >= Config.Plants.Count) return;
-        if (State.HippieTrades < Config.Plants[State.SeedsGiven].SeedAtTrade) return;
-        State.SeedsGiven++;
-        State.Seeds++;
+        foreach (var plant in Config.Plants)
+        {
+            if (State.SeedsGivenIds.Contains(plant.Id) || State.Plants.Contains(plant.Id)
+                || State.SeedsInHand.Contains(plant.Id) || State.Beds.Any(b => b.PlantId == plant.Id)) continue;
+            bool byWasps = plant.Giver == BeekeeperGivers.Wasps;
+            long trades = byWasps ? State.WaspTrades : State.HippieTrades;
+            if (trades < plant.SeedAtTrade) continue;
+            GiveSeed(plant, byWasps, events);
+        }
+    }
+
+    private void GiveSeed(BeekeeperPlant plant, bool byWasps, List<BeekeeperEvent> events)
+    {
+        State.SeedsGivenIds.Add(plant.Id);
+        State.SeedsInHand.Add(plant.Id);
         State.GardenRevealed = true;
-        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.Seeds));
+        events.Add(new BeekeeperEvent(byWasps ? BeekeeperEvents.WaspSeedGiven : BeekeeperEvents.SeedGiven,
+            State.SeedsInHand.Count, plant.Id));
     }
 
-    public bool CanPlantSeed => State.Seeds >= 1 && !IsGrowing && State.SeedsPlanted < Config.Plants.Count;
+    /// <summary>A seed in hand and a free bed.</summary>
+    public bool CanPlantSeed => State.SeedsInHand.Count >= 1 && FreeBeds > 0;
 
-    /// <summary>Uses a seed; what it grows stays a surprise. One plant grows at a time.</summary>
-    public ActionResult PlantSeed()
+    public bool CanPlantSeedOf(string plantId) => State.SeedsInHand.Contains(plantId) && FreeBeds > 0;
+
+    /// <summary>Plants a seed in a free bed, for its own grow time. <paramref name="plantId"/> null
+    /// plants the first seed in hand.</summary>
+    public ActionResult PlantSeed(string? plantId = null)
     {
-        if (!CanPlantSeed) return ActionResult.Refused;
-        State.Seeds--;
-        State.SeedsPlanted++;
-        State.GrowSecondsLeft = Config.GrowSeconds;
-        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.SeedPlanted) });
+        plantId ??= State.SeedsInHand.FirstOrDefault();
+        if (plantId is null || !CanPlantSeedOf(plantId) || PlantById(plantId) is not { } plant) return ActionResult.Refused;
+        State.SeedsInHand.Remove(plantId);
+        State.Beds.Add(new BeekeeperBed { PlantId = plantId, SecondsLeft = plant.GrowSeconds });
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.SeedPlanted, 0m, plantId) });
     }
+
+    // Cut in stage 7 (spec 015): GrowGarden did the one growing seed; Work now splits at every
+    // sprout (and the sage-propolis candle burning out) and calls Attract between the splits.
 
     /// <summary>
-    /// Growing and foraging for <paramref name="seconds"/>, in one step for any span so live ticks
-    /// and time away agree. Pollen is a straight line in time (rate × seconds; spec 014). If the
-    /// seed sprouts part-way, the span is split there and the new plant only counts afterwards.
+    /// The garden's gathering for <paramref name="seconds"/>: pollen (foraging) and propolis (resin)
+    /// are straight lines in time (rate × seconds; spec 014), so one long stretch equals many short
+    /// ones. <see cref="Work"/> never lets a stretch cross a sprout, so the rates are constant here.
     /// </summary>
-    private void GrowGarden(decimal seconds, List<BeekeeperEvent> events)
-    {
-        if (seconds <= 0m) return;
-
-        decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
-        Attract(before, events);
-        if (!IsGrowing) return;
-
-        State.GrowSecondsLeft -= before;
-        if (State.GrowSecondsLeft > 0m) return;
-
-        State.GrowSecondsLeft = 0m;
-        var plant = Config.Plants[State.SeedsPlanted - 1];
-        State.Plants.Add(plant.Id);
-        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedSprouted));
-        events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, plant.Id));
-        Attract(seconds - before, events);
-    }
-
     private void Attract(decimal seconds, List<BeekeeperEvent> events)
     {
         if (seconds <= 0m) return;
 
         // Multiply first and divide once, so whole minutes stay exact.
         State.Pollen += ForagingPollenPerMinute * seconds / 60m;
+        State.Propolis += ResinPropolisPerMinute * seconds / 60m;
+        if (!State.PropolisRevealed && State.Propolis >= 1m)
+        {
+            State.PropolisRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPropolis));
+        }
 
         // Cut in stage 6 (spec 014): plants attracted forager and guard bees, and pollen was the
         // area under the growing forager line.
@@ -1063,25 +1328,74 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ debug
 
-    /// <summary>Debug builds only: the Hippies hand over a seed (the next in order).</summary>
+    private bool SeedNotYetGiven(BeekeeperPlant p) =>
+        !State.SeedsGivenIds.Contains(p.Id) && !State.Plants.Contains(p.Id)
+        && !State.SeedsInHand.Contains(p.Id) && !State.Beds.Any(b => b.PlantId == p.Id);
+
+    /// <summary>Debug builds only: a seed is handed over (the next plant whose seed has not been given).</summary>
     public IReadOnlyList<BeekeeperEvent> DebugGiveSeed()
     {
         var events = new List<BeekeeperEvent>();
-        if (State.SeedsGiven < Config.Plants.Count)
+        if (Config.Plants.FirstOrDefault(SeedNotYetGiven) is { } next)
+            GiveSeed(next, next.Giver == BeekeeperGivers.Wasps, events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: every seed not yet given is handed over.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveEverySeed()
+    {
+        var events = new List<BeekeeperEvent>();
+        foreach (var plant in Config.Plants.Where(SeedNotYetGiven).ToList())
+            GiveSeed(plant, plant.Giver == BeekeeperGivers.Wasps, events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: every growing seed sprouts now.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugFinishGrowing()
+    {
+        var events = new List<BeekeeperEvent>();
+        foreach (var bed in State.Beds.OrderBy(b => b.SecondsLeft).ToList()) Sprout(bed, events);
+        return events;
+    }
+
+    /// <summary>Debug builds only: hands out propolis.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGivePropolis(decimal propolis)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (propolis <= 0m) return events;
+        State.Propolis += propolis;
+        if (!State.PropolisRevealed)
         {
-            State.SeedsGiven++;
-            State.Seeds++;
-            State.GardenRevealed = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.Seeds));
+            State.PropolisRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPropolis));
         }
         return events;
     }
 
-    /// <summary>Debug builds only: the growing seed sprouts now.</summary>
-    public IReadOnlyList<BeekeeperEvent> DebugFinishGrowing()
+    /// <summary>Debug builds only: hands out paper.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGivePaper(decimal paper)
     {
         var events = new List<BeekeeperEvent>();
-        if (IsGrowing) GrowGarden(State.GrowSecondsLeft, events);
+        if (paper <= 0m) return events;
+        State.Paper += paper;
+        State.PaperRevealed = true;
+        return events;
+    }
+
+    /// <summary>Debug builds only: the Hippie trade count goes up to 19 (one short of the willow
+    /// seed), the Hippies arrive if they hadn't and ten candles are put on the shelf for the trade.
+    /// Seeds already due at that count are given.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugHippieTradesTo19()
+    {
+        var events = new List<BeekeeperEvent>();
+        if (!State.HippiesRevealed)
+        {
+            State.HippiesRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.HippiesArrive));
+        }
+        State.HippieTrades = Math.Max(State.HippieTrades, 19);
+        if (State.BeeswaxCandles < Config.CandlesPerSage) State.BeeswaxCandles = Config.CandlesPerSage;
+        GiveSeedsIfDue(events);
         return events;
     }
 

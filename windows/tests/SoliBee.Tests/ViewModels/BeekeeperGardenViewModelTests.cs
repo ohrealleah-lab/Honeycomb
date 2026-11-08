@@ -48,17 +48,18 @@ public class BeekeeperGardenViewModelTests : IDisposable
         Assert.Equal(1, vm.Seeds);
         Assert.True(vm.GardenRevealed);
         Assert.True(vm.CanPlantSeed);
+        Assert.Equal(BeekeeperPlants.Wildflowers, vm.SeedsInHand[0].Id);
     }
 
     [Fact]
     public void Planting_ThenTenMinutesOfTicks_SproutsAndLogsBothLines()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Seeds = 1, SeedsGiven = 1, GardenRevealed = true, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { SeedsInHand = { BeekeeperPlants.Wildflowers }, GardenRevealed = true, BearName = "Bruno" });
         vm.PlantSeedCommand.Execute(null);
         Assert.True(Logged(vm, BeekeeperEvents.SeedPlanted));
         Assert.True(vm.IsGrowing);
-        Assert.False(vm.CanPlantSeed);
+        Assert.False(vm.CanPlantSeed);               // no seed left in hand
 
         for (int i = 0; i < 600; i++) { clock.Advance(1); vm.Tick(); }
 
@@ -72,7 +73,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     public void ReopeningAfterTwentyMinutes_HasSprouted_AndForagersArrived()
     {
         var clock = new Clock();
-        var first = Make(clock, new BeekeeperState { Seeds = 1, SeedsGiven = 1, GardenRevealed = true, BearName = "Bruno", Bees = 10m, HoneyRevealed = true }, persist: true);
+        var first = Make(clock, new BeekeeperState { SeedsInHand = { BeekeeperPlants.Wildflowers }, GardenRevealed = true, BearName = "Bruno", Bees = 10m, HoneyRevealed = true }, persist: true);
         first.PlantSeedCommand.Execute(null);
         first.SaveNow();
         first.Dispose();
@@ -127,7 +128,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     public void AGardenInProgress_IsKeptWhenTheGameIsReopenedQuickly()
     {
         var clock = new Clock();
-        var first = Make(clock, new BeekeeperState { Seeds = 2, SeedsGiven = 2, GardenRevealed = true, BearName = "Bruno" }, persist: true);
+        var first = Make(clock, new BeekeeperState { SeedsInHand = { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble }, GardenRevealed = true, BearName = "Bruno" }, persist: true);
         first.PlantSeedCommand.Execute(null);
         clock.Advance(1);
         first.Dispose();
@@ -135,6 +136,6 @@ public class BeekeeperGardenViewModelTests : IDisposable
         var second = Make(clock, state: null, persist: true);
         Assert.Equal(1, second.Seeds);
         Assert.True(second.IsGrowing);
-        Assert.True(second.State.GrowSecondsLeft is > 590m and <= 600m);
+        Assert.True(second.State.Beds[0].SecondsLeft is > 590m and <= 600m);
     }
 }

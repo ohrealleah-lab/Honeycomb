@@ -1770,7 +1770,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperGardenTitle = "beekeeper_garden_title"
     /// Garden button: plant a seed
     case beekeeperGardenPlant = "beekeeper_garden_plant"
-    /// Garden: a seed is growing (a surprise, no timer)
+    /// Garden: [unused since stage 7 (spec 015): beds name what grows; kept so it can come back]
     case beekeeperGardenGrowing = "beekeeper_garden_growing"
     /// Garden: nothing planted and no seed in hand
     case beekeeperGardenEmpty = "beekeeper_garden_empty"
@@ -1908,4 +1908,138 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogFirstPaper = "beekeeper_log_first_paper"
     /// Story log; %@ = honey given, paper got
     case beekeeperLogTradeWaspsFmt = "beekeeper_log_trade_wasps_fmt"
+    /// Hive card row label (Garden group)
+    case beekeeperHivePropolis = "beekeeper_hive_propolis"
+    /// Hive card row label (Crafts group)
+    case beekeeperHiveBeeBoostCandles = "beekeeper_hive_bee_boost_candles"
+    /// Hive card row label (Crafts group)
+    case beekeeperHiveSagePropolisCandles = "beekeeper_hive_sage_propolis_candles"
+    /// Hive card, Bees group; %@ = extra laying percent (keep the % after it)
+    case beekeeperSpecialtyNursingFmt = "beekeeper_specialty_nursing_fmt"
+    /// Hive card, Bees group; %@ = propolis a minute
+    case beekeeperSpecialtyResinFmt = "beekeeper_specialty_resin_fmt"
+    /// Hive card, Crafts group; %@ = time left (a phrase like 'about 7 minutes')
+    case beekeeperBeeBoostBurningFmt = "beekeeper_bee_boost_burning_fmt"
+    /// Hive card, Crafts group; %@ = time left (a phrase like 'about 3 hours')
+    case beekeeperSagePropolisBurningFmt = "beekeeper_sage_propolis_burning_fmt"
+    /// Hover on Propolis; %@ = propolis gathered per second
+    case beekeeperPropolisPerSecFmt = "beekeeper_propolis_per_sec_fmt"
+    /// A rough time: one minute
+    case beekeeperDurationMinute = "beekeeper_duration_minute"
+    /// A rough time; %@ = whole minutes
+    case beekeeperDurationMinutesFmt = "beekeeper_duration_minutes_fmt"
+    /// A rough time: one hour
+    case beekeeperDurationHour = "beekeeper_duration_hour"
+    /// A rough time; %@ = whole hours
+    case beekeeperDurationHoursFmt = "beekeeper_duration_hours_fmt"
+    /// Garden card: a bed with nothing growing
+    case beekeeperGardenEmptyBed = "beekeeper_garden_empty_bed"
+    /// Garden card; %@ = plant name, %@ = rough time left
+    case beekeeperGardenBedGrowingFmt = "beekeeper_garden_bed_growing_fmt"
+    /// Garden card: a seed in hand; %@ = the plant's seed name (lower case)
+    case beekeeperGardenSeedFmt = "beekeeper_garden_seed_fmt"
+    /// Garden card: hover on the Plant button; %@ = rough grow time
+    case beekeeperGardenTakesFmt = "beekeeper_garden_takes_fmt"
+    /// Garden: a plant
+    case beekeeperPlantWillow = "beekeeper_plant_willow"
+    /// Garden: what the plant's specialty does
+    case beekeeperPlantWillowBlurb = "beekeeper_plant_willow_blurb"
+    /// Garden: a plant
+    case beekeeperPlantPoplar = "beekeeper_plant_poplar"
+    /// Garden: what the plant's specialty does
+    case beekeeperPlantPoplarBlurb = "beekeeper_plant_poplar_blurb"
+    /// Garden: a plant
+    case beekeeperPlantClover = "beekeeper_plant_clover"
+    /// Garden: what the plant's specialty does
+    case beekeeperPlantCloverBlurb = "beekeeper_plant_clover_blurb"
+    /// Garden card: the specialty a plant gives (lower case, after the plant's name)
+    case beekeeperSpecialtyNursing = "beekeeper_specialty_nursing"
+    /// Garden card: the specialty a plant gives (lower case, after the plant's name)
+    case beekeeperSpecialtyResin = "beekeeper_specialty_resin"
+    /// A seed's plant, lower case, used in 'a ... seed'
+    case beekeeperSeedNameWildflowers = "beekeeper_seed_name_wildflowers"
+    /// A seed's plant, lower case, used in 'a ... seed'
+    case beekeeperSeedNameBramble = "beekeeper_seed_name_bramble"
+    /// A seed's plant, lower case, used in 'a ... seed'
+    case beekeeperSeedNameWillow = "beekeeper_seed_name_willow"
+    /// A seed's plant, lower case, used in 'a ... seed'
+    case beekeeperSeedNamePoplar = "beekeeper_seed_name_poplar"
+    /// A seed's plant, lower case, used in 'a ... seed'
+    case beekeeperSeedNameClover = "beekeeper_seed_name_clover"
+    /// Price part; %@ = amount
+    case beekeeperCostPaperFmt = "beekeeper_cost_paper_fmt"
+    /// Price part; %@ = amount
+    case beekeeperCostPropolisFmt = "beekeeper_cost_propolis_fmt"
+    /// Workbench: recipe name
+    case beekeeperBeeBoostCandle = "beekeeper_bee_boost_candle"
+    /// Workbench: recipe description; %@ = extra honey percent (keep the % after it), %@ = time
+    case beekeeperBeeBoostBlurbFmt = "beekeeper_bee_boost_blurb_fmt"
+    /// Workbench: recipe name
+    case beekeeperSagePropolisCandle = "beekeeper_sage_propolis_candle"
+    /// Workbench: recipe description; %@ = extra honey percent (keep the % after it), %@ = time
+    case beekeeperSagePropolisBlurbFmt = "beekeeper_sage_propolis_blurb_fmt"
+    /// Workbench button: light a bee-boost candle
+    case beekeeperLightBeeBoost = "beekeeper_light_bee_boost"
+    /// Workbench button: light a sage-propolis candle
+    case beekeeperLightSagePropolis = "beekeeper_light_sage_propolis"
+    /// Shop upgrade name
+    case beekeeperUpgradeNotebook = "beekeeper_upgrade_notebook"
+    /// Shop upgrade description
+    case beekeeperUpgradeNotebookBlurb = "beekeeper_upgrade_notebook_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeThirdBed = "beekeeper_upgrade_third_bed"
+    /// Shop upgrade description
+    case beekeeperUpgradeThirdBedBlurb = "beekeeper_upgrade_third_bed_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradePropolisSeal = "beekeeper_upgrade_propolis_seal"
+    /// Shop upgrade description
+    case beekeeperUpgradePropolisSealBlurb = "beekeeper_upgrade_propolis_seal_blurb"
+    /// Card title (all caps)
+    case beekeeperNotebookTitle = "beekeeper_notebook_title"
+    /// Notebook note
+    case beekeeperNoteQueen = "beekeeper_note_queen"
+    /// Notebook note
+    case beekeeperNoteForaging = "beekeeper_note_foraging"
+    /// Notebook note
+    case beekeeperNoteGuarding = "beekeeper_note_guarding"
+    /// Notebook note
+    case beekeeperNoteNursing = "beekeeper_note_nursing"
+    /// Notebook note
+    case beekeeperNoteResin = "beekeeper_note_resin"
+    /// Story log; %@ = the plant's seed name (lower case)
+    case beekeeperLogSeedGivenFmt = "beekeeper_log_seed_given_fmt"
+    /// Story log; %@ = the plant's seed name (lower case)
+    case beekeeperLogWaspSeedGivenFmt = "beekeeper_log_wasp_seed_given_fmt"
+    /// Story log; %@ = the plant's seed name (lower case)
+    case beekeeperLogSeedPlantedFmt = "beekeeper_log_seed_planted_fmt"
+    /// Story log: the willow sprouts
+    case beekeeperLogPlantWillowNursing = "beekeeper_log_plant_willow_nursing"
+    /// Story log: the poplar sprouts
+    case beekeeperLogPlantPoplarResin = "beekeeper_log_plant_poplar_resin"
+    /// Story log: clover sprouts
+    case beekeeperLogPlantCloverForaging = "beekeeper_log_plant_clover_foraging"
+    /// Story log: the first propolis
+    case beekeeperLogFirstPropolis = "beekeeper_log_first_propolis"
+    /// Story log
+    case beekeeperLogBeeBoostLit = "beekeeper_log_bee_boost_lit"
+    /// Story log
+    case beekeeperLogBeeBoostOut = "beekeeper_log_bee_boost_out"
+    /// Story log
+    case beekeeperLogSagePropolisLit = "beekeeper_log_sage_propolis_lit"
+    /// Story log
+    case beekeeperLogSagePropolisOut = "beekeeper_log_sage_propolis_out"
+    /// Story log on reopening the app
+    case beekeeperLogWelcomeBackSageOut = "beekeeper_log_welcome_back_sage_out"
+    /// Story log on reopening the app; %@ = propolis gathered
+    case beekeeperLogWelcomeBackPropolisFmt = "beekeeper_log_welcome_back_propolis_fmt"
+    /// Story log
+    case beekeeperLogNotebookBought = "beekeeper_log_notebook_bought"
+    /// Story log
+    case beekeeperLogThirdBedBought = "beekeeper_log_third_bed_bought"
+    /// Story log
+    case beekeeperLogPropolisSealBought = "beekeeper_log_propolis_seal_bought"
+    /// Story log; %@ = how many
+    case beekeeperLogCraftedBeeBoostFmt = "beekeeper_log_crafted_bee_boost_fmt"
+    /// Story log; %@ = how many
+    case beekeeperLogCraftedSagePropolisFmt = "beekeeper_log_crafted_sage_propolis_fmt"
 }

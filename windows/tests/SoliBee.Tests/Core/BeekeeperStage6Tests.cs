@@ -140,9 +140,7 @@ public class BeekeeperStage6Tests : IDisposable
     {
         var s = Garden(BeekeeperPlants.Wildflowers);
         s.Bees = 1000m;
-        s.SeedsGiven = 2;
-        s.SeedsPlanted = 2;          // the bramble is growing
-        s.GrowSecondsLeft = 60m;
+        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });   // the bramble is growing
         var e = Make(s, BigCombs);
         e.AdvanceAway(120m);
         // 60 s at 10 honey/s, then 60 s at 12.5 honey/s
@@ -186,7 +184,7 @@ public class BeekeeperStage6Tests : IDisposable
         {
             var s = Busy();
             s.Plants.Remove(BeekeeperPlants.Bramble);
-            s.GrowSecondsLeft = 400m;   // the bramble sprouts part-way
+            s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 400m });   // the bramble sprouts part-way
             return s;
         }
         var live = Make(Start(), BigCombs);
@@ -245,7 +243,9 @@ public class BeekeeperStage6Tests : IDisposable
 
         var e = Make(s);
         Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
-        Assert.Equal(BeekeeperPlants.Bramble, e.GrowingPlant!.Id);   // still growing, time kept
+        // Stage 7: the growing seed went into bed 1, time kept; the seed order was plant order.
+        Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(e.State.Beds).PlantId);
+        Assert.Equal(125m, e.State.Beds[0].SecondsLeft);
     }
 
     [Fact]
@@ -256,7 +256,7 @@ public class BeekeeperStage6Tests : IDisposable
         var s = new BeekeeperState { BribesTotal = 5, EmissaryCome = true, WaspTrades = 7, Paper = 23m, OldCountsAnnounced = true };
         Assert.True(BeekeeperSaveService.Save(s, path, DateTime.UtcNow));
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(6, back.Version);
+        Assert.Equal(7, back.Version);
         Assert.Equal(5, back.BribesTotal);
         Assert.True(back.EmissaryCome);
         Assert.Equal(7, back.WaspTrades);

@@ -88,8 +88,14 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Queen }, Ids(BeekeeperHiveRows.GroupBees));
         Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs, BeekeeperHiveRows.CombsFull },
             Ids(BeekeeperHiveRows.GroupHive));
-        Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread }, Ids(BeekeeperHiveRows.GroupGarden));
-        Assert.Equal(new[] { BeekeeperHiveRows.BeeswaxCandles, BeekeeperHiveRows.RepellentCandles }, Ids(BeekeeperHiveRows.GroupCrafts));
+        Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread, BeekeeperHiveRows.Propolis },
+            Ids(BeekeeperHiveRows.GroupGarden));
+        Assert.Equal(new[]
+        {
+            BeekeeperHiveRows.BeeswaxCandles, BeekeeperHiveRows.RepellentCandles,
+            BeekeeperHiveRows.BeeBoostCandles, BeekeeperHiveRows.SagePropolisCandles,
+            BeekeeperHiveRows.BeeBoostBurning, BeekeeperHiveRows.SagePropolisBurning,
+        }, Ids(BeekeeperHiveRows.GroupCrafts));
         Assert.Equal(new[] { BeekeeperHiveRows.Beebits, BeekeeperHiveRows.Sage, BeekeeperHiveRows.Paper }, Ids(BeekeeperHiveRows.GroupTradeGoods));
     }
 

@@ -1740,7 +1740,11 @@ public partial class MainWindow : Window
             case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (2 combs)
             case "Calm":    hive.DebugFillCalmMeter(); break;   // needs the Smoker
             case "Seed":    hive.DebugGiveSeed(); break;
-            case "Grow":    hive.DebugFinishGrowing(); break;   // needs a planted seed
+            case "EverySeed": hive.DebugGiveEverySeed(); break;   // every seed not yet given (stage 7)
+            case "Grow":    hive.DebugFinishGrowing(); break;   // finishes every bed
+            case "Propolis": hive.DebugGivePropolis(50m); break;
+            case "Paper":   hive.DebugGivePaper(20m); break;
+            case "Hippies19": hive.DebugHippieTradesTo19(); break;   // one more Hippie trade brings the willow seed
             case "Pollen":  hive.DebugGivePollen(10m); break;
             case "BeeBread": hive.DebugGiveBeeBread(10m); break;
             case "Trades":  hive.DebugBearTradesToAlmostAgreement(); break;   // one more sale brings the agreement

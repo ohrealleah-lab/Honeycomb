@@ -137,6 +137,14 @@
                                 HorizontalContentAlignment="Center" Click="Puff_Click" />
                     </StackPanel>
                 </Border>
+
+                <!-- THE BEEKEEPER'S NOTEBOOK (stage 7): the Bees card, back as a Shop upgrade. One note per thing the hive has. -->
+                <Border x:Name="NotebookCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="NotebookTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="NotebookRows" Spacing="8" />
+                    </StackPanel>
+                </Border>
             </StackPanel>
 
             <!-- ───────── CENTRE: Bear, Shop, Combs ───────── -->
@@ -213,6 +221,39 @@
                                         HorizontalContentAlignment="Center" Click="CraftRepellent_Click" />
                             </StackPanel>
                         </Grid>
+                        <!-- The propolis candles (stage 7): shown once the poplar has sprouted -->
+                        <Grid x:Name="BeeBoostRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="BeeBoostNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="BeeBoostInfoText" Classes="bk-muted" />
+                                <Button x:Name="LightBeeBoostButton" Classes="bk-button" MinWidth="90" Margin="0,4,0,0"
+                                        HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="LightBeeBoost_Click" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="BeeBoost100Button" Classes="bk-button" MinWidth="56" Tag="BeeBoost:100"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="BeeBoost10Button" Classes="bk-button" MinWidth="56" Tag="BeeBoost:10"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="CraftBeeBoostButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="CraftBeeBoost_Click" />
+                            </StackPanel>
+                        </Grid>
+                        <Grid x:Name="SagePropolisRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="SagePropolisNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="SagePropolisInfoText" Classes="bk-muted" />
+                                <Button x:Name="LightSagePropolisButton" Classes="bk-button" MinWidth="90" Margin="0,4,0,0"
+                                        HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="LightSagePropolis_Click" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Button x:Name="SagePropolis100Button" Classes="bk-button" MinWidth="56" Tag="SagePropolis:100"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="SagePropolis10Button" Classes="bk-button" MinWidth="56" Tag="SagePropolis:10"
+                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
+                                <Button x:Name="CraftSagePropolisButton" Classes="bk-button" MinWidth="90"
+                                        HorizontalContentAlignment="Center" Click="CraftSagePropolis_Click" />
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -220,9 +261,11 @@
                 <Border x:Name="GardenCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="GardenTitleText" Classes="bk-title" />
+                        <!-- Since stage 7 (spec 015): the beds (growing or empty), the seeds in hand with a
+                             Plant button each, then the plants that have sprouted. -->
                         <TextBlock x:Name="GardenStatusText" Classes="bk-body" FontWeight="SemiBold" />
-                        <Button x:Name="PlantSeedButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center" Click="PlantSeed_Click" />
+                        <StackPanel x:Name="BedRows" Spacing="4" />
+                        <StackPanel x:Name="SeedRows" Spacing="8" />
                         <StackPanel x:Name="PlantRows" Spacing="8" />
                     </StackPanel>
                 </Border>

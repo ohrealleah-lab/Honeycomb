@@ -2,7 +2,7 @@
 
 **Feature Branch**: `015-beekeeper-seeds`
 **Created**: 2026-11-07
-**Status**: Draft v1 (2026-11-07), from Leah's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
+**Status**: Built (2026-11-07), from Leah's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009–014 (014: specialties, the grouped Hive card, the emissary, paper).
 

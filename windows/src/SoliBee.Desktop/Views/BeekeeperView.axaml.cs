@@ -68,6 +68,8 @@ public partial class BeekeeperView : UserControl
             _shopSignature = "";
             _logSignature = "";
             _plantsSignature = "";
+            _seedsSignature = "";
+            _notebookSignature = "";
             _hiveSignature = "";
             Redraw();
         });
@@ -221,16 +223,44 @@ public partial class BeekeeperView : UserControl
         LightRepellentButton.Content = BeekeeperText.Light;
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
+        // The propolis candles (stage 7): once the poplar has sprouted
+        string Pct(decimal multiplier) => N((multiplier - 1m) * 100m);
+        BeeBoostRow.IsVisible = vm.PropolisCandlesShown;
+        BeeBoostNameText.Text = BeekeeperText.BeeBoostCandle;
+        BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeBoostCandleWax), null, propolis: N(vm.Config.BeeBoostCandlePropolis))
+            + " · " + BeekeeperText.BeeBoostBlurb(Pct(vm.Config.BeeBoostHoneyMultiplier), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
+        CraftBeeBoostButton.Content = BeekeeperText.Make;
+        CraftBeeBoostButton.IsEnabled = vm.CanCraftBeeBoost;
+        ShowBatch(BeeBoost10Button, 10, vm.CanCraftBeeBoostTimes(10));
+        ShowBatch(BeeBoost100Button, 100, vm.CanCraftBeeBoostTimes(100));
+        LightBeeBoostButton.Content = BeekeeperText.LightBeeBoost;
+        LightBeeBoostButton.IsEnabled = vm.CanLightBeeBoost;
+        SagePropolisRow.IsVisible = vm.PropolisCandlesShown;
+        SagePropolisNameText.Text = BeekeeperText.SagePropolisCandle;
+        SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.Config.SagePropolisCandleWax), N(vm.Config.SagePropolisCandleSage),
+                propolis: N(vm.Config.SagePropolisCandlePropolis))
+            + " · " + BeekeeperText.SagePropolisBlurb(Pct(vm.Config.SagePropolisHoneyMultiplier), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
+        CraftSagePropolisButton.Content = BeekeeperText.Make;
+        CraftSagePropolisButton.IsEnabled = vm.CanCraftSagePropolis;
+        ShowBatch(SagePropolis10Button, 10, vm.CanCraftSagePropolisTimes(10));
+        ShowBatch(SagePropolis100Button, 100, vm.CanCraftSagePropolisTimes(100));
+        LightSagePropolisButton.Content = BeekeeperText.LightSagePropolis;
+        LightSagePropolisButton.IsEnabled = vm.CanLightSagePropolis;
 
-        // The Garden: a surprise while growing (no timer), the plants once sprouted
+        // The Notebook (stage 7): the Bees card, once bought
+        NotebookCard.IsVisible = vm.HasNotebook;
+        NotebookTitleText.Text = BeekeeperText.NotebookTitle;
+        if (vm.HasNotebook) UpdateNotebook(vm, lang);
+
+        // The Garden (stage 7): the beds, the seeds in hand, the plants once sprouted
         GardenCard.IsVisible = vm.GardenRevealed;
         GardenTitleText.Text = BeekeeperText.GardenTitle;
-        GardenStatusText.Text = vm.IsGrowing ? BeekeeperText.GardenGrowing
-            : vm.CanPlantSeed ? "" : BeekeeperText.GardenEmpty;
-        GardenStatusText.IsVisible = GardenStatusText.Text.Length > 0;
-        PlantSeedButton.Content = BeekeeperText.GardenPlant;
-        PlantSeedButton.IsVisible = !vm.IsGrowing && vm.Seeds > 0;
-        PlantSeedButton.IsEnabled = vm.CanPlantSeed;
+        // Cut in stage 7 (spec 015): "Something is growing!" and the one Plant button.
+        // GardenStatusText.Text = vm.IsGrowing ? BeekeeperText.GardenGrowing : vm.CanPlantSeed ? "" : BeekeeperText.GardenEmpty;
+        GardenStatusText.Text = "";
+        GardenStatusText.IsVisible = false;
+        UpdateBeds(vm);
+        UpdateSeeds(vm, lang);
         UpdatePlants(vm, lang);
 
         // Wasps (never again once the emissary has come)
@@ -279,6 +309,8 @@ public partial class BeekeeperView : UserControl
             case "Beeswax": _vm.CraftBeeswaxTimes(n); break;
             case "BeeBread": _vm.MakeBeeBreadTimes(n); break;
             case "Repellent": _vm.CraftRepellentTimes(n); break;
+            case "BeeBoost": _vm.CraftBeeBoostTimes(n); break;
+            case "SagePropolis": _vm.CraftSagePropolisTimes(n); break;
         }
     }
 
@@ -355,6 +387,75 @@ public partial class BeekeeperView : UserControl
             }
     }
 
+    // The beds are plain text, so they are simply redrawn each tick (a row per bed, empty or growing).
+    private void UpdateBeds(BeekeeperViewModel vm)
+    {
+        var growing = vm.GrowingBeds;
+        int total = Math.Max(vm.BedCount, growing.Count);
+        while (BedRows.Children.Count > total) BedRows.Children.RemoveAt(BedRows.Children.Count - 1);
+        while (BedRows.Children.Count < total) BedRows.Children.Add(new TextBlock { Classes = { "bk-body" } });
+        for (int i = 0; i < total; i++)
+        {
+            var line = (TextBlock)BedRows.Children[i];
+            bool busy = i < growing.Count;
+            line.Text = busy ? BeekeeperText.BedGrowing(growing[i].Plant, growing[i].SecondsLeft) : BeekeeperText.GardenEmptyBed;
+            line.Opacity = busy ? 1.0 : 0.6;
+        }
+    }
+
+    // Each seed in hand has its own Plant button. Rebuilt only when the seeds change, so a button is
+    // never swapped under the mouse; whether it is enabled (a free bed) is refreshed every tick.
+    private string _seedsSignature = "";
+    private readonly Dictionary<string, Button> _seedButtons = new();
+
+    private void UpdateSeeds(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var seeds = vm.SeedsInHand;
+        string sig = lang + "|" + string.Join(",", seeds.Select(p => p.Id));
+        if (sig != _seedsSignature)
+        {
+            _seedsSignature = sig;
+            _seedButtons.Clear();
+            SeedRows.Children.Clear();
+            foreach (var plant in seeds)
+            {
+                var id = plant.Id;
+                var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+                row.Children.Add(new TextBlock
+                {
+                    Text = BeekeeperText.SeedLine(id), Classes = { "bk-body" },
+                    FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center,
+                });
+                var button = new Button
+                {
+                    Classes = { "bk-button" }, MinWidth = 90, Content = BeekeeperText.GardenPlant,
+                    HorizontalContentAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
+                };
+                ToolTip.SetTip(button, BeekeeperText.TakesToGrow(plant.GrowSeconds));
+                button.Click += (_, _) => _vm?.PlantSeedCommand.Execute(id);
+                Grid.SetColumn(button, 1);
+                row.Children.Add(button);
+                SeedRows.Children.Add(row);
+                _seedButtons[id] = button;
+            }
+        }
+        foreach (var (id, button) in _seedButtons) button.IsEnabled = vm.CanPlantSeedOf(id);
+    }
+
+    // The Notebook's notes: plain text, rebuilt only when a note is added.
+    private string _notebookSignature = "";
+
+    private void UpdateNotebook(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var notes = vm.NotebookNotes;
+        string sig = lang + "|" + string.Join(",", notes);
+        if (sig == _notebookSignature) return;
+        _notebookSignature = sig;
+        NotebookRows.Children.Clear();
+        foreach (var id in notes)
+            NotebookRows.Children.Add(new TextBlock { Text = BeekeeperText.NotebookNote(id), Classes = { "bk-body" }, Opacity = 0.9 });
+    }
+
     private string _plantsSignature = "";
 
     // Plain text rows, rebuilt only when what they show changes.
@@ -409,7 +510,8 @@ public partial class BeekeeperView : UserControl
                 string id = u.Id;
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id), false,
-                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage)), "upgrade:" + id, _ => vm.BuyUpgrade(id)));
+                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis)),
+                    "upgrade:" + id, _ => vm.BuyUpgrade(id)));
             }
         }
 
@@ -565,7 +667,10 @@ public partial class BeekeeperView : UserControl
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
-    private void PlantSeed_Click(object? sender, RoutedEventArgs e) => _vm?.PlantSeedCommand.Execute(null);
+    private void CraftBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeBoostCommand.Execute(null);
+    private void LightBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeBoostCommand.Execute(null);
+    private void CraftSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.CraftSagePropolisCommand.Execute(null);
+    private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
     private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);
     private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
     private void Puff_Click(object? sender, RoutedEventArgs e) => _vm?.PuffSmokerCommand.Execute(null);

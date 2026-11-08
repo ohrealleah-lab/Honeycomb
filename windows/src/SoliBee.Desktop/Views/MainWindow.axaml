@@ -98,7 +98,11 @@
                                         <MenuItem Header="Call a wasp" Click="DebugBeekeeper_Click" Tag="Wasp" />
                                         <MenuItem Header="Fill the calm meter" Click="DebugBeekeeper_Click" Tag="Calm" />
                                         <MenuItem Header="Give a seed" Click="DebugBeekeeper_Click" Tag="Seed" />
+                                        <MenuItem Header="Give every seed" Click="DebugBeekeeper_Click" Tag="EverySeed" />
                                         <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />
+                                        <MenuItem Header="+50 propolis" Click="DebugBeekeeper_Click" Tag="Propolis" />
+                                        <MenuItem Header="+20 paper" Click="DebugBeekeeper_Click" Tag="Paper" />
+                                        <MenuItem Header="Hippie trades to 19" Click="DebugBeekeeper_Click" Tag="Hippies19" />
                                         <MenuItem Header="+10 pollen" Click="DebugBeekeeper_Click" Tag="Pollen" />
                                         <MenuItem Header="+10 bee bread" Click="DebugBeekeeper_Click" Tag="BeeBread" />
                                         <MenuItem Header="Bear trades to 99" Click="DebugBeekeeper_Click" Tag="Trades" />

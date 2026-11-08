@@ -15,14 +15,22 @@ public sealed class BeekeeperLogEntry
     public string? Text { get; set; }
 }
 
+/// <summary>One garden bed that is growing a seed (spec 015).</summary>
+public sealed class BeekeeperBed
+{
+    public string PlantId { get; set; } = "";
+    public decimal SecondsLeft { get; set; }
+}
+
 /// <summary>Everything that is saved for a Beekeeper game.</summary>
 public sealed class BeekeeperState
 {
     /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps); 3 = stage 3
     /// (more tools, the Smoker); 4 = stage 4 (the Garden, pollen, the wooden hive); 5 = stage 5 (the
-    /// queen, the trade agreement); 6 = stage 6 (specialties, the wasp emissary, paper). Older files
-    /// load as they are: anything newer starts at zero.</summary>
-    public int Version { get; set; } = 6;
+    /// queen, the trade agreement); 6 = stage 6 (specialties, the wasp emissary, paper); 7 = stage 7
+    /// (named seeds, beds, propolis, two candles). Older files load as they are: anything newer
+    /// starts at zero, and the engine turns a file older than 7 into named seeds and beds.</summary>
+    public int Version { get; set; } = 7;
 
     // Resources
     public decimal Bees { get; set; }
@@ -79,13 +87,16 @@ public sealed class BeekeeperState
     public decimal CalmSecondsLeft { get; set; }
 
     // ----- Stage 4: the Garden (version 4)
-    /// <summary>Seeds the Hippies have given in all (the Nth is the Nth plant's seed).</summary>
+    // Obsolete since stage 7 (spec 015): seeds are named and live in SeedsInHand, SeedsGivenIds
+    // and Beds. These four are still read so stage 4 to 6 files load; the engine turns them into
+    // named seeds and a bed when it loads a file older than version 7, and never uses them again.
+    /// <summary>Obsolete (stage 7): seeds the Hippies gave in all (the Nth was the Nth plant's seed).</summary>
     public int SeedsGiven { get; set; }
-    /// <summary>Seeds in hand, not yet planted.</summary>
+    /// <summary>Obsolete (stage 7): seeds in hand, not yet planted.</summary>
     public int Seeds { get; set; }
-    /// <summary>Seeds planted in all; the next one grows Plants[SeedsPlanted].</summary>
+    /// <summary>Obsolete (stage 7): seeds planted in all; the next one grew Plants[SeedsPlanted].</summary>
     public int SeedsPlanted { get; set; }
-    /// <summary>Seconds until the growing seed sprouts; 0 = nothing growing.</summary>
+    /// <summary>Obsolete (stage 7): seconds until the growing seed sprouted; 0 = nothing growing.</summary>
     public decimal GrowSecondsLeft { get; set; }
     /// <summary>Plant ids that have sprouted, in order.</summary>
     public List<string> Plants { get; set; } = new();
@@ -122,6 +133,26 @@ public sealed class BeekeeperState
     /// <summary>True once an older save's forager and guard counts have been turned into
     /// specialties and announced (said once).</summary>
     public bool OldCountsAnnounced { get; set; }
+
+    // ----- Stage 7: more seeds, the poplar and propolis (version 7)
+    /// <summary>Seeds in hand, by plant id, not yet planted.</summary>
+    public List<string> SeedsInHand { get; set; } = new();
+    /// <summary>Plant ids whose seed has been given, so each is given once.</summary>
+    public List<string> SeedsGivenIds { get; set; } = new();
+    /// <summary>The garden beds that are growing a seed (a free bed is simply not listed).
+    /// Never more than the beds owned.</summary>
+    public List<BeekeeperBed> Beds { get; set; } = new();
+    public decimal Propolis { get; set; }
+    /// <summary>True once propolis has been seen (sticky): shows the Propolis Seal in the Shop.</summary>
+    public bool PropolisRevealed { get; set; }
+    /// <summary>True once paper has been seen (sticky): shows the Notebook and the Third Bed.</summary>
+    public bool PaperRevealed { get; set; }
+    public decimal BeeBoostCandles { get; set; }
+    public decimal SagePropolisCandles { get; set; }
+    /// <summary>Live seconds of bee-boost left (honey up); 0 = not burning. Waits while the app is closed.</summary>
+    public decimal BeeBoostSecondsLeft { get; set; }
+    /// <summary>Seconds of sage-propolis left (honey up); burns while the app is closed too.</summary>
+    public decimal SagePropolisSecondsLeft { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

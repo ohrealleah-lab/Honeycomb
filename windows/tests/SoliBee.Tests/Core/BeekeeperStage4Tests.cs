@@ -40,11 +40,12 @@ public class BeekeeperStage4Tests : IDisposable
     {
         var e = WithHippies(3);
         Assert.False(Has(e.TradeTenCandles().Events, BeekeeperEvents.SeedGiven));   // 4th
-        Assert.Equal(0, e.State.Seeds);
+        Assert.Empty(e.State.SeedsInHand);
 
         var fifth = e.TradeTenCandles();                                            // 5th
         Assert.True(Has(fifth.Events, BeekeeperEvents.SeedGiven));
-        Assert.Equal(1, e.State.Seeds);
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.SeedsInHand);   // a named seed (stage 7)
+        Assert.Contains(fifth.Events, ev => ev.Key == BeekeeperEvents.SeedGiven && ev.Text == BeekeeperPlants.Wildflowers);
         Assert.True(e.State.GardenRevealed);
     }
 
@@ -52,25 +53,23 @@ public class BeekeeperStage4Tests : IDisposable
     public void TheTenthTrade_GivesASecondSeed_AndNoMoreComeAfter()
     {
         var e = WithHippies(8);
-        e.State.SeedsGiven = 1;
-        e.State.Seeds = 0;
+        e.State.SeedsGivenIds.Add(BeekeeperPlants.Wildflowers);   // the first seed was given earlier
         e.TradeTenCandles();                       // 9th
-        Assert.Equal(0, e.State.Seeds);
+        Assert.Empty(e.State.SeedsInHand);
         e.TradeTenCandles();                       // 10th
-        Assert.Equal(1, e.State.Seeds);
-        Assert.Equal(2, e.State.SeedsGiven);
+        Assert.Equal(new[] { BeekeeperPlants.Bramble }, e.State.SeedsInHand);
 
-        for (int i = 0; i < 5; i++) e.TradeTenCandles();
-        Assert.Equal(1, e.State.Seeds);            // none in this build
+        for (int i = 0; i < 5; i++) e.TradeTenCandles();   // up to the 15th: the willow waits for the 20th
+        Assert.Single(e.State.SeedsInHand);
     }
 
     [Fact]
     public void AnOldSaveWithManyTrades_GetsItsFirstSeed_OnTheNextTrade()
     {
         var e = WithHippies(7);
-        Assert.Equal(0, e.State.SeedsGiven);
+        Assert.Empty(e.State.SeedsGivenIds);
         e.TradeTenCandles();
-        Assert.Equal(1, e.State.Seeds);
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.SeedsInHand);
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public class BeekeeperStage4Tests : IDisposable
         e.State.BeeswaxCandles = 100m;
         e.TradeAllCandles();
         Assert.Equal(5, e.State.HippieTrades);
-        Assert.Equal(1, e.State.Seeds);
+        Assert.Single(e.State.SeedsInHand);
     }
 
     [Fact]
@@ -93,8 +92,8 @@ public class BeekeeperStage4Tests : IDisposable
 
     // ============================================================ planting and growing
 
-    private static BeekeeperEngine WithSeed(int planted = 0)
-        => Make(new BeekeeperState { Seeds = 1, SeedsGiven = planted + 1, SeedsPlanted = planted, GardenRevealed = true });
+    private static BeekeeperEngine WithSeed(string plant = BeekeeperPlants.Wildflowers)
+        => Make(new BeekeeperState { SeedsInHand = { plant }, SeedsGivenIds = { plant }, GardenRevealed = true });
 
     [Fact]
     public void PlantingUsesTheSeed_AndStartsTheTenMinutes()
@@ -103,8 +102,10 @@ public class BeekeeperStage4Tests : IDisposable
         var r = e.PlantSeed();
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.SeedPlanted));
-        Assert.Equal(0, e.State.Seeds);
-        Assert.Equal(600m, e.State.GrowSecondsLeft);
+        Assert.Empty(e.State.SeedsInHand);
+        var bed = Assert.Single(e.State.Beds);
+        Assert.Equal(BeekeeperPlants.Wildflowers, bed.PlantId);
+        Assert.Equal(600m, bed.SecondsLeft);
         Assert.True(e.IsGrowing);
     }
 
@@ -113,12 +114,13 @@ public class BeekeeperStage4Tests : IDisposable
     {
         Assert.False(Make().PlantSeed().Done);
 
-        var e = WithSeed();
-        e.PlantSeed();
-        e.State.Seeds = 1;                          // a second seed waits
+        // Two beds (stage 7): two seeds grow at once, a third waits for a free bed.
+        var e = Make(new BeekeeperState { SeedsInHand = { "wildflowers", "bramble", "willow" }, GardenRevealed = true });
+        Assert.True(e.PlantSeed().Done);
+        Assert.True(e.PlantSeed().Done);
         Assert.False(e.CanPlantSeed);
         Assert.False(e.PlantSeed().Done);
-        Assert.Equal(1, e.State.Seeds);
+        Assert.Equal(new[] { "willow" }, e.State.SeedsInHand);
     }
 
     [Fact]
@@ -140,7 +142,7 @@ public class BeekeeperStage4Tests : IDisposable
     [Fact]
     public void TheSecondSeedGrowsTheBramble()
     {
-        var e = WithSeed(planted: 1);
+        var e = WithSeed(BeekeeperPlants.Bramble);
         e.State.Plants.Add(BeekeeperPlants.Wildflowers);
         e.PlantSeed();
         e.DebugFinishGrowing();
@@ -369,7 +371,8 @@ public class BeekeeperStage4Tests : IDisposable
         var path = Path.Combine(_dir, "bk.json");
         var state = new BeekeeperState
         {
-            Seeds = 1, SeedsGiven = 2, SeedsPlanted = 1, GrowSecondsLeft = 240m,
+            SeedsInHand = { BeekeeperPlants.Willow }, SeedsGivenIds = { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble, BeekeeperPlants.Willow },
+            Beds = { new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 240m } },
             Plants = { BeekeeperPlants.Wildflowers }, ForagerBees = 7.5m, GuardBees = 2m,
             Pollen = 12m, BeeBread = 3m, HasWoodenHive = true,
             GardenRevealed = true, PollenRevealed = true, BeeBreadRevealed = true,
@@ -378,8 +381,9 @@ public class BeekeeperStage4Tests : IDisposable
 
         var back = BeekeeperSaveService.Load(path)!;
         Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
-        Assert.Equal(1, back.Seeds);
-        Assert.Equal(240m, back.GrowSecondsLeft);
+        Assert.Equal(new[] { BeekeeperPlants.Willow }, back.SeedsInHand);
+        Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(back.Beds).PlantId);
+        Assert.Equal(240m, back.Beds[0].SecondsLeft);
         Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, back.Plants);
         Assert.Equal(7.5m, back.ForagerBees);
         Assert.Equal(2m, back.GuardBees);
@@ -417,7 +421,7 @@ public class BeekeeperStage4Tests : IDisposable
         s.HippiesRevealed = true;
         s.BeeswaxCandles = 20m;
         e.TradeTenCandles();
-        Assert.Equal(1, s.Seeds);
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, s.SeedsInHand);
     }
 
     [Fact]

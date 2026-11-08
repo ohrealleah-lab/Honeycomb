@@ -72,9 +72,27 @@ public static class BeekeeperHiveRows
     public const string Beebits = "beebits";
     public const string Sage = "sage";
     public const string Paper = "paper";
+    // Stage 7 (spec 015)
+    public const string Nursing = "nursing";              // full-width line; Value = extra laying percent
+    public const string Resin = "resin";                  // full-width line; Value = propolis a minute
+    public const string Propolis = "propolis";            // Rate = propolis/s while resin
+    public const string BeeBoostCandles = "bee_boost_candles";
+    public const string SagePropolisCandles = "sage_propolis_candles";
+    public const string BeeBoostBurning = "bee_boost_burning";         // full-width line; Value = seconds left
+    public const string SagePropolisBurning = "sage_propolis_burning"; // full-width line; Value = seconds left
     // Cut in stage 6 (spec 014): counts of forager and guard bees.
     // public const string Foragers = "foragers";
     // public const string Guards = "guards";
+}
+
+/// <summary>One growing bed on the Garden card: which plant and how long it has left.</summary>
+public sealed record BeekeeperBedView(BeekeeperPlant Plant, decimal SecondsLeft);
+
+/// <summary>Notes in the Beekeeper's Notebook (spec 015, FR-608): one per thing the hive has.
+/// A specialty's note uses the specialty's own id.</summary>
+public static class BeekeeperNotes
+{
+    public const string Queen = "queen";
 }
 
 public partial class BeekeeperViewModel : ObservableObject, IDisposable
@@ -246,10 +264,23 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     // Stage 4: the Garden
     public bool GardenRevealed => State.GardenRevealed;
-    public int Seeds => State.Seeds;
+    /// <summary>Seeds in hand, not yet planted.</summary>
+    public int Seeds => State.SeedsInHand.Count;
+    /// <summary>The seeds in hand, as plants, each with its own Plant button.</summary>
+    public IReadOnlyList<BeekeeperPlant> SeedsInHand => Engine.SeedsInHand;
     public bool IsGrowing => Engine.IsGrowing;
-    /// <summary>The plant growing now. The screen never names it before it sprouts (a surprise).</summary>
-    public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
+    // Cut in stage 7 (spec 015): one growing plant, kept a surprise. Seeds are named now.
+    // public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
+    /// <summary>How many garden beds there are (two, three with the Third Bed).</summary>
+    public int BedCount => Engine.BedCount;
+    public int FreeBeds => Engine.FreeBeds;
+    /// <summary>The beds with a seed growing, soonest to sprout first.</summary>
+    public IReadOnlyList<BeekeeperBedView> GrowingBeds => State.Beds
+        .Select(b => new { Bed = b, Plant = Engine.PlantById(b.PlantId) })
+        .Where(x => x.Plant is not null)
+        .OrderBy(x => x.Bed.SecondsLeft)
+        .Select(x => new BeekeeperBedView(x.Plant!, x.Bed.SecondsLeft))
+        .ToList();
     public IReadOnlyList<BeekeeperPlant> SproutedPlants => Engine.SproutedPlants;
     // Cut in stage 6 (spec 014): counts of forager and guard bees (now specialties).
     // public decimal ForagerBees => State.ForagerBees;
@@ -261,6 +292,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasWoodenHive => State.HasWoodenHive;
     public bool WoodenHiveOffered => Engine.WoodenHiveOffered;
     public bool CanPlantSeed => Engine.CanPlantSeed;
+    public bool CanPlantSeedOf(string plantId) => Engine.CanPlantSeedOf(plantId);
     public bool CanMakeBeeBread => Engine.CanMakeBeeBread;
     public bool CanMoveToWoodenHive => Engine.CanMoveToWoodenHive;
 
@@ -279,7 +311,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
 
     // Stage 6: specialties and the wasp emissary
-    /// <summary>The hive's specialties (foraging, guarding), from the sprouted plants.</summary>
+    /// <summary>The hive's specialties (foraging, guarding, nursing, resin), from the sprouted plants.</summary>
     public IReadOnlyList<string> Specialties => Engine.Specialties;
     public decimal PollenPerSecond => Engine.PollenPerSecondNow;
     public long BribesTotal => State.BribesTotal;
@@ -287,6 +319,40 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public long WaspTrades => State.WaspTrades;
     public decimal Paper => State.Paper;
     public bool CanTradePaper => Engine.CanTradePaper;
+
+    // Stage 7: the poplar, propolis, the two candles and the Notebook
+    public decimal Propolis => State.Propolis;
+    public decimal PropolisPerSecond => Engine.PropolisPerSecondNow;
+    /// <summary>The two propolis candles' recipes show at The Workbench once the poplar has sprouted.</summary>
+    public bool PropolisCandlesShown => Engine.PropolisCandlesShown;
+    public decimal BeeBoostCandles => State.BeeBoostCandles;
+    public decimal SagePropolisCandles => State.SagePropolisCandles;
+    public decimal BeeBoostSecondsLeft => State.BeeBoostSecondsLeft;
+    public decimal SagePropolisSecondsLeft => State.SagePropolisSecondsLeft;
+    public bool CanCraftBeeBoost => Engine.CanCraftBeeBoost;
+    public bool CanCraftSagePropolis => Engine.CanCraftSagePropolis;
+    public bool CanLightBeeBoost => Engine.CanLightBeeBoost;
+    public bool CanLightSagePropolis => Engine.CanLightSagePropolis;
+    public bool CanCraftBeeBoostTimes(int n) => Engine.CanCraftBeeBoostTimes(n);
+    public bool CanCraftSagePropolisTimes(int n) => Engine.CanCraftSagePropolisTimes(n);
+    public void CraftBeeBoostTimes(int n) => Apply(Engine.CraftBeeBoost(n));
+    public void CraftSagePropolisTimes(int n) => Apply(Engine.CraftSagePropolis(n));
+
+    /// <summary>The Notebook (bought with paper) brings the Bees card back.</summary>
+    public bool HasNotebook => Engine.Owns(BeekeeperUpgrades.Notebook);
+
+    /// <summary>The Notebook's notes: the queen once she has settled, then each specialty the hive has,
+    /// in the order they came. The view turns an id into its note.</summary>
+    public IReadOnlyList<string> NotebookNotes
+    {
+        get
+        {
+            var notes = new List<string>();
+            if (Engine.HasQueen) notes.Add(BeekeeperNotes.Queen);
+            notes.AddRange(Engine.Specialties);
+            return notes;
+        }
+    }
     public bool CanTradePaperTimes(int n) => Engine.CanTradePaperTimes(n);
     public void TradePaperTimes(int n) => Apply(Engine.TradeForPaper(n));
 
@@ -308,6 +374,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                     bees.Add(new(BeekeeperHiveRows.Foraging, true, Engine.ForagingPollenPerMinute));
                 else if (id == BeekeeperSpecialties.Guarding)
                     bees.Add(new(BeekeeperHiveRows.Guarding, true, (Engine.GuardingMultiplier - 1m) * 100m));
+                else if (id == BeekeeperSpecialties.Nursing)
+                    bees.Add(new(BeekeeperHiveRows.Nursing, true, (Engine.NursingMultiplier - 1m) * 100m));
+                else if (id == BeekeeperSpecialties.Resin)
+                    bees.Add(new(BeekeeperHiveRows.Resin, true, Engine.ResinPropolisPerMinute));
             }
             // Cut in stage 6 (spec 014): the forager and guard counts.
             // bees.Add(new(BeekeeperHiveRows.Foragers, State.ForagerBees > 0m, Math.Floor(State.ForagerBees)));
@@ -325,16 +395,22 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupGarden, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.Seeds),
+                    new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),
                     new(BeekeeperHiveRows.Pollen, State.PollenRevealed, Math.Floor(State.Pollen),
                         Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null),
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
+                    new(BeekeeperHiveRows.Propolis, State.PropolisRevealed || State.Propolis > 0m || Engine.ResinPropolisPerMinute > 0m,
+                        Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
                     new(BeekeeperHiveRows.BeeswaxCandles, State.CandlesCrafted > 0, State.BeeswaxCandles),
                     new(BeekeeperHiveRows.RepellentCandles, RepellentShown, State.RepellentCandles),
+                    new(BeekeeperHiveRows.BeeBoostCandles, State.BeeBoostCandles > 0m, State.BeeBoostCandles),
+                    new(BeekeeperHiveRows.SagePropolisCandles, State.SagePropolisCandles > 0m, State.SagePropolisCandles),
+                    new(BeekeeperHiveRows.BeeBoostBurning, Engine.IsBeeBoosted, State.BeeBoostSecondsLeft),
+                    new(BeekeeperHiveRows.SagePropolisBurning, Engine.IsSagePropolisBurning, State.SagePropolisSecondsLeft),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupTradeGoods, new BeekeeperHiveRow[]
                 {
@@ -419,8 +495,21 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void CraftRepellentTimes(int n) => Apply(Engine.CraftRepellent(n));
     public void MakeBeeBreadTimes(int n) => Apply(Engine.MakeBeeBread(n));
 
+    /// <summary>Plants a seed in a free bed: the named one, or the first in hand when null.</summary>
     [RelayCommand(CanExecute = nameof(CanPlantSeed))]
-    public void PlantSeed() => Apply(Engine.PlantSeed());
+    public void PlantSeed(string? plantId) => Apply(Engine.PlantSeed(plantId));
+
+    [RelayCommand(CanExecute = nameof(CanCraftBeeBoost))]
+    public void CraftBeeBoost() => Apply(Engine.CraftBeeBoost());
+
+    [RelayCommand(CanExecute = nameof(CanCraftSagePropolis))]
+    public void CraftSagePropolis() => Apply(Engine.CraftSagePropolis());
+
+    [RelayCommand(CanExecute = nameof(CanLightBeeBoost))]
+    public void LightBeeBoost() => Apply(Engine.LightBeeBoost());
+
+    [RelayCommand(CanExecute = nameof(CanLightSagePropolis))]
+    public void LightSagePropolis() => Apply(Engine.LightSagePropolis());
 
     [RelayCommand(CanExecute = nameof(CanMakeBeeBread))]
     public void MakeBeeBread() => Apply(Engine.MakeBeeBread());
@@ -436,7 +525,39 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
-    /// <summary>Debug builds only: the growing seed sprouts now.</summary>
+    /// <summary>Debug builds only: every seed not yet given is handed over.</summary>
+    public void DebugGiveEverySeed()
+    {
+        LogEvents(Engine.DebugGiveEverySeed());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: hands out propolis.</summary>
+    public void DebugGivePropolis(decimal propolis)
+    {
+        LogEvents(Engine.DebugGivePropolis(propolis));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: hands out paper.</summary>
+    public void DebugGivePaper(decimal paper)
+    {
+        LogEvents(Engine.DebugGivePaper(paper));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: the Hippie trades go to 19; one more brings the willow seed.</summary>
+    public void DebugHippieTradesTo19()
+    {
+        LogEvents(Engine.DebugHippieTradesTo19());
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only: every growing seed sprouts now.</summary>
     public void DebugFinishGrowing()
     {
         LogEvents(Engine.DebugFinishGrowing());
@@ -686,6 +807,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         LightRepellentCommand.NotifyCanExecuteChanged();
         PuffSmokerCommand.NotifyCanExecuteChanged();
         PlantSeedCommand.NotifyCanExecuteChanged();
+        CraftBeeBoostCommand.NotifyCanExecuteChanged();
+        CraftSagePropolisCommand.NotifyCanExecuteChanged();
+        LightBeeBoostCommand.NotifyCanExecuteChanged();
+        LightSagePropolisCommand.NotifyCanExecuteChanged();
         MakeBeeBreadCommand.NotifyCanExecuteChanged();
         MoveToWoodenHiveCommand.NotifyCanExecuteChanged();
     }
