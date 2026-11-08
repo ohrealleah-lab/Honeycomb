@@ -486,7 +486,7 @@ public partial class BeekeeperView : UserControl
         string N(decimal v) => NumberFormatter.Format(v, lang);
         string? Part(decimal v) => v > 0m ? N(v) : null;
         var upgrades = vm.ShopUpgrades;
-        string sig = $"{vm.ToolLevel}|{vm.HasWaxCatcher}|{lang}|{string.Join(",", upgrades.Select(u => u.Id))}";
+        string sig = $"{vm.ToolLevel}|{vm.BeesPerClick}|{vm.HasWaxCatcher}|{lang}|{string.Join(",", upgrades.Select(u => u.Id))}";
         if (sig != _shopSignature)
         {
             _shopSignature = sig;
@@ -502,7 +502,7 @@ public partial class BeekeeperView : UserControl
                 bool isNext = vm.ToolLevel == i;
                 if (!isNext && !(owned && ShowBoughtItems)) continue;
                 ShopRows.Children.Add(MakeShopRow(
-                    BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, tool.BeesPerClick),
+                    BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, vm.Engine.BeesPerClickWith(tool)),
                     owned, BeekeeperText.Price(N(tool.Cost), null, null), tool.Id, vm.BuyNextToolCommand.Execute));
             }
             if (!vm.HasWaxCatcher || ShowBoughtItems)

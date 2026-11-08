@@ -245,6 +245,7 @@ internal static class BeekeeperText
     public static string PantryLasts(decimal seconds)
     {
         decimal minutes = System.Math.Ceiling(seconds / 60m);
+        if (minutes <= 1m) return T(StringKey.BeekeeperPantryMinute);
         if (minutes < 90m)
             return Fill(T(StringKey.BeekeeperPantryMinutesFmt), NumberFormatter.Format(System.Math.Max(1m, minutes), Lang));
         return Fill(T(StringKey.BeekeeperPantryHoursFmt), NumberFormatter.Format(System.Math.Round(minutes / 60m), Lang));
@@ -486,8 +487,10 @@ internal static class BeekeeperText
             BeekeeperEvents.PantryEmpty => L(StringKey.BeekeeperLogPantryEmpty),
             BeekeeperEvents.QueenResumes => L(StringKey.BeekeeperLogQueenResumes),
             BeekeeperEvents.TradeAgreement => Fill(L(StringKey.BeekeeperLogTradeAgreementFmt), e.Text ?? ""),
-            BeekeeperEvents.WelcomeBackQueen => Fill(L(StringKey.BeekeeperLogWelcomeBackQueenFmt), N(e.Value)),
-            BeekeeperEvents.WelcomeBackBear => Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
+            BeekeeperEvents.WelcomeBackQueen => e.Value == 1m ? L(StringKey.BeekeeperLogWelcomeBackQueenOne)
+                : Fill(L(StringKey.BeekeeperLogWelcomeBackQueenFmt), N(e.Value)),
+            BeekeeperEvents.WelcomeBackBear => e.Value == 1m ? Fill(L(StringKey.BeekeeperLogWelcomeBackBearOneFmt), e.Text ?? "")
+                : Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
             BeekeeperEvents.WelcomeBackPantry => L(StringKey.BeekeeperLogWelcomeBackPantry),
             BeekeeperEvents.OldCountsSettle => L(StringKey.BeekeeperLogOldCountsSettle),
             BeekeeperEvents.BribeHint => L(StringKey.BeekeeperLogBribeHint),

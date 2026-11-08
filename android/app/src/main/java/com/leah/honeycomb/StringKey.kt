@@ -1023,4 +1023,7 @@ enum class StringKey {
     BeekeeperLogPropolisSealBought,
     BeekeeperLogCraftedBeeBoostFmt,
     BeekeeperLogCraftedSagePropolisFmt,
+    BeekeeperPantryMinute,
+    BeekeeperLogWelcomeBackQueenOne,
+    BeekeeperLogWelcomeBackBearOneFmt,
 }

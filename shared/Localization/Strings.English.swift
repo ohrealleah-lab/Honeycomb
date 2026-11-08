@@ -1022,5 +1022,8 @@ enum StringsEnglish {
         .beekeeperLogPropolisSealBought: "The bees seal the combs with propolis. They hold more now.",
         .beekeeperLogCraftedBeeBoostFmt: "You make %@ bee-boost candles.",
         .beekeeperLogCraftedSagePropolisFmt: "You make %@ sage-propolis candles.",
+        .beekeeperPantryMinute: "The pantry lasts about 1 minute.",
+        .beekeeperLogWelcomeBackQueenOne: "The queen raised 1 bee.",
+        .beekeeperLogWelcomeBackBearOneFmt: "%@ came by and left 1 Beebit for the extra honey.",
     ]
 }

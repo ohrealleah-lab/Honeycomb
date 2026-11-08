@@ -2042,4 +2042,10 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogCraftedBeeBoostFmt = "beekeeper_log_crafted_bee_boost_fmt"
     /// Story log; %@ = how many
     case beekeeperLogCraftedSagePropolisFmt = "beekeeper_log_crafted_sage_propolis_fmt"
+    /// Hover on Bee bread, second line; a minute or less
+    case beekeeperPantryMinute = "beekeeper_pantry_minute"
+    /// Story log on reopening the app; exactly 1 bee raised
+    case beekeeperLogWelcomeBackQueenOne = "beekeeper_log_welcome_back_queen_one"
+    /// Story log on reopening the app; %@ = bear name; exactly 1 Beebit
+    case beekeeperLogWelcomeBackBearOneFmt = "beekeeper_log_welcome_back_bear_one_fmt"
 }

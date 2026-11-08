@@ -1051,6 +1051,9 @@ object Strings {
         StringKey.BeekeeperLogPropolisSealBought to "The bees seal the combs with propolis. They hold more now.",
         StringKey.BeekeeperLogCraftedBeeBoostFmt to "You make %@ bee-boost candles.",
         StringKey.BeekeeperLogCraftedSagePropolisFmt to "You make %@ sage-propolis candles.",
+        StringKey.BeekeeperPantryMinute to "The pantry lasts about 1 minute.",
+        StringKey.BeekeeperLogWelcomeBackQueenOne to "The queen raised 1 bee.",
+        StringKey.BeekeeperLogWelcomeBackBearOneFmt to "%@ came by and left 1 Beebit for the extra honey.",
     )
 
     private val Spanish = mapOf(
@@ -2010,15 +2013,15 @@ object Strings {
         StringKey.BeekeeperHiveSagePropolisCandles to "Velas de salvia y propóleo",
         StringKey.BeekeeperSpecialtyNursingFmt to "Crianza: la reina pone más rápido, +%@%",
         StringKey.BeekeeperSpecialtyResinFmt to "Resina: %@ de propóleo por minuto",
-        StringKey.BeekeeperBeeBoostBurningFmt to "Impulso: encendida, quedan %@",
-        StringKey.BeekeeperSagePropolisBurningFmt to "Salvia y propóleo: encendida, quedan %@",
+        StringKey.BeekeeperBeeBoostBurningFmt to "Impulso: encendida, tiempo restante: %@",
+        StringKey.BeekeeperSagePropolisBurningFmt to "Salvia y propóleo: encendida, tiempo restante: %@",
         StringKey.BeekeeperPropolisPerSecFmt to "+%@ de propóleo / s",
         StringKey.BeekeeperDurationMinute to "aproximadamente 1 minuto",
         StringKey.BeekeeperDurationMinutesFmt to "aproximadamente %@ minutos",
         StringKey.BeekeeperDurationHour to "aproximadamente 1 hora",
         StringKey.BeekeeperDurationHoursFmt to "aproximadamente %@ horas",
         StringKey.BeekeeperGardenEmptyBed to "Un bancal vacío",
-        StringKey.BeekeeperGardenBedGrowingFmt to "%@: creciendo, quedan %@",
+        StringKey.BeekeeperGardenBedGrowingFmt to "%@: creciendo, tiempo restante: %@",
         StringKey.BeekeeperGardenSeedFmt to "Semilla de %@",
         StringKey.BeekeeperGardenTakesFmt to "Tarda %@ en crecer.",
         StringKey.BeekeeperPlantWillow to "Sauce",
@@ -2072,5 +2075,8 @@ object Strings {
         StringKey.BeekeeperLogPropolisSealBought to "Las abejas sellan los panales con propóleo. Ahora guardan más.",
         StringKey.BeekeeperLogCraftedBeeBoostFmt to "Haces %@ velas de impulso.",
         StringKey.BeekeeperLogCraftedSagePropolisFmt to "Haces %@ velas de salvia y propóleo.",
+        StringKey.BeekeeperPantryMinute to "La despensa dura aproximadamente 1 minuto.",
+        StringKey.BeekeeperLogWelcomeBackQueenOne to "La reina crió 1 abeja.",
+        StringKey.BeekeeperLogWelcomeBackBearOneFmt to "%@ pasó y dejó 1 Beebit por la miel que sobraba.",
     )
 }

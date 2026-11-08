@@ -206,6 +206,9 @@ public sealed class BeekeeperEngine
         (int)Math.Floor((State.ToolLevel <= 0 ? Config.BareHandsBees : Config.Tools[State.ToolLevel - 1].BeesPerClick)
                         * PracticeMultiplier);
 
+    /// <summary>Bees a click would catch with <paramref name="tool"/>, Practice counted (for the Shop's blurb).</summary>
+    public int BeesPerClickWith(BeekeeperTool tool) => (int)Math.Floor(tool.BeesPerClick * PracticeMultiplier);
+
     private decimal PracticeMultiplier =>
         Owns(BeekeeperUpgrades.MorePractice) ? Config.MorePracticeMultiplier
         : Owns(BeekeeperUpgrades.Practice) ? Config.PracticeMultiplier

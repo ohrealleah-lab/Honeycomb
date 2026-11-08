@@ -1038,6 +1038,9 @@ public static class Strings
         [StringKey.BeekeeperLogPropolisSealBought] = "The bees seal the combs with propolis. They hold more now.",
         [StringKey.BeekeeperLogCraftedBeeBoostFmt] = "You make %@ bee-boost candles.",
         [StringKey.BeekeeperLogCraftedSagePropolisFmt] = "You make %@ sage-propolis candles.",
+        [StringKey.BeekeeperPantryMinute] = "The pantry lasts about 1 minute.",
+        [StringKey.BeekeeperLogWelcomeBackQueenOne] = "The queen raised 1 bee.",
+        [StringKey.BeekeeperLogWelcomeBackBearOneFmt] = "%@ came by and left 1 Beebit for the extra honey.",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -1998,15 +2001,15 @@ public static class Strings
         [StringKey.BeekeeperHiveSagePropolisCandles] = "Velas de salvia y propóleo",
         [StringKey.BeekeeperSpecialtyNursingFmt] = "Crianza: la reina pone más rápido, +%@%",
         [StringKey.BeekeeperSpecialtyResinFmt] = "Resina: %@ de propóleo por minuto",
-        [StringKey.BeekeeperBeeBoostBurningFmt] = "Impulso: encendida, quedan %@",
-        [StringKey.BeekeeperSagePropolisBurningFmt] = "Salvia y propóleo: encendida, quedan %@",
+        [StringKey.BeekeeperBeeBoostBurningFmt] = "Impulso: encendida, tiempo restante: %@",
+        [StringKey.BeekeeperSagePropolisBurningFmt] = "Salvia y propóleo: encendida, tiempo restante: %@",
         [StringKey.BeekeeperPropolisPerSecFmt] = "+%@ de propóleo / s",
         [StringKey.BeekeeperDurationMinute] = "aproximadamente 1 minuto",
         [StringKey.BeekeeperDurationMinutesFmt] = "aproximadamente %@ minutos",
         [StringKey.BeekeeperDurationHour] = "aproximadamente 1 hora",
         [StringKey.BeekeeperDurationHoursFmt] = "aproximadamente %@ horas",
         [StringKey.BeekeeperGardenEmptyBed] = "Un bancal vacío",
-        [StringKey.BeekeeperGardenBedGrowingFmt] = "%@: creciendo, quedan %@",
+        [StringKey.BeekeeperGardenBedGrowingFmt] = "%@: creciendo, tiempo restante: %@",
         [StringKey.BeekeeperGardenSeedFmt] = "Semilla de %@",
         [StringKey.BeekeeperGardenTakesFmt] = "Tarda %@ en crecer.",
         [StringKey.BeekeeperPlantWillow] = "Sauce",
@@ -2060,5 +2063,8 @@ public static class Strings
         [StringKey.BeekeeperLogPropolisSealBought] = "Las abejas sellan los panales con propóleo. Ahora guardan más.",
         [StringKey.BeekeeperLogCraftedBeeBoostFmt] = "Haces %@ velas de impulso.",
         [StringKey.BeekeeperLogCraftedSagePropolisFmt] = "Haces %@ velas de salvia y propóleo.",
+        [StringKey.BeekeeperPantryMinute] = "La despensa dura aproximadamente 1 minuto.",
+        [StringKey.BeekeeperLogWelcomeBackQueenOne] = "La reina crió 1 abeja.",
+        [StringKey.BeekeeperLogWelcomeBackBearOneFmt] = "%@ pasó y dejó 1 Beebit por la miel que sobraba.",
     };
 }

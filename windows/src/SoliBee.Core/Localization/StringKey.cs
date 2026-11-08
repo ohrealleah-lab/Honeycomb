@@ -1027,4 +1027,7 @@ public enum StringKey
     BeekeeperLogPropolisSealBought,
     BeekeeperLogCraftedBeeBoostFmt,
     BeekeeperLogCraftedSagePropolisFmt,
+    BeekeeperPantryMinute,
+    BeekeeperLogWelcomeBackQueenOne,
+    BeekeeperLogWelcomeBackBearOneFmt,
 }
