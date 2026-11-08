@@ -133,6 +133,10 @@ public sealed class BeekeeperConfig
     /// rounded down (Leah: 0.1%). Stings catch nothing.</summary>
     public decimal CatchSliceShare { get; init; } = 0.001m;
 
+    /// <summary>The most bees a hive can hold. Keeps (bees × 3 days) inside what a decimal can
+    /// hold, so time away can never overflow; a save above it is refused as damaged.</summary>
+    public decimal MaxBees { get; init; } = 1e20m;
+
     public decimal WaxCatcherCost { get; init; } = 150m;
 
     // --- Trading -------------------------------------------------------------
@@ -150,7 +154,10 @@ public sealed class BeekeeperConfig
     // --- Time away (offline earnings) ---------------------------------------
     /// <summary>Longest stretch that is paid: 3 days.</summary>
     public decimal OfflineCapSeconds { get; init; } = 3m * 24m * 60m * 60m;
-    /// <summary>Share of normal production earned while away (Leah confirmed 100%).</summary>
+    /// <summary>Share of normal production earned while away (Leah confirmed 100%).
+    /// Note: below 1 this scales the whole away stretch, so garden beds and the sage-propolis
+    /// candle also run slower while away, not only earnings. Fine at 1; fix before tuning below it
+    /// (review 2026-11-08, left as is on purpose).</summary>
     public decimal OfflineRate { get; init; } = 1m;
     /// <summary>A gap longer than this many seconds counts as time away.</summary>
     public decimal AwayThresholdSeconds { get; init; } = 2m;

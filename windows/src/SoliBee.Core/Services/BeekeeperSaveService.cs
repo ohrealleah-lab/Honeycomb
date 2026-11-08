@@ -111,7 +111,7 @@ public static class BeekeeperSaveService
     private static bool LooksSane(BeekeeperState s)
     {
         int maxTool = BeekeeperConfig.Default.Tools.Count;
-        return s.Bees >= 0m && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
+        return s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
             && s.Combs >= 0 && s.Trades >= 0
             && s.ToolLevel >= 0 && s.ToolLevel <= maxTool
             && s.Log is not null

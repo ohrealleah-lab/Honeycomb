@@ -59,6 +59,32 @@ public class BeekeeperLoadFixesTests : IDisposable
     }
 
     [Fact]
+    public void TheBeeCountIsCapped_SoThreeDaysAwayNeverOverflows()
+    {
+        var max = BeekeeperConfig.Default.MaxBees;
+        var e = new BeekeeperEngine(state: new BeekeeperState { BearName = "B", Bees = max, HasTradeAgreement = true, Combs = 1 });
+        e.AdvanceAway(259200m);
+        Assert.Equal(max, e.State.Bees);
+        e.DebugGrant(max, 0m, 0m);
+        Assert.Equal(max, e.State.Bees);
+
+        var path = Path.Combine(_dir, "huge.json");
+        BeekeeperSaveService.Save(new BeekeeperState { Bees = max }, path, DateTime.UtcNow);
+        Assert.NotNull(BeekeeperSaveService.Load(path));
+        BeekeeperSaveService.Save(new BeekeeperState { Bees = max * 10m }, path, DateTime.UtcNow);
+        Assert.Null(BeekeeperSaveService.Load(path));
+    }
+
+    [Fact]
+    public void ThePropolisSeal_ShowsWithTheFirstPropolisLine_NotBefore()
+    {
+        var e = new BeekeeperEngine(state: new BeekeeperState { BearName = "B", Propolis = 0.5m });
+        Assert.False(e.PropolisSeen);
+        e.State.Propolis = 1m;
+        Assert.True(e.PropolisSeen);
+    }
+
+    [Fact]
     public void ACandleBurningOutInAnOpenAppGap_IsLogged()
     {
         var t = new DateTime(2026, 11, 8, 12, 0, 0, DateTimeKind.Utc);

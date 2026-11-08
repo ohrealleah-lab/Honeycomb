@@ -307,7 +307,7 @@ public sealed class BeekeeperEngine
         }
 
         decimal gained = BeesPerCatch;
-        State.Bees += gained;
+        State.Bees = Math.Min(Config.MaxBees, State.Bees + gained);
         if (!State.HoneyRevealed)
         {
             State.HoneyRevealed = true;
@@ -523,7 +523,7 @@ public sealed class BeekeeperEngine
                              + perMinute * layingSeconds * layingSeconds / 120m
                              + raised * (seconds - layingSeconds);
 
-        State.Bees += raised;
+        State.Bees = Math.Min(Config.MaxBees, State.Bees + raised);
         if (perMinute > 0m)
             State.BeeBread = emptied ? 0m : Math.Max(0m, State.BeeBread - raised / Config.BeesPerBeeBread);
         if (emptied && !State.PantryEmptyAnnounced)
@@ -922,7 +922,7 @@ public sealed class BeekeeperEngine
     public bool PaperSeen => State.PaperRevealed || State.WaspTrades > 0 || State.Paper > 0m;
 
     /// <summary>Propolis has been seen: the poplar has sprouted, or any propolis was held.</summary>
-    public bool PropolisSeen => State.PropolisRevealed || State.Propolis > 0m;
+    public bool PropolisSeen => State.PropolisRevealed || State.Propolis >= 1m;
 
     private int VacuumLevel => Config.Tools.ToList().FindIndex(t => t.Id == "vacuum") + 1;
 
@@ -1475,7 +1475,7 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent>();
         if (bees > 0m)
         {
-            State.Bees += bees;
+            State.Bees = Math.Min(Config.MaxBees, State.Bees + bees);
             if (!State.HoneyRevealed)
             {
                 State.HoneyRevealed = true;
