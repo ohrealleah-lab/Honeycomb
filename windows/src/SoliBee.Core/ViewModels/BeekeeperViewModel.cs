@@ -413,8 +413,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 {
                     new(BeekeeperHiveRows.BeeswaxCandles, State.CandlesCrafted > 0, State.BeeswaxCandles),
                     new(BeekeeperHiveRows.RepellentCandles, RepellentShown, State.RepellentCandles),
-                    new(BeekeeperHiveRows.BeeBoostCandles, State.BeeBoostCandles > 0m, State.BeeBoostCandles),
-                    new(BeekeeperHiveRows.SagePropolisCandles, State.SagePropolisCandles > 0m, State.SagePropolisCandles),
+                    // Shown with their recipes, so a row stays when the last candle is lit.
+                    new(BeekeeperHiveRows.BeeBoostCandles, Engine.PropolisCandlesShown || State.BeeBoostCandles > 0m, State.BeeBoostCandles),
+                    new(BeekeeperHiveRows.SagePropolisCandles, Engine.PropolisCandlesShown || State.SagePropolisCandles > 0m, State.SagePropolisCandles),
                     new(BeekeeperHiveRows.BeeBoostBurning, Engine.IsBeeBoosted, State.BeeBoostSecondsLeft),
                     new(BeekeeperHiveRows.SagePropolisBurning, Engine.IsSagePropolisBurning, State.SagePropolisSecondsLeft),
                 }),

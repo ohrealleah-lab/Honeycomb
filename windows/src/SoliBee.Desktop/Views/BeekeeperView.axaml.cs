@@ -327,8 +327,12 @@ public partial class BeekeeperView : UserControl
     private void UpdateHive(BeekeeperViewModel vm, AppLanguage lang)
     {
         var groups = vm.HiveGroups;
+        // Lines that come and go on ticks (combs full, a candle burning) are always built and just
+        // shown or hidden, so they never trigger a rebuild under the mouse.
+        static bool Transient(string id) =>
+            id is BeekeeperHiveRows.CombsFull or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
         string sig = lang + "|" + string.Join(";", groups.Select(g =>
-            g.Id + ":" + string.Join(",", g.Rows.Where(r => r.Visible).Select(r => r.Id))));
+            g.Id + ":" + string.Join(",", g.Rows.Where(r => r.Visible && !Transient(r.Id)).Select(r => r.Id))));
         if (sig != _hiveSignature)
         {
             _hiveSignature = sig;
@@ -336,7 +340,7 @@ public partial class BeekeeperView : UserControl
             HiveGroups.Children.Clear();
             foreach (var g in groups)
             {
-                if (!g.Visible) continue;
+                if (!g.Rows.Any(r => r.Visible && !Transient(r.Id))) continue;
                 var panel = new StackPanel { Spacing = 2 };
                 panel.Children.Add(new TextBlock
                 {
@@ -347,7 +351,7 @@ public partial class BeekeeperView : UserControl
                 });
                 foreach (var r in g.Rows)
                 {
-                    if (!r.Visible) continue;
+                    if (!r.Visible && !Transient(r.Id)) continue;
                     if (BeekeeperText.IsHiveLine(r.Id))
                     {
                         // A whole-line row: a specialty, or the "combs are full" warning.
@@ -375,7 +379,9 @@ public partial class BeekeeperView : UserControl
         foreach (var g in groups)
             foreach (var r in g.Rows)
             {
-                if (!r.Visible || !_hiveRows.TryGetValue(r.Id, out var c)) continue;
+                if (!_hiveRows.TryGetValue(r.Id, out var c)) continue;
+                if (Transient(r.Id)) c.Label.IsVisible = r.Visible;
+                if (!r.Visible) continue;
                 c.Label.Text = BeekeeperText.HiveRowLabel(r);
                 string? tip = BeekeeperText.HiveRowTip(r);
                 if (c.Value is { } v)
