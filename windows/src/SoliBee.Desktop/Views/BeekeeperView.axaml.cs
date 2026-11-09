@@ -153,9 +153,7 @@ public partial class BeekeeperView : UserControl
         SmokerStatusText.Text = vm.IsCalm
             ? BeekeeperText.CalmNow(BeekeeperText.Clock(vm.CalmSecondsLeft), N(vm.Config.CalmHoneyMultiplier))
             : BeekeeperText.CalmMeter(vm.CalmMeter, vm.CalmMeterClicks);
-        CalmBar.Value = vm.IsCalm
-            ? (double)(vm.CalmSecondsLeft / vm.Config.CalmSeconds)
-            : (double)vm.CalmMeter / Math.Max(1, vm.CalmMeterClicks);
+        CalmBar.Value = (double)vm.CalmBarFraction;
         PuffButton.Content = BeekeeperText.Puff;
         PuffButton.IsEnabled = vm.CanPuff;
 
@@ -166,7 +164,7 @@ public partial class BeekeeperView : UserControl
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
         WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
-            + " · " + BeekeeperText.WoodenHiveBlurb(N((vm.Config.WoodenHiveHoneyMultiplier - 1m) * 100m));
+            + " · " + BeekeeperText.WoodenHiveBlurb(N(vm.WoodenHiveBonusPercent));
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
 
@@ -214,7 +212,7 @@ public partial class BeekeeperView : UserControl
         RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
         RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
-            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.Engine.RepellentBurnSeconds));
+            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.RepellentBurnSeconds));
         CraftRepellentButton.Content = BeekeeperText.Make;
         CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
         ShowBatch(Repellent10Button, 10, vm.CanCraftRepellentTimes(10));
@@ -223,11 +221,10 @@ public partial class BeekeeperView : UserControl
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
         // The propolis candles (stage 7): once the poplar has sprouted
-        string Pct(decimal multiplier) => N((multiplier - 1m) * 100m);
         BeeBoostRow.IsVisible = vm.PropolisCandlesShown;
         BeeBoostNameText.Text = BeekeeperText.BeeBoostCandle;
         BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeBoostCandleWax), null, propolis: N(vm.Config.BeeBoostCandlePropolis))
-            + " · " + BeekeeperText.BeeBoostBlurb(Pct(vm.Config.BeeBoostHoneyMultiplier), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
+            + " · " + BeekeeperText.BeeBoostBlurb(N(vm.BeeBoostBonusPercent), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
         CraftBeeBoostButton.Content = BeekeeperText.Make;
         CraftBeeBoostButton.IsEnabled = vm.CanCraftBeeBoost;
         ShowBatch(BeeBoost10Button, 10, vm.CanCraftBeeBoostTimes(10));
@@ -238,7 +235,7 @@ public partial class BeekeeperView : UserControl
         SagePropolisNameText.Text = BeekeeperText.SagePropolisCandle;
         SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.Config.SagePropolisCandleWax), N(vm.Config.SagePropolisCandleSage),
                 propolis: N(vm.Config.SagePropolisCandlePropolis))
-            + " · " + BeekeeperText.SagePropolisBlurb(Pct(vm.Config.SagePropolisHoneyMultiplier), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
+            + " · " + BeekeeperText.SagePropolisBlurb(N(vm.SagePropolisBonusPercent), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
         CraftSagePropolisButton.Content = BeekeeperText.Make;
         CraftSagePropolisButton.IsEnabled = vm.CanCraftSagePropolis;
         ShowBatch(SagePropolis10Button, 10, vm.CanCraftSagePropolisTimes(10));
@@ -392,7 +389,7 @@ public partial class BeekeeperView : UserControl
     private void UpdateBeds(BeekeeperViewModel vm)
     {
         var growing = vm.GrowingBeds;
-        int total = Math.Max(vm.BedCount, growing.Count);
+        int total = vm.BedRowCount;
         while (BedRows.Children.Count > total) BedRows.Children.RemoveAt(BedRows.Children.Count - 1);
         while (BedRows.Children.Count < total) BedRows.Children.Add(new TextBlock { Classes = { "bk-body" } });
         for (int i = 0; i < total; i++)
@@ -498,7 +495,7 @@ public partial class BeekeeperView : UserControl
                 bool isNext = vm.ToolLevel == i;
                 if (!isNext && !(owned && ShowBoughtItems)) continue;
                 ShopRows.Children.Add(MakeShopRow(
-                    BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, vm.Engine.BeesPerClickWith(tool)),
+                    BeekeeperText.ToolName(tool.Id), BeekeeperText.ToolBlurb(tool.Id, vm.BeesPerClickWith(tool)),
                     owned, BeekeeperText.Price(N(tool.Cost), null, null), tool.Id, vm.BuyNextToolCommand.Execute));
             }
             if (!vm.HasWaxCatcher || ShowBoughtItems)

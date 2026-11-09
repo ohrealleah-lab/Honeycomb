@@ -215,6 +215,9 @@ public sealed class BeekeeperEngine
     public decimal HoneyStorage =>
         (Config.StartingStorage + State.Combs * Config.StoragePerComb) * StorageMultiplier;
 
+    /// <summary>The combs are full: no more honey is stored (the one place this is decided).</summary>
+    public bool IsStorageFull => State.Honey >= HoneyStorage;
+
     /// <summary>Honey storage one comb adds right now.</summary>
     public decimal StoragePerComb => Config.StoragePerComb * StorageMultiplier;
 
@@ -697,7 +700,7 @@ public sealed class BeekeeperEngine
 
     /// <summary>Beebits a second the agreement brings while the combs are full.</summary>
     public decimal AgreementBeebitsPerSecondNow =>
-        State.HasTradeAgreement && State.Honey >= HoneyStorage ? HoneyPerSecondNow / Config.AgreementHoneyPerBeebit : 0m;
+        State.HasTradeAgreement && IsStorageFull ? HoneyPerSecondNow / Config.AgreementHoneyPerBeebit : 0m;
 
     private void OfferAgreementIfDue(List<BeekeeperEvent> events)
     {
@@ -1616,6 +1619,6 @@ public sealed class BeekeeperEngine
     /// <summary>Lets "the combs are full" be announced again once there is room again.</summary>
     private void RefreshStorageFlag()
     {
-        if (State.Honey < HoneyStorage) State.StorageFullAnnounced = false;
+        if (!IsStorageFull) State.StorageFullAnnounced = false;
     }
 }

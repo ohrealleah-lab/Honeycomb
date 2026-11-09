@@ -202,7 +202,23 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public string BearName => State.BearName;
     public long Trades => State.Trades;
     public BeekeeperTool? NextTool => Engine.NextTool;
-    public bool StorageIsFull => State.Honey >= Engine.HoneyStorage;
+    public bool StorageIsFull => Engine.IsStorageFull;
+
+    // Finished values for the screen, so it does no rules or percentage maths of its own.
+    /// <summary>How full the Smoker's bar is, 0 to 1: the calm time left while calm, otherwise the calm meter.</summary>
+    public decimal CalmBarFraction => IsCalm
+        ? CalmSecondsLeft / Config.CalmSeconds
+        : (decimal)CalmMeter / Math.Max(1, CalmMeterClicks);
+    /// <summary>Honey bonus of the wooden hive, as a percent ("25").</summary>
+    public decimal WoodenHiveBonusPercent => (Config.WoodenHiveHoneyMultiplier - 1m) * 100m;
+    public decimal BeeBoostBonusPercent => (Config.BeeBoostHoneyMultiplier - 1m) * 100m;
+    public decimal SagePropolisBonusPercent => (Config.SagePropolisHoneyMultiplier - 1m) * 100m;
+    /// <summary>Wasp time one repellent candle buys right now (Stronger Candles counted).</summary>
+    public decimal RepellentBurnSeconds => Engine.RepellentBurnSeconds;
+    /// <summary>Bees a click would catch with <paramref name="tool"/>, Practice counted.</summary>
+    public int BeesPerClickWith(BeekeeperTool tool) => Engine.BeesPerClickWith(tool);
+    /// <summary>Garden bed rows to draw: every bed owned (a save may hold more growing than owned).</summary>
+    public int BedRowCount => Math.Max(BedCount, State.Beds.Count);
 
     public bool HoneyRevealed => State.HoneyRevealed;
     public bool BearRevealed => State.BearRevealed;
