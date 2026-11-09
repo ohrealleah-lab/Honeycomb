@@ -942,7 +942,7 @@ public sealed class BeekeeperEngine
         BeekeeperUpgrades.NeedsWorkbench => State.WorkbenchRevealed,
         BeekeeperUpgrades.NeedsWaxCatcher => State.WorkbenchRevealed && State.HasWaxCatcher,
         // Stronger Candles leaves the Shop with the repellent candle (spec 014), unless bought.
-        BeekeeperUpgrades.NeedsRepellent => State.RepellentUnlocked && !RepellentRetired,
+        BeekeeperUpgrades.NeedsRepellent => RepellentShown,
         BeekeeperUpgrades.NeedsVacuum => State.ToolLevel >= VacuumLevel,
         // Stage 7 (spec 015)
         BeekeeperUpgrades.NeedsPaper => PaperSeen,
@@ -956,6 +956,33 @@ public sealed class BeekeeperEngine
 
     /// <summary>Propolis has been seen: the poplar has sprouted, or any propolis was held.</summary>
     public bool PropolisSeen => State.PropolisRevealed || State.Propolis >= 1m;
+
+    // ---- which Hive rows show (one rule each, specs 009 to 015; the view model only reads these)
+
+    /// <summary>The Pollen row: pollen has been seen, or foraging is on (the wildflowers or clover have sprouted).</summary>
+    public bool PollenShown => State.PollenRevealed || State.Pollen > 0m || ForagingPollenPerMinute > 0m;
+
+    /// <summary>The Propolis row: propolis has been seen or held, or resin is on (the poplar has sprouted).</summary>
+    public bool PropolisShown => State.PropolisRevealed || State.Propolis > 0m || ResinPropolisPerMinute > 0m;
+
+    /// <summary>The Paper row: the first paper (a wasp trade, or any paper held).</summary>
+    public bool PaperShown => PaperSeen;
+
+    /// <summary>The Beeswax candles row: the first candle of any kind has been crafted.</summary>
+    public bool BeeswaxCandlesShown => State.CandlesCrafted > 0;
+
+    /// <summary>The repellent candle (recipe, light button, Hive row) is shown: unlocked, and
+    /// not yet retired by the emissary.</summary>
+    public bool RepellentShown => State.RepellentUnlocked && !RepellentRetired;
+
+    /// <summary>The Repellent candles Hive row: shown once the first one is made, while the candle is shown.</summary>
+    public bool RepellentCandlesRowShown =>
+        RepellentShown && (State.RepellentCrafted || State.RepellentCandles > 0m || State.RepellentSecondsLeft > 0m);
+
+    /// <summary>The bee-boost candle row shows with its recipe, so it stays when the last candle is lit.</summary>
+    public bool BeeBoostCandlesShown => PropolisCandlesShown || State.BeeBoostCandles > 0m;
+
+    public bool SagePropolisCandlesShown => PropolisCandlesShown || State.SagePropolisCandles > 0m;
 
     private int VacuumLevel => Config.Tools.ToList().FindIndex(t => t.Id == "vacuum") + 1;
 

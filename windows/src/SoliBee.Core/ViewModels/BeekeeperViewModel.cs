@@ -222,7 +222,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool RepellentUnlocked => State.RepellentUnlocked;
     /// <summary>The repellent candle is shown (recipe, light button, Hive row): unlocked, and
     /// not yet retired by the emissary (spec 014).</summary>
-    public bool RepellentShown => State.RepellentUnlocked && !Engine.RepellentRetired;
+    public bool RepellentShown => Engine.RepellentShown;
     public bool WaspApproaching => Engine.WaspApproaching;
     public decimal WaspSecondsLeft => State.WaspCountdown;
     public decimal RepellentSecondsLeft => State.RepellentSecondsLeft;
@@ -400,22 +400,19 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupGarden, new BeekeeperHiveRow[]
                 {
                     new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),
-                    new(BeekeeperHiveRows.Pollen, State.PollenRevealed, Math.Floor(State.Pollen),
+                    new(BeekeeperHiveRows.Pollen, Engine.PollenShown, Math.Floor(State.Pollen),
                         Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null),
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
-                    new(BeekeeperHiveRows.Propolis, State.PropolisRevealed || State.Propolis > 0m || Engine.ResinPropolisPerMinute > 0m,
+                    new(BeekeeperHiveRows.Propolis, Engine.PropolisShown,
                         Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.BeeswaxCandles, State.CandlesCrafted > 0, State.BeeswaxCandles),
-                    new(BeekeeperHiveRows.RepellentCandles,
-                        RepellentShown && (State.RepellentCrafted || State.RepellentCandles > 0m || State.RepellentSecondsLeft > 0m),
-                        State.RepellentCandles),
-                    // Shown with their recipes, so a row stays when the last candle is lit.
-                    new(BeekeeperHiveRows.BeeBoostCandles, Engine.PropolisCandlesShown || State.BeeBoostCandles > 0m, State.BeeBoostCandles),
-                    new(BeekeeperHiveRows.SagePropolisCandles, Engine.PropolisCandlesShown || State.SagePropolisCandles > 0m, State.SagePropolisCandles),
+                    new(BeekeeperHiveRows.BeeswaxCandles, Engine.BeeswaxCandlesShown, State.BeeswaxCandles),
+                    new(BeekeeperHiveRows.RepellentCandles, Engine.RepellentCandlesRowShown, State.RepellentCandles),
+                    new(BeekeeperHiveRows.BeeBoostCandles, Engine.BeeBoostCandlesShown, State.BeeBoostCandles),
+                    new(BeekeeperHiveRows.SagePropolisCandles, Engine.SagePropolisCandlesShown, State.SagePropolisCandles),
                     new(BeekeeperHiveRows.BeeBoostBurning, Engine.IsBeeBoosted, State.BeeBoostSecondsLeft),
                     new(BeekeeperHiveRows.SagePropolisBurning, Engine.IsSagePropolisBurning, State.SagePropolisSecondsLeft),
                 }),
@@ -423,7 +420,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 {
                     new(BeekeeperHiveRows.Beebits, State.BeebitsRevealed, State.Beebits),
                     new(BeekeeperHiveRows.Sage, State.SageRevealed, State.Sage),
-                    new(BeekeeperHiveRows.Paper, State.WaspTrades > 0 || State.Paper > 0m, State.Paper),
+                    new(BeekeeperHiveRows.Paper, Engine.PaperShown, State.Paper),
                 }),
             };
         }
