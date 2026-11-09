@@ -122,3 +122,19 @@ Gaps these stages answer: time away barely grew anything (5, built); content ran
 10. Upgrades: the full list, each upgrade's cost, and which upgrades unlock which (work in progress; the first build of them uses placeholders).
 11. Candles: settled for stage 7 (bee-boost: wax + propolis; sage-propolis: wax + sage + propolis; propolis comes from the poplar's resin specialty). Open: their prices and boosts.
 12. Wasp emissary: settled that it comes after 5 bribes in total. Settled: the wasps trade paper for honey (placeholder 50 honey each). Settled (stage 7): paper buys the Notebook and is part of new Shop prices; the wasps give the poplar seed. Open: labels for jarred honey (stage 8) and anything more their reputation gives.
+
+## Update: Combs, bees as currency (design change, proposed, 2026-11-09)
+Leah's design notes. **Design only: nothing in the code changes yet.** *Replaces:* "every bee makes 0.01 honey per second."
+
+1. **Bees are caught by clicking** and are the currency for combs.
+2. **Bees don't make honey.** Honey and wax come from combs.
+3. **You start with one comb.** It drips wax slowly. The wax rate depends on your **free bees**: those not living in a comb.
+4. **Each comb makes honey at a flat rate.** It doesn't matter how many bees live in it (so no per-comb bee tracking).
+5. **A new comb costs bees and wax.** The bees move into the comb and **leave your free-bee count**.
+6. **Honey and wax each have a cap.** At the cap, production stops and nothing is wasted or auto-sold.
+7. **Wax also crafts candles.**
+8. **Capacity upgrades** raise the caps.
+9. **Technologies** are one-time upgrades that add a **% boost to capacity**.
+10. Honey still goes to the bear for Beebits, which buy tools.
+
+*Open:* the cost of the first new comb and how it grows; the honey rate per comb; the caps; how many bees fit in one comb.
