@@ -508,7 +508,7 @@ public partial class BeekeeperView : UserControl
             {
                 string id = u.Id;
                 ShopRows.Children.Add(MakeShopRow(
-                    BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id), false,
+                    BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id)), false,
                     BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis)),
                     "upgrade:" + id, _ => vm.BuyUpgrade(id)));
             }

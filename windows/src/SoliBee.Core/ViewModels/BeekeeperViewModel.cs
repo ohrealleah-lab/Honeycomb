@@ -245,6 +245,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal BribeCost => Engine.BribeCost;
     public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades => Engine.ShopUpgrades;
     public bool CanBuyUpgrade(string id) => Engine.CanBuyUpgrade(id);
+    /// <summary>The percent a Shop upgrade's blurb quotes, or null when its blurb has no number.</summary>
+    public decimal? UpgradeBonusPercent(string id) => Engine.UpgradeBonusPercent(id);
     public bool CanCraftBeeswax => Engine.CanCraftBeeswax;
     public bool CanCraftRepellent => Engine.CanCraftRepellent;
     public bool CanTradeCandles => Engine.CanTradeCandles;

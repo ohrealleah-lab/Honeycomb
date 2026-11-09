@@ -94,14 +94,19 @@ internal static class BeekeeperText
         return trades == 0 ? who : Fill(T(StringKey.BeekeeperBearTradesFmt), who, NumberFormatter.Format(trades, Lang));
     }
 
-    /// <summary>What a buyer gives for what: "10 honey = 1 Beebit".</summary>
-    public static string TradeRate(string id, decimal give = 0m) => id switch
+    /// <summary>What a buyer gives for what: "10 honey = 1 Beebit". <paramref name="give"/> is the
+    /// offer's give amount (from the config).</summary>
+    public static string TradeRate(string id, decimal give = 0m)
     {
-        "bear" => T(StringKey.BeekeeperSellHint),
-        "hippies" => T(StringKey.BeekeeperHippiesRate),
-        "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), NumberFormatter.Format(give, Lang)),
-        _ => "",
-    };
+        string g = NumberFormatter.Format(give, Lang);
+        return id switch
+        {
+            "bear" => Fill(T(StringKey.BeekeeperSellHint), g),
+            "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), g),
+            "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), g),
+            _ => "",
+        };
+    }
 
     public static string TradeOne => T(StringKey.BeekeeperTradeOne);
 
@@ -144,20 +149,26 @@ internal static class BeekeeperText
     public static string CalmNow(string time, string multiplier) => Fill(T(StringKey.BeekeeperCalmNowFmt), time, multiplier);
     public static string Puff => T(StringKey.BeekeeperPuff);
 
-    public static string UpgradeBlurb(string id) => id switch
+    /// <summary>A Shop upgrade's blurb. <paramref name="percent"/> is the figure it quotes (from the
+    /// config, via the view model); upgrades whose blurb has no number ignore it.</summary>
+    public static string UpgradeBlurb(string id, decimal? percent = null)
     {
-        BeekeeperUpgrades.Practice => T(StringKey.BeekeeperUpgradePracticeBlurb),
-        BeekeeperUpgrades.MorePractice => T(StringKey.BeekeeperUpgradeMorePracticeBlurb),
-        BeekeeperUpgrades.Smoker => T(StringKey.BeekeeperUpgradeSmokerBlurb),
-        BeekeeperUpgrades.BiggerCombs1 => T(StringKey.BeekeeperUpgradeBiggerCombs1Blurb),
-        BeekeeperUpgrades.BiggerCombs2 => T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb),
-        BeekeeperUpgrades.BetterWaxCatcher => T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb),
-        BeekeeperUpgrades.StrongerCandles => T(StringKey.BeekeeperUpgradeStrongerCandlesBlurb),
-        BeekeeperUpgrades.Notebook => T(StringKey.BeekeeperUpgradeNotebookBlurb),
-        BeekeeperUpgrades.ThirdBed => T(StringKey.BeekeeperUpgradeThirdBedBlurb),
-        BeekeeperUpgrades.PropolisSeal => T(StringKey.BeekeeperUpgradePropolisSealBlurb),
-        _ => "",
-    };
+        string P() => NumberFormatter.Format(percent ?? 0m, Lang);
+        return id switch
+        {
+            BeekeeperUpgrades.Practice => Fill(T(StringKey.BeekeeperUpgradePracticeBlurb), P()),
+            BeekeeperUpgrades.MorePractice => Fill(T(StringKey.BeekeeperUpgradeMorePracticeBlurb), P()),
+            BeekeeperUpgrades.Smoker => T(StringKey.BeekeeperUpgradeSmokerBlurb),
+            BeekeeperUpgrades.BiggerCombs1 => Fill(T(StringKey.BeekeeperUpgradeBiggerCombs1Blurb), P()),
+            BeekeeperUpgrades.BiggerCombs2 => Fill(T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb), P()),
+            BeekeeperUpgrades.BetterWaxCatcher => Fill(T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb), P()),
+            BeekeeperUpgrades.StrongerCandles => Fill(T(StringKey.BeekeeperUpgradeStrongerCandlesBlurb), P()),
+            BeekeeperUpgrades.Notebook => T(StringKey.BeekeeperUpgradeNotebookBlurb),
+            BeekeeperUpgrades.ThirdBed => T(StringKey.BeekeeperUpgradeThirdBedBlurb),
+            BeekeeperUpgrades.PropolisSeal => Fill(T(StringKey.BeekeeperUpgradePropolisSealBlurb), P()),
+            _ => "",
+        };
+    }
 
     // ---- stage 4: the Garden, bees, bee bread, the wooden hive
     // Cut in stage 6 (spec 014): the forager and guard rows.

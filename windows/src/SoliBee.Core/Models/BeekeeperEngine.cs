@@ -1021,6 +1021,24 @@ public sealed class BeekeeperEngine
 
     private int VacuumLevel => Config.Tools.ToList().FindIndex(t => t.Id == "vacuum") + 1;
 
+    /// <summary>The percent an upgrade's Shop blurb quotes ("+50% honey storage"), from the config,
+    /// or null for an upgrade whose blurb has no number.</summary>
+    public decimal? UpgradeBonusPercent(string id)
+    {
+        decimal? Pct(decimal multiplier) => (multiplier - 1m) * 100m;
+        return id switch
+        {
+            BeekeeperUpgrades.BiggerCombs1 => Pct(Config.BiggerCombs1Multiplier),
+            BeekeeperUpgrades.BiggerCombs2 => Pct(Config.BiggerCombs2Multiplier),
+            BeekeeperUpgrades.BetterWaxCatcher => Pct(Config.BetterWaxCatcherBonus),
+            BeekeeperUpgrades.StrongerCandles => Pct(Config.StrongerCandlesBonus),
+            BeekeeperUpgrades.Practice => Pct(Config.PracticeMultiplier),
+            BeekeeperUpgrades.MorePractice => Pct(Config.MorePracticeMultiplier),
+            BeekeeperUpgrades.PropolisSeal => Pct(Config.PropolisSealStorageMultiplier),
+            _ => null,
+        };
+    }
+
     public bool CanBuyUpgrade(string id) =>
         Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u
         && !Owns(id) && IsUnlocked(u)
