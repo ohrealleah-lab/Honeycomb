@@ -12,6 +12,16 @@ UPDATE = {  # key: Spanish
     "beekeeper_garden_bed_growing_fmt": "%@: creciendo, tiempo restante: %@",
     "beekeeper_bee_boost_burning_fmt": "Impulso: encendida, tiempo restante: %@",
     "beekeeper_sage_propolis_burning_fmt": "Salvia y propóleo: encendida, tiempo restante: %@",
+    # Spanish wording that read badly (review finding 12)
+    "beekeeper_log_comb_built_fmt": "Un panal nuevo. Ahora caben %@ más de miel.",
+    "beekeeper_group_crafts": "Velas",
+    "beekeeper_queen_laying": "poniendo huevos",
+    "beekeeper_honey_per_sec_fmt": "%@ de miel / s",
+    "beekeeper_wax_per_sec_fmt": "%@ de cera / s",
+}
+
+REPLACE_IN = {  # key: (old, new) inside the Spanish text
+    "help_beekeeper_queen": ("Tras 100 intercambios", "Tras 100 tratos"),
 }
 
 NEW = [
@@ -28,6 +38,9 @@ ws = wb.worksheets[0]
 rows = {str(r[1].value).strip(): r for r in ws.iter_rows(min_row=2) if r[1].value}
 for key, es in UPDATE.items():
     rows[key][4].value = es
+for key, (old, new) in REPLACE_IN.items():
+    assert old in rows[key][4].value or new in rows[key][4].value
+    rows[key][4].value = rows[key][4].value.replace(old, new)
 for sec, key, ctx, en, es, tr in NEW:
     if key in rows:
         r = rows[key]

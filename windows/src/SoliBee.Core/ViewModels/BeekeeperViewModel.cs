@@ -412,7 +412,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
                     new(BeekeeperHiveRows.BeeswaxCandles, State.CandlesCrafted > 0, State.BeeswaxCandles),
-                    new(BeekeeperHiveRows.RepellentCandles, RepellentShown, State.RepellentCandles),
+                    new(BeekeeperHiveRows.RepellentCandles,
+                        RepellentShown && (State.RepellentCrafted || State.RepellentCandles > 0m || State.RepellentSecondsLeft > 0m),
+                        State.RepellentCandles),
                     // Shown with their recipes, so a row stays when the last candle is lit.
                     new(BeekeeperHiveRows.BeeBoostCandles, Engine.PropolisCandlesShown || State.BeeBoostCandles > 0m, State.BeeBoostCandles),
                     new(BeekeeperHiveRows.SagePropolisCandles, Engine.PropolisCandlesShown || State.SagePropolisCandles > 0m, State.SagePropolisCandles),

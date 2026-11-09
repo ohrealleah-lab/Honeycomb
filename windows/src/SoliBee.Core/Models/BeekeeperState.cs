@@ -74,6 +74,8 @@ public sealed class BeekeeperState
     public bool HippiesRevealed { get; set; }
     public bool SageRevealed { get; set; }
     public bool RepellentUnlocked { get; set; }
+    /// <summary>True once the first repellent candle is made (brings its Hive row, spec 010).</summary>
+    public bool RepellentCrafted { get; set; }
 
     /// <summary>Wasp time left on burning repellent candles (0 = none burning).</summary>
     public decimal RepellentSecondsLeft { get; set; }

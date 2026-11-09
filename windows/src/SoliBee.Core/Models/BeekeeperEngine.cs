@@ -783,6 +783,7 @@ public sealed class BeekeeperEngine
         State.Wax -= Config.RepellentCandleWax * count;
         State.Sage -= Config.RepellentCandleSage * count;
         State.RepellentCandles += count;
+        State.RepellentCrafted = true;
         var events = new List<BeekeeperEvent>();
         if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "repellent"));
         CountCandleCrafted(events, count);
