@@ -62,6 +62,7 @@ public static class BeekeeperSaveService
             if (!MoveAside(path)) keepFile = true;
             return null;
         }
+        state.Log.RemoveAll(entry => entry is null || entry.Key is null);   // the story log reads every entry's key
         return state;
     }
 
@@ -107,11 +108,26 @@ public static class BeekeeperSaveService
         return (decimal)(utcNow - saved).TotalSeconds;
     }
 
+    /// <summary>No real hive holds this much of anything. Refusing bigger numbers leaves the maths
+    /// room to work without overflowing.</summary>
+    private const decimal MaxAmount = 1e24m;
+
+    /// <summary>Combs cost so much by the 300th that no real hive gets near this.</summary>
+    private const int MaxCombs = 100_000;
+
     // Guards against a hand-edited or damaged file that parses but makes no sense.
     private static bool LooksSane(BeekeeperState s)
     {
         int maxTool = BeekeeperConfig.Default.Tools.Count;
-        return s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
+        decimal[] amounts =
+        {
+            s.Honey, s.Wax, s.WaxProgress, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
+            s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown, s.GrowSecondsLeft,
+            s.ForagerBees, s.GuardBees, s.Pollen, s.BeeBread, s.AgreementHoneyProgress, s.Paper,
+            s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles,
+        };
+        return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
+            && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
             && s.Combs >= 0 && s.Trades >= 0
             && s.ToolLevel >= 0 && s.ToolLevel <= maxTool
             && s.Log is not null
@@ -133,9 +149,12 @@ public static class BeekeeperSaveService
             && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m;
     }
 
+    // Every damaged file keeps its own backup: .unreadable, then .unreadable2, .unreadable3…
     private static bool MoveAside(string path)
     {
-        try { File.Move(path, path + ".unreadable", overwrite: true); return true; }
+        string target = path + ".unreadable";
+        for (int n = 2; File.Exists(target); n++) target = path + ".unreadable" + n;
+        try { File.Move(path, target); return true; }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { return false; }
     }
 }

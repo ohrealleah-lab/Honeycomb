@@ -160,15 +160,31 @@ public sealed class BeekeeperEngine
         s.Version = 7;
     }
 
-    /// <summary>Sanity for a loaded file: unknown plant ids dropped, no more beds than owned.</summary>
+    /// <summary>Sanity for a loaded file: unknown plant ids dropped, every plant in one place only
+    /// (sprouted, else in a bed, else in hand), no more beds than owned (the seeds from extra beds
+    /// go back in hand) and no timer longer than it could ever be.</summary>
     private void Tidy(BeekeeperState s)
     {
         bool Known(string id) => Config.Plants.Any(p => p.Id == id);
-        s.SeedsInHand.RemoveAll(id => !Known(id));
-        s.SeedsGivenIds.RemoveAll(id => !Known(id));
-        s.Beds.RemoveAll(b => !Known(b.PlantId));
+        s.Plants = s.Plants.Where(id => id is not null).Distinct().ToList();
+        s.Upgrades = s.Upgrades.Where(id => id is not null).Distinct().ToList();
+        s.SeedsGivenIds = s.SeedsGivenIds.Where(Known).Distinct().ToList();
+        s.Beds = s.Beds.Where(b => Known(b.PlantId) && !s.Plants.Contains(b.PlantId)).DistinctBy(b => b.PlantId).ToList();
+        s.SeedsInHand = s.SeedsInHand.Where(id => Known(id) && !s.Plants.Contains(id) && s.Beds.All(b => b.PlantId != id))
+            .Distinct().ToList();
+
         int owned = Config.StartingBeds + (s.Upgrades.Contains(BeekeeperUpgrades.ThirdBed) ? Config.ThirdBedBeds : 0);
-        if (s.Beds.Count > owned) s.Beds.RemoveRange(owned, s.Beds.Count - owned);
+        if (s.Beds.Count > owned)
+        {
+            s.SeedsInHand.AddRange(s.Beds.Skip(owned).Select(b => b.PlantId));
+            s.Beds.RemoveRange(owned, s.Beds.Count - owned);
+        }
+
+        foreach (var bed in s.Beds)
+            bed.SecondsLeft = Math.Min(bed.SecondsLeft, Config.Plants.First(p => p.Id == bed.PlantId).GrowSeconds);
+        s.CalmSecondsLeft = Math.Min(s.CalmSecondsLeft, Config.CalmSeconds);
+        s.BeeBoostSecondsLeft = Math.Min(s.BeeBoostSecondsLeft, Config.BeeBoostCapSeconds);
+        s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
     }
 
     private BeekeeperState NewState() => new() { BearName = PickBearName() };
@@ -407,8 +423,9 @@ public sealed class BeekeeperEngine
             decimal raised = Math.Floor(m.Raised);
             if (raised > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
             // Honey that found a home: stored, or taken by the bear under the agreement.
+            // Under 1 honey would read "made 0 honey", so that counts as nothing.
             decimal honey = m.Stored + m.Taken;
-            events.Add(honey > 0m
+            events.Add(honey >= 1m
                 ? new BeekeeperEvent(BeekeeperEvents.WelcomeBack, honey)
                 : new BeekeeperEvent(BeekeeperEvents.WelcomeBackNothing));
         }
@@ -488,6 +505,18 @@ public sealed class BeekeeperEngine
         events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, bed.PlantId));
     }
 
+    /// <summary>Closer than this to a tidy number counts as that number.</summary>
+    private const decimal RoundingDust = 0.00000000000000001m;
+
+    /// <summary>A third of a bee can't be stored exactly, so sums of many short stretches end a
+    /// hair under the true amount (1999.99… for 2000). This puts a running total back on the tidy
+    /// number when it is only rounding dust away, so live play and time away agree.</summary>
+    private static decimal Snap(decimal value)
+    {
+        decimal tidy = Math.Round(value, 15);
+        return Math.Abs(value - tidy) < RoundingDust ? tidy : value;
+    }
+
     /// <summary>
     /// The hive works for <paramref name="seconds"/> in one exact step, so many short stretches
     /// add up to one long one (FR-402, FR-403). While the queen lays, the bees grow in a straight
@@ -508,7 +537,7 @@ public sealed class BeekeeperEngine
         {
             decimal canFeed = State.BeeBread * Config.BeesPerBeeBread;
             decimal wouldRaise = perMinute * seconds / 60m;
-            if (wouldRaise >= canFeed)
+            if (wouldRaise >= canFeed - RoundingDust)
             {
                 raised = canFeed;
                 layingSeconds = Math.Min(seconds, canFeed * 60m / perMinute);
@@ -526,9 +555,9 @@ public sealed class BeekeeperEngine
                              + perMinute * layingSeconds * layingSeconds / 120m
                              + raised * (seconds - layingSeconds);
 
-        State.Bees = Math.Min(Config.MaxBees, State.Bees + raised);
+        State.Bees = Math.Min(Config.MaxBees, Snap(State.Bees + raised));
         if (perMinute > 0m)
-            State.BeeBread = emptied ? 0m : Math.Max(0m, State.BeeBread - raised / Config.BeesPerBeeBread);
+            State.BeeBread = emptied ? 0m : Math.Max(0m, Snap(State.BeeBread - raised / Config.BeesPerBeeBread));
         if (emptied && !State.PantryEmptyAnnounced)
         {
             State.PantryEmptyAnnounced = true;
@@ -540,7 +569,7 @@ public sealed class BeekeeperEngine
         decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * SagePropolisBoostNow * HiveMultiplier;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
-        State.Honey += stored;
+        State.Honey = Snap(State.Honey + stored);
 
         if (made > room && !State.StorageFullAnnounced)
         {
@@ -553,7 +582,7 @@ public sealed class BeekeeperEngine
         if (State.HasTradeAgreement && made > stored)
         {
             taken = made - stored;
-            State.AgreementHoneyProgress += taken;
+            State.AgreementHoneyProgress = Snap(State.AgreementHoneyProgress + taken);
             agreementBeebits = Math.Floor(State.AgreementHoneyProgress / Config.AgreementHoneyPerBeebit);
             if (agreementBeebits > 0m)
             {
@@ -566,7 +595,7 @@ public sealed class BeekeeperEngine
         // Wax follows all the honey the bees make, so it keeps coming when the combs are
         // full (Leah, 2026-11-07). Selling honey never touches it.
         decimal waxMade = 0m;
-        State.WaxProgress += made;
+        State.WaxProgress = Snap(State.WaxProgress + made);
         decimal batches = Math.Floor(State.WaxProgress / Config.HoneyPerWax);
         if (batches > 0m)
         {
@@ -1260,8 +1289,8 @@ public sealed class BeekeeperEngine
         if (seconds <= 0m) return;
 
         // Multiply first and divide once, so whole minutes stay exact.
-        State.Pollen += ForagingPollenPerMinute * seconds / 60m;
-        State.Propolis += ResinPropolisPerMinute * seconds / 60m;
+        State.Pollen = Snap(State.Pollen + ForagingPollenPerMinute * seconds / 60m);
+        State.Propolis = Snap(State.Propolis + ResinPropolisPerMinute * seconds / 60m);
         if (!State.PropolisRevealed && State.Propolis >= 1m)
         {
             State.PropolisRevealed = true;

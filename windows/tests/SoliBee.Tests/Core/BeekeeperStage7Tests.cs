@@ -455,7 +455,7 @@ public class BeekeeperStage7Tests : IDisposable
             },
         };
         Make(s);
-        Assert.Equal(new[] { "willow" }, s.SeedsInHand);
+        Assert.Equal(new[] { "willow", "poplar" }, s.SeedsInHand);   // the seed from the extra bed comes back
         Assert.Equal(new[] { "willow" }, s.SeedsGivenIds);
         Assert.Equal(2, s.Beds.Count);   // two beds owned; the unknown one went first
         Assert.DoesNotContain(s.Beds, b => b.PlantId == "nonsense");
