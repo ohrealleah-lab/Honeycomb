@@ -357,16 +357,17 @@ public class BeekeeperStage5Tests : IDisposable
         s.HasTradeAgreement = true;
         var e = Make(s);
         var r = e.AdvanceAway(8m * 3600m);
-        var keys = r.Events.Select(x => x.Key).Where(BeekeeperEvents.IsWelcomeBack).ToList();
-        // Added bottom line first, so the log (newest first) reads honey, queen, bear, pantry.
+        var keys = r.WelcomeBack.Select(x => x.Key).ToList();
+        // In reading order, top line first: honey, queen, bear, pantry.
         Assert.Equal(new[]
         {
-            BeekeeperEvents.WelcomeBackPantry, BeekeeperEvents.WelcomeBackBear,
-            BeekeeperEvents.WelcomeBackQueen, BeekeeperEvents.WelcomeBack,
+            BeekeeperEvents.WelcomeBack, BeekeeperEvents.WelcomeBackQueen,
+            BeekeeperEvents.WelcomeBackBear, BeekeeperEvents.WelcomeBackPantry,
         }, keys);
+        Assert.All(r.Events, x => Assert.False(BeekeeperEvents.IsWelcomeBack(x.Key)));
         Assert.False(Has(r.Events, BeekeeperEvents.PantryEmpty));
-        Assert.Equal(1000m, r.Events.Single(x => x.Key == BeekeeperEvents.WelcomeBackQueen).Value);
-        Assert.Equal(e.State.Beebits, r.Events.Single(x => x.Key == BeekeeperEvents.WelcomeBackBear).Value);
+        Assert.Equal(1000m, r.WelcomeBack.Single(x => x.Key == BeekeeperEvents.WelcomeBackQueen).Value);
+        Assert.Equal(e.State.Beebits, r.WelcomeBack.Single(x => x.Key == BeekeeperEvents.WelcomeBackBear).Value);
         Assert.True(r.PantryEmptied);
     }
 
@@ -374,7 +375,7 @@ public class BeekeeperStage5Tests : IDisposable
     public void WelcomeBack_LeavesOutWhatDidNotHappen()
     {
         var e = Make(new BeekeeperState { Bees = 10m, Combs = 10 });
-        var keys = e.AdvanceAway(600m).Events.Select(x => x.Key).Where(BeekeeperEvents.IsWelcomeBack).ToList();
+        var keys = e.AdvanceAway(600m).WelcomeBack.Select(x => x.Key).ToList();
         Assert.Equal(new[] { BeekeeperEvents.WelcomeBack }, keys);
     }
 

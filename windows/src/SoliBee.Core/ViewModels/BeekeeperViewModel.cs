@@ -165,7 +165,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // agreement already count for the time away.
             LogEvents(Engine.RevealOnLoad());   // an older save may already have earned The Workbench
             decimal gap = BeekeeperSaveService.SecondsSinceSaved(loaded, now);
-            if (Engine.IsAway(gap)) LogEvents(Engine.AdvanceAway(gap).Events);
+            if (Engine.IsAway(gap)) LogAway(Engine.AdvanceAway(gap));
         }
 
         if (!isHeadless) StartTimer();
@@ -629,7 +629,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>Debug builds only: credits time away as if the app had been closed, welcome-back lines included.</summary>
     public void DebugSpendAway(decimal seconds)
     {
-        LogEvents(Engine.AdvanceAway(seconds).Events);
+        LogAway(Engine.AdvanceAway(seconds));
         _lastTickUtc = _clock();
         SaveNow();
         Refresh();
@@ -717,16 +717,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         if (away)
         {
             // The app was open the whole time, so the honey is credited quietly: only
-            // reopening the app says "While you were away" (Leah, 2026-11-07). An empty pantry
-            // is still said, the live way.
-            LogEvents(Engine.AdvanceAway(gap).Events
-                .Select(e => e.Key switch
-                {
-                    BeekeeperEvents.WelcomeBackPantry => new BeekeeperEvent(BeekeeperEvents.PantryEmpty),
-                    BeekeeperEvents.WelcomeBackSageOut => new BeekeeperEvent(BeekeeperEvents.SagePropolisOut),
-                    _ => e,
-                })
-                .Where(e => !BeekeeperEvents.IsWelcomeBack(e.Key)));
+            // reopening the app says "While you were away" (Leah, 2026-11-07). The engine tells
+            // an empty pantry or a burnt-out candle the live way.
+            LogEvents(Engine.AdvanceGap(gap).Events);
         }
         else
         {
@@ -785,6 +778,14 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     }
 
     // ------------------------------------------------------------------ log and refresh
+
+    /// <summary>Time away: what happened, then the welcome-back lines. The log shows the newest
+    /// line first, and the engine gives the lines top first, so they go in bottom line first.</summary>
+    private void LogAway(AwayResult away)
+    {
+        LogEvents(away.Events);
+        LogEvents(away.WelcomeBack.Reverse());
+    }
 
     private void LogEvents(IEnumerable<BeekeeperEvent> events)
     {

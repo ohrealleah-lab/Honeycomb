@@ -381,7 +381,7 @@ public class BeekeeperEngineTests
         Assert.Equal(7200m, r.CreditedSeconds);
         Assert.Equal(7200m, e.State.Honey);
         Assert.Equal(144m, e.State.Wax);        // 7200 / 50
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.WelcomeBack && ev.Value == 7200m);
+        Assert.Contains(r.WelcomeBack, ev => ev.Key == BeekeeperEvents.WelcomeBack && ev.Value == 7200m);
     }
 
     [Fact]
@@ -429,11 +429,11 @@ public class BeekeeperEngineTests
     public void WelcomeBack_SaysNothingForAnEmptyHive_AndAGladLineWhenNothingWasMade()
     {
         var empty = Make();
-        Assert.Empty(empty.AdvanceAway(3600m).Events);
+        Assert.Empty(empty.AdvanceAway(3600m).WelcomeBack);
 
         var full = Make(state: new BeekeeperState { Bees = 100m, Honey = 200m });
         var r = full.AdvanceAway(3600m);
-        Assert.True(Has(r.Events, BeekeeperEvents.WelcomeBackNothing));
+        Assert.True(Has(r.WelcomeBack, BeekeeperEvents.WelcomeBackNothing));
     }
 
     [Fact]

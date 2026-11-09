@@ -257,9 +257,9 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal(0m, e.State.SagePropolisSecondsLeft);
         // 100 s at 12.5 × 1.1, 100 s at 12.5
         Assert.Equal(12.5m * 1.1m * 100m + 12.5m * 100m, e.State.Honey);
-        Assert.True(Has(away.Events, BeekeeperEvents.WelcomeBackSageOut));
+        Assert.True(Has(away.WelcomeBack, BeekeeperEvents.WelcomeBackSageOut));
         Assert.False(Has(away.Events, BeekeeperEvents.SagePropolisOut));
-        Assert.Contains(away.Events, ev => ev.Key == BeekeeperEvents.WelcomeBackPropolis && ev.Value == 3m);   // 200 s of resin
+        Assert.Contains(away.WelcomeBack, ev => ev.Key == BeekeeperEvents.WelcomeBackPropolis && ev.Value == 3m);   // 200 s of resin
     }
 
     [Fact]

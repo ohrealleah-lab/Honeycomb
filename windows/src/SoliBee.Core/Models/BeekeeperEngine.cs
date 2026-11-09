@@ -68,7 +68,7 @@ public static class BeekeeperEvents
 
     // Stage 5
     public const string QueenSettles = "queen_settles";
-    public const string PantryEmpty = "pantry_empty";          // live play only; away says WelcomeBackPantry
+    public const string PantryEmpty = "pantry_empty";          // live play and open-app gaps; time away says WelcomeBackPantry
     public const string QueenResumes = "queen_resumes";
     public const string TradeAgreement = "trade_agreement";    // Text = bear name
     public const string WelcomeBackQueen = "welcome_back_queen";   // Value = bees raised while away
@@ -107,8 +107,15 @@ public sealed record CatchResult(bool Stung, decimal BeesGained, IReadOnlyList<B
 public sealed record AdvanceResult(decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
     decimal BeesRaised = 0m, decimal AgreementBeebits = 0m);
 
+/// <summary><see cref="Events"/>: what happened, in the order it happened. <see cref="WelcomeBack"/>:
+/// the "While you were away" summary, in reading order (top line first); empty for
+/// <see cref="BeekeeperEngine.AdvanceGap"/>, which is the app staying open. The caller decides how
+/// to put them in its log.</summary>
 public sealed record AwayResult(decimal CreditedSeconds, decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
-    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m, bool PantryEmptied = false);
+    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m, bool PantryEmptied = false)
+{
+    public IReadOnlyList<BeekeeperEvent> WelcomeBack { get; init; } = Array.Empty<BeekeeperEvent>();
+}
 
 /// <summary>Result of a sell, buy or build. <see cref="Done"/> is false when it was refused.</summary>
 public sealed record ActionResult(bool Done, decimal Amount, IReadOnlyList<BeekeeperEvent> Events)
@@ -393,43 +400,68 @@ public sealed class BeekeeperEngine
 
     /// <summary>
     /// Time away: the same maths as <see cref="Advance"/> in one step, capped at 3 days,
-    /// paid at the offline rate, ignored if negative. Storage still limits the honey.
+    /// paid at the offline rate, ignored if negative. Storage still limits the honey. For the app
+    /// having been closed: an empty pantry and a sage-propolis candle burning down are told in the
+    /// <see cref="AwayResult.WelcomeBack"/> summary instead of as their live events.
     /// </summary>
     public AwayResult AdvanceAway(decimal gapSeconds)
     {
         var events = new List<BeekeeperEvent>();
         if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
 
-        decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
         decimal propolisBefore = State.Propolis;
-        var m = Work(credited * Config.OfflineRate, events);   // the bee-boost candle waits: no live boost here
+        var (credited, m) = AwayStretch(gapSeconds, events);
 
-        // An empty pantry while away is told in the welcome-back lines instead (and so is a
-        // sage-propolis candle burning down).
         if (m.PantryEmptied) events.RemoveAll(e => e.Key == BeekeeperEvents.PantryEmpty);
         bool sageOut = events.RemoveAll(e => e.Key == BeekeeperEvents.SagePropolisOut) > 0;
 
+        // In reading order, top line first: "the bees made…", "the queen raised…", "propolis…",
+        // "the bear left…", "the pantry…", "the candle…".
+        var welcome = new List<BeekeeperEvent>();
         if (State.Bees > 0m)
         {
-            // The log shows the newest line first, so these are added bottom line first:
-            // they then read "the bees made…", "the queen raised…", "propolis…", "the bear left…",
-            // "the pantry…", "the candle…".
-            if (sageOut) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackSageOut));
-            if (m.PantryEmptied) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
-            if (m.AgreementBeebits > 0m)
-                events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
-            decimal gathered = Math.Floor(State.Propolis - propolisBefore);
-            if (gathered > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPropolis, gathered));
-            decimal raised = Math.Floor(m.Raised);
-            if (raised > 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
             // Honey that found a home: stored, or taken by the bear under the agreement.
             // Under 1 honey would read "made 0 honey", so that counts as nothing.
             decimal honey = m.Stored + m.Taken;
-            events.Add(honey >= 1m
+            welcome.Add(honey >= 1m
                 ? new BeekeeperEvent(BeekeeperEvents.WelcomeBack, honey)
                 : new BeekeeperEvent(BeekeeperEvents.WelcomeBackNothing));
+            decimal raised = Math.Floor(m.Raised);
+            if (raised > 0m) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
+            decimal gathered = Math.Floor(State.Propolis - propolisBefore);
+            if (gathered > 0m) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPropolis, gathered));
+            if (m.AgreementBeebits > 0m)
+                welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
+            if (m.PantryEmptied) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
+            if (sageOut) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackSageOut));
         }
+        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.AgreementBeebits, m.PantryEmptied)
+        {
+            WelcomeBack = welcome,
+        };
+    }
+
+    /// <summary>
+    /// A long gap while the app stayed open (a sleep, a frozen window): the same maths and caps as
+    /// <see cref="AdvanceAway"/>, but the events come out as in live play (an empty pantry and a
+    /// candle burning out are told as they happened) and there is no welcome-back summary, since
+    /// only reopening the app says "While you were away".
+    /// </summary>
+    public AwayResult AdvanceGap(decimal gapSeconds)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
+        var (credited, m) = AwayStretch(gapSeconds, events);
         return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.AgreementBeebits, m.PantryEmptied);
+    }
+
+    /// <summary>The one place a gap is worked out, shared by <see cref="AdvanceAway"/> and
+    /// <see cref="AdvanceGap"/>, so they cannot drift apart.</summary>
+    private (decimal Credited, Made Made) AwayStretch(decimal gapSeconds, List<BeekeeperEvent> events)
+    {
+        decimal credited = Math.Min(gapSeconds, Config.OfflineCapSeconds);
+        var m = Work(credited * Config.OfflineRate, events);   // the bee-boost candle waits: no live boost here
+        return (credited, m);
     }
 
     /// <summary>What one stretch made. <see cref="Taken"/> is the overflow honey the bear took.</summary>

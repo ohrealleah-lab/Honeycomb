@@ -84,7 +84,7 @@ public class BeekeeperHardeningTests : IDisposable
     {
         var e = With(new BeekeeperState { Bees = 1m, HoneyRevealed = true });
 
-        var keys = e.AdvanceAway(2.5m).Events.Select(x => x.Key).ToList();
+        var keys = e.AdvanceAway(2.5m).WelcomeBack.Select(x => x.Key).ToList();
 
         Assert.Contains(BeekeeperEvents.WelcomeBackNothing, keys);
         Assert.DoesNotContain(BeekeeperEvents.WelcomeBack, keys);
@@ -95,7 +95,7 @@ public class BeekeeperHardeningTests : IDisposable
     {
         var e = With(new BeekeeperState { Bees = 1m, HoneyRevealed = true });
 
-        Assert.Contains(e.AdvanceAway(100m).Events, x => x.Key == BeekeeperEvents.WelcomeBack && x.Value == 1m);
+        Assert.Contains(e.AdvanceAway(100m).WelcomeBack, x => x.Key == BeekeeperEvents.WelcomeBack && x.Value == 1m);
     }
 
     // ------------------------------------------------------------------ absurd numbers
