@@ -28,7 +28,6 @@ internal static class BeekeeperText
     }
 
     // ---- labels
-    public static string GameName => T(StringKey.GamemodeBeekeeperDisplay);
     public static string Catch => T(StringKey.BeekeeperCatchBee);
     public static string BeesLabel => T(StringKey.BeekeeperBeesLabel);
     public static string HoneyLabel => T(StringKey.BeekeeperHoneyLabel);
@@ -36,13 +35,8 @@ internal static class BeekeeperText
     public static string BeebitsLabel => T(StringKey.BeekeeperBeebitsLabel);
     public static string HiveTitle(bool wooden) =>
         T(wooden ? StringKey.BeekeeperHiveTitleWooden : StringKey.BeekeeperHiveTitleSkep);
-    public static string HiveBees => T(StringKey.BeekeeperHiveBees);
-    public static string HiveHoney => T(StringKey.BeekeeperHiveHoney);
-    public static string HiveWax => T(StringKey.BeekeeperHiveWax);
-    public static string HiveCombs => T(StringKey.BeekeeperHiveCombs);
     public static string Comb => T(StringKey.BeekeeperComb);
     public static string Build => T(StringKey.BeekeeperBuild);
-    public static string HiveBeebits => T(StringKey.BeekeeperHiveBeebits);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
     public static string LogTitle => T(StringKey.BeekeeperLogTitle);
     public static string Owned => T(StringKey.BeekeeperOwned);
@@ -68,15 +62,11 @@ internal static class BeekeeperText
 
     public static string HoneyPerSecond(string n) => Fill(T(StringKey.BeekeeperHoneyPerSecFmt), n);
     public static string WaxPerSecond(string n) => Fill(T(StringKey.BeekeeperWaxPerSecFmt), n);
-    public static string CombsFull => T(StringKey.BeekeeperCombsFull);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
     public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
     public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
 
     // ---- stage 2: The Workbench, Hippies, wasps, upgrades
-    public static string HiveBeeswaxCandles => T(StringKey.BeekeeperHiveBeeswaxCandles);
-    public static string HiveRepellentCandles => T(StringKey.BeekeeperHiveRepellentCandles);
-    public static string HiveSage => T(StringKey.BeekeeperHiveSage);
 
     public static string WorkbenchTitle => T(StringKey.BeekeeperWorkbenchTitle);
     public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
@@ -170,12 +160,9 @@ internal static class BeekeeperText
     };
 
     // ---- stage 4: the Garden, bees, bee bread, the wooden hive
-    public static string HiveSeeds => T(StringKey.BeekeeperHiveSeeds);
     // Cut in stage 6 (spec 014): the forager and guard rows.
     // public static string HiveForagers => T(StringKey.BeekeeperHiveForagers);
     // public static string HiveGuards => T(StringKey.BeekeeperHiveGuards);
-    public static string HivePollen => T(StringKey.BeekeeperHivePollen);
-    public static string HiveBeeBread => T(StringKey.BeekeeperHiveBeeBread);
     public static string WoodenHiveName => T(StringKey.BeekeeperWoodenHiveName);
     public static string WoodenHiveBlurb(string percent) => Fill(T(StringKey.BeekeeperWoodenHiveBlurbFmt), percent);
     public static string Move => T(StringKey.BeekeeperMove);
@@ -228,12 +215,10 @@ internal static class BeekeeperText
         BeekeeperSpecialties.Resin => T(StringKey.BeekeeperNoteResin),
         _ => "",
     };
-    public static string GardenEmpty => T(StringKey.BeekeeperGardenEmpty);
     public static string BeeBread => T(StringKey.BeekeeperBeeBread);
     public static string BeeBreadBlurb => T(StringKey.BeekeeperBeeBreadBlurb);
 
     // ---- stage 5: the queen, the pantry, the trade agreement
-    public static string HiveQueen => T(StringKey.BeekeeperHiveQueen);
     public static string QueenStatus(bool laying) =>
         T(laying ? StringKey.BeekeeperQueenLaying : StringKey.BeekeeperQueenResting);
     public static string BeesPerSecond(string n) => Fill(T(StringKey.BeekeeperBeesPerSecFmt), n);

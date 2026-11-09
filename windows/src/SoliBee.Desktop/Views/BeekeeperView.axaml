@@ -80,7 +80,7 @@
     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto">
         <Grid Margin="20,12,20,20" MinWidth="980" ColumnDefinitions="340,*,260" ColumnSpacing="16">
 
-            <!-- ───────── LEFT: art, Catch Bee, Hive, Smoker ───────── -->
+            <!-- ───────── LEFT: art, Catch Bee, Hive, Smoker, Notebook ───────── -->
             <StackPanel Grid.Column="0" Spacing="12">
                 <!-- Pixel-art slot (170x102 shown at 2x). Art arrives later; until then a quiet placeholder. -->
                 <Border Classes="bk-card" Height="204" Padding="0" ClipToBounds="True">
@@ -147,7 +147,7 @@
                 </Border>
             </StackPanel>
 
-            <!-- ───────── CENTRE: Bear, Shop, Combs ───────── -->
+            <!-- ───────── CENTRE: Trading, Shop, Workbench, Garden ───────── -->
             <StackPanel Grid.Column="1" Spacing="12">
                 <!-- TRADING: every buyer (the Bear, the Hippies, later others) as one row each -->
                 <Border x:Name="TradeCard" Classes="bk-card" IsVisible="False">
@@ -263,7 +263,6 @@
                         <TextBlock x:Name="GardenTitleText" Classes="bk-title" />
                         <!-- Since stage 7 (spec 015): the beds (growing or empty), the seeds in hand with a
                              Plant button each, then the plants that have sprouted. -->
-                        <TextBlock x:Name="GardenStatusText" Classes="bk-body" FontWeight="SemiBold" />
                         <StackPanel x:Name="BedRows" Spacing="4" />
                         <StackPanel x:Name="SeedRows" Spacing="8" />
                         <StackPanel x:Name="PlantRows" Spacing="8" />

@@ -146,7 +146,6 @@ public partial class BeekeeperView : UserControl
         string N(decimal v, int d = 0) => NumberFormatter.Format(v, lang, d);
 
         CatchButton.Content = BeekeeperText.Catch;
-        CatchButton.IsEnabled = true;
 
         // The Smoker
         SmokerCard.IsVisible = vm.HasSmoker;
@@ -255,10 +254,6 @@ public partial class BeekeeperView : UserControl
         // The Garden (stage 7): the beds, the seeds in hand, the plants once sprouted
         GardenCard.IsVisible = vm.GardenRevealed;
         GardenTitleText.Text = BeekeeperText.GardenTitle;
-        // Cut in stage 7 (spec 015): "Something is growing!" and the one Plant button.
-        // GardenStatusText.Text = vm.IsGrowing ? BeekeeperText.GardenGrowing : vm.CanPlantSeed ? "" : BeekeeperText.GardenEmpty;
-        GardenStatusText.Text = "";
-        GardenStatusText.IsVisible = false;
         UpdateBeds(vm);
         UpdateSeeds(vm, lang);
         UpdatePlants(vm, lang);
@@ -438,6 +433,7 @@ public partial class BeekeeperView : UserControl
                     HorizontalContentAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 };
                 ToolTip.SetTip(button, BeekeeperText.TakesToGrow(plant.GrowSeconds));
+                ToolTip.SetShowOnDisabled(button, true);   // beds full: the button is off but still says how long it takes
                 button.Click += (_, _) => _vm?.PlantSeedCommand.Execute(id);
                 Grid.SetColumn(button, 1);
                 row.Children.Add(button);

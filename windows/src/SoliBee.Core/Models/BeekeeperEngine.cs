@@ -232,8 +232,8 @@ public sealed class BeekeeperEngine
 
     /// <summary>Everything one successful click catches: the tool's bees plus a slice of the
     /// hive (0.1%, rounded down; Practice doesn't grow the slice), the slice capped at 10 × the
-    /// tool's bees (spec 013, FR-405). The one place this is worked out, so the catch, the popup
-    /// and the tool line agree.</summary>
+    /// tool's bees (spec 013, FR-405). The one place this is worked out, so the catch and the popup
+    /// agree.</summary>
     public decimal BeesPerCatch => BeesPerClick + Math.Min(Math.Floor(State.Bees * Config.CatchSliceShare), SliceCap);
 
     /// <summary>The most bees the slice can bring in on one click.</summary>

@@ -11,13 +11,6 @@ using SoliBee.Core.Services;
 namespace SoliBee.Core.ViewModels;
 
 /// <summary>
-/// Runs a Beekeeper game for the screen: owns the rules engine, the one-second timer, the
-/// story log, autosave and time-away credit. It deliberately knows no words: the log holds
-/// event keys plus values and the view turns them into (localized) sentences.
-/// The app coordinator owns one of these for the whole session, so the hive keeps working
-/// while the player is in another game.
-/// </summary>
-/// <summary>
 /// One buyer on the shared Trading card (the Bear, the Hippies, later others). Give and Get
 /// are resource names ("honey", "beebits", "beeswax_candles", "sage") the view turns into
 /// words: "10 honey = 1 Beebit". The view model holds no words.
@@ -95,6 +88,13 @@ public static class BeekeeperNotes
     public const string Queen = "queen";
 }
 
+/// <summary>
+/// Runs a Beekeeper game for the screen: owns the rules engine, the one-second timer, the
+/// story log, autosave and time-away credit. It deliberately knows no words: the log holds
+/// event keys plus values and the view turns them into (localized) sentences.
+/// The app coordinator owns one of these for the whole session, so the hive keeps working
+/// while the player is in another game.
+/// </summary>
 public partial class BeekeeperViewModel : ObservableObject, IDisposable
 {
     /// <summary>How often progress is saved while playing.</summary>
@@ -319,7 +319,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     // Stage 6: specialties and the wasp emissary
     /// <summary>The hive's specialties (foraging, guarding, nursing, resin), from the sprouted plants.</summary>
     public IReadOnlyList<string> Specialties => Engine.Specialties;
-    public decimal PollenPerSecond => Engine.PollenPerSecondNow;
     public long BribesTotal => State.BribesTotal;
     public bool EmissaryCome => Engine.EmissaryCome;
     public long WaspTrades => State.WaspTrades;
@@ -328,7 +327,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     // Stage 7: the poplar, propolis, the two candles and the Notebook
     public decimal Propolis => State.Propolis;
-    public decimal PropolisPerSecond => Engine.PropolisPerSecondNow;
     /// <summary>The two propolis candles' recipes show at The Workbench once the poplar has sprouted.</summary>
     public bool PropolisCandlesShown => Engine.PropolisCandlesShown;
     public decimal BeeBoostCandles => State.BeeBoostCandles;
