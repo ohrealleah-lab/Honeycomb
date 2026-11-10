@@ -93,6 +93,7 @@ public class BeekeeperQueenViewModelTests : IDisposable
     public void BearTradesToAlmostAgreement_ThenOneSale_BringsTheBetterRate()
     {
         var vm = Make(new Clock(), new BeekeeperState { Bees = 10m, Honey = 50m, HoneyRevealed = true, BearRevealed = true, BearName = "Bruno" });
+        vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         vm.DebugBearTradesToAlmostAgreement();
         Assert.Equal(39, vm.Trades);          // the agreement comes at 40 (pacing review 2026-11-10; was 25, and 100 before stage 7.5)
         Assert.False(vm.HasTradeAgreement);

@@ -50,6 +50,10 @@ public static class BeekeeperEvents
     public const string WaspRaid = "wasp_raid";
     public const string Bribe = "bribe";                     // Value = honey paid
     public const string WaspLeft = "wasp_left";              // the player stepped away; nothing lost
+    public const string RepArrives = "rep_arrives";          // Text = rep id ("bear", "hippies"); "A {} shows up"
+    public const string RepEngaged = "rep_engaged";          // Text = rep id; their trades are open
+    public const string RepLeft = "rep_left";                // Text = rep id; a shoe sent them away, they will return
+    public const string WaspEngaged = "wasp_engaged";        // first visit only: the wasp is spoken to and leaves
     public const string CandleLit = "candle_lit";
     public const string CandleOut = "candle_out";
 
@@ -1346,9 +1350,84 @@ public sealed class BeekeeperEngine
         {
             State.NextWaspInSeconds = 0m;
             State.WaspCountdown = Config.WaspCountdownSeconds;
+            State.WaspVisits++;
             events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
         }
         return events;
+    }
+
+    /// <summary>True while the wasp at the door is on its first visit: the choices are Throw a shoe /
+    /// Engage. Later visits are Throw a shoe / Bribe. (Older saves that already bribed count as later.)</summary>
+    public bool WaspFirstVisit => State.WaspVisits <= 1 && State.BribesTotal == 0;
+
+    public bool CanEngageWasp => WaspApproaching && WaspFirstVisit;
+
+    /// <summary>First visit only: the player speaks to the wasp, it hums, takes a look and leaves.
+    /// Nothing is lost and it does not count towards the emissary.</summary>
+    public ActionResult EngageWasp()
+    {
+        if (!CanEngageWasp) return ActionResult.Refused;
+        EndWasp();
+        return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.WaspEngaged) });
+    }
+
+    // ------------------------------------------------------------------ trade reps (bear, hippies)
+
+    public static readonly string[] RepIds = { "bear", "hippies" };
+
+    private bool RepRevealed(string id) => id switch
+    {
+        "bear" => State.BearRevealed,
+        "hippies" => State.HippiesRevealed,
+        _ => false,
+    };
+
+    public bool RepPresent(string id) => State.RepsPresent.Contains(id);
+    public bool RepEngaged(string id) => State.RepsEngaged.Contains(id);
+
+    /// <summary>Reps at the door right now, in arrival order.</summary>
+    public IReadOnlyList<string> RepsPresent => State.RepsPresent;
+
+    /// <summary>Rep time passes (the view model feeds it every non-away tick). A revealed rep shows up
+    /// the first time; one sent away by a shoe comes back when its delay is used up. No emissary rule.</summary>
+    public IReadOnlyList<BeekeeperEvent> AdvanceRepTime(decimal seconds)
+    {
+        var events = new List<BeekeeperEvent>();
+        foreach (var id in RepIds)
+        {
+            if (!RepRevealed(id)) continue;
+            if (!State.RepsMet.Contains(id))
+            {
+                State.RepsMet.Add(id);
+                State.RepsPresent.Add(id);
+                // No log line the first time: the reveal line (BearArrives / HippiesArrive) already says so.
+            }
+            else if (State.RepReturnIn.TryGetValue(id, out var left))
+            {
+                left -= Math.Max(0m, seconds);
+                if (left > 0m) { State.RepReturnIn[id] = left; continue; }
+                State.RepReturnIn.Remove(id);
+                State.RepsPresent.Add(id);
+                events.Add(new BeekeeperEvent(BeekeeperEvents.RepArrives, 0m, id));
+            }
+        }
+        return events;
+    }
+
+    /// <summary>Opens the rep's trades.</summary>
+    public ActionResult EngageRep(string id)
+    {
+        if (!State.RepsPresent.Remove(id)) return ActionResult.Refused;
+        if (!State.RepsEngaged.Contains(id)) State.RepsEngaged.Add(id);
+        return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.RepEngaged, 0m, id) });
+    }
+
+    /// <summary>The rep leaves and comes back later (RepReturnSeconds). No miss, no emissary.</summary>
+    public ActionResult ThrowShoeAtRep(string id)
+    {
+        if (!State.RepsPresent.Remove(id)) return ActionResult.Refused;
+        State.RepReturnIn[id] = Config.RepReturnSeconds;
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.RepLeft, 0m, id) });
     }
 
     private void RollNextWasp()
@@ -1363,6 +1442,7 @@ public sealed class BeekeeperEngine
         if (!State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return Array.Empty<BeekeeperEvent>();
         State.NextWaspInSeconds = 0m;
         State.WaspCountdown = Config.WaspCountdownSeconds;
+        State.WaspVisits++;
         return new[] { new BeekeeperEvent(BeekeeperEvents.WaspArrives) };
     }
 

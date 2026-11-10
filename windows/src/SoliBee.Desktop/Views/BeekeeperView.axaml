@@ -294,6 +294,14 @@
 
             <!-- ───────── RIGHT: wasps, story log ───────── -->
             <StackPanel Grid.Column="2" Spacing="12" VerticalAlignment="Top">
+                <!-- Reps at the door (Bear, Hippies): each has Throw a shoe / Engage -->
+                <Border x:Name="VisitorsCard" Classes="bk-card" IsVisible="False">
+                    <StackPanel Spacing="8">
+                        <TextBlock x:Name="VisitorsTitleText" Classes="bk-title" />
+                        <StackPanel x:Name="VisitorRows" Spacing="10" />
+                    </StackPanel>
+                </Border>
+
                 <!-- Shown while a wasp is here or a repellent candle burns -->
                 <Border x:Name="WaspCard" Classes="bk-card" IsVisible="False" BorderBrush="#66FFA38F">
                     <StackPanel Spacing="8">
@@ -303,6 +311,8 @@
                             <TextBlock x:Name="WaspTimeText" Classes="bk-muted" />
                             <Button x:Name="ThrowShoeButton" Classes="bk-button" HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" Click="ThrowShoe_Click" />
+                            <Button x:Name="EngageWaspButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" Click="EngageWasp_Click" />
                             <Button x:Name="BribeButton" Classes="bk-button" HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" Click="Bribe_Click" />
                             <Button x:Name="WaspLightButton" Classes="bk-button" HorizontalAlignment="Stretch"

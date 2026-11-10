@@ -43,6 +43,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     {
         var vm = Make(new Clock(), new BeekeeperState { HippiesRevealed = true, HippieTrades = 4, BeeswaxCandles = 10m, BearName = "Bruno" });
         Assert.False(vm.GardenRevealed);
+        vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         vm.TradeOffers.First(o => o.Id == "hippies").TradeOne();
         Assert.True(Logged(vm, BeekeeperEvents.SeedGiven));
         Assert.Equal(1, vm.Seeds);

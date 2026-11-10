@@ -65,6 +65,7 @@ public class BeekeeperLoadFixesTests : IDisposable
         var saved = new DateTime(2026, 11, 8, 0, 0, 0, DateTimeKind.Utc);
         var s = new BeekeeperState { BearName = "B", HoneyRevealed = true, Combs = 5, Honey = 1400m, Trades = 45, BearRevealed = true, SavedAtUtc = saved };
         var vm = new BeekeeperViewModel(isHeadless: true, persist: false, initialState: s, clock: () => saved.AddHours(1));
+        vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         Assert.True(vm.HasTradeAgreement);
         Assert.Equal(0m, vm.State.Beebits);
         Assert.Equal(8m, vm.HoneyPerBeebitNow);

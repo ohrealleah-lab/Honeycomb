@@ -1066,6 +1066,14 @@ public static class Strings
         [StringKey.BeekeeperTimeHourMinFmt] = "%@ h %@ min",
         [StringKey.BeekeeperTimeDayFmt] = "%@ d",
         [StringKey.BeekeeperTimeDayHourFmt] = "%@ d %@ h",
+        [StringKey.BeekeeperEngage] = "Engage",
+        [StringKey.BeekeeperVisitorsTitle] = "Visitors",
+        [StringKey.BeekeeperRepBear] = "bear",
+        [StringKey.BeekeeperRepHippies] = "hippie",
+        [StringKey.BeekeeperLogRepArrivesFmt] = "A %@ shows up.",
+        [StringKey.BeekeeperLogRepEngagedFmt] = "You talk with the %@.",
+        [StringKey.BeekeeperLogRepLeftFmt] = "The %@ leaves. They will be back later.",
+        [StringKey.BeekeeperLogWaspEngaged] = "You talk to the wasp. It hums, has a look around and flies off.",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -2116,5 +2124,13 @@ public static class Strings
         [StringKey.BeekeeperTimeHourMinFmt] = "%@ h %@ min",
         [StringKey.BeekeeperTimeDayFmt] = "%@ d",
         [StringKey.BeekeeperTimeDayHourFmt] = "%@ d %@ h",
+        [StringKey.BeekeeperEngage] = "Hablar",
+        [StringKey.BeekeeperVisitorsTitle] = "Visitantes",
+        [StringKey.BeekeeperRepBear] = "oso",
+        [StringKey.BeekeeperRepHippies] = "hippie",
+        [StringKey.BeekeeperLogRepArrivesFmt] = "Aparece un %@.",
+        [StringKey.BeekeeperLogRepEngagedFmt] = "Hablas con el %@.",
+        [StringKey.BeekeeperLogRepLeftFmt] = "El %@ se va. Volverá más tarde.",
+        [StringKey.BeekeeperLogWaspEngaged] = "Hablas con la avispa. Zumba, echa un vistazo y se va.",
     };
 }

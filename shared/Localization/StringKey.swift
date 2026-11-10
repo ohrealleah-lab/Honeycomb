@@ -2098,4 +2098,20 @@ public enum StringKey: String, CaseIterable {
     case beekeeperTimeDayFmt = "beekeeper_time_day_fmt"
     /// Short time, days and hours; first %@ = days, second = hours
     case beekeeperTimeDayHourFmt = "beekeeper_time_day_hour_fmt"
+    /// Button: talk to a visitor (wasp first visit, Bear, Hippies)
+    case beekeeperEngage = "beekeeper_engage"
+    /// Visitors card title
+    case beekeeperVisitorsTitle = "beekeeper_visitors_title"
+    /// Rep noun used in "A %@ shows up"
+    case beekeeperRepBear = "beekeeper_rep_bear"
+    /// Rep noun used in "A %@ shows up"
+    case beekeeperRepHippies = "beekeeper_rep_hippies"
+    /// Story log; %@ = rep noun
+    case beekeeperLogRepArrivesFmt = "beekeeper_log_rep_arrives_fmt"
+    /// Story log; %@ = rep noun
+    case beekeeperLogRepEngagedFmt = "beekeeper_log_rep_engaged_fmt"
+    /// Story log; %@ = rep noun
+    case beekeeperLogRepLeftFmt = "beekeeper_log_rep_left_fmt"
+    /// Story log; first wasp visit, Engage
+    case beekeeperLogWaspEngaged = "beekeeper_log_wasp_engaged"
 }

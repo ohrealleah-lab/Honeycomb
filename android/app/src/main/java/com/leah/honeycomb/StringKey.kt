@@ -1051,4 +1051,12 @@ enum class StringKey {
     BeekeeperTimeHourMinFmt,
     BeekeeperTimeDayFmt,
     BeekeeperTimeDayHourFmt,
+    BeekeeperEngage,
+    BeekeeperVisitorsTitle,
+    BeekeeperRepBear,
+    BeekeeperRepHippies,
+    BeekeeperLogRepArrivesFmt,
+    BeekeeperLogRepEngagedFmt,
+    BeekeeperLogRepLeftFmt,
+    BeekeeperLogWaspEngaged,
 }

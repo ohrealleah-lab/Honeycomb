@@ -1079,6 +1079,14 @@ object Strings {
         StringKey.BeekeeperTimeHourMinFmt to "%@ h %@ min",
         StringKey.BeekeeperTimeDayFmt to "%@ d",
         StringKey.BeekeeperTimeDayHourFmt to "%@ d %@ h",
+        StringKey.BeekeeperEngage to "Engage",
+        StringKey.BeekeeperVisitorsTitle to "Visitors",
+        StringKey.BeekeeperRepBear to "bear",
+        StringKey.BeekeeperRepHippies to "hippie",
+        StringKey.BeekeeperLogRepArrivesFmt to "A %@ shows up.",
+        StringKey.BeekeeperLogRepEngagedFmt to "You talk with the %@.",
+        StringKey.BeekeeperLogRepLeftFmt to "The %@ leaves. They will be back later.",
+        StringKey.BeekeeperLogWaspEngaged to "You talk to the wasp. It hums, has a look around and flies off.",
     )
 
     private val Spanish = mapOf(
@@ -2128,5 +2136,13 @@ object Strings {
         StringKey.BeekeeperTimeHourMinFmt to "%@ h %@ min",
         StringKey.BeekeeperTimeDayFmt to "%@ d",
         StringKey.BeekeeperTimeDayHourFmt to "%@ d %@ h",
+        StringKey.BeekeeperEngage to "Hablar",
+        StringKey.BeekeeperVisitorsTitle to "Visitantes",
+        StringKey.BeekeeperRepBear to "oso",
+        StringKey.BeekeeperRepHippies to "hippie",
+        StringKey.BeekeeperLogRepArrivesFmt to "Aparece un %@.",
+        StringKey.BeekeeperLogRepEngagedFmt to "Hablas con el %@.",
+        StringKey.BeekeeperLogRepLeftFmt to "El %@ se va. Volverá más tarde.",
+        StringKey.BeekeeperLogWaspEngaged to "Hablas con la avispa. Zumba, echa un vistazo y se va.",
     )
 }

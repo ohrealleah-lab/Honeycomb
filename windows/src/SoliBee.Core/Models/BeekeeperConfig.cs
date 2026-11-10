@@ -233,6 +233,8 @@ public sealed class BeekeeperConfig
     public decimal WaspCountdownSeconds { get; init; } = 60m;
     /// <summary>Chance a thrown shoe hits (Leah: 40% miss).</summary>
     public double ShoeHitChance { get; init; } = 0.60;
+    /// <summary>Placeholder: seconds before the Bear or the Hippies come back after a shoe (2 minutes).</summary>
+    public decimal RepReturnSeconds { get; init; } = 2m * 60m;
     /// <summary>A raid takes this many seconds' worth of honey production (Leah: 3 minutes).</summary>
     public decimal RaidHoneySeconds { get; init; } = 3m * 60m;
     // Cut in stage 6 (spec 014): raids take only honey, never bees.

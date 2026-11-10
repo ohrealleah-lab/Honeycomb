@@ -288,6 +288,12 @@ public partial class BeekeeperView : UserControl
         ThrowShoeButton.IsEnabled = vm.CanThrowShoe;
         BribeButton.Content = BeekeeperText.Bribe(N(vm.BribeCost));
         BribeButton.IsEnabled = vm.CanBribe;
+        // First visit: Throw a shoe / Engage. Later visits: Throw a shoe / Bribe.
+        EngageWaspButton.Content = BeekeeperText.Engage;
+        EngageWaspButton.IsVisible = vm.WaspFirstVisit;
+        EngageWaspButton.IsEnabled = vm.CanEngageWasp;
+        BribeButton.IsVisible = !vm.WaspFirstVisit;
+        UpdateVisitors(vm.RepsPresent, lang);
         WaspLightButton.Content = BeekeeperText.LightCandle;
         WaspLightButton.IsVisible = vm.RepellentShown;
         WaspLightButton.IsEnabled = vm.CanLightRepellent;
@@ -734,6 +740,36 @@ public partial class BeekeeperView : UserControl
     private void CraftRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.CraftRepellentCommand.Execute(null);
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
+    private void EngageWasp_Click(object? sender, RoutedEventArgs e) => _vm?.EngageWaspCommand.Execute(null);
+
+    // Reps at the door: rebuilt only when who is here (or the language) changes.
+    private string _visitorSignature = "";
+
+    private void UpdateVisitors(IReadOnlyList<string> present, AppLanguage lang)
+    {
+        VisitorsCard.IsVisible = present.Count > 0;
+        VisitorsTitleText.Text = BeekeeperText.VisitorsTitle;
+        string sig = lang + "|" + string.Join(",", present);
+        if (sig == _visitorSignature) return;
+        _visitorSignature = sig;
+        VisitorRows.Children.Clear();
+        foreach (var id in present)
+        {
+            var rep = id;
+            var row = new StackPanel { Spacing = 6 };
+            row.Children.Add(new TextBlock { Text = BeekeeperText.RepHere(rep), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            var shoe = new Button { Classes = { "bk-button" }, Content = BeekeeperText.ThrowShoe,
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+            var engage = new Button { Classes = { "bk-button" }, Content = BeekeeperText.Engage,
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+            shoe.Click += (_, _) => _vm?.ThrowShoeAtRep(rep);
+            engage.Click += (_, _) => _vm?.EngageRep(rep);
+            row.Children.Add(shoe);
+            row.Children.Add(engage);
+            VisitorRows.Children.Add(row);
+        }
+    }
+
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
     private void CraftBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeBoostCommand.Execute(null);
     private void LightBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeBoostCommand.Execute(null);

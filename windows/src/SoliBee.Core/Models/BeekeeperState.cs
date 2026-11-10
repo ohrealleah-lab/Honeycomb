@@ -181,6 +181,19 @@ public sealed class BeekeeperState
     /// <summary>True once the first wall (a price above a cap) has been told in the log (said once).</summary>
     public bool FirstWallAnnounced { get; set; }
 
+    // ----- Trade reps arrive like wasps (older saves load with these empty)
+    /// <summary>Reps (bear, hippies) whose first arrival has been handled. A revealed rep missing
+    /// here (new reveal, or an older save) shows up on the next rep time.</summary>
+    public List<string> RepsMet { get; set; } = new();
+    /// <summary>Reps at the door now, waiting for "Throw a shoe" or "Engage".</summary>
+    public List<string> RepsPresent { get; set; } = new();
+    /// <summary>Reps the player engaged: their trades are open.</summary>
+    public List<string> RepsEngaged { get; set; } = new();
+    /// <summary>Seconds until a rep that was sent away comes back, by rep id.</summary>
+    public Dictionary<string, decimal> RepReturnIn { get; set; } = new();
+    /// <summary>Wasps that have shown up in all; the first visit offers Engage, later ones Bribe.</summary>
+    public long WaspVisits { get; set; }
+
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>
     [JsonIgnore]

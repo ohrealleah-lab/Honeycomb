@@ -276,6 +276,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanTradeCandles => Engine.CanTradeCandles;
     public bool CanThrowShoe => Engine.WaspApproaching;
     public bool CanBribe => Engine.CanBribe;
+    /// <summary>The wasp's first visit: the choices are Throw a shoe / Engage (later: Throw a shoe / Bribe).</summary>
+    public bool WaspFirstVisit => Engine.WaspFirstVisit;
+    public bool CanEngageWasp => Engine.CanEngageWasp;
+    /// <summary>Reps (ids "bear", "hippies") at the door, waiting for Throw a shoe or Engage.</summary>
+    public IReadOnlyList<string> RepsPresent => Engine.RepsPresent.ToList();
     public bool CanLightRepellent => Engine.CanLightRepellent;
 
     /// <summary>Every buyer the player has met, in the order they arrived (Leah: one shared
@@ -286,11 +291,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         {
             var offers = new List<BeekeeperTradeOffer>();
             // Stage 7.5 (spec 016): the bundle of the moment, 10 honey, or 8 under the agreement.
-            if (State.BearRevealed)
+            // Reps' trades appear only once the player has engaged them.
+            if (State.BearRevealed && Engine.RepEngaged("bear"))
                 offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
                     Engine.HoneyPerBeebitNow, "honey", 1m, "beebits", CanSell, SellTen, SellAll));
             // Cut in stage 7.5 (spec 016): Config.HoneyPerBeebit (always 10).
-            if (State.HippiesRevealed)
+            if (State.HippiesRevealed && Engine.RepEngaged("hippies"))
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
                     Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
             // Stage 6: the wasps, once their emissary has come. One paper a click, or x10 / x100.
@@ -570,6 +576,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanThrowShoe))]
     public void ThrowShoe() => Apply(Engine.ThrowShoe());
 
+    [RelayCommand(CanExecute = nameof(CanEngageWasp))]
+    public void EngageWasp() => Apply(Engine.EngageWasp());
+
+    public void EngageRep(string id) => Apply(Engine.EngageRep(id));
+    public void ThrowShoeAtRep(string id) => Apply(Engine.ThrowShoeAtRep(id));
+
     [RelayCommand(CanExecute = nameof(CanBribe))]
     public void Bribe() => Apply(Engine.Bribe());
 
@@ -839,6 +851,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         }
 
         AdvanceWasps(gap, away, now);
+        if (!away) LogEvents(Engine.AdvanceRepTime(gap));
 
         _secondsSinceSave += gap;
         if (_secondsSinceSave >= AutosaveEverySeconds) SaveNow();
@@ -921,6 +934,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         TradeTenCandlesCommand.NotifyCanExecuteChanged();
         TradeAllCandlesCommand.NotifyCanExecuteChanged();
         ThrowShoeCommand.NotifyCanExecuteChanged();
+        EngageWaspCommand.NotifyCanExecuteChanged();
         BribeCommand.NotifyCanExecuteChanged();
         LightRepellentCommand.NotifyCanExecuteChanged();
         PuffSmokerCommand.NotifyCanExecuteChanged();

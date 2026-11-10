@@ -136,6 +136,10 @@ internal static class BeekeeperText
     public static string TimeLeft(string time) => Fill(T(StringKey.BeekeeperTimeLeftFmt), time);
     public static string ThrowShoe => T(StringKey.BeekeeperThrowShoe);
     public static string Bribe(string honey) => Fill(T(StringKey.BeekeeperBribeFmt), honey);
+    public static string Engage => T(StringKey.BeekeeperEngage);
+    public static string VisitorsTitle => T(StringKey.BeekeeperVisitorsTitle);
+    public static string RepNoun(string? id) => T(id == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies);
+    public static string RepHere(string id) => Fill(T(StringKey.BeekeeperLogRepArrivesFmt), RepNoun(id));
     public static string LightCandle => T(StringKey.BeekeeperLightCandle);
     public static string CandleBurning(string time) => Fill(T(StringKey.BeekeeperCandleBurningFmt), time);
 
@@ -490,6 +494,10 @@ internal static class BeekeeperText
                 _ => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
             },
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
+            BeekeeperEvents.RepArrives => Fill(L(StringKey.BeekeeperLogRepArrivesFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
+            BeekeeperEvents.RepEngaged => Fill(L(StringKey.BeekeeperLogRepEngagedFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
+            BeekeeperEvents.RepLeft => Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
+            BeekeeperEvents.WaspEngaged => L(StringKey.BeekeeperLogWaspEngaged),
             BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
             // Raids take only honey since stage 6 (spec 014). Lines saved before then keep their
             // old wording (bees flown off, or the guards keeping them safe), so the story stays true.

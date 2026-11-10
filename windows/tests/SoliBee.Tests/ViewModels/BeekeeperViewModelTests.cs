@@ -333,6 +333,7 @@ public class BeekeeperViewModelTests : IDisposable
         var vm = Make(new Clock(), new BeekeeperState { BearName = "Bruno" });
         Assert.Empty(vm.TradeOffers);
 
+        vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         vm.State.BearRevealed = true;
         vm.State.Honey = 25m;
         vm.State.HippiesRevealed = true;

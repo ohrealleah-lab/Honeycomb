@@ -1050,5 +1050,13 @@ enum StringsEnglish {
         .beekeeperTimeHourMinFmt: "%@ h %@ min",
         .beekeeperTimeDayFmt: "%@ d",
         .beekeeperTimeDayHourFmt: "%@ d %@ h",
+        .beekeeperEngage: "Engage",
+        .beekeeperVisitorsTitle: "Visitors",
+        .beekeeperRepBear: "bear",
+        .beekeeperRepHippies: "hippie",
+        .beekeeperLogRepArrivesFmt: "A %@ shows up.",
+        .beekeeperLogRepEngagedFmt: "You talk with the %@.",
+        .beekeeperLogRepLeftFmt: "The %@ leaves. They will be back later.",
+        .beekeeperLogWaspEngaged: "You talk to the wasp. It hums, has a look around and flies off.",
     ]
 }

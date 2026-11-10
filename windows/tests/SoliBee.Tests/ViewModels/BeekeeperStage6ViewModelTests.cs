@@ -205,6 +205,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         var s = Workshop();
         s.HippiesRevealed = true;
         var vm = Make(new Clock(), s);
+        vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         Assert.DoesNotContain(vm.TradeOffers, o => o.Id == "wasps");
         vm.DebugBringEmissary();
         Assert.Equal(new[] { "bear", "hippies", "wasps" }, vm.TradeOffers.Select(o => o.Id));
