@@ -102,7 +102,7 @@
                                         <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />
                                         <MenuItem Header="+50 propolis" Click="DebugBeekeeper_Click" Tag="Propolis" />
                                         <MenuItem Header="+20 paper" Click="DebugBeekeeper_Click" Tag="Paper" />
-                                        <MenuItem Header="Hippie trades to 59" Click="DebugBeekeeper_Click" Tag="Hippies59" />
+                                        <MenuItem Header="Hippie trades to 199" Click="DebugBeekeeper_Click" Tag="Hippies199" />
                                         <MenuItem Header="+10 pollen" Click="DebugBeekeeper_Click" Tag="Pollen" />
                                         <MenuItem Header="+10 bee bread" Click="DebugBeekeeper_Click" Tag="BeeBread" />
                                         <MenuItem Header="Bear trades to almost agreement" Click="DebugBeekeeper_Click" Tag="Trades" />

@@ -36,14 +36,14 @@ public class BeekeeperStage3Tests : IDisposable
     [Fact]
     public void AfterTheVacuum_ComeTheLure_TheCart_AndTheWhistle_InOrder()
     {
-        var e = Make(new BeekeeperState { ToolLevel = 3, ShopRevealed = true, Beebits = 20_000m });
+        var e = Make(new BeekeeperState { ToolLevel = 3, ShopRevealed = true, Beebits = 43_000m });
         Assert.True(e.BuyNextTool().Done);
         Assert.Equal(25, e.BeesPerClick);
         Assert.True(e.BuyNextTool().Done);
         Assert.Equal(60, e.BeesPerClick);
         Assert.True(e.BuyNextTool().Done);
         Assert.Equal(150, e.BeesPerClick);
-        Assert.Equal(20_000m - 1_000m - 4_000m - 15_000m, e.State.Beebits);
+        Assert.Equal(43_000m - 3_000m - 10_000m - 30_000m, e.State.Beebits);
         Assert.Null(e.NextTool);              // nothing after the Hive Whistle in this build
         Assert.False(e.BuyNextTool().Done);
     }

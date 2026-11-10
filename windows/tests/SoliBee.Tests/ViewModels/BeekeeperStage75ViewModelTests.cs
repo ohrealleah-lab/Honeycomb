@@ -85,8 +85,8 @@ public class BeekeeperStage75ViewModelTests
         Assert.Equal(1200m, vm.HoneyStorage);
         vm.BuyWaxTrayCommand.Execute(null);
         Assert.Equal(1, vm.WaxTrays);
-        Assert.Equal(28m, vm.WaxStorage);
-        Assert.Equal(160m, vm.WaxTrayCost);
+        Assert.Equal(30m, vm.WaxStorage);
+        Assert.Equal(145m, vm.WaxTrayCost);
         Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.HoneySuperBought);
         Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.WaxTrayBought);
     }

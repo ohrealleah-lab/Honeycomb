@@ -94,7 +94,7 @@ public class BeekeeperQueenViewModelTests : IDisposable
     {
         var vm = Make(new Clock(), new BeekeeperState { Bees = 10m, Honey = 50m, HoneyRevealed = true, BearRevealed = true, BearName = "Bruno" });
         vm.DebugBearTradesToAlmostAgreement();
-        Assert.Equal(24, vm.Trades);          // stage 7.5: the agreement comes at 25 (was 100)
+        Assert.Equal(39, vm.Trades);          // the agreement comes at 40 (pacing review 2026-11-10; was 25, and 100 before stage 7.5)
         Assert.False(vm.HasTradeAgreement);
         Assert.Equal(10m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);
         vm.SellTen();                         // paid at the old rate

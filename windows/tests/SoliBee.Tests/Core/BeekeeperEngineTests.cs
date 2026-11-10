@@ -413,8 +413,8 @@ public class BeekeeperEngineTests
         Assert.True(e.BuyNextTool().Done);     // Vacuum
         Assert.Equal(3, e.State.ToolLevel);
         Assert.Equal("lure", e.NextTool!.Id);   // stage 3 tools come after the Vacuum
-        Assert.False(e.BuyNextTool().Done);      // the Bee Lure costs 1,000
-        Assert.Equal(1000m - 75m - 250m, e.State.Beebits);
+        Assert.False(e.BuyNextTool().Done);      // the Bee Lure costs 3,000
+        Assert.Equal(1000m - 75m - 400m, e.State.Beebits);
     }
 
     [Fact]

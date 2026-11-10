@@ -174,8 +174,8 @@ public class BeekeeperStage2Tests : IDisposable
     {
         var e = Make(Workshop(s => { s.Beebits = 1000m; s.Wax = 300m; s.Sage = 2m; }));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);
-        Assert.Equal(700m, e.State.Beebits);
-        Assert.Equal(200m, e.State.Wax);
+        Assert.Equal(200m, e.State.Beebits);   // Bigger Combs I: 800 Beebits + 60 wax
+        Assert.Equal(240m, e.State.Wax);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.BiggerCombs1);
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.BiggerCombs2);
         Assert.False(e.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);   // once only

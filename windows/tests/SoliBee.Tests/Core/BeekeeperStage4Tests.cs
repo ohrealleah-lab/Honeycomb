@@ -50,16 +50,16 @@ public class BeekeeperStage4Tests : IDisposable
     }
 
     [Fact]
-    public void TheThirtiethTrade_GivesASecondSeed_AndNoMoreComeAfter()
+    public void TheFortiethTrade_GivesASecondSeed_AndNoMoreComeAfter()
     {
-        var e = WithHippies(28);
+        var e = WithHippies(38);
         e.State.SeedsGivenIds.Add(BeekeeperPlants.Wildflowers);   // the first seed was given earlier
-        e.TradeTenCandles();                       // 29th
+        e.TradeTenCandles();                       // 39th
         Assert.Empty(e.State.SeedsInHand);
-        e.TradeTenCandles();                       // 30th
+        e.TradeTenCandles();                       // 40th
         Assert.Equal(new[] { BeekeeperPlants.Bramble }, e.State.SeedsInHand);
 
-        for (int i = 0; i < 5; i++) e.TradeTenCandles();   // up to the 35th: the willow waits for the 60th
+        for (int i = 0; i < 5; i++) e.TradeTenCandles();   // up to the 45th: the willow waits for the 200th
         Assert.Single(e.State.SeedsInHand);
     }
 
@@ -338,7 +338,7 @@ public class BeekeeperStage4Tests : IDisposable
     // ============================================================ the wooden hive
 
     [Fact]
-    public void TheWoodenHive_IsOfferedAfterTheFirstBeeBread_AndCosts200WaxAnd10BeeBread()
+    public void TheWoodenHive_IsOfferedAfterTheFirstBeeBread_AndCosts100WaxAnd10BeeBread()
     {
         var e = Make(new BeekeeperState { Wax = 300m, BeeBread = 10m });
         Assert.False(e.WoodenHiveOffered);          // no bee bread made yet
@@ -347,7 +347,7 @@ public class BeekeeperStage4Tests : IDisposable
         var r = e.MoveToWoodenHive();
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.WoodenHive));
-        Assert.Equal(100m, e.State.Wax);
+        Assert.Equal(200m, e.State.Wax);
         Assert.Equal(0m, e.State.BeeBread);
         Assert.True(e.State.HasWoodenHive);
         Assert.False(e.WoodenHiveOffered);
@@ -356,7 +356,7 @@ public class BeekeeperStage4Tests : IDisposable
     [Fact]
     public void TheWoodenHive_IsRefusedWhenShort_OrAlreadyMoved()
     {
-        Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 199m, BeeBread = 10m }).MoveToWoodenHive().Done);
+        Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 99m, BeeBread = 10m }).MoveToWoodenHive().Done);
         Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 500m, BeeBread = 9m }).MoveToWoodenHive().Done);
         Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, HasWoodenHive = true, Wax = 500m, BeeBread = 50m }).MoveToWoodenHive().Done);
     }

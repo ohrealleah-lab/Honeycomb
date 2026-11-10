@@ -332,14 +332,14 @@ public class BeekeeperStage5Tests : IDisposable
     // }
 
     [Fact]
-    public void The25thBearTrade_BringsTheAgreement_AndIsPaidAtTheOldRate()
+    public void The40thBearTrade_BringsTheAgreement_AndIsPaidAtTheOldRate()
     {
-        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 24, Honey = 100m });
+        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 39, Honey = 100m });
         var r = e.SellAll();
         var offer = r.Events.Single(x => x.Key == BeekeeperEvents.TradeAgreement);
         Assert.Equal("Bruno", offer.Text);
         Assert.True(e.State.HasTradeAgreement);
-        Assert.Equal(25, e.State.Trades);   // Sell All counts as one
+        Assert.Equal(40, e.State.Trades);   // Sell All counts as one
         Assert.Equal(10m, e.State.Beebits); // the sale that reached it: 10 honey a Beebit
         Assert.Equal(0m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
@@ -359,9 +359,9 @@ public class BeekeeperStage5Tests : IDisposable
     // }
 
     [Fact]
-    public void ASavePast25Trades_GetsTheAgreementOnLoad()
+    public void ASavePast40Trades_GetsTheAgreementOnLoad()
     {
-        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 30 });
+        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 45 });
         Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.TradeAgreement));
         Assert.True(e.State.HasTradeAgreement);
     }

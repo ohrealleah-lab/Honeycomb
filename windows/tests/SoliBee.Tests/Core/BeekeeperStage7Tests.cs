@@ -61,21 +61,21 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal(6m * 3600m, p[BeekeeperPlants.Poplar].GrowSeconds);
         Assert.Equal(12m * 3600m, p[BeekeeperPlants.Clover].GrowSeconds);
         Assert.Equal(5, p[BeekeeperPlants.Wildflowers].SeedAtTrade);
-        Assert.Equal(30, p[BeekeeperPlants.Bramble].SeedAtTrade);
-        Assert.Equal(60, p[BeekeeperPlants.Willow].SeedAtTrade);
-        Assert.Equal(100, p[BeekeeperPlants.Clover].SeedAtTrade);
+        Assert.Equal(40, p[BeekeeperPlants.Bramble].SeedAtTrade);
+        Assert.Equal(200, p[BeekeeperPlants.Willow].SeedAtTrade);
+        Assert.Equal(400, p[BeekeeperPlants.Clover].SeedAtTrade);
         Assert.Equal(BeekeeperGivers.Wasps, p[BeekeeperPlants.Poplar].Giver);
-        Assert.Equal(10, p[BeekeeperPlants.Poplar].SeedAtTrade);
+        Assert.Equal(20, p[BeekeeperPlants.Poplar].SeedAtTrade);
     }
 
     // ============================================================ seeds from two givers
 
     [Fact]
-    public void TheSixtiethHippieTrade_GivesAWillowSeed()
+    public void The200thHippieTrade_GivesAWillowSeed()
     {
         var e = Make(new BeekeeperState
         {
-            HippiesRevealed = true, HippieTrades = 59, BeeswaxCandles = 100m,
+            HippiesRevealed = true, HippieTrades = 199, BeeswaxCandles = 100m,
             SeedsGivenIds = { "wildflowers", "bramble" },
         });
         var r = e.TradeTenCandles();
@@ -86,9 +86,9 @@ public class BeekeeperStage7Tests : IDisposable
     }
 
     [Fact]
-    public void TheWasps_GiveThePoplarSeed_OnTheirTenthTrade()
+    public void TheWasps_GiveThePoplarSeed_OnTheirTwentiethTrade()
     {
-        var e = Make(new BeekeeperState { EmissaryCome = true, WaspTrades = 9, Honey = 1000m, HoneyRevealed = true });
+        var e = Make(new BeekeeperState { EmissaryCome = true, WaspTrades = 19, Honey = 1000m, HoneyRevealed = true });
         var r = e.TradeForPaper();
         Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.WaspSeedGiven && ev.Text == BeekeeperPlants.Poplar);
         Assert.Equal(new[] { BeekeeperPlants.Poplar }, e.State.SeedsInHand);
@@ -98,7 +98,7 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void AnOldSavePastTheCounts_GetsTheSeedsOnLoad()
     {
-        var s = new BeekeeperState { HippieTrades = 100, WaspTrades = 12, EmissaryCome = true };
+        var s = new BeekeeperState { HippieTrades = 400, WaspTrades = 22, EmissaryCome = true };
         // Cut in stage 7.5 (spec 016): Version = 6, SeedsGiven = 2, SeedsPlanted = 2 (older saves no longer load).
         s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
         var e = Make(s);
@@ -369,7 +369,7 @@ public class BeekeeperStage7Tests : IDisposable
 
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Notebook).Done);
         Assert.Equal(0m, e.State.Paper);
-        Assert.Equal(9899m, e.State.Beebits);
+        Assert.Equal(9849m, e.State.Beebits);   // the Notebook costs 150
         // Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.ThirdBed));   // 10 paper needed, none left
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Notebook);
 
@@ -515,8 +515,8 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.True(e.PaperSeen && e.PropolisSeen);
 
         var h = Make(new BeekeeperState());
-        h.DebugHippieTradesTo59();
-        Assert.Equal(59, h.State.HippieTrades);
+        h.DebugHippieTradesTo199();
+        Assert.Equal(199, h.State.HippieTrades);
         h.TradeTenCandles();
         Assert.Contains(BeekeeperPlants.Willow, h.State.SeedsInHand);
     }

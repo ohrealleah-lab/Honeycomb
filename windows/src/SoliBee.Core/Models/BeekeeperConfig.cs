@@ -137,9 +137,9 @@ public sealed class BeekeeperConfig
     public decimal HoneySuperCapacity { get; init; } = 1_000m;
     public decimal HoneySuperBaseCost { get; init; } = 75m;
     public decimal HoneySuperCostGrowth { get; init; } = 1.5m;
-    public decimal WaxTrayCapacity { get; init; } = 8m;
+    public decimal WaxTrayCapacity { get; init; } = 10m;       // pacing review 2026-11-10: was 8
     public decimal WaxTrayBaseCost { get; init; } = 100m;
-    public decimal WaxTrayCostGrowth { get; init; } = 1.6m;
+    public decimal WaxTrayCostGrowth { get; init; } = 1.45m;   // pacing review 2026-11-10: was 1.6
 
     // Cut in stage 7.5 (spec 016): honey storage only, no starter comb.
     // public decimal StartingStorage { get; init; } = 200m;   // approved by Leah 2026-11-06 for the first build; revisit after play-testing
@@ -155,11 +155,12 @@ public sealed class BeekeeperConfig
     {
         new BeekeeperTool("gloves", 15m, 2),
         new BeekeeperTool("net", 75m, 5),
-        new BeekeeperTool("vacuum", 250m, 10),
+        new BeekeeperTool("vacuum", 400m, 10),
         // Stage 3 (spec 011): names Leah's, numbers placeholders.
-        new BeekeeperTool("lure", 1_000m, 25),
-        new BeekeeperTool("cart", 4_000m, 60),
-        new BeekeeperTool("whistle", 15_000m, 150),
+        // Pacing review 2026-11-10: was 250, 1,000, 4,000, 15,000 (Vacuum to Whistle).
+        new BeekeeperTool("lure", 3_000m, 25),
+        new BeekeeperTool("cart", 10_000m, 60),
+        new BeekeeperTool("whistle", 30_000m, 150),
     };
 
     /// <summary>Each catch also brings in this share of the bees already in the hive,
@@ -246,20 +247,23 @@ public sealed class BeekeeperConfig
     /// <summary>In the order the Shop lists them.</summary>
     public IReadOnlyList<BeekeeperUpgrade> Upgrades { get; init; } = new[]
     {
-        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 300m, 100m, 0m, BeekeeperUpgrades.NeedsWorkbench),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 800m, 250m, 2m, BeekeeperUpgrades.BiggerCombs1),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 400m, 0m, 1m, BeekeeperUpgrades.NeedsWaxCatcher),
-        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 200m, 50m, 2m, BeekeeperUpgrades.NeedsRepellent),
+        // Pacing review 2026-11-10 (Bee approved), was: Bigger Combs I 300 + 100 wax; II 800 + 250 wax + 2 sage;
+        // Better Wax-Catcher 400 + 1 sage; Stronger Candles 200 + 50 wax + 2 sage; Practice 600;
+        // More Practice 2,500 + 200 wax + 3 sage; Smoker 500; Notebook 100; Propolis Seal 1,000.
+        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 800m, 60m, 0m, BeekeeperUpgrades.NeedsWorkbench),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 20m, BeekeeperUpgrades.BiggerCombs1),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 5m, BeekeeperUpgrades.NeedsWaxCatcher),
+        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 50m, 20m, 1m, BeekeeperUpgrades.NeedsRepellent),
         // Stage 3 (spec 011)
-        new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 600m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
-        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 2_500m, 200m, 3m, BeekeeperUpgrades.Practice),
-        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 1_500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
+        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 1_000m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
         // Stage 7 (spec 015): paper and propolis join the prices (all placeholders).
-        new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 100m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 150m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
         // Off the Shop (Leah, 2026-11-10): extra beds become a technology bought after a swarm (stage 11, not built yet).
         // A save that already owns the Third Bed keeps its extra bed.
         // new BeekeeperUpgrade(BeekeeperUpgrades.ThirdBed, 1_500m, 200m, 0m, BeekeeperUpgrades.NeedsGardenAndPaper, Paper: 10m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 1_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 4_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m),
     };
 
     // --- Stage 3: catching and the Smoker (spec 011) -------------------------
@@ -286,16 +290,17 @@ public sealed class BeekeeperConfig
     {
         // Stage 6 (spec 014): foraging 3 pollen a minute (beats the queen's 2); guarding +25% honey.
         new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperSpecialties.Foraging, 3m, 10m * 60m),
-        // Seed trades spaced from 5 to 100 (Leah, 2026-11-10; placeholders): 5, 30, 60, 100. One seed per plant, once.
-        // (Was 5, 10, 20, 35.)
-        new BeekeeperPlant(BeekeeperPlants.Bramble, 30, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
+        // Seed trades (pacing review 2026-11-10, Bee approved; placeholders): 5, 40, 200, 400, so the willow
+        // comes after the queen and clover by about day 5. One seed per plant, once.
+        // (Was 5, 30, 60, 100 earlier on 2026-11-10; before that 5, 10, 20, 35.)
+        new BeekeeperPlant(BeekeeperPlants.Bramble, 40, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
         // Stage 7 (spec 015), placeholders, each slower than the last:
         // the willow (1 hour): nursing, the queen lays 50% faster;
-        new BeekeeperPlant(BeekeeperPlants.Willow, 60, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
-        // the poplar (6 hours; seed from the wasps' 10th trade): resin, 1 propolis a minute;
-        new BeekeeperPlant(BeekeeperPlants.Poplar, 10, BeekeeperSpecialties.Resin, 1m, 6m * 3600m, BeekeeperGivers.Wasps),
+        new BeekeeperPlant(BeekeeperPlants.Willow, 200, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
+        // the poplar (6 hours; seed from the wasps' 20th trade, was 10th): resin, 1 propolis a minute;
+        new BeekeeperPlant(BeekeeperPlants.Poplar, 20, BeekeeperSpecialties.Resin, 1m, 6m * 3600m, BeekeeperGivers.Wasps),
         // clover (12 hours, overnight): 3 more pollen a minute.
-        new BeekeeperPlant(BeekeeperPlants.Clover, 100, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
+        new BeekeeperPlant(BeekeeperPlants.Clover, 400, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
         // Cut in stage 6 (spec 014): forager and guard bees a minute.
         // new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
         // new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
@@ -309,7 +314,7 @@ public sealed class BeekeeperConfig
     // public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
     public decimal BeeBreadPollen { get; init; } = 10m;
     public decimal BeeBreadHoney { get; init; } = 10m;
-    public decimal WoodenHiveWax { get; init; } = 200m;
+    public decimal WoodenHiveWax { get; init; } = 100m;   // pacing review 2026-11-10: was 200
     public decimal WoodenHiveBeeBread { get; init; } = 10m;
     /// <summary>Honey from the combs in a wooden hive (+25%; before stage 7.5, from every honeybee).</summary>
     public decimal WoodenHiveHoneyMultiplier { get; init; } = 1.25m;
@@ -326,7 +331,7 @@ public sealed class BeekeeperConfig
     public decimal SliceCapMultiple { get; init; } = 10m;
     /// <summary>The bear offers the trade agreement on this trade (Sell All counts as one).
     /// Stage 7.5 (spec 016): was 100; the agreement is now a better selling rate.</summary>
-    public long AgreementTrades { get; init; } = 25;
+    public long AgreementTrades { get; init; } = 40;   // pacing review 2026-11-10: was 25
     // Cut in stage 7.5 (spec 016): the bear no longer takes the overflow; see BetterHoneyPerBeebit.
     // /// <summary>Honey that doesn't fit, per Beebit, under the agreement (Leah: half price).</summary>
     // public decimal AgreementHoneyPerBeebit { get; init; } = 20m;

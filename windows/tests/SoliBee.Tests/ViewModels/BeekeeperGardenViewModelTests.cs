@@ -105,7 +105,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
         Assert.True(vm.HasWoodenHive);
         Assert.True(Logged(vm, BeekeeperEvents.WoodenHive));
         Assert.False(vm.WoodenHiveOffered);
-        Assert.Equal(50m, vm.Wax);
+        Assert.Equal(150m, vm.Wax);   // the wooden hive costs 100 wax
         Assert.False(vm.CanMoveToWoodenHive);
     }
 

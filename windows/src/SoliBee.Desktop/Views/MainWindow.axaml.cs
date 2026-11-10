@@ -1752,7 +1752,7 @@ public partial class MainWindow : Window
             case "Grow":    hive.DebugFinishGrowing(); break;   // finishes every bed
             case "Propolis": hive.DebugGivePropolis(50m); break;
             case "Paper":   hive.DebugGivePaper(20m); break;
-            case "Hippies59": hive.DebugHippieTradesTo59(); break;   // one more Hippie trade brings the willow seed
+            case "Hippies199": hive.DebugHippieTradesTo199(); break;   // one more Hippie trade brings the willow seed
             case "Pollen":  hive.DebugGivePollen(10m); break;
             case "BeeBread": hive.DebugGiveBeeBread(10m); break;
             case "Trades":  hive.DebugBearTradesToAlmostAgreement(); break;   // one more sale brings the agreement

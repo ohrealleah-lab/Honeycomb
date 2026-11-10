@@ -60,10 +60,10 @@ public class BeekeeperLoadFixesTests : IDisposable
     // }
 
     [Fact]
-    public void ASaveWith30BearTrades_GetsTheBetterRateOnLoad_AndNothingIsSoldWhileAway()
+    public void ASaveWith45BearTrades_GetsTheBetterRateOnLoad_AndNothingIsSoldWhileAway()
     {
         var saved = new DateTime(2026, 11, 8, 0, 0, 0, DateTimeKind.Utc);
-        var s = new BeekeeperState { BearName = "B", HoneyRevealed = true, Combs = 5, Honey = 1400m, Trades = 30, BearRevealed = true, SavedAtUtc = saved };
+        var s = new BeekeeperState { BearName = "B", HoneyRevealed = true, Combs = 5, Honey = 1400m, Trades = 45, BearRevealed = true, SavedAtUtc = saved };
         var vm = new BeekeeperViewModel(isHeadless: true, persist: false, initialState: s, clock: () => saved.AddHours(1));
         Assert.True(vm.HasTradeAgreement);
         Assert.Equal(0m, vm.State.Beebits);

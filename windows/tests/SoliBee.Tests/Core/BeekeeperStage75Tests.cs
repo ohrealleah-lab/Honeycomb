@@ -121,7 +121,7 @@ public class BeekeeperStage75Tests
     {
         var e = Make(new BeekeeperState { Combs = 4, HoneySupers = 2, WaxTrays = 3 });
         Assert.Equal(200m + 3m * 300m + 2m * 1000m, e.HoneyStorage);
-        Assert.Equal(20m + 3m * 2m + 3m * 8m, e.WaxStorage);
+        Assert.Equal(20m + 3m * 2m + 3m * 10m, e.WaxStorage);
     }
 
     [Fact]
@@ -191,11 +191,11 @@ public class BeekeeperStage75Tests
             prices.Add(e.WaxTrayCost);
             Assert.True(e.BuyWaxTray().Done);
         }
-        Assert.Equal(new[] { 100m, 160m, 256m }, prices);        // +60%, rounded down
-        Assert.Equal(20m + 24m, e.WaxStorage);
-        Assert.Equal(409m, e.WaxTrayCost);
-        Assert.True(e.CanBuyWaxTray);                            // 484 left
-        e.State.Beebits = 408m;
+        Assert.Equal(new[] { 100m, 145m, 210m }, prices);        // +45%, rounded down
+        Assert.Equal(20m + 30m, e.WaxStorage);
+        Assert.Equal(304m, e.WaxTrayCost);
+        Assert.True(e.CanBuyWaxTray);                            // 545 left
+        e.State.Beebits = 303m;
         Assert.False(e.CanBuyWaxTray);
         Assert.False(e.BuyWaxTray().Done);
         Assert.Equal(3, e.State.WaxTrays);

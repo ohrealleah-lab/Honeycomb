@@ -105,7 +105,7 @@ public class BeekeeperStage7ViewModelTests
         vm.DebugGivePaper(20m);
         Assert.Equal(50m, vm.Propolis);
         Assert.Equal(20m, vm.Paper);
-        vm.DebugHippieTradesTo59();
-        Assert.Equal(59, vm.State.HippieTrades);
+        vm.DebugHippieTradesTo199();
+        Assert.Equal(199, vm.State.HippieTrades);
     }
 }
