@@ -432,9 +432,11 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ capacity upgrades (stage 7.5)
 
-    /// <summary>Honey Super and Wax Tray rows show at The Workbench once the Shop has opened and
+    /// <summary>Honey Super and Wax Tray rows show at The Workbench once the Shop is showing (the Workbench or 15 Beebits) and
     /// the Combs panel has appeared. Beebits only, so selling honey always pays past a wall.</summary>
-    public bool CapacityUpgradesShown => State.ShopRevealed && State.CombsRevealed;
+    // Review change (Bee): the Shop counts as open once the Workbench shows it, not only after 15 Beebits.
+    public bool CapacityUpgradesShown => ShopShown && State.CombsRevealed;
+    // Cut after the stage 7.5 review: public bool CapacityUpgradesShown => State.ShopRevealed && State.CombsRevealed;
 
     public bool CanBuyHoneySuper => CapacityUpgradesShown && State.Beebits >= HoneySuperCost;
 
@@ -782,11 +784,12 @@ public sealed class BeekeeperEngine
         decimal stored = Math.Min(made, room);
         State.Honey = Snap(State.Honey + stored);
 
-        if (made > room && !State.StorageFullAnnounced)
-        {
-            State.StorageFullAnnounced = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.StorageFull));
-        }
+        // Cut after the stage 7.5 review (Bee): no log line when the honey is capped.
+        // if (made > room && !State.StorageFullAnnounced)
+        // {
+        //     State.StorageFullAnnounced = true;
+        //     events.Add(new BeekeeperEvent(BeekeeperEvents.StorageFull));
+        // }
 
         // Cut in stage 7.5 (spec 016): the trade agreement's auto-sale. Full combs simply stop.
         // // The trade agreement: the bear takes the overflow at half price, fractions kept (FR-404).
@@ -829,11 +832,12 @@ public sealed class BeekeeperEngine
         decimal waxStored = Math.Min(waxMade, waxRoom);
         State.Wax = Snap(State.Wax + waxStored);
 
-        if (waxMade > 0m && State.Wax >= WaxStorage && !State.WaxFullAnnounced)
-        {
-            State.WaxFullAnnounced = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.WaxFull));
-        }
+        // Cut after the stage 7.5 review (Bee): no log line when the wax is capped.
+        // if (waxMade > 0m && State.Wax >= WaxStorage && !State.WaxFullAnnounced)
+        // {
+        //     State.WaxFullAnnounced = true;
+        //     events.Add(new BeekeeperEvent(BeekeeperEvents.WaxFull));
+        // }
         if (!State.WaxRevealed && State.Wax >= Config.WaxRevealWax)
         {
             State.WaxRevealed = true;

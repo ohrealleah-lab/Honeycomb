@@ -147,12 +147,12 @@ public class BeekeeperViewModelTests : IDisposable
     }
 
     [Fact]
-    public void WhenStorageFills_TheLogSaysSoOnce()
+    public void WhenStorageFills_TheLogSaysNothing()
     {
         var clock = new Clock();
         var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Honey = 199.5m, BearName = "Bruno" });   // 1 comb: 0.2 a second, room for 200
         for (int i = 0; i < 5; i++) { clock.Advance(1); vm.Tick(); }
-        Assert.Equal(1, vm.Log.Count(e => e.Key == BeekeeperEvents.StorageFull));
+        Assert.Equal(0, vm.Log.Count(e => e.Key == BeekeeperEvents.StorageFull));
         Assert.True(vm.StorageIsFull);
     }
 

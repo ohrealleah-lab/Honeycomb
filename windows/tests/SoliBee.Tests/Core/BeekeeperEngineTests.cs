@@ -127,12 +127,12 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void WhenStorageIsFull_NoHoneyIsStored_AndItIsAnnouncedOnce()
+    public void WhenStorageIsFull_NoHoneyIsStored_AndNothingIsSaid()
     {
         var e = Make(state: new BeekeeperState { HoneyRevealed = true, Combs = 5, Honey = 1400m });
         var first = e.Advance(1m);
         Assert.Equal(0m, first.HoneyStored);
-        Assert.True(Has(first.Events, BeekeeperEvents.StorageFull));
+        Assert.False(Has(first.Events, BeekeeperEvents.StorageFull));   // review change: no log line for capped honey
 
         var second = e.Advance(1m);
         Assert.False(Has(second.Events, BeekeeperEvents.StorageFull));
@@ -163,15 +163,16 @@ public class BeekeeperEngineTests
         Assert.Equal(1400m, full.State.Honey);
     }
 
-    [Fact]
-    public void StorageFull_IsAnnouncedAgain_AfterRoomOpensUp()
-    {
-        var e = Make(state: new BeekeeperState { HoneyRevealed = true, Combs = 5, Honey = 1400m });
-        e.Advance(1m);                       // announced
-        e.SellTen();                         // room again
-        var again = e.Advance(20m);          // refills and overflows
-        Assert.True(Has(again.Events, BeekeeperEvents.StorageFull));
-    }
+    // Cut after the stage 7.5 review (Bee): no log line when the honey is capped.
+    // [Fact]
+    // public void StorageFull_IsAnnouncedAgain_AfterRoomOpensUp()
+    // {
+    //     var e = Make(state: new BeekeeperState { HoneyRevealed = true, Combs = 5, Honey = 1400m });
+    //     e.Advance(1m);                       // announced
+    //     e.SellTen();                         // room again
+    //     var again = e.Advance(20m);          // refills and overflows
+    //     Assert.True(Has(again.Events, BeekeeperEvents.StorageFull));
+    // }
 
     // ============================================================ wax
     // Stage 7.5 (spec 016): a tiny drip from the start plus a little from every free bee.
@@ -290,7 +291,7 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void Wax_StopsAtTheWaxCap_AndSaysSoOnce_ThenAgainAfterRoomOpens()
+    public void Wax_StopsAtTheWaxCap_AndNothingIsSaid()
     {
         var e = Make(state: new BeekeeperState { Bees = 1000m, Wax = 19.99m });   // cap 20
         Assert.Equal(20m, e.WaxStorage);
@@ -298,7 +299,7 @@ public class BeekeeperEngineTests
         Assert.Equal(20m, e.State.Wax);
         Assert.Equal(0.01m, first.WaxMade);
         Assert.True(e.IsWaxFull);
-        Assert.True(Has(first.Events, BeekeeperEvents.WaxFull));
+        Assert.False(Has(first.Events, BeekeeperEvents.WaxFull));   // review change: no log line for capped wax
 
         var second = e.Advance(10m);
         Assert.Equal(20m, e.State.Wax);
@@ -306,8 +307,7 @@ public class BeekeeperEngineTests
 
         e.State.Wax = 10m;                               // spent
         e.Advance(1m);
-        Assert.False(e.State.WaxFullAnnounced);
-        Assert.True(Has(e.Advance(100m).Events, BeekeeperEvents.WaxFull));
+        Assert.False(Has(e.Advance(100m).Events, BeekeeperEvents.WaxFull));
     }
 
     [Fact]
@@ -610,8 +610,8 @@ public class BeekeeperEngineTests
         Assert.Equal(3600m, r.HoneyStored);
         Assert.Equal(20m, e.State.Wax);          // 36 dripped, but the wax cap is 20
         Assert.Equal(20m, r.WaxMade);
-        Assert.True(Has(r.Events, BeekeeperEvents.StorageFull));
-        Assert.True(Has(r.Events, BeekeeperEvents.WaxFull));
+        Assert.False(Has(r.Events, BeekeeperEvents.StorageFull));
+        Assert.False(Has(r.Events, BeekeeperEvents.WaxFull));
     }
 
     [Fact]

@@ -134,8 +134,8 @@ public class BeekeeperStage75Tests
         Assert.Equal(1m, r.HoneyStored);
         Assert.Equal(0.1m, r.WaxMade);
         Assert.Equal(0m, e.State.Beebits);
-        Assert.True(Has(r.Events, BeekeeperEvents.StorageFull));
-        Assert.True(Has(r.Events, BeekeeperEvents.WaxFull));
+        Assert.False(Has(r.Events, BeekeeperEvents.StorageFull));
+        Assert.False(Has(r.Events, BeekeeperEvents.WaxFull));
     }
 
     // ============================================================ capacity upgrades (User Story 6)
@@ -150,6 +150,16 @@ public class BeekeeperStage75Tests
         Assert.False(e.CapacityUpgradesShown);
         e.State.CombsRevealed = true;
         Assert.True(e.CapacityUpgradesShown);
+    }
+
+    // Review change (Bee): the Shop showing because the Workbench opened is enough.
+    [Fact]
+    public void CapacityUpgrades_ShowOnceTheWorkbenchHasOpenedTheShop_WithoutFifteenBeebits()
+    {
+        var e = Make(new BeekeeperState { Beebits = 10_000m, WorkbenchRevealed = true, CombsRevealed = true });
+        Assert.False(e.State.ShopRevealed);
+        Assert.True(e.CapacityUpgradesShown);
+        Assert.True(e.BuyHoneySuper().Done);
     }
 
     [Fact]
@@ -358,7 +368,7 @@ public class BeekeeperStage75Tests
         Assert.Equal(0m, away.State.SagePropolisSecondsLeft);                  // burned out at 700 s
         Assert.Equal(away.HoneyStorage, away.State.Honey);                     // honey cap reached
         Assert.Equal(away.WaxStorage, away.State.Wax);                         // wax cap reached
-        Assert.True(away.State.StorageFullAnnounced && away.State.WaxFullAnnounced);
+        Assert.False(away.State.StorageFullAnnounced || away.State.WaxFullAnnounced);   // review change: no capped lines
     }
 
     /// <summary>The caps are far away, so nothing hides a difference: wax, honey and bees must match
