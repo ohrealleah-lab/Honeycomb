@@ -330,7 +330,7 @@ public class BeekeeperStage75Tests
     {
         const int Places = 6;
         Assert.Equal((double)away.State.Honey, (double)live.State.Honey, Places);
-        Assert.Equal((double)away.State.Wax, (double)live.State.Wax, Places);
+        Assert.Equal(away.State.Wax, live.State.Wax);   // exact: wax is 0.0001 × bee-seconds, so 6 places would hide drift
         Assert.Equal((double)away.State.Bees, (double)live.State.Bees, Places);
         Assert.Equal((double)away.State.BeeBread, (double)live.State.BeeBread, Places);
         Assert.Equal((double)away.State.Pollen, (double)live.State.Pollen, Places);
@@ -359,6 +359,42 @@ public class BeekeeperStage75Tests
         Assert.Equal(away.HoneyStorage, away.State.Honey);                     // honey cap reached
         Assert.Equal(away.WaxStorage, away.State.Wax);                         // wax cap reached
         Assert.True(away.State.StorageFullAnnounced && away.State.WaxFullAnnounced);
+    }
+
+    /// <summary>The caps are far away, so nothing hides a difference: wax, honey and bees must match
+    /// exactly through the sprout (450 s), the candle (700 s) and the empty pantry (900 s).</summary>
+    private static readonly BeekeeperConfig NoCaps = new() { StartingHoneyCap = 1e12m, StartingWaxCap = 1e12m };
+
+    [Fact]
+    public void LiveAndAway_AgreeExactly_WithNoCapsInTheWay()
+    {
+        var live = Make(Busy(), NoCaps);
+        for (int i = 0; i < 3000; i++) live.Advance(1m);
+        var away = Make(Busy(), NoCaps);
+        away.AdvanceAway(3000m);
+
+        AssertSame(live, away);
+        Assert.Equal(away.State.Honey, live.State.Honey);
+        Assert.Equal(away.State.Bees, live.State.Bees);
+        Assert.True(away.State.Honey < away.HoneyStorage && away.State.Wax < away.WaxStorage);   // no cap was reached
+        Assert.Equal(0m, away.State.BeeBread);                                                   // the pantry ran out
+        Assert.Equal(0m, away.State.SagePropolisSecondsLeft);                                    // the candle burned out
+        Assert.Contains(BeekeeperPlants.Bramble, away.State.Plants);                             // the plant sprouted
+    }
+
+    [Fact]
+    public void LiveAndAway_Agree_WhenBothCapsAreReachedAfterTheLastChange()
+    {
+        // Caps sit between the last change (900 s) and the end, so the candle, the sprout and the
+        // pantry all shape the totals before each cap is hit part-way through the stretch.
+        var cfg = new BeekeeperConfig { StartingHoneyCap = 1_500m, StartingWaxCap = 20m, HoneyPerCombPerSecond = 0.1m };
+        BeekeeperState Slow() { var s = Busy(); s.Honey = 0m; s.Wax = 0m; return s; }
+        var live = Make(Slow(), cfg);
+        for (int i = 0; i < 3000; i++) live.Advance(1m);
+        var away = Make(Slow(), cfg);
+        away.AdvanceAway(3000m);
+        AssertSame(live, away);
+        Assert.Equal(away.State.Honey, live.State.Honey);
     }
 
     [Fact]

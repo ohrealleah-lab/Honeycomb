@@ -98,6 +98,10 @@ internal static class BeekeeperText
     public static string TradingTitle => T(StringKey.BeekeeperTradingTitle);
     public static string TradeTen => T(StringKey.BeekeeperTradeTen);
     public static string TradeAll => T(StringKey.BeekeeperTradeAll);
+    /// <summary>The bear's one-bundle button with the bundle of the moment ("Trade 10", then "Trade 8"
+    /// under the agreement). Reuses the "Trade 10" words, whose number is the bundle, so no new key.</summary>
+    public static string TradeBundle(decimal honey) =>
+        TradeTen.Replace("10", NumberFormatter.Format(honey, Lang));
 
     /// <summary>"Bruno · Trades: 3", "The Hippies · Trades: 1": who, and how often you've traded.</summary>
     public static string TraderLine(string id, string? name, long trades)

@@ -39,6 +39,7 @@ public class BeekeeperHardeningTests : IDisposable
     private string SaveToFile(BeekeeperState state)
     {
         string path = Path.Combine(_dir, "beekeeper.json");
+        state.Version = BeekeeperSaveService.CurrentVersion;   // a state has no version until it is saved
         File.WriteAllText(path, JsonSerializer.Serialize(state));
         return path;
     }
@@ -162,7 +163,7 @@ public class BeekeeperHardeningTests : IDisposable
     public void AnEmptyLogLine_IsDropped()
     {
         string path = Path.Combine(_dir, "beekeeper.json");
-        var json = JsonSerializer.Serialize(new BeekeeperState { Bees = 5m })
+        var json = JsonSerializer.Serialize(new BeekeeperState { Version = BeekeeperSaveService.CurrentVersion, Bees = 5m })
             .Replace("\"Log\":[]", "\"Log\":[null,{\"Key\":null},{\"Key\":\"sting\"}]");
         File.WriteAllText(path, json);
 

@@ -127,22 +127,45 @@ public class BeekeeperSaveTests : IDisposable
         Assert.True(File.Exists(path + ".unreadable"));
     }
 
+    // Review fix: these carry "Version": 8, so they test the sanity checks, not the version check.
     [Theory]
-    [InlineData("{\"Bees\": -5}")]
-    [InlineData("{\"Honey\": -1}")]
-    [InlineData("{\"Combs\": -1}")]
-    [InlineData("{\"Combs\": 0}")]         // stage 7.5: the starter comb is always there
-    [InlineData("{\"HoneySupers\": -1}")]
-    [InlineData("{\"WaxTrays\": -1}")]
-    [InlineData("{\"Wax\": -0.5}")]
-    [InlineData("{\"ToolLevel\": 9}")]
-    [InlineData("{\"ToolLevel\": -1}")]
+    [InlineData("{\"Version\": 8, \"Bees\": -5}")]
+    [InlineData("{\"Version\": 8, \"Honey\": -1}")]
+    [InlineData("{\"Version\": 8, \"Combs\": -1}")]
+    [InlineData("{\"Version\": 8, \"Combs\": 0}")]         // stage 7.5: the starter comb is always there
+    [InlineData("{\"Version\": 8, \"HoneySupers\": -1}")]
+    [InlineData("{\"Version\": 8, \"WaxTrays\": -1}")]
+    [InlineData("{\"Version\": 8, \"Wax\": -0.5}")]
+    [InlineData("{\"Version\": 8, \"ToolLevel\": 9}")]
+    [InlineData("{\"Version\": 8, \"ToolLevel\": -1}")]
     public void NonsenseNumbers_AreRefused(string json)
     {
         var path = PathFor();
         Directory.CreateDirectory(_dir);
         File.WriteAllText(path, json);
         Assert.Null(BeekeeperSaveService.Load(path));
+    }
+
+    [Fact]
+    public void AFileWithNoVersion_IsMovedAside_AndANewGameStarts()
+    {
+        var path = PathFor();
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(path, "{\"Bees\": 5, \"Combs\": 3, \"Log\": []}");
+
+        Assert.Null(BeekeeperSaveService.Load(path, out bool keep));
+        Assert.False(keep);
+        Assert.False(File.Exists(path));
+        Assert.True(File.Exists(path + ".unreadable"));
+    }
+
+    [Fact]
+    public void ASanePlainVersion8File_StillLoads()
+    {
+        var path = PathFor();
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(path, "{\"Version\": 8, \"Combs\": 3, \"Log\": []}");
+        Assert.Equal(3, BeekeeperSaveService.Load(path)!.Combs);
     }
 
     [Fact]

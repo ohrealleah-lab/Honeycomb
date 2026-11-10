@@ -294,8 +294,11 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal((double)away.State.Pollen, (double)live.State.Pollen, Places);
         Assert.Equal((double)away.State.Propolis, (double)live.State.Propolis, Places);
         Assert.Equal((double)away.State.BeeBread, (double)live.State.BeeBread, Places);
-        // Stage 7.5: wax is fractional now, so it compares like honey (to 6 places).
-        Assert.Equal((double)away.State.Wax, (double)live.State.Wax, 6);
+        // Stage 7.5: wax is fractional now, but live and away still match exactly.
+        // 12 places: the queen's thirds leave decimal dust around the 26th digit (279.2222…21 vs …22),
+        // which is not drift; 6 places was a million times looser.
+        Assert.Equal(Math.Round(away.State.Wax, 12), Math.Round(live.State.Wax, 12));
+        // Cut (review of stage 7.5): Assert.Equal((double)away.State.Wax, (double)live.State.Wax, 6);
         Assert.Equal(away.State.SagePropolisSecondsLeft, live.State.SagePropolisSecondsLeft);
         Assert.Equal(away.State.Plants, live.State.Plants);
         Assert.Equal(away.State.Beds.Count, live.State.Beds.Count);

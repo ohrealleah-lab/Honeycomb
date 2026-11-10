@@ -572,6 +572,7 @@ public partial class BeekeeperView : UserControl
     // never swapped under the mouse; names and enabled states are refreshed every tick.
     private string _tradeSignature = "";
     private readonly Dictionary<string, (TextBlock Name, Button One, Button? All, Button? Ten, Button? Hundred)> _tradeRows = new();
+    private readonly Dictionary<string, TextBlock> _tradeRates = new();
     private TextBlock? _agreementText;
 
     private void UpdateTrades(IReadOnlyList<BeekeeperTradeOffer> offers, AppLanguage lang)
@@ -581,6 +582,7 @@ public partial class BeekeeperView : UserControl
         {
             _tradeSignature = sig;
             _tradeRows.Clear();
+            _tradeRates.Clear();
             _agreementText = null;
             TradeRows.Children.Clear();
             foreach (var offer in offers)
@@ -618,10 +620,12 @@ public partial class BeekeeperView : UserControl
                 var row = new StackPanel { Spacing = 6 };
                 row.Children.Add(name);
                 row.Children.Add(buttons);
-                row.Children.Add(new TextBlock { Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount), Classes = { "bk-muted" } });
+                var rate = new TextBlock { Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount), Classes = { "bk-muted" } };
+                row.Children.Add(rate);
+                _tradeRates[o.Id] = rate;
                 if (o.Id == "bear")
                 {
-                    // The bear's trade agreement (100 trades): shown once offered, rate on hover.
+                    // The bear's trade agreement (25 trades): shown once offered.
                     _agreementText = new TextBlock { Text = BeekeeperText.AgreementLine, Classes = { "bk-muted" }, IsVisible = false };
                     row.Children.Add(_agreementText);
                 }
@@ -635,6 +639,10 @@ public partial class BeekeeperView : UserControl
             if (!_tradeRows.TryGetValue(o.Id, out var r)) continue;
             r.Name.Text = BeekeeperText.TraderLine(o.Id, o.Name, o.Trades);
             r.One.IsEnabled = o.CanTrade;
+            // Stage 7.5: the bear's bundle changes with the trade agreement (10, then 8), so the rate
+            // line and the "Trade 10" button are rewritten every tick rather than only on a rebuild.
+            if (_tradeRates.TryGetValue(o.Id, out var rateText)) rateText.Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount);
+            if (o.Id == "bear" && o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.GiveAmount);
             if (r.All != null) r.All.IsEnabled = o.CanTrade;
             if (r.Ten != null) r.Ten.IsVisible = o.CanTradeTimes?.Invoke(10) == true;
             if (r.Hundred != null) r.Hundred.IsVisible = o.CanTradeTimes?.Invoke(100) == true;

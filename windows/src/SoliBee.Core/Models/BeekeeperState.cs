@@ -31,7 +31,10 @@ public sealed class BeekeeperState
     /// (named seeds, beds, propolis, two candles); 8 = stage 7.5 (combs make the honey, bees as
     /// currency, honey and wax caps). Since version 8 an older file is not loaded at all: it is moved
     /// aside and a new game starts (spec 016, FR-714).</summary>
-    public int Version { get; set; } = 8;
+    // Review fix (stage 7.5): a file with no Version field now reads as 0 and is moved aside, instead
+    // of passing as the current version. Save always writes CurrentVersion, so real files are fine.
+    public int Version { get; set; }
+    // Cut in the stage 7.5 review: public int Version { get; set; } = 8;
 
     // Resources
     /// <summary>Free bees (stage 7.5, spec 016): the bees not living in a comb. They make the wax,
