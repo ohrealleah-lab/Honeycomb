@@ -38,11 +38,6 @@ struct TransparentWindowApplier: NSViewRepresentable {
             guard let window else { return }
             window.isOpaque = !isTransparent
             window.backgroundColor = isTransparent ? .clear : .windowBackgroundColor
-            // A non-opaque window lets AppKit's own title-bar strip show through as a
-            // lighter band with hairline borders above/below the toolbar. Hide it while
-            // the table is see-through; restore the default when it's solid again.
-            window.titlebarAppearsTransparent = isTransparent
-            window.titlebarSeparatorStyle = isTransparent ? .none : .automatic
             window.invalidateShadow()
         }
     }

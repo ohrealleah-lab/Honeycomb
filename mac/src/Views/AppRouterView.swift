@@ -40,6 +40,8 @@ struct AppRouterView: View {
                 .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
                 .allowsHitTesting(false)
                 .opacity(coordinator.isTransparentTable ? 1 : 0)
+                // Trace the real window edge, not the area below the title bar.
+                .ignoresSafeArea()
         )
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)
         .environment(coordinator)
