@@ -313,13 +313,36 @@ public partial class PreferencesView : UserControl
         {
             CardColorPreviewImage.IsVisible = false;
             CardColorPreviewImage.Source = null;
-            CardColorPreviewBackdrop.Background = Color.TryParse(FeltHexForOptions(options), out var felt)
-                ? new SolidColorBrush(felt)
-                : new SolidColorBrush(Colors.DarkGreen);
+            CardColorPreviewBackdrop.Background = PreviewBackdropBrush(options);
         }
 
         if (_cardColorPreviewRingBrush != null)
             _cardColorPreviewRingBrush.Color = CardView._hintHighlightColor;
+    }
+
+    // Preview-only backdrop: a grey checkerboard when the table is Transparent (so it
+    // reads as see-through), otherwise the felt color.
+    private static IBrush PreviewBackdropBrush(GameOptions options)
+    {
+        if (options.FeltColor == FeltColorTheme.Transparent)
+        {
+            var light = new SolidColorBrush(Color.Parse("#FFE6E6E6"));
+            var dark  = new SolidColorBrush(Color.Parse("#FFBDBDBD"));
+            var tile = new DrawingGroup();
+            tile.Children.Add(new GeometryDrawing { Brush = light, Geometry = new RectangleGeometry(new Rect(0, 0, 20, 20)) });
+            tile.Children.Add(new GeometryDrawing { Brush = dark,  Geometry = new RectangleGeometry(new Rect(0, 0, 10, 10)) });
+            tile.Children.Add(new GeometryDrawing { Brush = dark,  Geometry = new RectangleGeometry(new Rect(10, 10, 10, 10)) });
+            return new DrawingBrush(tile)
+            {
+                TileMode = TileMode.Tile,
+                Stretch = Stretch.None,
+                SourceRect = new RelativeRect(0, 0, 20, 20, RelativeUnit.Absolute),
+                DestinationRect = new RelativeRect(0, 0, 20, 20, RelativeUnit.Absolute),
+            };
+        }
+        return Color.TryParse(FeltHexForOptions(options), out var felt)
+            ? new SolidColorBrush(felt)
+            : new SolidColorBrush(Colors.DarkGreen);
     }
 
     private static string FeltHexForOptions(GameOptions options) => options.FeltColor switch
@@ -1831,9 +1854,7 @@ public partial class PreferencesView : UserControl
         {
             DeckBackgroundImage.IsVisible = false;
             DeckBackgroundImage.Source = null;
-            DeckBackgroundBackdrop.Background = Color.TryParse(FeltHexForOptions(options), out var felt)
-                ? new SolidColorBrush(felt)
-                : new SolidColorBrush(Colors.DarkGreen);
+            DeckBackgroundBackdrop.Background = PreviewBackdropBrush(options);
         }
 
         CardView.InvalidateAllCardViews(DeckBackgroundCardMockHost);

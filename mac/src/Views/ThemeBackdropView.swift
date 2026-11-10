@@ -27,6 +27,9 @@ struct ThemeBackdropView: View {
                 Image(nsImage: image)
                     .resizable()
                     .aspectRatio(contentMode: .fill)
+            } else if coordinator.feltColor == .transparent {
+                // Preview-only: a clear table shows as a checkerboard so it reads as see-through.
+                CheckerboardView()
             } else {
                 coordinator.currentFeltColor
             }
@@ -34,6 +37,27 @@ struct ThemeBackdropView: View {
         .id(loadTrigger)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
             loadTrigger = UUID()
+        }
+    }
+}
+
+
+/// Grey checkerboard used by theme previews to show a see-through table.
+struct CheckerboardView: View {
+    var cell: CGFloat = 10
+    var body: some View {
+        Canvas { ctx, size in
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(Color(white: 0.9)))
+            let dark = Color(white: 0.74)
+            var y: CGFloat = 0, row = 0
+            while y < size.height {
+                var x: CGFloat = row % 2 == 0 ? 0 : cell
+                while x < size.width {
+                    ctx.fill(Path(CGRect(x: x, y: y, width: cell, height: cell)), with: .color(dark))
+                    x += cell * 2
+                }
+                y += cell; row += 1
+            }
         }
     }
 }
