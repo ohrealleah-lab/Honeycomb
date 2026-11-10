@@ -17,14 +17,26 @@ struct FaceCardIdentifiableImage: Identifiable {
 struct FaceCardSlotTileView: View {
     let slot: FaceCardSlot
 
-    private var cardColor: Color { slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1) }
+    // Same rule as CardView: custom Card Colors when enabled, else the stock look.
+    @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
+    private var cardColor: Color {
+        let c = coordinator.customCardColors
+        if c.isEnabled { return slot.isRed ? c.redSuitColor : c.blackSuitColor }
+        return slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
+    }
+    private var cardBackground: Color {
+        coordinator.customCardColors.isEnabled ? coordinator.customCardColors.backgroundColor : Color.white
+    }
+    private var cardOutline: Color {
+        coordinator.customCardColors.isEnabled ? coordinator.customCardColors.outlineColor : Color.black.opacity(0.85)
+    }
 
     var body: some View {
         // Read directly from the manager so SwiftUI's @Observable tracking only re-renders
         // this tile when its specific slot entry in faceArts changes.
         let art = CustomFaceCardArtManager.shared.art(for: slot)
         ZStack {
-            RoundedRectangle(cornerRadius: 8).fill(Color.white).frame(width: Self.tileWidth, height: Self.tileHeight)
+            RoundedRectangle(cornerRadius: 8).fill(cardBackground).frame(width: Self.tileWidth, height: Self.tileHeight)
 
             Group {
                 if let art, let img = CustomFaceCardArtManager.shared.image(for: art) {
@@ -72,7 +84,7 @@ struct FaceCardSlotTileView: View {
                 .frame(width: Self.tileWidth, height: Self.tileHeight, alignment: .bottomTrailing)
 
             RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.black.opacity(0.85), lineWidth: 0.5)
+                .stroke(cardOutline, lineWidth: 0.5)
                 .frame(width: Self.tileWidth, height: Self.tileHeight)
         }
         // Matches CardView's own shadow so these mini previews read as real cards
@@ -124,7 +136,18 @@ struct FaceCardArtEditorView: View {
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
 
-    private var cardColor: Color { slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1) }
+    // Same rule as CardView: custom Card Colors when enabled, else the stock look.
+    private var cardColor: Color {
+        let c = coordinator.customCardColors
+        if c.isEnabled { return slot.isRed ? c.redSuitColor : c.blackSuitColor }
+        return slot.isRed ? Color(red: 0.8, green: 0.1, blue: 0.1) : Color(red: 0.1, green: 0.1, blue: 0.1)
+    }
+    private var cardBackground: Color {
+        coordinator.customCardColors.isEnabled ? coordinator.customCardColors.backgroundColor : Color.white
+    }
+    private var cardOutline: Color {
+        coordinator.customCardColors.isEnabled ? coordinator.customCardColors.outlineColor : Color.black.opacity(0.85)
+    }
 
     init(slot: FaceCardSlot, image: NSImage, rawData: Data, isGIF: Bool,
          existingArt: CustomFaceArt?, onSave: @escaping (Double, Double, Double) -> Void,
@@ -152,7 +175,7 @@ struct FaceCardArtEditorView: View {
 
                 // Card preview
                 ZStack {
-                    RoundedRectangle(cornerRadius: 10).fill(Color.white).frame(width: CardDimensions.width, height: CardDimensions.height).shadow(radius: 4)
+                    RoundedRectangle(cornerRadius: 10).fill(cardBackground).frame(width: CardDimensions.width, height: CardDimensions.height).shadow(radius: 4)
 
                     // Custom art in center area — drawn before the corner indices below
                     // (not after) so they always stay legible on top of it, matching
@@ -190,7 +213,7 @@ struct FaceCardArtEditorView: View {
                     .frame(width: CardDimensions.width, height: CardDimensions.height, alignment: .bottomTrailing)
 
                     RoundedRectangle(cornerRadius: 10)
-                        .stroke(Color.black.opacity(0.85), lineWidth: 0.75)
+                        .stroke(cardOutline, lineWidth: 0.75)
                         .frame(width: 128, height: 181)
                 }
                 .frame(width: 150, height: 200)

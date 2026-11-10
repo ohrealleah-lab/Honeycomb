@@ -66,8 +66,9 @@ public partial class FaceCardArtSectionView : UserControl
         bool isRed = slot.GetIsRed();
         string rankLabel = slot.GetRankLabel();
         string suitChar = slot.GetSuitSymbol();
-        var color = isRed ? Color.Parse("#CC1A1A") : Color.Parse("#1A1A1A");
-        var brush = new SolidColorBrush(color);
+        // Live shared brushes from CardView (same ones real cards use), so the tiles show
+        // the user's Custom Card Colors and follow changes to them.
+        IBrush brush = isRed ? CardView._brushTextRed : CardView._brushTextBlackNormal;
 
         // Mini card border (78×111 — ~1.3x the original 60×85). A larger scale filled
         // more of the panel's width but pushed the 4-row grid taller than the visible
@@ -78,8 +79,8 @@ public partial class FaceCardArtSectionView : UserControl
         var cardBorder = new Border
         {
             Width = 78, Height = 111,
-            Background = new SolidColorBrush(Colors.White),
-            BorderBrush = new SolidColorBrush(Color.Parse("#D9000000")),
+            Background = CardView._brushFaceBackNormal,
+            BorderBrush = CardView._brushFaceBorderNormal,
             BorderThickness = new Thickness(0.75),
             CornerRadius = new CornerRadius(6),
             ClipToBounds = true,

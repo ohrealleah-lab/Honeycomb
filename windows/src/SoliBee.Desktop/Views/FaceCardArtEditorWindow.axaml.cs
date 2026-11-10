@@ -47,8 +47,10 @@ public partial class FaceCardArtEditorWindow : Window
         bool isRed = _slot.GetIsRed();
         string rankLabel = _slot.GetRankLabel();
         string suitChar = _slot.GetSuitSymbol();
-        var color = isRed ? Color.Parse("#CC1A1A") : Color.Parse("#1A1A1A");
-        var brush = new SolidColorBrush(color);
+        IBrush brush = isRed ? CardView._brushTextRed : CardView._brushTextBlackNormal;
+        // Preview card uses the user's Custom Card Colors, same as gameplay cards.
+        CardFacePreview.Background = CardView._brushFaceBackNormal;
+        CardFacePreview.BorderBrush = CardView._brushFaceBorderNormal;
 
         var language = SettingsService.LoadOptions().Language;
         var titleFmt = Strings.Get(StringKey.EditFaceCardArtTitleFmt, language);
