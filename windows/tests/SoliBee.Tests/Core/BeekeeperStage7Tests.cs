@@ -357,7 +357,7 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void TheNewUpgrades_ShowWhenTheirNeedIsMet_AndCostPaperAndPropolis()
     {
-        var e = Make(new BeekeeperState { Beebits = 9999m, Wax = 999m, WorkbenchRevealed = true });
+        var e = Make(new BeekeeperState { Beebits = 9999m, Wax = 999m, WorkbenchRevealed = true, Bees = 5_000m });
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id is BeekeeperUpgrades.Notebook or BeekeeperUpgrades.ThirdBed or BeekeeperUpgrades.PropolisSeal);
 
         e.State.Paper = 20m;     // first paper (but no garden yet)
@@ -377,6 +377,7 @@ public class BeekeeperStage7Tests : IDisposable
         e.State.Propolis = 30m;
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.PropolisSeal).Done);
         Assert.Equal(0m, e.State.Propolis);
+        Assert.Equal(3_000m, e.State.Bees);   // the Seal took 2,000 free bees; the Notebook took none
     }
 
     [Fact]

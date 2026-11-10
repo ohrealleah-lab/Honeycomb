@@ -48,17 +48,43 @@ public class BeekeeperStage75ViewModelTests
     }
 
     [Fact]
+    public void CappedRows_ShareOneTimeToFullRule_Filling_Full_AndNoRate()
+    {
+        // Filling: (cap - amount) / rate, worked from the exact amount (wax 12.9 shows as 12).
+        var filling = Make(new BeekeeperState { HoneyRevealed = true, WaxRevealed = true, Honey = 50m, Wax = 12.9m });
+        var honey = Row(filling, BeekeeperHiveRows.Honey);
+        Assert.Equal((filling.HoneyStorage - 50m) / filling.HoneyPerSecond, honey.SecondsToFull);
+        var wax = Row(filling, BeekeeperHiveRows.Wax);
+        Assert.Equal((filling.WaxStorage - 12.9m) / filling.WaxPerSecond, wax.SecondsToFull);
+
+        // Full: 0, so the view says "Full" and never "0s".
+        var full = Make(new BeekeeperState { HoneyRevealed = true, WaxRevealed = true, Honey = 200m, Wax = 20m });
+        Assert.Equal(0m, Row(full, BeekeeperHiveRows.Honey).SecondsToFull);
+        Assert.Equal(0m, Row(full, BeekeeperHiveRows.Wax).SecondsToFull);
+
+        // No rate (and the shared rule itself): no time.
+        Assert.Null(BeekeeperEngine.SecondsToFull(5m, 10m, 0m));
+        Assert.Null(BeekeeperEngine.SecondsToFull(5m, 10m, -1m));
+        Assert.Equal(0m, BeekeeperEngine.SecondsToFull(10m, 10m, 0m));
+        Assert.Equal(5m, BeekeeperEngine.SecondsToFull(5m, 10m, 1m));
+
+        // Rows without a cap never carry it.
+        Assert.All(filling.HiveGroups.SelectMany(g => g.Rows).Where(r => r.Id is not (BeekeeperHiveRows.Honey or BeekeeperHiveRows.Wax)),
+            r => Assert.Null(r.SecondsToFull));
+    }
+
+    [Fact]
     public void TheWaxRow_ShowsItsCap_AndTheWaxFullLineComesAtTheCap()
     {
         var vm = Make(new BeekeeperState { HoneyRevealed = true, WaxRevealed = true, Wax = 12.9m });
         var wax = Row(vm, BeekeeperHiveRows.Wax);
         Assert.Equal(12m, wax.Value);           // rounded down, fractions kept behind the scenes
         Assert.Equal(20m, wax.Value2);
-        Assert.False(Row(vm, BeekeeperHiveRows.WaxFull).Visible);
+        Assert.NotEqual(0m, wax.SecondsToFull);
         Assert.Equal("12 / 20", vm.WaxDisplay);
 
         vm.DebugFillWax();
-        Assert.True(Row(vm, BeekeeperHiveRows.WaxFull).Visible);
+        Assert.Equal(0m, Row(vm, BeekeeperHiveRows.Wax).SecondsToFull);   // capped: the view colors the number
         Assert.True(vm.WaxIsFull);
     }
 

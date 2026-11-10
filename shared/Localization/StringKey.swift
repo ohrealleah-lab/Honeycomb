@@ -2082,4 +2082,20 @@ public enum StringKey: String, CaseIterable {
     case feltTransparent = "felt_transparent"
     /// Slider label under Background (Mac/Windows only): how see-through the table is
     case tableOpacityLabel = "table_opacity_label"
+    /// Hive card rate hover, second line: the resource is at its cap
+    case beekeeperTimeToFullFull = "beekeeper_time_to_full_full"
+    /// Hive card rate hover, second line; %@ = time until the cap (see the time words below)
+    case beekeeperTimeToFullFmt = "beekeeper_time_to_full_fmt"
+    /// Short time under a minute; %@ = seconds
+    case beekeeperTimeSecFmt = "beekeeper_time_sec_fmt"
+    /// Short time under an hour; %@ = minutes
+    case beekeeperTimeMinFmt = "beekeeper_time_min_fmt"
+    /// Short time, whole hours; %@ = hours
+    case beekeeperTimeHourFmt = "beekeeper_time_hour_fmt"
+    /// Short time under a day; first %@ = hours, second = minutes
+    case beekeeperTimeHourMinFmt = "beekeeper_time_hour_min_fmt"
+    /// Short time, whole days; %@ = days
+    case beekeeperTimeDayFmt = "beekeeper_time_day_fmt"
+    /// Short time, days and hours; first %@ = days, second = hours
+    case beekeeperTimeDayHourFmt = "beekeeper_time_day_hour_fmt"
 }

@@ -1042,5 +1042,13 @@ enum StringsSpanish {
         .beekeeperLogWaxTrayBought: "Metes otra bandeja de cera.",
         .feltTransparent: "Transparente",
         .tableOpacityLabel: "Opacidad de la Mesa",
+        .beekeeperTimeToFullFull: "Lleno",
+        .beekeeperTimeToFullFmt: "Lleno en %@",
+        .beekeeperTimeSecFmt: "%@ s",
+        .beekeeperTimeMinFmt: "%@ min",
+        .beekeeperTimeHourFmt: "%@ h",
+        .beekeeperTimeHourMinFmt: "%@ h %@ min",
+        .beekeeperTimeDayFmt: "%@ d",
+        .beekeeperTimeDayHourFmt: "%@ d %@ h",
     ]
 }

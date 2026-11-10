@@ -65,7 +65,7 @@ public class BeekeeperStage3Tests : IDisposable
     {
         Assert.Empty(Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades);
 
-        var e = Make(new BeekeeperState { ToolLevel = 3, Beebits = 5_000m, Wax = 500m, Sage = 5m });
+        var e = Make(new BeekeeperState { ToolLevel = 3, Beebits = 5_000m, Wax = 500m, Sage = 5m, Bees = 5_000m, WaxTrays = 100 });   // trays: room for every wax price
         Assert.Equal(new[] { BeekeeperUpgrades.Practice, BeekeeperUpgrades.Smoker }, e.ShopUpgrades.Select(u => u.Id));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Practice).Done);
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.MorePractice);
@@ -75,12 +75,12 @@ public class BeekeeperStage3Tests : IDisposable
     // ============================================================ the slice
 
     [Fact]
-    public void EveryCatch_AlsoBringsInASliceOfTheHive()
+    public void EveryCatch_IsExactlyTheToolsBees_NoSliceOfTheHive()
     {
         var e = Make(new BeekeeperState { ToolLevel = 6, Bees = 250_000m });
-        Assert.Equal(400m, e.BeesPerCatch);   // 150 + 250
-        Assert.Equal(400m, e.Catch().BeesGained);
-        Assert.Equal(250_400m, e.State.Bees);
+        Assert.Equal(150m, e.BeesPerCatch);
+        Assert.Equal(150m, e.Catch().BeesGained);
+        Assert.Equal(250_150m, e.State.Bees);
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class BeekeeperStage3Tests : IDisposable
     {
         var e = Make(new BeekeeperState { ToolLevel = 3, Bees = 100_000m });
         e.State.Upgrades.Add(BeekeeperUpgrades.MorePractice);
-        Assert.Equal(20m + 100m, e.BeesPerCatch);
+        Assert.Equal(20m, e.BeesPerCatch);
     }
 
     [Fact]

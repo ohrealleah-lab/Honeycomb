@@ -244,7 +244,7 @@ public class BeekeeperStage4Tests : IDisposable
         e.Advance(100m);
         Assert.Equal(0m, e.State.Honey);
         Assert.Equal(0m, e.State.Bees);
-        Assert.Equal(1m, e.BeesPerCatch);   // the slice is only of free bees
+        Assert.Equal(1m, e.BeesPerCatch);
     }
 
     // Cut in stage 7.5 (spec 016): forager counts are no longer saved.

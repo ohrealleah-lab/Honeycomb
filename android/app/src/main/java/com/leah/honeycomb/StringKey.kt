@@ -1043,4 +1043,12 @@ enum class StringKey {
     BeekeeperLogWaxTrayBought,
     FeltTransparent,
     TableOpacityLabel,
+    BeekeeperTimeToFullFull,
+    BeekeeperTimeToFullFmt,
+    BeekeeperTimeSecFmt,
+    BeekeeperTimeMinFmt,
+    BeekeeperTimeHourFmt,
+    BeekeeperTimeHourMinFmt,
+    BeekeeperTimeDayFmt,
+    BeekeeperTimeDayHourFmt,
 }

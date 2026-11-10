@@ -1071,6 +1071,14 @@ object Strings {
         StringKey.BeekeeperLogWaxTrayBought to "You slide in another wax tray.",
         StringKey.FeltTransparent to "Transparent",
         StringKey.TableOpacityLabel to "Table Opacity",
+        StringKey.BeekeeperTimeToFullFull to "Full",
+        StringKey.BeekeeperTimeToFullFmt to "Full in %@",
+        StringKey.BeekeeperTimeSecFmt to "%@ sec",
+        StringKey.BeekeeperTimeMinFmt to "%@ min",
+        StringKey.BeekeeperTimeHourFmt to "%@ h",
+        StringKey.BeekeeperTimeHourMinFmt to "%@ h %@ min",
+        StringKey.BeekeeperTimeDayFmt to "%@ d",
+        StringKey.BeekeeperTimeDayHourFmt to "%@ d %@ h",
     )
 
     private val Spanish = mapOf(
@@ -2112,5 +2120,13 @@ object Strings {
         StringKey.BeekeeperLogWaxTrayBought to "Metes otra bandeja de cera.",
         StringKey.FeltTransparent to "Transparente",
         StringKey.TableOpacityLabel to "Opacidad de la Mesa",
+        StringKey.BeekeeperTimeToFullFull to "Lleno",
+        StringKey.BeekeeperTimeToFullFmt to "Lleno en %@",
+        StringKey.BeekeeperTimeSecFmt to "%@ s",
+        StringKey.BeekeeperTimeMinFmt to "%@ min",
+        StringKey.BeekeeperTimeHourFmt to "%@ h",
+        StringKey.BeekeeperTimeHourMinFmt to "%@ h %@ min",
+        StringKey.BeekeeperTimeDayFmt to "%@ d",
+        StringKey.BeekeeperTimeDayHourFmt to "%@ d %@ h",
     )
 }

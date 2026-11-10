@@ -13,7 +13,7 @@ public sealed record BeekeeperTool(string Id, decimal Cost, int BeesPerClick);
 /// </summary>
 /// <remarks>Since stage 7 (spec 015) a price can also be paper and propolis; both default to 0, so older entries are unchanged.</remarks>
 public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Sage, string Needs,
-    decimal Paper = 0m, decimal Propolis = 0m);
+    decimal Paper = 0m, decimal Propolis = 0m, decimal Bees = 0m);   // Bees: free bees spent (default 0, like Paper)
 
 /// <summary>A plant a seed grows into. <see cref="SeedAtTrade"/> is the Hippie trade that gives its seed;
 /// <see cref="Specialty"/> is the job it gives the hive (<see cref="BeekeeperSpecialties"/>) and
@@ -113,6 +113,13 @@ public sealed class BeekeeperConfig
     // ===== Stage 7.5 (spec 016): combs make the honey, free bees make the wax. All placeholders (Bee).
     /// <summary>Honey a second from each comb, however many bees live in it.</summary>
     public decimal HoneyPerCombPerSecond { get; init; } = 0.2m;
+    /// <summary>Free bees add this share of the comb honey per 100 free bees (0.0002 = 0.02%). Placeholder.</summary>
+    public decimal FreeBeeHoneyBonusPer100 { get => _freeBeePer100 ?? StartingFreeBeeHoneyBonusPer100; init => _freeBeePer100 = value; }
+    private decimal? _freeBeePer100;
+    /// <summary>The starting value above; a static only so the older tests can switch the bonus off for every config they build.</summary>
+    public static decimal StartingFreeBeeHoneyBonusPer100 { get; set; } = 0.0002m;
+    /// <summary>The most the free bees' bonus can add to the comb honey (0.25 = +25%). Placeholder.</summary>
+    public decimal FreeBeeHoneyBonusCap { get; init; } = 0.25m;
     /// <summary>The tiny wax drip that runs from the start of the game, bees or not.</summary>
     public decimal WaxBasePerSecond { get; init; } = 0.005m;
     /// <summary>Wax a second from each free bee (bees not living in a comb).</summary>
@@ -163,9 +170,8 @@ public sealed class BeekeeperConfig
         new BeekeeperTool("whistle", 30_000m, 150),
     };
 
-    /// <summary>Each catch also brings in this share of the bees already in the hive,
-    /// rounded down (Leah: 0.1%). Stings catch nothing.</summary>
-    public decimal CatchSliceShare { get; init; } = 0.001m;
+    // Cut (may return): each catch also brought in this share of the hive, rounded down (0.1%).
+    // public decimal CatchSliceShare { get; init; } = 0.001m;
 
     /// <summary>The most bees a hive can hold. Keeps (bees × 3 days) inside what a decimal can
     /// hold, so time away can never overflow; a save above it is refused as damaged.</summary>
@@ -250,20 +256,20 @@ public sealed class BeekeeperConfig
         // Pacing review 2026-11-10 (Bee approved), was: Bigger Combs I 300 + 100 wax; II 800 + 250 wax + 2 sage;
         // Better Wax-Catcher 400 + 1 sage; Stronger Candles 200 + 50 wax + 2 sage; Practice 600;
         // More Practice 2,500 + 200 wax + 3 sage; Smoker 500; Notebook 100; Propolis Seal 1,000.
-        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 800m, 60m, 0m, BeekeeperUpgrades.NeedsWorkbench),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 20m, BeekeeperUpgrades.BiggerCombs1),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 5m, BeekeeperUpgrades.NeedsWaxCatcher),
-        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 50m, 20m, 1m, BeekeeperUpgrades.NeedsRepellent),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 800m, 60m, 0m, BeekeeperUpgrades.NeedsWorkbench, Bees: 200m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 20m, BeekeeperUpgrades.BiggerCombs1, Bees: 5_000m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 5m, BeekeeperUpgrades.NeedsWaxCatcher, Bees: 1_000m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 50m, 20m, 1m, BeekeeperUpgrades.NeedsRepellent, Bees: 100m),
         // Stage 3 (spec 011)
-        new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 1_500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
-        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice),
-        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 1_000m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 1_500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum, Bees: 500m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice, Bees: 3_000m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 1_000m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum, Bees: 300m),
         // Stage 7 (spec 015): paper and propolis join the prices (all placeholders).
         new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 150m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
         // Off the Shop (Leah, 2026-11-10): extra beds become a technology bought after a swarm (stage 11, not built yet).
         // A save that already owns the Third Bed keeps its extra bed.
         // new BeekeeperUpgrade(BeekeeperUpgrades.ThirdBed, 1_500m, 200m, 0m, BeekeeperUpgrades.NeedsGardenAndPaper, Paper: 10m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 4_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 4_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m, Bees: 2_000m),
     };
 
     // --- Stage 3: catching and the Smoker (spec 011) -------------------------
@@ -326,9 +332,8 @@ public sealed class BeekeeperConfig
     public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 0m, 20m };
     /// <summary>Bees raised for every 1 bee bread the brood eats.</summary>
     public decimal BeesPerBeeBread { get; init; } = 100m;
-    /// <summary>The slice of the hive a click brings in is never more than this many times
-    /// the bees the tool catches (after Practice).</summary>
-    public decimal SliceCapMultiple { get; init; } = 10m;
+    // Cut (may return): the slice of the hive was never more than this many times the tool's bees.
+    // public decimal SliceCapMultiple { get; init; } = 10m;
     /// <summary>The bear offers the trade agreement on this trade (Sell All counts as one).
     /// Stage 7.5 (spec 016): was 100; the agreement is now a better selling rate.</summary>
     public long AgreementTrades { get; init; } = 40;   // pacing review 2026-11-10: was 25

@@ -87,8 +87,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         var vm = Make(new Clock(), Workshop());
         string[] Ids(string g) => Group(vm, g).Rows.Select(r => r.Id).ToArray();
         Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Queen }, Ids(BeekeeperHiveRows.GroupBees));
-        Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs, BeekeeperHiveRows.CombsFull,
-                BeekeeperHiveRows.WaxFull },   // stage 7.5
+        Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs },   // the red full lines are cut; a capped number is colored
             Ids(BeekeeperHiveRows.GroupHive));
         Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread, BeekeeperHiveRows.Propolis },
             Ids(BeekeeperHiveRows.GroupGarden));

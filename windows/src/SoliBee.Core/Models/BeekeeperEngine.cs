@@ -255,6 +255,16 @@ public sealed class BeekeeperEngine
         (Config.StartingWaxCap + CombsBought * Config.WaxCapPerComb + State.WaxTrays * Config.WaxTrayCapacity)
         * StorageMultiplier;
 
+    /// <summary>The one rule for "time to full" on any capped resource (the Hive card's rate hovers):
+    /// seconds until <paramref name="amount"/> reaches <paramref name="cap"/> at <paramref name="rate"/>
+    /// a second. 0 when it is already full; null when it is not filling (rate zero or below).</summary>
+    public static decimal? SecondsToFull(decimal amount, decimal cap, decimal rate)
+    {
+        if (amount >= cap) return 0m;
+        if (rate <= 0m) return null;
+        return (cap - amount) / rate;
+    }
+
     /// <summary>The combs are full: no more honey is stored (the one place this is decided).</summary>
     public bool IsStorageFull => State.Honey >= HoneyStorage;
 
@@ -270,6 +280,12 @@ public sealed class BeekeeperEngine
 
     /// <summary>Honey a second one comb adds, with the lasting boosts (the wooden hive, guarding).</summary>
     public decimal HoneyPerCombNow => Config.HoneyPerCombPerSecond * HiveMultiplier;
+
+    /// <summary>Free bees' small honey bonus: +0.02% per 100 free bees, capped at +25%; it multiplies
+    /// the comb honey, so with no combs it adds nothing. Part of <see cref="HiveMultiplier"/>, the one
+    /// place the honey rate is worked out, so live, away, hovers and time-to-full agree.</summary>
+    public decimal FreeBeeHoneyFactor =>
+        1m + Math.Min(Config.FreeBeeHoneyBonusCap, State.Bees / 100m * Config.FreeBeeHoneyBonusPer100);
 
     /// <summary>The Technologies' multiplier on both caps (honey and wax since stage 7.5).</summary>
     public decimal StorageMultiplier =>
@@ -291,14 +307,14 @@ public sealed class BeekeeperEngine
         : Owns(BeekeeperUpgrades.Practice) ? Config.PracticeMultiplier
         : 1m;
 
-    /// <summary>Everything one successful click catches: the tool's bees plus a slice of the
-    /// hive (0.1%, rounded down; Practice doesn't grow the slice), the slice capped at 10 × the
-    /// tool's bees (spec 013, FR-405). The one place this is worked out, so the catch and the popup
-    /// agree.</summary>
-    public decimal BeesPerCatch => BeesPerClick + Math.Min(Math.Floor(State.Bees * Config.CatchSliceShare), SliceCap);
-
-    /// <summary>The most bees the slice can bring in on one click.</summary>
-    public decimal SliceCap => Math.Floor(BeesPerClick * Config.SliceCapMultiple);
+    /// <summary>Everything one successful click catches: exactly the tool's bees (Practice counted),
+    /// so the Shop's "catches N bees" is true. The one place this is worked out, so the catch and the
+    /// popup agree.</summary>
+    public decimal BeesPerCatch => BeesPerClick;
+    // Cut (Bee, 2026-11-10; may return): each catch also brought in a slice of the hive (0.1%, rounded
+    // down, capped at 10 x the tool's bees; spec 013, FR-405). The Shop said "2 bees" while gloves caught 3.
+    // public decimal BeesPerCatch => BeesPerClick + Math.Min(Math.Floor(State.Bees * Config.CatchSliceShare), SliceCap);
+    // public decimal SliceCap => Math.Floor(BeesPerClick * Config.SliceCapMultiple);
 
     /// <summary>The hive's base honey rate: each comb makes a flat rate (spec 016, FR-703), from the
     /// first bee caught on, however many bees there are. Raids and the like use this, never the
@@ -311,7 +327,7 @@ public sealed class BeekeeperEngine
     /// <summary>Lasting boosts to the combs' honey: the wooden hive and guarding ("the hive
     /// feels safe"), multiplied together. Everything that reads honey per second (production,
     /// raids, hover rates) sees it, live and away alike. Wax never does.</summary>
-    public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier;
+    public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier * FreeBeeHoneyFactor;
 
     /// <summary>What the hive makes right now: the base rate with whichever boosts are on (calm
     /// bees, a bee-boost candle, a sage-propolis candle).</summary>
@@ -1196,9 +1212,12 @@ public sealed class BeekeeperEngine
     // ------------------------------------------------------------------ upgrades (in the Shop)
 
     /// <summary>Upgrades that are unlocked and not yet bought, in Shop order. Bought and
-    /// still-locked upgrades are not listed (Leah: hide purchased upgrades).</summary>
+    /// still-locked upgrades are not listed (Leah: hide purchased upgrades). An upgrade whose wax
+    /// price is above the wax cap (a wall) is not listed either: it shows once the hive can hold
+    /// its price, so there is never a "needs more storage" line for it.</summary>
     public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades =>
-        Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u)).ToList();
+        Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u) && !IsWaxWall(u.Wax)).ToList();
+    // Before: Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u)).ToList();
 
     // Stage 2's upgrades come with The Workbench; stage 3's catching upgrades only need the Vacuum.
     private bool IsUnlocked(BeekeeperUpgrade u) => u.Needs switch
@@ -1272,7 +1291,7 @@ public sealed class BeekeeperEngine
         Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u
         && !Owns(id) && IsUnlocked(u)
         && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Sage >= u.Sage
-        && State.Paper >= u.Paper && State.Propolis >= u.Propolis;
+        && State.Paper >= u.Paper && State.Propolis >= u.Propolis && State.Bees >= u.Bees;
 
     /// <summary>Takes every part of the cost at once, or nothing.</summary>
     public ActionResult BuyUpgrade(string id)
@@ -1284,6 +1303,7 @@ public sealed class BeekeeperEngine
         State.Sage -= u.Sage;
         State.Paper -= u.Paper;
         State.Propolis -= u.Propolis;
+        State.Bees -= u.Bees;
         State.Upgrades.Add(id);
         RefreshStorageFlag();
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.UpgradeBought, 0m, id) };

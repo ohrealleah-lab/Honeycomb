@@ -29,9 +29,12 @@ public sealed record BeekeeperTradeOffer(
 /// (one of <see cref="BeekeeperHiveRows"/>) tells the view which label and wording to use, and
 /// the numbers fill it in. <see cref="Rate"/> is the per-second rate shown on hover (null: no
 /// hover); <see cref="Rate2"/> a second hover number where a row needs one (the pantry's time).
+/// <see cref="SecondsToFull"/> is set only on a row with a cap (Build it with
+/// <see cref="BeekeeperViewModel.CappedRow"/>): 0 = full, null = no time to show. Every capped
+/// row's hover shows it under the rate, so a new capped row gets it by using that helper.
 /// </summary>
 public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0m, decimal Value2 = 0m,
-    decimal? Rate = null, decimal Rate2 = 0m);
+    decimal? Rate = null, decimal Rate2 = 0m, decimal? SecondsToFull = null);
 
 /// <summary>A small heading and its rows. The heading only shows while one of its rows does.</summary>
 public sealed record BeekeeperHiveGroup(string Id, IReadOnlyList<BeekeeperHiveRow> Rows)
@@ -348,6 +351,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasQueen => Engine.HasQueen;
     public bool IsQueenLaying => Engine.IsQueenLaying;
     /// <summary>Bees a second the queen raises right now (0 while she rests).</summary>
+    /// <summary>A Hive row that has both a rate and a cap: the shared place "time to full" is worked
+    /// out (<see cref="BeekeeperEngine.SecondsToFull"/>). <paramref name="shown"/> is the number the row
+    /// displays; <paramref name="exact"/> is the true amount the time is worked from.</summary>
+    public static BeekeeperHiveRow CappedRow(string id, bool visible, decimal shown, decimal exact, decimal cap, decimal rate) =>
+        new(id, visible, shown, cap, rate, SecondsToFull: BeekeeperEngine.SecondsToFull(exact, cap, rate));
+
     public decimal QueenBeesPerSecond => Engine.QueenBeesPerSecondNow;
     /// <summary>Bee bread a second the brood eats right now (0 while she rests).</summary>
     public decimal BeeBreadPerSecond => Engine.BeeBreadPerSecondNow;
@@ -438,11 +447,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupHive, new BeekeeperHiveRow[]
                 {
                     // Stage 7.5 (spec 016): honey from the first bee; wax with its cap, rounded down.
-                    new(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
-                    new(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), Engine.WaxStorage, Engine.WaxPerSecondNow),
+                    CappedRow(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
+                    CappedRow(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), State.Wax, Engine.WaxStorage, Engine.WaxPerSecondNow),
                     new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
-                    new(BeekeeperHiveRows.CombsFull, StorageIsFull && Engine.HiveStarted),
-                    new(BeekeeperHiveRows.WaxFull, State.WaxRevealed && Engine.IsWaxFull),
+                    // Cut (may return): the red "full" lines. A capped number is colored instead (the view reads SecondsToFull == 0).
+                    // new(BeekeeperHiveRows.CombsFull, StorageIsFull && Engine.HiveStarted),
+                    // new(BeekeeperHiveRows.WaxFull, State.WaxRevealed && Engine.IsWaxFull),
                     // Cut in stage 7.5 (spec 016):
                     // new(BeekeeperHiveRows.Honey, true, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
                     // new(BeekeeperHiveRows.Wax, State.WaxRevealed, State.Wax, Rate: Engine.WaxPerSecondNow),

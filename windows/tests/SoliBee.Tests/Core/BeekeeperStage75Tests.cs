@@ -80,16 +80,16 @@ public class BeekeeperStage75Tests
         e.Advance(60m);                            // 20 bees raised
         Assert.Equal(20m, e.State.Bees);
         Assert.Equal(0.007m, e.WaxPerSecondNow);   // 0.005 + 20 × 0.0001
-        Assert.Equal(1m, e.BeesPerCatch);          // the slice reads free bees: 1 + floor(20 × 0.001)
+        Assert.Equal(1m, e.BeesPerCatch);
     }
 
     [Fact]
     public void TheCatchSlice_ReadsFreeBeesOnly()
     {
         var e = Make(new BeekeeperState { ToolLevel = 3, Bees = 10_000m, Wax = 1000m, HoneyRevealed = true });
-        Assert.Equal(20m, e.BeesPerCatch);         // 10 + 10
-        e.State.Combs = 20;                        // combs hold bees, but they are not free bees
-        Assert.Equal(20m, e.BeesPerCatch);
+        Assert.Equal(10m, e.BeesPerCatch);         // no slice: just the tool's bees, whatever the hive holds
+        e.State.Combs = 20;
+        Assert.Equal(10m, e.BeesPerCatch);
         e.State.Bees = 0m;
         Assert.Equal(10m, e.BeesPerCatch);
     }
@@ -437,5 +437,43 @@ public class BeekeeperStage75Tests
         var e = Make(new BeekeeperState { HoneyRevealed = true, Bees = 0m });
         var r = e.AdvanceAway(3600m);
         Assert.Contains(r.WelcomeBack, x => x.Key == BeekeeperEvents.WelcomeBack && x.Value == 200m);   // filled to the cap
+    }
+
+    // ---- free bees as a price, and their small honey bonus (Bee, 2026-11-10; all numbers placeholders)
+
+    private static BeekeeperState Shopper(decimal bees) => new()
+    {
+        Beebits = 5_000m, Wax = 500m, WaxTrays = 100, WorkbenchRevealed = true, HoneyRevealed = true, Combs = 1, Bees = bees,
+    };
+
+    [Fact]
+    public void AnUpgradeWithABeePrice_TakesTheBees_AndNeedsEnoughOfThem()
+    {
+        var short_ = Make(Shopper(199m));
+        Assert.Contains(short_.ShopUpgrades, u => u.Id == BeekeeperUpgrades.BiggerCombs1);   // listed, not hidden
+        Assert.False(short_.CanBuyUpgrade(BeekeeperUpgrades.BiggerCombs1));                  // but cannot be bought
+        Assert.False(short_.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);
+        Assert.Equal(199m, short_.State.Bees);
+        Assert.Equal(5_000m, short_.State.Beebits);   // nothing else was taken either
+
+        var enough = Make(Shopper(250m));
+        Assert.True(enough.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);
+        Assert.Equal(50m, enough.State.Bees);          // 250 - 200
+        Assert.Equal(4_200m, enough.State.Beebits);    // 800 beebits as before
+    }
+
+    [Fact]
+    public void TheFreeBeeHoneyBonus_IsSmall_Capped_AndZeroWithoutCombs()
+    {
+        var cfg = new BeekeeperConfig { FreeBeeHoneyBonusPer100 = 0.0002m, FreeBeeHoneyBonusCap = 0.25m, StartingHoneyCap = 1_000_000m };
+        decimal Rate(int combs, decimal bees) =>
+            new BeekeeperEngine(cfg, new BeekeeperState { HoneyRevealed = true, Combs = combs, Bees = bees }, new FakeRandom()).HoneyPerSecondNow;
+        decimal plain = Rate(5, 0m);
+        Assert.Equal(1m, plain);
+        Assert.Equal(1.0002m, Rate(5, 100m));       // +0.02% per 100 free bees
+        Assert.Equal(1.002m, Rate(5, 1_000m));
+        Assert.Equal(1.25m, Rate(5, 10_000_000m));  // capped at +25%
+        // no combs (a hive not started has none working): the bonus multiplies nothing
+        Assert.Equal(0m, new BeekeeperEngine(cfg, new BeekeeperState { Bees = 10_000m }, new FakeRandom()).HoneyPerSecondNow);
     }
 }

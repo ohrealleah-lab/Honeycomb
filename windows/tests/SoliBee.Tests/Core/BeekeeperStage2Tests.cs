@@ -161,10 +161,12 @@ public class BeekeeperStage2Tests : IDisposable
     {
         Assert.Empty(Make(new BeekeeperState { Combs = 1, Beebits = 5000m }).ShopUpgrades);
 
-        var e = Make(Workshop());
+        // Bigger Combs I costs 60 wax: it stays out of the Shop until the wax cap can hold that (no wall line).
+        Assert.Empty(Make(Workshop()).ShopUpgrades);
+        var e = Make(Workshop(s => s.WaxTrays = 10));
         Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1 }, e.ShopUpgrades.Select(u => u.Id));
 
-        var more = Make(Workshop(s => { s.HasWaxCatcher = true; s.RepellentUnlocked = true; }));
+        var more = Make(Workshop(s => { s.HasWaxCatcher = true; s.RepellentUnlocked = true; s.WaxTrays = 10; }));
         Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1, BeekeeperUpgrades.BetterWaxCatcher, BeekeeperUpgrades.StrongerCandles },
                      more.ShopUpgrades.Select(u => u.Id));
     }
@@ -172,8 +174,9 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void BuyingAnUpgrade_TakesEveryPartOfTheCost_AndItLeavesTheShop()
     {
-        var e = Make(Workshop(s => { s.Beebits = 1000m; s.Wax = 300m; s.Sage = 2m; }));
+        var e = Make(Workshop(s => { s.Beebits = 1000m; s.Wax = 300m; s.Sage = 2m; s.WaxTrays = 100; s.Bees = 500m; }));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);
+        Assert.Equal(300m, e.State.Bees);   // and 200 free bees
         Assert.Equal(200m, e.State.Beebits);   // Bigger Combs I: 800 Beebits + 60 wax
         Assert.Equal(240m, e.State.Wax);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.BiggerCombs1);

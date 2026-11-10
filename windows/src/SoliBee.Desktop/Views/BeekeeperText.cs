@@ -342,7 +342,7 @@ internal static class BeekeeperText
     {
         if (r.Rate is not { } rate) return null;
         string N(decimal v, int d) => NumberFormatter.Format(v, Lang, d);
-        return r.Id switch
+        string? tip = r.Id switch
         {
             BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)),
             BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)),
@@ -353,6 +353,30 @@ internal static class BeekeeperText
                                           + (r.Rate2 > 0m ? "\n" + PantryLasts(r.Rate2) : ""),
             _ => null,
         };
+        // The shared rule: any capped row (SecondsToFull set) also says how long until it is full.
+        if (tip is not null && r.SecondsToFull is { } toFull) tip += "\n" + TimeToFull(toFull);
+        return tip;
+    }
+
+    /// <summary>"Full" at the cap, else "Full in 3 h 20 min".</summary>
+    public static string TimeToFull(decimal seconds) =>
+        seconds <= 0m ? T(StringKey.BeekeeperTimeToFullFull) : Fill(T(StringKey.BeekeeperTimeToFullFmt), ShortTime(seconds));
+
+    /// <summary>A short readable time, rounded up so it never says 0: "45 sec", "12 min", "3 h 20 min", "2 d 5 h".</summary>
+    public static string ShortTime(decimal seconds)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        decimal s = System.Math.Ceiling(System.Math.Max(1m, seconds));
+        if (s < 60m) return Fill(T(StringKey.BeekeeperTimeSecFmt), N(s));
+        decimal minutes = System.Math.Ceiling(s / 60m);
+        if (minutes < 60m) return Fill(T(StringKey.BeekeeperTimeMinFmt), N(minutes));
+        decimal hours = System.Math.Floor(minutes / 60m), restMin = minutes - hours * 60m;
+        if (hours < 24m)
+            return restMin == 0m ? Fill(T(StringKey.BeekeeperTimeHourFmt), N(hours))
+                                 : Fill(T(StringKey.BeekeeperTimeHourMinFmt), N(hours), N(restMin));
+        decimal days = System.Math.Floor(hours / 24m), restHours = hours - days * 24m;
+        return restHours == 0m ? Fill(T(StringKey.BeekeeperTimeDayFmt), N(days))
+                               : Fill(T(StringKey.BeekeeperTimeDayHourFmt), N(days), N(restHours));
     }
 
     public static string PollenPerSecond(string n) => Fill(T(StringKey.BeekeeperPollenPerSecFmt), n);

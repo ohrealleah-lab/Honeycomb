@@ -311,10 +311,12 @@ public partial class BeekeeperView : UserControl
     /// player merely can't afford yet shows neither. The view model decides; this only draws.</summary>
     private static void ShowWall(TextBlock text, Button button, bool wall, string holds)
     {
-        text.IsVisible = wall;
-        text.Foreground = WallBrush;
-        text.Opacity = 1.0;
-        if (wall) text.Text = BeekeeperText.WaxWall(holds);
+        // Cut (may return, Bee 2026-11-10): the red "needs more wax storage" line. The disabled button's hover still explains.
+        // text.IsVisible = wall;
+        // text.Foreground = WallBrush;
+        // text.Opacity = 1.0;
+        // if (wall) text.Text = BeekeeperText.WaxWall(holds);
+        text.IsVisible = false;
         ToolTip.SetShowOnDisabled(button, true);
         ToolTip.SetTip(button, wall ? BeekeeperText.WaxWallTip : null);
     }
@@ -415,6 +417,9 @@ public partial class BeekeeperView : UserControl
                 if (c.Value is { } v)
                 {
                     v.Text = BeekeeperText.HiveRowValue(r);
+                    // The shared rule: a capped number (SecondsToFull is 0) is colored, in place of a warning line.
+                    // (Not "= null": a local null brush draws no text at all; clearing the value restores the style's color.)
+                    if (r.SecondsToFull is 0m) v.Foreground = SoftCoral; else v.ClearValue(TextBlock.ForegroundProperty);
                     SetRateTip(tip, c.Label, v);
                 }
                 else SetRateTip(tip, c.Label);
@@ -546,7 +551,7 @@ public partial class BeekeeperView : UserControl
                 string id = u.Id;
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id)), false,
-                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis)),
+                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis), bees: Part(u.Bees)),
                     "upgrade:" + id, _ => vm.BuyUpgrade(id), withWall: true));
             }
         }
@@ -642,7 +647,8 @@ public partial class BeekeeperView : UserControl
             // Stage 7.5: the bear's bundle changes with the trade agreement (10, then 8), so the rate
             // line and the "Trade 10" button are rewritten every tick rather than only on a rebuild.
             if (_tradeRates.TryGetValue(o.Id, out var rateText)) rateText.Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount);
-            if (o.Id == "bear" && o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.GiveAmount);
+            // The bear sells a bundle of honey ("Trade 10", then 8); every other buyer's button is one trade, so "Trade 1".
+            if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.Id == "bear" ? o.GiveAmount : 1m);
             if (r.All != null) r.All.IsEnabled = o.CanTrade;
             if (r.Ten != null) r.Ten.IsVisible = o.CanTradeTimes?.Invoke(10) == true;
             if (r.Hundred != null) r.Hundred.IsVisible = o.CanTradeTimes?.Invoke(100) == true;

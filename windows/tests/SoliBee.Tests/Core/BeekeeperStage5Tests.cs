@@ -305,15 +305,15 @@ public class BeekeeperStage5Tests : IDisposable
             Upgrades = { BeekeeperUpgrades.Practice, BeekeeperUpgrades.MorePractice },
         });
         Assert.Equal(300, e.BeesPerClick);
-        Assert.Equal(3300m, e.BeesPerCatch);
-        Assert.Equal(3300m, e.Catch().BeesGained);
+        Assert.Equal(300m, e.BeesPerCatch);   // no slice: exactly the tool's bees
+        Assert.Equal(300m, e.Catch().BeesGained);
     }
 
     [Fact]
     public void BelowTheCap_TheSliceIsUnchanged()
     {
         var e = Make(new BeekeeperState { Bees = 250_000m, ToolLevel = 6 });
-        Assert.Equal(400m, e.BeesPerCatch);   // 150 + 250
+        Assert.Equal(150m, e.BeesPerCatch);
     }
 
     // ============================================================ the trade agreement

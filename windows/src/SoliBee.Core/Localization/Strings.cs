@@ -1058,6 +1058,14 @@ public static class Strings
         [StringKey.BeekeeperLogWaxTrayBought] = "You slide in another wax tray.",
         [StringKey.FeltTransparent] = "Transparent",
         [StringKey.TableOpacityLabel] = "Table Opacity",
+        [StringKey.BeekeeperTimeToFullFull] = "Full",
+        [StringKey.BeekeeperTimeToFullFmt] = "Full in %@",
+        [StringKey.BeekeeperTimeSecFmt] = "%@ sec",
+        [StringKey.BeekeeperTimeMinFmt] = "%@ min",
+        [StringKey.BeekeeperTimeHourFmt] = "%@ h",
+        [StringKey.BeekeeperTimeHourMinFmt] = "%@ h %@ min",
+        [StringKey.BeekeeperTimeDayFmt] = "%@ d",
+        [StringKey.BeekeeperTimeDayHourFmt] = "%@ d %@ h",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -2100,5 +2108,13 @@ public static class Strings
         [StringKey.BeekeeperLogWaxTrayBought] = "Metes otra bandeja de cera.",
         [StringKey.FeltTransparent] = "Transparente",
         [StringKey.TableOpacityLabel] = "Opacidad de la Mesa",
+        [StringKey.BeekeeperTimeToFullFull] = "Lleno",
+        [StringKey.BeekeeperTimeToFullFmt] = "Lleno en %@",
+        [StringKey.BeekeeperTimeSecFmt] = "%@ s",
+        [StringKey.BeekeeperTimeMinFmt] = "%@ min",
+        [StringKey.BeekeeperTimeHourFmt] = "%@ h",
+        [StringKey.BeekeeperTimeHourMinFmt] = "%@ h %@ min",
+        [StringKey.BeekeeperTimeDayFmt] = "%@ d",
+        [StringKey.BeekeeperTimeDayHourFmt] = "%@ d %@ h",
     };
 }
