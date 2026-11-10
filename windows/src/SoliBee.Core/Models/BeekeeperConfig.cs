@@ -93,6 +93,8 @@ public static class BeekeeperUpgrades
     public const string NeedsWaxCatcher = "wax_catcher";
     public const string NeedsRepellent = "repellent";
     public const string NeedsVacuum = "vacuum_owned";
+    /// <summary>Nothing first: in the Shop as soon as the Shop is open.</summary>
+    public const string NeedsNothing = "";
 }
 
 /// <summary>
@@ -180,9 +182,14 @@ public sealed class BeekeeperConfig
     public decimal WaxCatcherCost { get; init; } = 150m;
 
     // --- Trading -------------------------------------------------------------
-    public decimal HoneyPerBeebit { get; init; } = 10m;
-    /// <summary>Stage 7.5 (spec 016): honey per Beebit under the bear's trade agreement (a better rate).</summary>
-    public decimal BetterHoneyPerBeebit { get; init; } = 8m;
+    // Bee, 2026-11-10 (placeholders): 10 honey for 5 Beebits, so two trades buy the Smoker.
+    // Was 10 honey for 1 Beebit, or 8 honey for 1 under the agreement.
+    /// <summary>Honey in one bear trade.</summary>
+    public decimal HoneyPerTrade { get; init; } = 10m;
+    /// <summary>Beebits the bear pays for one trade.</summary>
+    public decimal BeebitsPerTrade { get; init; } = 5m;
+    /// <summary>Stage 7.5 (spec 016): Beebits for one trade under the bear's trade agreement (a better rate).</summary>
+    public decimal BetterBeebitsPerTrade { get; init; } = 6m;
     public IReadOnlyList<string> BearNames { get; init; } = new[]
     {
         "Barnaby", "Billy", "Berenstein", "Bruno", "Baloo", "Buster", "Bartholomew",
@@ -190,7 +197,7 @@ public sealed class BeekeeperConfig
 
     // --- When things appear --------------------------------------------------
     public decimal BearRevealHoney { get; init; } = 10m;
-    public decimal ShopRevealBeebits { get; init; } = 15m;
+    public decimal ShopRevealBeebits { get; init; } = 10m;   // Bee, 2026-11-10: opens with the Smoker's price (was 15)
     /// <summary>Stage 7.5 (spec 016): was 50. Comes before a comb can be paid for.</summary>
     public decimal CombsRevealWax { get; init; } = 5m;
 
@@ -265,7 +272,9 @@ public sealed class BeekeeperConfig
         // Stage 3 (spec 011)
         new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 1_500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum, Bees: 500m),
         new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice, Bees: 3_000m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 1_000m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum, Bees: 300m),
+        // Bee, 2026-11-10: the Smoker is an early buy, 10 Beebits after two bear trades
+        // (was 1,000 + 50 wax + 300 bees, after the Vacuum).
+        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 10m, 0m, 0m, BeekeeperUpgrades.NeedsNothing),
         // Stage 7 (spec 015): paper and propolis join the prices (all placeholders).
         new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 150m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
         // Off the Shop (Leah, 2026-11-10): extra beds become a technology bought after a swarm (stage 11, not built yet).
@@ -277,15 +286,11 @@ public sealed class BeekeeperConfig
     // --- Stage 3: catching and the Smoker (spec 011) -------------------------
     public decimal PracticeMultiplier { get; init; } = 1.5m;       // +50% (placeholder)
     public decimal MorePracticeMultiplier { get; init; } = 2m;     // +100% (placeholder)
-    /// <summary>Clicks to fill the Smoker's calm meter (Leah: 15).</summary>
-    public int CalmMeterClicks { get; init; } = 15;
-    /// <summary>How long the bees stay calm after a puff (Leah: 2 minutes).</summary>
-    public decimal CalmSeconds { get; init; } = 2m * 60m;
-    /// <summary>Calm time a Catch Bee click adds back while the bees are calm, up to
-    /// <see cref="CalmSeconds"/> (Leah: a click refills it fully; lower this to soften).</summary>
-    public decimal CalmCatchRefillSeconds { get; init; } = 2m * 60m;
-    /// <summary>Honey while calm (Leah: ×2).</summary>
-    public decimal CalmHoneyMultiplier { get; init; } = 2m;
+    /// <summary>Extra honey while the smoker boost is on, in percent (Bee, 2026-11-10: +100%,
+    /// was +50%). Later smoker upgrades will each add 25 points on top.</summary>
+    public decimal SmokerBoostPercent { get; init; } = 100m;
+    /// <summary>Live seconds one smoker click keeps the boost on; a click refreshes it (placeholder: 1).</summary>
+    public decimal SmokerBoostSeconds { get; init; } = 1m;
 
     // ===== Stage 4 (spec 012): the Garden. All placeholders, accepted by Leah 2026-11-07.
 

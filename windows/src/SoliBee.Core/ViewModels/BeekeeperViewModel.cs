@@ -28,7 +28,8 @@ public sealed record BeekeeperTradeOffer(
 /// One row of the Hive card (spec 014, FR-505). The view model knows no words: <see cref="Id"/>
 /// (one of <see cref="BeekeeperHiveRows"/>) tells the view which label and wording to use, and
 /// the numbers fill it in. <see cref="Rate"/> is the per-second rate shown on hover (null: no
-/// hover); <see cref="Rate2"/> a second hover number where a row needs one (the pantry's time).
+/// hover); <see cref="Rate2"/> a second hover number where a row needs one (the pantry's time,
+/// the free bees' honey bonus in percent).
 /// <see cref="SecondsToFull"/> is set only on a row with a cap (Build it with
 /// <see cref="BeekeeperViewModel.CappedRow"/>): 0 = full, null = no time to show. Every capped
 /// row's hover shows it under the rate, so a new capped row gets it by using that helper.
@@ -57,7 +58,7 @@ public static class BeekeeperHiveRows
     public const string Queen = "queen";                  // Value = 1 laying, 0 resting
     public const string Foraging = "foraging";            // full-width line; Value = pollen a minute
     public const string Guarding = "guarding";            // full-width line; Value = extra honey percent
-    public const string Honey = "honey";                  // Value = stored, Value2 = storage; Rate = honey/s
+    public const string Honey = "honey";                  // Value = stored, Value2 = storage; Rate = honey/s, Rate2 = free bees' bonus %
     public const string Wax = "wax";                      // Value = stored (rounded down), Value2 = wax cap; Rate = wax/s
     public const string Combs = "combs";
     public const string CombsFull = "combs_full";         // full-width warning line
@@ -226,10 +227,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool StorageIsFull => Engine.IsStorageFull;
 
     // Finished values for the screen, so it does no rules or percentage maths of its own.
-    /// <summary>How full the Smoker's bar is, 0 to 1: the calm time left while calm, otherwise the calm meter.</summary>
-    public decimal CalmBarFraction => IsCalm
-        ? CalmSecondsLeft / Config.CalmSeconds
-        : (decimal)CalmMeter / Math.Max(1, CalmMeterClicks);
     /// <summary>Honey bonus of the wooden hive, as a percent ("25").</summary>
     public decimal WoodenHiveBonusPercent => (Config.WoodenHiveHoneyMultiplier - 1m) * 100m;
     public decimal BeeBoostBonusPercent => (Config.BeeBoostHoneyMultiplier - 1m) * 100m;
@@ -290,12 +287,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         get
         {
             var offers = new List<BeekeeperTradeOffer>();
-            // Stage 7.5 (spec 016): the bundle of the moment, 10 honey, or 8 under the agreement.
+            // The bear's trade of the moment: 10 honey for 5 Beebits, or 6 under the agreement.
             // Reps' trades appear only once the player has engaged them.
             if (State.BearRevealed && Engine.RepEngaged("bear"))
                 offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
-                    Engine.HoneyPerBeebitNow, "honey", 1m, "beebits", CanSell, SellTen, SellAll));
-            // Cut in stage 7.5 (spec 016): Config.HoneyPerBeebit (always 10).
+                    Engine.HoneyPerTradeNow, "honey", Engine.BeebitsPerTradeNow, "beebits", CanSell, SellTen, SellAll));
             if (State.HippiesRevealed && Engine.RepEngaged("hippies"))
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
                     Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
@@ -312,11 +308,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>Everything a successful click catches right now (tool, Practice and the slice).</summary>
     public decimal BeesPerCatch => Engine.BeesPerCatch;
     public bool HasSmoker => Engine.Owns(BeekeeperUpgrades.Smoker);
-    public int CalmMeter => State.CalmMeter;
-    public int CalmMeterClicks => Config.CalmMeterClicks;
-    public bool IsCalm => Engine.IsCalm;
-    public decimal CalmSecondsLeft => State.CalmSecondsLeft;
-    public bool CanPuff => Engine.CanPuff;
+    /// <summary>True while a recent smoker click is boosting honey.</summary>
+    public bool IsSmokerBoosted => Engine.IsSmokerBoosted;
+    /// <summary>The smoker's honey boost, as a percent ("50").</summary>
+    public decimal SmokerBoostPercent => Engine.SmokerBoostPercent;
 
     // Stage 4: the Garden
     public bool GardenRevealed => State.GardenRevealed;
@@ -363,6 +358,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public static BeekeeperHiveRow CappedRow(string id, bool visible, decimal shown, decimal exact, decimal cap, decimal rate) =>
         new(id, visible, shown, cap, rate, SecondsToFull: BeekeeperEngine.SecondsToFull(exact, cap, rate));
 
+    /// <summary>What the free bees add to the comb honey right now, as a percent ("0.4"); capped by the config.</summary>
+    public decimal FreeBeeHoneyBonusPercent => (Engine.FreeBeeHoneyFactor - 1m) * 100m;
+
     public decimal QueenBeesPerSecond => Engine.QueenBeesPerSecondNow;
     /// <summary>Bee bread a second the brood eats right now (0 while she rests).</summary>
     public decimal BeeBreadPerSecond => Engine.BeeBreadPerSecondNow;
@@ -370,7 +368,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal PantrySecondsLeft => Engine.PantrySecondsLeft;
     public bool HasTradeAgreement => State.HasTradeAgreement;
     /// <summary>Honey in one bundle right now (10, or 8 under the agreement).</summary>
-    public decimal HoneyPerBeebitNow => Engine.HoneyPerBeebitNow;
+    public decimal HoneyPerTradeNow => Engine.HoneyPerTradeNow;
+    public decimal BeebitsPerTradeNow => Engine.BeebitsPerTradeNow;
     // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.
     // /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
     // public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
@@ -453,7 +452,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupHive, new BeekeeperHiveRow[]
                 {
                     // Stage 7.5 (spec 016): honey from the first bee; wax with its cap, rounded down.
-                    CappedRow(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
+                    CappedRow(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow)
+                        with { Rate2 = FreeBeeHoneyBonusPercent },
                     CappedRow(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), State.Wax, Engine.WaxStorage, Engine.WaxPerSecondNow),
                     new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
                     // Cut (may return): the red "full" lines. A capped number is colored instead (the view reads SecondsToFull == 0).
@@ -588,8 +588,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanLightRepellent))]
     public void LightRepellent() => Apply(Engine.LightRepellent());
 
-    [RelayCommand(CanExecute = nameof(CanPuff))]
-    public void PuffSmoker() => Apply(Engine.PuffSmoker());
+    [RelayCommand(CanExecute = nameof(HasSmoker))]
+    public void UseSmoker() => Apply(Engine.UseSmoker());
 
     // Batches (x10, x100): the screen only offers a size when the whole batch can be paid for.
     public bool CanCraftBeeswaxTimes(int n) => Engine.CanCraftBeeswaxTimes(n);
@@ -748,13 +748,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         LogAway(Engine.AdvanceAway(seconds));
         _lastTickUtc = _clock();
         SaveNow();
-        Refresh();
-    }
-
-    /// <summary>Debug builds only: fills the Smoker's calm meter.</summary>
-    public void DebugFillCalmMeter()
-    {
-        Engine.DebugFillCalmMeter();
         Refresh();
     }
 
@@ -937,7 +930,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         EngageWaspCommand.NotifyCanExecuteChanged();
         BribeCommand.NotifyCanExecuteChanged();
         LightRepellentCommand.NotifyCanExecuteChanged();
-        PuffSmokerCommand.NotifyCanExecuteChanged();
+        UseSmokerCommand.NotifyCanExecuteChanged();
         PlantSeedCommand.NotifyCanExecuteChanged();
         CraftBeeBoostCommand.NotifyCanExecuteChanged();
         CraftSagePropolisCommand.NotifyCanExecuteChanged();

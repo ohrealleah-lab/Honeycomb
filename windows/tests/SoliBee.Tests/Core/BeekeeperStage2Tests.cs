@@ -159,16 +159,18 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void Upgrades_AppearWithTheWorkbench_AndOnlyWhenUnlocked()
     {
-        Assert.Empty(Make(new BeekeeperState { Combs = 1, Beebits = 5000m }).ShopUpgrades);
+        // The Smoker needs nothing first (Bee, 2026-11-10), so it is left out of these lists.
+        static IEnumerable<string> Ids(BeekeeperEngine x) => x.ShopUpgrades.Select(u => u.Id).Where(id => id != BeekeeperUpgrades.Smoker);
+        Assert.Empty(Ids(Make(new BeekeeperState { Combs = 1, Beebits = 5000m })));
 
         // Bigger Combs I costs 60 wax: it stays out of the Shop until the wax cap can hold that (no wall line).
-        Assert.Empty(Make(Workshop()).ShopUpgrades);
+        Assert.Empty(Ids(Make(Workshop())));
         var e = Make(Workshop(s => s.WaxTrays = 10));
-        Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1 }, e.ShopUpgrades.Select(u => u.Id));
+        Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1 }, Ids(e));
 
         var more = Make(Workshop(s => { s.HasWaxCatcher = true; s.RepellentUnlocked = true; s.WaxTrays = 10; }));
         Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1, BeekeeperUpgrades.BetterWaxCatcher, BeekeeperUpgrades.StrongerCandles },
-                     more.ShopUpgrades.Select(u => u.Id));
+                     Ids(more));
     }
 
     [Fact]

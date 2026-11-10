@@ -323,12 +323,12 @@ public class BeekeeperEngineTests
     // ============================================================ the bear
 
     [Fact]
-    public void SellAll_FortySevenHoney_GivesFourBeebitsAndKeepsSeven()
+    public void SellAll_FortySevenHoney_GivesTwentyBeebitsAndKeepsSeven()
     {
         var e = Make(state: new BeekeeperState { Honey = 47m });
         var r = e.SellAll();
         Assert.True(r.Done);
-        Assert.Equal(4m, e.State.Beebits);
+        Assert.Equal(20m, e.State.Beebits);   // 4 trades of 10 honey for 5 Beebits
         Assert.Equal(7m, e.State.Honey);
         Assert.Equal(1, e.State.Trades);
     }
@@ -342,12 +342,12 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void SellTen_GivesOneBeebit_AndCountsOneTrade()
+    public void SellTen_GivesFiveBeebits_AndCountsOneTrade()
     {
         var e = Make(state: new BeekeeperState { Honey = 25m });
         Assert.True(e.SellTen().Done);
         Assert.Equal(15m, e.State.Honey);
-        Assert.Equal(1m, e.State.Beebits);
+        Assert.Equal(5m, e.State.Beebits);
         Assert.Equal(1, e.State.Trades);
         Assert.True(e.State.BeebitsRevealed);
     }

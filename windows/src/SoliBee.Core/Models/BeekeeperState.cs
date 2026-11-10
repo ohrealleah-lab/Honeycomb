@@ -93,11 +93,11 @@ public sealed class BeekeeperState
     /// <summary>Wasp time until the next wasp; 0 means "not rolled yet".</summary>
     public decimal NextWaspInSeconds { get; set; }
 
-    // ----- Stage 3: the Smoker (version 3)
-    /// <summary>Clicks towards the next puff (0 up to CalmMeterClicks).</summary>
-    public int CalmMeter { get; set; }
-    /// <summary>Live seconds of calm left (honey doubled); 0 = not calm.</summary>
-    public decimal CalmSecondsLeft { get; set; }
+    // ----- The Smoker: a click boost. Never saved, so time away never has it (older saves'
+    // CalmMeter / CalmSecondsLeft fields are simply ignored when loading).
+    /// <summary>Live seconds of smoker boost left; 0 = off. Each smoker click refreshes it.</summary>
+    [JsonIgnore]
+    public decimal SmokerBoostSecondsLeft { get; set; }
 
     // ----- Stage 4: the Garden (version 4)
     // Cut in stage 7.5 (spec 016): files older than version 8 no longer load, so the stage 4 to 6

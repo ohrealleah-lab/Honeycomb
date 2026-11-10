@@ -61,9 +61,9 @@ public class BeekeeperStage3Tests : IDisposable
     }
 
     [Fact]
-    public void PracticeAndTheSmoker_ComeWithTheVacuum_WithoutTheWorkbench()
+    public void PracticeComesWithTheVacuum_WithoutTheWorkbench_AndTheSmokerNeedsNothing()
     {
-        Assert.Empty(Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades);
+        Assert.Equal(new[] { BeekeeperUpgrades.Smoker }, Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades.Select(u => u.Id));
 
         var e = Make(new BeekeeperState { ToolLevel = 3, Beebits = 5_000m, Wax = 500m, Sage = 5m, Bees = 5_000m, WaxTrays = 100 });   // trays: room for every wax price
         Assert.Equal(new[] { BeekeeperUpgrades.Practice, BeekeeperUpgrades.Smoker }, e.ShopUpgrades.Select(u => u.Id));
@@ -111,148 +111,136 @@ public class BeekeeperStage3Tests : IDisposable
 
     private static BeekeeperEngine WithSmoker(Action<BeekeeperState>? tweak = null, params double[] dice)
     {
-        var s = new BeekeeperState { ToolLevel = 3, Bees = 100m, Upgrades = { BeekeeperUpgrades.Smoker } };
+        // 5 combs: 1 honey/s, plenty of room.
+        var s = new BeekeeperState { ToolLevel = 3, Bees = 100m, Honey = 0m, Combs = 5, HoneyRevealed = true,
+                                     Upgrades = { BeekeeperUpgrades.Smoker } };
         tweak?.Invoke(s);
         return Make(s, dice);
     }
 
     [Fact]
-    public void WithoutTheSmoker_ClicksDoNotFillAnyMeter()
+    public void TwoBearTrades_BuyTheSmoker_WithNothingElseNeeded()
     {
-        var e = Make(new BeekeeperState { ToolLevel = 3 });
-        for (int i = 0; i < 20; i++) e.Catch();
-        Assert.Equal(0, e.State.CalmMeter);
+        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Honey = 20m, HoneyRevealed = true });
+        e.SellTen();
+        Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.Smoker));   // 5 Beebits: not yet
+        e.SellTen();
+        Assert.Equal(10m, e.State.Beebits);
+        Assert.True(e.State.ShopRevealed);
+        Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Smoker);
+        Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Smoker).Done);
+        Assert.Equal(0m, e.State.Beebits);
+        Assert.True(e.CanUseSmoker);
     }
 
     [Fact]
-    public void FifteenClicks_FillTheMeter_AndItStopsThere()
+    public void WithoutTheSmoker_TheSmokerButtonDoesNothing()
+    {
+        var e = Make(new BeekeeperState { ToolLevel = 3, Combs = 5, HoneyRevealed = true });
+        Assert.False(e.CanUseSmoker);
+        Assert.False(e.UseSmoker().Done);
+        Assert.False(e.IsSmokerBoosted);
+        Assert.Equal(1m, e.HoneyPerSecondNow);
+    }
+
+    [Fact]
+    public void ASmokerClick_DoublesHoney_ForOneSecond()
     {
         var e = WithSmoker();
-        for (int i = 0; i < 14; i++) e.Catch();
-        Assert.False(e.CanPuff);
-        e.Catch();
-        Assert.True(e.CanPuff);
-        for (int i = 0; i < 10; i++) e.Catch();
-        Assert.Equal(15, e.State.CalmMeter);
-    }
-
-    [Fact]
-    public void StingsFillTheMeterToo()
-    {
-        var e = WithSmoker(s => s.ToolLevel = 0, 0.0, 0.0, 0.0);
-        e.Catch(); e.Catch(); e.Catch();
-        Assert.Equal(3, e.State.CalmMeter);
-    }
-
-    [Fact]
-    public void APuff_CalmsTheBeesForTwoMinutes_AndDoublesHoney()
-    {
-        var e = WithSmoker(s => { s.CalmMeter = 15; s.Honey = 0m; s.Combs = 5; s.HoneyRevealed = true; });   // 5 combs: 1 honey/s; room for 1,400
-        var r = e.PuffSmoker();
-        Assert.True(r.Done);
-        Assert.Equal(0, e.State.CalmMeter);
-        Assert.Equal(120m, e.State.CalmSecondsLeft);
-        Assert.True(Has(r.Events, BeekeeperEvents.SmokerPuffed));
+        Assert.True(e.UseSmoker().Done);
+        Assert.True(e.IsSmokerBoosted);
         Assert.Equal(2m, e.HoneyPerSecondNow);
         Assert.Equal(1m, e.HoneyPerSecond);   // raids still use the plain rate
 
-        e.Advance(100m);
-        Assert.Equal(200m, e.State.Honey);
-        var end = e.Advance(30m);              // 20 calm seconds, then 10 plain
-        Assert.Equal(200m + 40m + 10m, e.State.Honey);
-        Assert.True(Has(end.Events, BeekeeperEvents.CalmEnded));
-        Assert.False(e.IsCalm);
+        e.Advance(0.5m);
+        Assert.Equal(1m, e.State.Honey);
+        Assert.True(e.IsSmokerBoosted);
+        e.Advance(1.5m);                       // 0.5 boosted second, then 1 plain
+        Assert.Equal(1m + 1m + 1m, e.State.Honey);
+        Assert.False(e.IsSmokerBoosted);
+        Assert.Equal(1m, e.HoneyPerSecondNow);
     }
 
     [Fact]
-    public void NoSecondPuff_UntilTheCalmEnds()
+    public void KeepClicking_KeepsTheBoostOn_WithoutStackingTime()
     {
-        var e = WithSmoker(s => { s.CalmMeter = 15; });
-        e.PuffSmoker();
-        e.State.CalmMeter = 15;
-        Assert.False(e.CanPuff);
-        Assert.False(e.PuffSmoker().Done);
-        e.Advance(120m);
-        Assert.True(e.CanPuff);
+        var e = WithSmoker();
+        e.UseSmoker();
+        for (int i = 0; i < 4; i++) { e.Advance(0.8m); e.UseSmoker(); }
+        Assert.Equal(4 * 0.8m * 2m, e.State.Honey);
+        Assert.Equal(1m, e.State.SmokerBoostSecondsLeft);   // a click refreshes to 1s, never more
+        e.Advance(3m);
+        Assert.Equal(4 * 0.8m * 2m + 2m + 2m, e.State.Honey);
     }
 
-    // Cut in stage 7.5 (spec 016): calm doubled wax too, since wax followed honey.
-    // [Fact]
-    // public void CalmBees_MakeWaxTwiceAsFastToo()
-    // {
-    //     var e = WithSmoker(s => { s.Bees = 5000m; s.CalmSecondsLeft = 10m; s.Honey = 0m; });   // 50 honey/s, 100 calm
-    //     e.Advance(1m);
-    //     Assert.Equal(2m, e.State.Wax);
-    // }
-
     [Fact]
-    public void Calm_DoublesHoney_AndLeavesWaxAlone()
+    public void TheSmokerBoost_MultipliesWithTheBeeBoostCandle()
     {
-        var calm = WithSmoker(s => { s.Bees = 1000m; s.CalmSecondsLeft = 10m; s.HoneyRevealed = true; s.Combs = 5; });
-        var plain = WithSmoker(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.Combs = 5; });
-        calm.Advance(10m);
-        plain.Advance(10m);
-        Assert.Equal(20m, calm.State.Honey);
-        Assert.Equal(10m, plain.State.Honey);
-        Assert.Equal(plain.State.Wax, calm.State.Wax);
-        Assert.Equal(1.05m, calm.State.Wax);
+        var e = WithSmoker(s => s.BeeBoostSecondsLeft = 10m);
+        decimal candle = e.HoneyPerSecondNow;
+        e.UseSmoker();
+        Assert.Equal(candle * 2m, e.HoneyPerSecondNow);
+        e.Advance(1m);
+        Assert.Equal(candle * 2m, e.State.Honey);
     }
 
-    // Cut in stage 7.5 (spec 016): wax followed honey, calm counted.
-    // [Fact]
-    // public void WaxPerSecond_FollowsHoney_TheCatcher_AndCalm()
-    // {
-    //     var e = WithSmoker(s => s.Bees = 1000m);   // 10 honey/s
-    //     Assert.Equal(0.2m, e.WaxPerSecondNow);
-    //     e.State.HasWaxCatcher = true;
-    //     Assert.Equal(0.4m, e.WaxPerSecondNow);
-    //     e.State.CalmSecondsLeft = 60m;
-    //     Assert.Equal(0.8m, e.WaxPerSecondNow);
-    // }
+    [Fact]
+    public void TheBoostPercentAndSeconds_ComeFromTheConfig()
+    {
+        var config = new BeekeeperConfig { SmokerBoostPercent = 75m, SmokerBoostSeconds = 2m };
+        var s = new BeekeeperState { ToolLevel = 3, Combs = 5, HoneyRevealed = true, Upgrades = { BeekeeperUpgrades.Smoker } };
+        var e = new BeekeeperEngine(config, s, new FakeRandom());
+        e.UseSmoker();
+        Assert.Equal(1.75m, e.HoneyPerSecondNow);
+        Assert.Equal(75m, e.UpgradeBonusPercent(BeekeeperUpgrades.Smoker));
+        e.Advance(2m);
+        Assert.Equal(3.5m, e.State.Honey);
+        Assert.False(e.IsSmokerBoosted);
+    }
 
     [Fact]
-    public void WaxPerSecond_FollowsTheFreeBees_AndTheCatcher_ButNotCalm()
+    public void TheSmokerBoost_LeavesWaxAlone()
     {
         var e = WithSmoker(s => s.Bees = 1000m);
-        Assert.Equal(0.105m, e.WaxPerSecondNow);
-        e.State.HasWaxCatcher = true;
-        Assert.Equal(0.21m, e.WaxPerSecondNow);
-        e.State.CalmSecondsLeft = 60m;
-        Assert.Equal(0.21m, e.WaxPerSecondNow);
+        decimal wax = e.WaxPerSecondNow;
+        e.UseSmoker();
+        Assert.Equal(wax, e.WaxPerSecondNow);
     }
 
     [Fact]
-    public void TimeAway_NeitherUsesUpNorDoublesCalm()
+    public void TimeAway_NeitherUsesUpNorGetsTheSmokerBoost()
     {
-        var calm = WithSmoker(s => { s.CalmSecondsLeft = 100m; s.Honey = 0m; });
-        var plain = WithSmoker(s => { s.Honey = 0m; });
-        calm.AdvanceAway(3600m);
+        var boosted = WithSmoker();
+        var plain = WithSmoker();
+        boosted.UseSmoker();
+        boosted.AdvanceAway(3600m);
         plain.AdvanceAway(3600m);
-        Assert.Equal(plain.State.Honey, calm.State.Honey);
-        Assert.Equal(100m, calm.State.CalmSecondsLeft);
+        Assert.Equal(plain.State.Honey, boosted.State.Honey);
     }
 
     // ============================================================ saving
 
     [Fact]
-    public void TheSmokerAndCalm_AreSaved_AndOlderSavesStillLoad()
+    public void TheSmokerBoost_IsNotSaved_AndSavesWithTheOldCalmFieldsStillLoad()
     {
         Directory.CreateDirectory(_dir);
         string path = Path.Combine(_dir, "beekeeper.json");
-        var s = new BeekeeperState { ToolLevel = 6, CalmMeter = 9, CalmSecondsLeft = 42m, Upgrades = { BeekeeperUpgrades.Smoker } };
+        var s = new BeekeeperState { ToolLevel = 6, SmokerBoostSecondsLeft = 1m, Upgrades = { BeekeeperUpgrades.Smoker } };
         Assert.True(BeekeeperSaveService.Save(s, path, new DateTime(2026, 11, 7, 12, 0, 0, DateTimeKind.Utc)));
         var back = BeekeeperSaveService.Load(path)!;
         Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.Equal(6, back.ToolLevel);
-        Assert.Equal(9, back.CalmMeter);
-        Assert.Equal(42m, back.CalmSecondsLeft);
+        Assert.Equal(0m, back.SmokerBoostSecondsLeft);
+
+        // A save from before the click boost, still carrying the Calm meter's fields.
+        string json = File.ReadAllText(path);
+        File.WriteAllText(path, "{\"CalmMeter\":9,\"CalmSecondsLeft\":42," + json.TrimStart().Substring(1));
+        var old = BeekeeperSaveService.Load(path)!;
+        Assert.Equal(6, old.ToolLevel);
+        Assert.Contains(BeekeeperUpgrades.Smoker, old.Upgrades);
+        Assert.Equal(0m, old.SmokerBoostSecondsLeft);
 
         File.WriteAllText(path, "{\"Version\":2,\"Bees\":10,\"ToolLevel\":3,\"Upgrades\":[\"bigger_combs_1\"],\"Log\":[]}");
         Assert.Null(BeekeeperSaveService.Load(path));   // stage 7.5: an older save starts a new game
-        // Cut in stage 7.5 (spec 016): older saves loaded with the new fields at zero.
-        // var old = BeekeeperSaveService.Load(path)!;
-        // Assert.Equal(0, old.CalmMeter);
-        // Assert.Equal(0m, old.CalmSecondsLeft);
-        // Assert.Equal(new[] { "bigger_combs_1" }, old.Upgrades);
     }
 }

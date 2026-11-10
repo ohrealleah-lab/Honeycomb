@@ -228,11 +228,11 @@ public class BeekeeperHardeningTests : IDisposable
 
         var e = With(new BeekeeperState
         {
-            CalmSecondsLeft = 1e27m, BeeBoostSecondsLeft = 1e27m, SagePropolisSecondsLeft = 1e27m,
+            SmokerBoostSecondsLeft = 1e27m, BeeBoostSecondsLeft = 1e27m, SagePropolisSecondsLeft = 1e27m,
             Beds = { new BeekeeperBed { PlantId = plant.Id, SecondsLeft = 1e27m } },
         });
 
-        Assert.Equal(config.CalmSeconds, e.State.CalmSecondsLeft);
+        Assert.Equal(config.SmokerBoostSeconds, e.State.SmokerBoostSecondsLeft);
         Assert.Equal(config.BeeBoostCapSeconds, e.State.BeeBoostSecondsLeft);
         Assert.Equal(config.SagePropolisCapSeconds, e.State.SagePropolisSecondsLeft);
         Assert.Equal(plant.GrowSeconds, Assert.Single(e.State.Beds).SecondsLeft);

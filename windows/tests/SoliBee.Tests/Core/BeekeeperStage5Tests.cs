@@ -177,19 +177,16 @@ public class BeekeeperStage5Tests : IDisposable
     }
 
     [Fact]
-    public void TheCalmPart_SeesTheGrowingHiveToo()
+    public void TheBoostedPart_SeesTheGrowingHiveToo()
     {
         var e = Make(Queen(10m));
-        e.State.CalmSecondsLeft = 60m;
+        e.State.SmokerBoostSecondsLeft = 60m;   // set directly: a long boost, to split the stretch
         e.Advance(120m);
-        // Stage 7.5: calm doubles the combs' honey only: 250 a second × (2 × 60 + 60).
+        // The smoker boosts the combs' honey only: 250 a second × (2 × 60 + 60).
         Assert.Equal(45000m, e.State.Honey);
-        // The wax follows the growing bees, calm or not: 0.005 × 120 + 0.0001 × (60,600 + 61,800).
+        // The wax follows the growing bees, boosted or not: 0.005 × 120 + 0.0001 × (60,600 + 61,800).
         Assert.Equal(12.84, (double)e.State.Wax, Places);
         Assert.Equal(1040m, e.State.Bees);
-        // Cut in stage 7.5 (spec 016):
-        // // Calm first: 2 × (1000×60 + 600) = 121,200; then (1020×60 + 600) = 61,800. × 0.0125
-        // Assert.Equal(2287.5, (double)e.State.Honey, Places);
     }
 
     [Fact]
@@ -340,13 +337,13 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal("Bruno", offer.Text);
         Assert.True(e.State.HasTradeAgreement);
         Assert.Equal(40, e.State.Trades);   // Sell All counts as one
-        Assert.Equal(10m, e.State.Beebits); // the sale that reached it: 10 honey a Beebit
+        Assert.Equal(50m, e.State.Beebits); // the sale that reached it: 10 honey for 5 Beebits
         Assert.Equal(0m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
         Assert.Equal(100m, sale.Value2);
-        e.State.Honey = 8m;
+        e.State.Honey = 10m;
         Assert.False(Has(e.SellTen().Events, BeekeeperEvents.TradeAgreement));
-        Assert.Equal(11m, e.State.Beebits); // from now on 8 honey a Beebit
+        Assert.Equal(56m, e.State.Beebits); // from now on 10 honey for 6 Beebits
     }
 
     // Cut in stage 7.5 (spec 016): the agreement came at 100 trades.
@@ -367,21 +364,22 @@ public class BeekeeperStage5Tests : IDisposable
     }
 
     [Fact]
-    public void WithTheAgreement_SellingUsesBundlesOf8_AndTheLeftoverStays()
+    public void WithTheAgreement_EachTradePays6Beebits_AndTheLeftoverStays()
     {
         var e = Make(new BeekeeperState { Honey = 47m, HasTradeAgreement = true, BearName = "Bruno" });
-        Assert.Equal(8m, e.HoneyPerBeebitNow);
+        Assert.Equal(10m, e.HoneyPerTradeNow);
+        Assert.Equal(6m, e.BeebitsPerTradeNow);
         var r = e.SellAll();
-        Assert.Equal(5m, e.State.Beebits);
+        Assert.Equal(24m, e.State.Beebits);
         Assert.Equal(7m, e.State.Honey);
-        Assert.Equal(40m, r.Events.Single(x => x.Key == BeekeeperEvents.Sale).Value2);
+        var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
+        Assert.Equal(24m, sale.Value);
+        Assert.Equal(40m, sale.Value2);
 
-        var low = Make(new BeekeeperState { Honey = 8m, HasTradeAgreement = true });
-        Assert.True(low.CanSell);
         var none = Make(new BeekeeperState { Honey = 9m });
         Assert.False(none.CanSell);
-        Assert.Equal(10m, none.HoneyPerBeebitNow);
-        Assert.False(Make(new BeekeeperState { Honey = 7.9m, HasTradeAgreement = true }).CanSell);
+        Assert.Equal(5m, none.BeebitsPerTradeNow);
+        Assert.False(Make(new BeekeeperState { Honey = 9.9m, HasTradeAgreement = true }).CanSell);
     }
 
     [Fact]
@@ -432,15 +430,6 @@ public class BeekeeperStage5Tests : IDisposable
     //     e.SellTen();
     //     Assert.Equal(before + 1m, e.State.Beebits);
     //     Assert.Equal(190m, e.State.Honey);
-    // }
-
-    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
-    // [Fact]
-    // public void CalmBees_SendTheirDoubleHoneyToTheBearToo()
-    // {
-    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, CalmSecondsLeft = 60m, BearName = "Bruno" });
-    //     e.Advance(20m);   // 20 honey a second while calm
-    //     Assert.Equal(20m, e.State.Beebits);
     // }
 
     // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.

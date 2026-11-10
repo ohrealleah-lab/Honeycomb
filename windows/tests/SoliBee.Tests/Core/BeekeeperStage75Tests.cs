@@ -97,15 +97,16 @@ public class BeekeeperStage75Tests
     // ============================================================ boosts touch honey only (User Story 2)
 
     [Fact]
-    public void Calm_Candles_TheWoodenHiveAndGuarding_BoostHoney_AndNotWax()
+    public void TheSmoker_Candles_TheWoodenHiveAndGuarding_BoostHoney_AndNotWax()
     {
         var plain = Make(new BeekeeperState { HoneyRevealed = true, Combs = 4, Bees = 500m });
         var boosted = Make(new BeekeeperState
         {
             HoneyRevealed = true, Combs = 4, Bees = 500m,
-            CalmSecondsLeft = 100m, BeeBoostSecondsLeft = 100m, SagePropolisSecondsLeft = 100m,
+            BeeBoostSecondsLeft = 100m, SagePropolisSecondsLeft = 100m,
             HasWoodenHive = true, Plants = { BeekeeperPlants.Bramble },
         });
+        boosted.State.SmokerBoostSecondsLeft = 100m;   // set after loading (loading caps it at 1 s): keep clicking
         Assert.Equal(plain.WaxPerSecondNow, boosted.WaxPerSecondNow);
         Assert.True(boosted.HoneyPerSecondNow > plain.HoneyPerSecondNow);
         plain.Advance(50m);

@@ -68,8 +68,10 @@ public class BeekeeperLoadFixesTests : IDisposable
         vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         Assert.True(vm.HasTradeAgreement);
         Assert.Equal(0m, vm.State.Beebits);
-        Assert.Equal(8m, vm.HoneyPerBeebitNow);
-        Assert.Equal(8m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);
+        Assert.Equal(6m, vm.BeebitsPerTradeNow);
+        var bear = vm.TradeOffers.Single(o => o.Id == "bear");
+        Assert.Equal(10m, bear.GiveAmount);
+        Assert.Equal(6m, bear.GetAmount);
     }
 
     [Fact]

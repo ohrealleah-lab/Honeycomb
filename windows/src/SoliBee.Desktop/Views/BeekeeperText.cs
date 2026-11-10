@@ -115,14 +115,14 @@ internal static class BeekeeperText
         return trades == 0 ? who : Fill(T(StringKey.BeekeeperBearTradesFmt), who, NumberFormatter.Format(trades, Lang));
     }
 
-    /// <summary>What a buyer gives for what: "10 honey = 1 Beebit". <paramref name="give"/> is the
-    /// offer's give amount (from the config).</summary>
-    public static string TradeRate(string id, decimal give = 0m)
+    /// <summary>What a buyer gives for what: "10 honey = 5 Beebits". <paramref name="give"/> and
+    /// <paramref name="get"/> are the offer's amounts (from the config).</summary>
+    public static string TradeRate(string id, decimal give = 0m, decimal get = 0m)
     {
         string g = NumberFormatter.Format(give, Lang);
         return id switch
         {
-            "bear" => Fill(T(StringKey.BeekeeperSellHint), g),
+            "bear" => Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),
             "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), g),
             "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), g),
             _ => "",
@@ -171,11 +171,6 @@ internal static class BeekeeperText
 
     public static string UpgradeName(string id) => UpgradeNameIn(id, Lang);
 
-    public static string SmokerTitle => T(StringKey.BeekeeperSmokerTitle);
-    public static string CalmMeter(int clicks, int needed) => Fill(T(StringKey.BeekeeperCalmMeterFmt), clicks.ToString(), needed.ToString());
-    public static string CalmNow(string time, string multiplier) => Fill(T(StringKey.BeekeeperCalmNowFmt), time, multiplier);
-    public static string Puff => T(StringKey.BeekeeperPuff);
-
     /// <summary>A Shop upgrade's blurb. <paramref name="percent"/> is the figure it quotes (from the
     /// config, via the view model); upgrades whose blurb has no number ignore it.</summary>
     public static string UpgradeBlurb(string id, decimal? percent = null)
@@ -185,7 +180,7 @@ internal static class BeekeeperText
         {
             BeekeeperUpgrades.Practice => Fill(T(StringKey.BeekeeperUpgradePracticeBlurb), P()),
             BeekeeperUpgrades.MorePractice => Fill(T(StringKey.BeekeeperUpgradeMorePracticeBlurb), P()),
-            BeekeeperUpgrades.Smoker => T(StringKey.BeekeeperUpgradeSmokerBlurb),
+            BeekeeperUpgrades.Smoker => Fill(T(StringKey.BeekeeperUpgradeSmokerBlurb), P()),
             BeekeeperUpgrades.BiggerCombs1 => Fill(T(StringKey.BeekeeperUpgradeBiggerCombs1Blurb), P()),
             BeekeeperUpgrades.BiggerCombs2 => Fill(T(StringKey.BeekeeperUpgradeBiggerCombs2Blurb), P()),
             BeekeeperUpgrades.BetterWaxCatcher => Fill(T(StringKey.BeekeeperUpgradeBetterWaxCatcherBlurb), P()),
@@ -349,7 +344,9 @@ internal static class BeekeeperText
         string? tip = r.Id switch
         {
             BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)),
-            BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)),
+            BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2))
+                                       // hidden until the bonus reaches 0.01% (below that it would read "+0%")
+                                       + (r.Rate2 >= 0.01m ? "\n" + Fill(T(StringKey.BeekeeperHoneyFreeBeeBonusFmt), N(r.Rate2, 2)) : ""),
             BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)),
             BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)),
             BeekeeperHiveRows.Propolis => Fill(T(StringKey.BeekeeperPropolisPerSecFmt), N(rate, 3)),
@@ -513,8 +510,6 @@ internal static class BeekeeperText
             BeekeeperEvents.WaspLeft => L(StringKey.BeekeeperLogWaspLeft),
             BeekeeperEvents.CandleLit => L(StringKey.BeekeeperLogCandleLit),
             BeekeeperEvents.CandleOut => L(StringKey.BeekeeperLogCandleOut),
-            BeekeeperEvents.SmokerPuffed => L(StringKey.BeekeeperLogSmokerPuffed),
-            BeekeeperEvents.CalmEnded => L(StringKey.BeekeeperLogCalmEnded),
             // Lines saved before seeds had names (no plant in Text) keep the old wording.
             BeekeeperEvents.SeedGiven => string.IsNullOrEmpty(e.Text) ? L(StringKey.BeekeeperLogSeedGiven)
                 : Fill(L(StringKey.BeekeeperLogSeedGivenFmt), SeedName(e.Text, lang)),

@@ -150,14 +150,10 @@ public partial class BeekeeperView : UserControl
         CatchButton.Content = BeekeeperText.Catch;
 
         // The Smoker
-        SmokerCard.IsVisible = vm.HasSmoker;
-        SmokerTitleText.Text = BeekeeperText.SmokerTitle;
-        SmokerStatusText.Text = vm.IsCalm
-            ? BeekeeperText.CalmNow(BeekeeperText.Clock(vm.CalmSecondsLeft), N(vm.Config.CalmHoneyMultiplier))
-            : BeekeeperText.CalmMeter(vm.CalmMeter, vm.CalmMeterClicks);
-        CalmBar.Value = (double)vm.CalmBarFraction;
-        PuffButton.Content = BeekeeperText.Puff;
-        PuffButton.IsEnabled = vm.CanPuff;
+        // The Smoker: a button beside Catch Bee once bought; brighter while its boost is on.
+        SmokerButton.IsVisible = vm.HasSmoker;
+        SmokerButton.Opacity = vm.IsSmokerBoosted ? 1.0 : 0.75;
+        ToolTip.SetTip(SmokerButton, BeekeeperText.UpgradeBlurb(BeekeeperUpgrades.Smoker, vm.SmokerBoostPercent));
 
         // Hive: the title, the groups of rows (built from the view model), the move-hive row.
         HiveCard.IsVisible = vm.HiveCardShown;   // stage 7.5: the drip's first wax can come before any bee
@@ -631,7 +627,7 @@ public partial class BeekeeperView : UserControl
                 var row = new StackPanel { Spacing = 6 };
                 row.Children.Add(name);
                 row.Children.Add(buttons);
-                var rate = new TextBlock { Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount), Classes = { "bk-muted" } };
+                var rate = new TextBlock { Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount, o.GetAmount), Classes = { "bk-muted" } };
                 row.Children.Add(rate);
                 _tradeRates[o.Id] = rate;
                 if (o.Id == "bear")
@@ -652,7 +648,7 @@ public partial class BeekeeperView : UserControl
             r.One.IsEnabled = o.CanTrade;
             // Stage 7.5: the bear's bundle changes with the trade agreement (10, then 8), so the rate
             // line and the "Trade 10" button are rewritten every tick rather than only on a rebuild.
-            if (_tradeRates.TryGetValue(o.Id, out var rateText)) rateText.Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount);
+            if (_tradeRates.TryGetValue(o.Id, out var rateText)) rateText.Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount, o.GetAmount);
             // The bear sells a bundle of honey ("Trade 10", then 8); every other buyer's button is one trade, so "Trade 1".
             if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.Id == "bear" ? o.GiveAmount : 1m);
             if (r.All != null) r.All.IsEnabled = o.CanTrade;
@@ -777,7 +773,7 @@ public partial class BeekeeperView : UserControl
     private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
     private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);
     private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
-    private void Puff_Click(object? sender, RoutedEventArgs e) => _vm?.PuffSmokerCommand.Execute(null);
+    private void Smoker_Click(object? sender, RoutedEventArgs e) => _vm?.UseSmokerCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup
 

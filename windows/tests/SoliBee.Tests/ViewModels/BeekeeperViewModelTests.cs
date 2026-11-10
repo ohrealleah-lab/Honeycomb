@@ -194,7 +194,7 @@ public class BeekeeperViewModelTests : IDisposable
         var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 25m, BearName = "Bruno" });
 
         vm.SellAllCommand.Execute(null);
-        Assert.Equal(15m, vm.Beebits);
+        Assert.Equal(75m, vm.Beebits);                   // 15 trades of 10 honey for 5 Beebits
         Assert.True(vm.ShopRevealed);
         Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
 
@@ -343,8 +343,8 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.Equal("Bruno", offers[0].Name);
         Assert.True(offers.All(o => o.CanTrade));
 
-        offers[0].TradeAll();               // 25 honey -> 2 Beebits, 5 kept
-        Assert.Equal(2m, vm.Beebits);
+        offers[0].TradeAll();               // 25 honey -> 10 Beebits, 5 kept
+        Assert.Equal(10m, vm.Beebits);
         Assert.Equal(5m, vm.Honey);
         offers[1].TradeOne();               // 10 candles -> 1 sage
         Assert.Equal(1m, vm.Sage);

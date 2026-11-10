@@ -58,8 +58,6 @@ public static class BeekeeperEvents
     public const string CandleOut = "candle_out";
 
     // Stage 3
-    public const string SmokerPuffed = "smoker_puffed";
-    public const string CalmEnded = "calm_ended";
 
     // Stage 4
     public const string SeedGiven = "seed_given";              // Value = seeds in hand; since stage 7 Text = plant id (from the Hippies)
@@ -211,7 +209,7 @@ public sealed class BeekeeperEngine
 
         foreach (var bed in s.Beds)
             bed.SecondsLeft = Math.Min(bed.SecondsLeft, Config.Plants.First(p => p.Id == bed.PlantId).GrowSeconds);
-        s.CalmSecondsLeft = Math.Min(s.CalmSecondsLeft, Config.CalmSeconds);
+        s.SmokerBoostSecondsLeft = Math.Clamp(s.SmokerBoostSecondsLeft, 0m, Config.SmokerBoostSeconds);
         s.BeeBoostSecondsLeft = Math.Min(s.BeeBoostSecondsLeft, Config.BeeBoostCapSeconds);
         s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
         s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
@@ -340,7 +338,7 @@ public sealed class BeekeeperEngine
     /// <summary>The boosts that only work while the app is open, multiplied: calm bees and a
     /// bee-boost candle (stage 7). Time away never has them.</summary>
     public decimal LiveBoostNow =>
-        (IsCalm ? Config.CalmHoneyMultiplier : 1m) * (IsBeeBoosted ? Config.BeeBoostHoneyMultiplier : 1m);
+        SmokerBoostNow * (IsBeeBoosted ? Config.BeeBoostHoneyMultiplier : 1m);
 
     /// <summary>The sage-propolis candle's boost, on while it burns, live or away.</summary>
     public decimal SagePropolisBoostNow => IsSagePropolisBurning ? Config.SagePropolisHoneyMultiplier : 1m;
@@ -395,12 +393,15 @@ public sealed class BeekeeperEngine
     public BeekeeperTool? NextTool =>
         State.ToolLevel < Config.Tools.Count ? Config.Tools[State.ToolLevel] : null;
 
-    /// <summary>Honey in one bundle for 1 Beebit right now: 10, or 8 under the trade agreement
-    /// (stage 7.5, spec 016, FR-711). Everything about selling reads this.</summary>
-    public decimal HoneyPerBeebitNow => State.HasTradeAgreement ? Config.BetterHoneyPerBeebit : Config.HoneyPerBeebit;
+    /// <summary>Honey in one bear trade. Everything about selling reads this and
+    /// <see cref="BeebitsPerTradeNow"/>.</summary>
+    public decimal HoneyPerTradeNow => Config.HoneyPerTrade;
 
-    public bool CanSell => State.Honey >= HoneyPerBeebitNow;
-    // Cut in stage 7.5 (spec 016): public bool CanSell => State.Honey >= Config.HoneyPerBeebit;
+    /// <summary>Beebits one bear trade pays right now: 5, or 6 under the trade agreement
+    /// (stage 7.5, spec 016, FR-711).</summary>
+    public decimal BeebitsPerTradeNow => State.HasTradeAgreement ? Config.BetterBeebitsPerTrade : Config.BeebitsPerTrade;
+
+    public bool CanSell => State.Honey >= HoneyPerTradeNow;
 
     public bool CanBuyNextTool => NextTool is { } t && State.ShopRevealed && State.Beebits >= t.Cost;
 
@@ -495,13 +496,6 @@ public sealed class BeekeeperEngine
     {
         var events = new List<BeekeeperEvent>();
 
-        // Every click calms the bees a little once the Smoker is owned, stings included.
-        if (Owns(BeekeeperUpgrades.Smoker) && State.CalmMeter < Config.CalmMeterClicks) State.CalmMeter++;
-
-        // While the bees are calm, every click tops the calm time back up: a perk for staying active.
-        if (IsCalm)
-            State.CalmSecondsLeft = Math.Min(Config.CalmSeconds, State.CalmSecondsLeft + Config.CalmCatchRefillSeconds);
-
         // Only Bare Hands ever get stung; better tools never roll the dice.
         if (State.ToolLevel == 0 && _rng.NextDouble() < Config.StingChance)
         {
@@ -521,32 +515,25 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ time passing
 
-    /// <summary>Normal play: the hive works for <paramref name="seconds"/>. Calm bees (after a
-    /// puff of the Smoker) make double honey, and only live play uses up calm time.</summary>
+    /// <summary>Normal play: the hive works for <paramref name="seconds"/>. The live boosts
+    /// (smoker clicks, a bee-boost candle) are used up only by live play.</summary>
     public AdvanceResult Advance(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
-        // Cut in stage 7 (spec 015): one calm part then the rest. Now the stretch is split at
-        // whichever live boost (calm, bee-boost candle) ends first, again and again (FR-604).
-        // decimal calm = seconds > 0m ? Math.Min(seconds, State.CalmSecondsLeft) : 0m;
-        // var a = Work(calm, events, Config.CalmHoneyMultiplier);
-        // var b = Work(seconds - calm, events);
+        // The stretch is split at whichever live boost (smoker, bee-boost candle) ends first,
+        // again and again (FR-604).
         Made total = default;
         decimal left = seconds;
         if (left <= 0m) total = Work(left, events);
         while (left > 0m)
         {
-            bool calm = State.CalmSecondsLeft > 0m, beeBoost = State.BeeBoostSecondsLeft > 0m;
+            bool smoker = State.SmokerBoostSecondsLeft > 0m, beeBoost = State.BeeBoostSecondsLeft > 0m;
             decimal step = left;
-            if (calm) step = Math.Min(step, State.CalmSecondsLeft);
+            if (smoker) step = Math.Min(step, State.SmokerBoostSecondsLeft);
             if (beeBoost) step = Math.Min(step, State.BeeBoostSecondsLeft);
             total += Work(step, events, LiveBoostNow);   // the hive goes on growing across the parts (FR-402)
             left -= step;
-            if (calm)
-            {
-                State.CalmSecondsLeft -= step;
-                if (State.CalmSecondsLeft <= 0m) { State.CalmSecondsLeft = 0m; events.Add(new BeekeeperEvent(BeekeeperEvents.CalmEnded)); }
-            }
+            if (smoker) State.SmokerBoostSecondsLeft = Math.Max(0m, State.SmokerBoostSecondsLeft - step);
             if (beeBoost)
             {
                 State.BeeBoostSecondsLeft -= step;
@@ -558,22 +545,25 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the Smoker (stage 3)
 
-    public bool IsCalm => State.CalmSecondsLeft > 0m;
+    public bool CanUseSmoker => Owns(BeekeeperUpgrades.Smoker);
 
-    public bool CanPuff =>
-        Owns(BeekeeperUpgrades.Smoker) && State.CalmMeter >= Config.CalmMeterClicks && !IsCalm;
+    public bool IsSmokerBoosted => State.SmokerBoostSecondsLeft > 0m;
 
-    /// <summary>A full meter, puffed by hand: the bees are calm (double honey) for a while.</summary>
-    public ActionResult PuffSmoker()
+    /// <summary>The smoker boost in percent. Today the config's base; later smoker upgrades
+    /// will add their points here.</summary>
+    public decimal SmokerBoostPercent => Config.SmokerBoostPercent;
+
+    /// <summary>The smoker's honey factor right now: 1 + percent/100 while boosted, else 1.
+    /// Multiplied with the other honey boosts.</summary>
+    public decimal SmokerBoostNow => IsSmokerBoosted ? 1m + SmokerBoostPercent / 100m : 1m;
+
+    /// <summary>A smoker click: honey is boosted for the next few live seconds (refreshes, not stacks).</summary>
+    public ActionResult UseSmoker()
     {
-        if (!CanPuff) return ActionResult.Refused;
-        State.CalmMeter = 0;
-        State.CalmSecondsLeft = Config.CalmSeconds;
-        return new ActionResult(true, Config.CalmSeconds, new[] { new BeekeeperEvent(BeekeeperEvents.SmokerPuffed) });
+        if (!CanUseSmoker) return ActionResult.Refused;
+        State.SmokerBoostSecondsLeft = Config.SmokerBoostSeconds;
+        return new ActionResult(true, Config.SmokerBoostSeconds, Array.Empty<BeekeeperEvent>());
     }
-
-    /// <summary>Debug builds only: fills the calm meter.</summary>
-    public void DebugFillCalmMeter() => State.CalmMeter = Config.CalmMeterClicks;
 
     /// <summary>
     /// Time away: the same maths as <see cref="Advance"/> in one step, capped at 3 days,
@@ -933,7 +923,7 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the bear
 
-    /// <summary>Sell exactly one bundle (10 honey for 1 Beebit; 8 under the agreement).</summary>
+    /// <summary>Sell exactly one bundle (10 honey for 5 Beebits; 6 under the agreement).</summary>
     public ActionResult SellTen() => Sell(all: false);
 
     /// <summary>Sell as many whole bundles as possible; the remainder stays. Counts as one trade.</summary>
@@ -945,22 +935,20 @@ public sealed class BeekeeperEngine
     {
         if (!CanSell) return ActionResult.Refused;
 
-        decimal bundle = HoneyPerBeebitNow;
+        decimal bundle = HoneyPerTradeNow;
         decimal bundles = all ? Math.Floor(State.Honey / bundle) : 1m;
+        decimal paid = bundles * BeebitsPerTradeNow;
         State.Honey -= bundles * bundle;
-        State.Beebits += bundles;
+        State.Beebits += paid;
         State.Trades++;
         State.BeebitsRevealed = true;
         RefreshStorageFlag();
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * bundle) };
-        // Cut in stage 7.5 (spec 016): bundles were always Config.HoneyPerBeebit.
-        // decimal bundles = all ? Math.Floor(State.Honey / Config.HoneyPerBeebit) : 1m;
-        // State.Honey -= bundles * Config.HoneyPerBeebit;
-        // var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * Config.HoneyPerBeebit) };
+        // Value: Beebits paid; Value2: honey given.
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, paid, State.BearName, bundles * bundle) };
         OfferAgreementIfDue(events);
         CheckReveals(events);
-        return new ActionResult(true, bundles, events);
+        return new ActionResult(true, paid, events);
     }
 
     // ------------------------------------------------------------------ the shop
@@ -1235,6 +1223,7 @@ public sealed class BeekeeperEngine
         BeekeeperUpgrades.NeedsPaper => PaperSeen,
         BeekeeperUpgrades.NeedsGardenAndPaper => State.GardenRevealed && PaperSeen,
         BeekeeperUpgrades.NeedsPropolis => PropolisSeen,
+        BeekeeperUpgrades.NeedsNothing => true,
         var other => Owns(other),
     };
 
@@ -1287,6 +1276,7 @@ public sealed class BeekeeperEngine
             BeekeeperUpgrades.Practice => Pct(Config.PracticeMultiplier),
             BeekeeperUpgrades.MorePractice => Pct(Config.MorePracticeMultiplier),
             BeekeeperUpgrades.PropolisSeal => Pct(Config.PropolisSealStorageMultiplier),
+            BeekeeperUpgrades.Smoker => SmokerBoostPercent,
             _ => null,
         };
     }

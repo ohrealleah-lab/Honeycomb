@@ -144,7 +144,6 @@ public static class BeekeeperSaveService
             && s.Sage >= 0m && s.HippieTrades >= 0
             && s.RepellentSecondsLeft >= 0m && s.NextWaspInSeconds >= 0m
             && s.Upgrades is not null
-            && s.CalmMeter >= 0 && s.CalmSecondsLeft >= 0m
             && s.Plants is not null
             && s.Pollen >= 0m && s.BeeBread >= 0m
             && s.BribesTotal >= 0 && s.WaspTrades >= 0 && s.Paper >= 0m

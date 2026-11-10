@@ -242,7 +242,7 @@ public class BeekeeperStage7Tests : IDisposable
     }
 
     [Fact]
-    public void TheBeeBoost_BoostsLivePlay_ThenGuttersOut_AndMultipliesWithCalm()
+    public void TheBeeBoost_BoostsLivePlay_ThenGuttersOut_AndMultipliesWithTheSmoker()
     {
         var e = Make(Hive(), BigCombs);
         e.State.BeeBread = 0m;
@@ -255,7 +255,7 @@ public class BeekeeperStage7Tests : IDisposable
         var both = Make(Hive(), BigCombs);
         both.State.BeeBread = 0m;
         both.State.BeeBoostSecondsLeft = 10m;
-        both.State.CalmSecondsLeft = 10m;
+        both.State.SmokerBoostSecondsLeft = 10m;
         Assert.Equal(12.5m * 2m * 1.2m, both.HoneyPerSecondNow);
         both.Advance(10m);
         Assert.Equal(12.5m * 2m * 1.2m * 10m, both.State.Honey);

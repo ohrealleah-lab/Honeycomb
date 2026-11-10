@@ -1512,7 +1512,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperShopTitle = "beekeeper_shop_title"
     /// Story log card title (all caps)
     case beekeeperLogTitle = "beekeeper_log_title"
-    /// Under the bear's buttons; %@ = honey in one bundle right now (10, or 8 under the trade agreement)
+    /// Bear trade rate; %@ = honey, %@ = Beebits
     case beekeeperSellHint = "beekeeper_sell_hint"
     /// Trading card, each buyer's line; %@ = buyer's name, %@ = number of trades
     case beekeeperBearTradesFmt = "beekeeper_bear_trades_fmt"
@@ -1542,6 +1542,8 @@ public enum StringKey: String, CaseIterable {
     case beekeeperWaxCatcherBlurb = "beekeeper_wax_catcher_blurb"
     /// Hive card; %@ = honey made per second
     case beekeeperHoneyPerSecFmt = "beekeeper_honey_per_sec_fmt"
+    /// Honey row hover, under the rate; %@ = percent the free bees add
+    case beekeeperHoneyFreeBeeBonusFmt = "beekeeper_honey_free_bee_bonus_fmt"
     /// Hive card, when honey storage is full
     case beekeeperCombsFull = "beekeeper_combs_full"
     /// Workbench comb row; %@ = honey a second it adds, %@ = honey room, %@ = wax room
@@ -1710,20 +1712,8 @@ public enum StringKey: String, CaseIterable {
     case beekeeperUpgradeMorePracticeBlurb = "beekeeper_upgrade_more_practice_blurb"
     /// Shop upgrade name
     case beekeeperUpgradeSmoker = "beekeeper_upgrade_smoker"
-    /// Shop upgrade description
+    /// Shop upgrade description; %@ = honey boost percent
     case beekeeperUpgradeSmokerBlurb = "beekeeper_upgrade_smoker_blurb"
-    /// Smoker card title (all caps)
-    case beekeeperSmokerTitle = "beekeeper_smoker_title"
-    /// Smoker card; %@ = clicks so far, %@ = clicks needed
-    case beekeeperCalmMeterFmt = "beekeeper_calm_meter_fmt"
-    /// Smoker card while calm; %@ = time left, %@ = honey multiplier
-    case beekeeperCalmNowFmt = "beekeeper_calm_now_fmt"
-    /// Smoker card button
-    case beekeeperPuff = "beekeeper_puff"
-    /// Story log
-    case beekeeperLogSmokerPuffed = "beekeeper_log_smoker_puffed"
-    /// Story log
-    case beekeeperLogCalmEnded = "beekeeper_log_calm_ended"
     /// RuleSection title, Beekeeper
     case helpBeekeeperSmokerTitle = "help_beekeeper_smoker_title"
     /// Catching More & the Smoker RuleSection body
