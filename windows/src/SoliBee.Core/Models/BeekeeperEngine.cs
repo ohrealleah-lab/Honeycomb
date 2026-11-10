@@ -360,6 +360,23 @@ public sealed class BeekeeperEngine
     /// <summary>The next comb's wax price: floor(10 × 1.25^n), n = combs bought (the starter doesn't count).</summary>
     public decimal CombCost => GrowingPrice(Config.CombBaseWaxCost, Config.CombCostGrowth, CombsBought);
     // Cut in stage 7.5 (spec 016): floor(50 × 1.25^N) where N = combs already built (no starter comb).
+    // Cut in stage 7.5 (spec 016): the old body, which counted the starter-less combs and used the old base:
+    // public decimal CombCost
+    // {
+    //     get
+    //     {
+    //         try
+    //         {
+    //             decimal cost = Config.CombBaseWaxCost;
+    //             for (int i = 0; i < State.Combs; i++) cost *= Config.CombCostGrowth;
+    //             return Math.Floor(cost);
+    //         }
+    //         catch (OverflowException)
+    //         {
+    //             return decimal.MaxValue; // effectively unbuyable
+    //         }
+    //     }
+    // }
 
     /// <summary>The next comb's bee price: floor(20 × 1.4^n), n = combs bought. These bees move in
     /// and leave the free-bee count; "how many bees fit in a comb" is simply this price.</summary>

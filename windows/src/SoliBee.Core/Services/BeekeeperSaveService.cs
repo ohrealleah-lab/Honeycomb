@@ -125,6 +125,17 @@ public static class BeekeeperSaveService
         int maxTool = BeekeeperConfig.Default.Tools.Count;
         // Cut in stage 7.5 (spec 016): WaxProgress, GrowSecondsLeft, ForagerBees, GuardBees and
         // AgreementHoneyProgress (no longer saved).
+        // Cut in stage 7.5 (spec 016): the old list of amounts and checks that named those fields:
+        // decimal[] amounts =
+        // {
+        //     s.Honey, s.Wax, s.WaxProgress, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
+        //     s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown, s.GrowSecondsLeft,
+        //     s.ForagerBees, s.GuardBees, s.Pollen, s.BeeBread, s.AgreementHoneyProgress, s.Paper,
+        //     s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles,
+        // };
+        // ... && s.WaxProgress >= 0m && s.Combs >= 0
+        // ... && s.SeedsGiven >= 0 && s.Seeds >= 0 && s.SeedsPlanted >= 0 && s.GrowSecondsLeft >= 0m
+        // ... && s.ForagerBees >= 0m && s.GuardBees >= 0m && s.AgreementHoneyProgress >= 0m
         decimal[] amounts =
         {
             s.Honey, s.Wax, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
