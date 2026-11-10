@@ -158,7 +158,7 @@ public static class ThemeService
             ThemeTextRed          = "#FFC41E1E",
             ThemeCardShadow       = "#26000000",
             ThemeHintHighlight    = "#FFFFD700",
-            ThemeToolbarButton    = "#FFFFFFFF",
+            ThemeToolbarButton    = "#FF000000",
         },
     }.AsReadOnly();
 

@@ -146,7 +146,7 @@ public final class ThemeManager {
                      customFeltRed: 0.0, customFeltGreen: 0.0, customFeltBlue: 0.0,
                      faceArts: [], customCardColors: presetCardColors(
                          bg: (1.0, 1.0, 1.0), blackSuit: (0.0667, 0.0667, 0.0667), redSuit: (0.7686, 0.1176, 0.1176),
-                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
+                         hint: (1.0, 0.8431, 0.0), button: (0.0, 0.0, 0.0))),
     ]
 
     // Built-in themes all turn custom card colors on with the standard outline and
