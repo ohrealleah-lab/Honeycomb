@@ -52,6 +52,9 @@ public enum FeltColorTheme: String, Codable, CaseIterable {
     case royalBlue
     case charcoal
     case desert
+    // See-through table: Mac/Windows only (the window itself goes clear so the desktop
+    // shows behind the cards). Never offered or applied on iOS.
+    case transparent
     case custom
 }
 
@@ -70,6 +73,8 @@ extension FeltColorTheme {
             return Color(red: 0.18, green: 0.18, blue: 0.18)
         case .desert:
             return Color(red: 0.76, green: 0.59, blue: 0.48)
+        case .transparent:
+            return Color.clear
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")
@@ -93,6 +98,8 @@ extension FeltColorTheme {
             return Color(red: 0.14, green: 0.14, blue: 0.14)
         case .desert:
             return Color(red: 0.71, green: 0.54, blue: 0.43)
+        case .transparent:
+            return Color.clear
         case .custom:
             let r = UserDefaults.standard.double(forKey: "custom_felt_red")
             let g = UserDefaults.standard.double(forKey: "custom_felt_green")

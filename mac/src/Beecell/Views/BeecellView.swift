@@ -100,7 +100,7 @@ public struct BeecellView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            if coordinator.showFeltVignette { FeltVignetteView() }
+            if coordinator.effectiveShowFeltVignette { FeltVignetteView() }
 
 
             VStack(spacing: 0) {

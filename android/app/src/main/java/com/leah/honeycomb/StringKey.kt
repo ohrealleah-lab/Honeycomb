@@ -1041,4 +1041,5 @@ enum class StringKey {
     BeekeeperLogFirstWall,
     BeekeeperLogHoneySuperBought,
     BeekeeperLogWaxTrayBought,
+    FeltTransparent,
 }

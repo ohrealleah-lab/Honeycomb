@@ -483,6 +483,18 @@ public final class AppCoordinator {
         return Color(red: customFeltRed, green: customFeltGreen, blue: customFeltBlue)
     }
 
+    /// True when the table itself is see-through (Mac window goes clear). A background
+    /// image, if one is selected, wins over the felt choice — so this is only true when
+    /// no wallpaper is active.
+    public var isTransparentTable: Bool {
+        feltColor == .transparent && customBackgroundName == nil
+    }
+
+    /// The Felt Vignette setting, ignored (not toggled) while the table is transparent.
+    public var effectiveShowFeltVignette: Bool {
+        showFeltVignette && !isTransparentTable
+    }
+
     #if canImport(AppKit)
     // What "this is the active/selected thing" UI tints (a saved theme's row, a saved
     // deck's row, the deck builder's tray) should use for their opaque background —
@@ -494,7 +506,10 @@ public final class AppCoordinator {
     // for the brief window before that backfill finishes for a pre-existing background.
     public var currentAccentTint: Color {
         guard let background = activeCustomBackground, let sampled = background.dominantColor
-        else { return currentFeltColor }
+        else {
+            // A clear table can't tint a selected row — use charcoal so rows stay visible.
+            return feltColor == .transparent ? FeltColorTheme.charcoal.primaryColor : currentFeltColor
+        }
         return sampled
     }
     #else

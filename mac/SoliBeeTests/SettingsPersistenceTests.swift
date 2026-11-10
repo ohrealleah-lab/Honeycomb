@@ -131,7 +131,7 @@ struct SettingsPersistenceTests {
 
     static func testFeltColorThemes() {
         withCleanDefaults(["custom_felt_red", "custom_felt_green", "custom_felt_blue"]) {
-            expect(FeltColorTheme.allCases.count == 6, "Six felt colours")
+            expect(FeltColorTheme.allCases.count == 7, "Seven felt colours")
             for theme in FeltColorTheme.allCases {
                 let json = (try? JSONEncoder().encode(theme)).flatMap { try? JSONDecoder().decode(FeltColorTheme.self, from: $0) }
                 expect(json == theme, "\(theme) round-trips")

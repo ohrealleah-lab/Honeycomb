@@ -95,7 +95,7 @@ public struct VideoPokerView: View {
             BackgroundLayerView()
                 .ignoresSafeArea()
 
-            if coordinator.showFeltVignette { FeltVignetteView() }
+            if coordinator.effectiveShowFeltVignette { FeltVignetteView() }
 
             VStack(spacing: 0) {
                 // Stationary toolbar — never scales with zoom

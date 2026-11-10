@@ -22,6 +22,36 @@ struct WindowAccessor: NSViewRepresentable {
     }
 }
 
+/// Makes the host window see-through (or solid again) to match the table. Re-applies on
+/// every SwiftUI update so flipping the Background option takes effect live. Title bar is
+/// already hidden app-wide; only the window's own background changes.
+struct TransparentWindowApplier: NSViewRepresentable {
+    let isTransparent: Bool
+
+    final class Host: NSView {
+        var isTransparent = false
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            apply()
+        }
+        func apply() {
+            guard let window else { return }
+            window.isOpaque = !isTransparent
+            window.backgroundColor = isTransparent ? .clear : .windowBackgroundColor
+            window.invalidateShadow()
+        }
+    }
+
+    func makeNSView(context: Context) -> Host {
+        let v = Host(); v.isTransparent = isTransparent; return v
+    }
+
+    func updateNSView(_ nsView: Host, context: Context) {
+        nsView.isTransparent = isTransparent
+        DispatchQueue.main.async { nsView.apply() }
+    }
+}
+
 class WindowDetectingView: NSView {
     var onWindowDetected: (NSWindow) -> Void
     var onResize: (() -> Void)?

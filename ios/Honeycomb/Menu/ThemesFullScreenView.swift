@@ -306,7 +306,7 @@ struct ThemesFullScreenView: View {
                 // wrapping onto multiple rows; a single scrolling row per request.
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(alignment: .top, spacing: 14) {
-                        ForEach(FeltColorTheme.allCases.filter { $0 != .custom }, id: \.self) { theme in
+                        ForEach(FeltColorTheme.allCases.filter { $0 != .custom && $0 != .transparent }, id: \.self) { theme in
                             feltTile(theme)
                         }
                         customFeltTile

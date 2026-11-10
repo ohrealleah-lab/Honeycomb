@@ -91,7 +91,7 @@ public struct GameView: View {
         let scaledBoardWidth = boardWidth * viewModel.zoomScale
         let scaledBoardHeight = boardHeight * viewModel.zoomScale
         let resolvedFeltColorTheme: FeltColorTheme = coordinator.feltColor
-        let resolvedShowFeltVignette: Bool = coordinator.showFeltVignette
+        let resolvedShowFeltVignette: Bool = coordinator.effectiveShowFeltVignette
         let resolvedCardBackTheme: String = coordinator.cardBackTheme
         let resolvedCustomCardColors: CustomCardColorGroup = coordinator.customCardColors
 

@@ -82,7 +82,16 @@ public final class ThemeManager {
     // `activeThemeId` (or any other stored reference) that pointed at last launch's id.
     // load() matches these by name, so a player who already has a theme with one of
     // these names keeps their own copy; only names they don't have yet get added.
-    private static let defaultThemes: [SoliBeeTheme] = [
+    // The see-through table only exists on Mac/Windows — iOS never gets that theme.
+    private static var defaultThemes: [SoliBeeTheme] {
+        #if os(iOS)
+        return allDefaultThemes.filter { $0.feltColor != .transparent }
+        #else
+        return allDefaultThemes
+        #endif
+    }
+
+    private static let allDefaultThemes: [SoliBeeTheme] = [
         SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000001")!,
                      name: "Default", cardBackTheme: "Solibee", feltColor: .feltGreen,
                      customFeltRed: 0.0, customFeltGreen: 0.0, customFeltBlue: 0.0,
@@ -130,6 +139,13 @@ public final class ThemeManager {
                      customFeltRed: 0.1412, customFeltGreen: 0.4706, customFeltBlue: 0.5608,
                      faceArts: [], customCardColors: presetCardColors(
                          bg: (0.949, 0.9961, 1.0), blackSuit: (0.0784, 0.1098, 0.1255), redSuit: (0.6902, 0.1882, 0.4314),
+                         hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
+        // See-through table (Mac/Windows). Cards keep Default's solid look.
+        SoliBeeTheme(id: UUID(uuidString: "3B1E1B7A-3F0C-4B8D-9C1E-000000000009")!,
+                     name: "Transparent", cardBackTheme: "Solibee", feltColor: .transparent,
+                     customFeltRed: 0.0, customFeltGreen: 0.0, customFeltBlue: 0.0,
+                     faceArts: [], customCardColors: presetCardColors(
+                         bg: (1.0, 1.0, 1.0), blackSuit: (0.0667, 0.0667, 0.0667), redSuit: (0.7686, 0.1176, 0.1176),
                          hint: (1.0, 0.8431, 0.0), button: (1.0, 1.0, 1.0))),
     ]
 

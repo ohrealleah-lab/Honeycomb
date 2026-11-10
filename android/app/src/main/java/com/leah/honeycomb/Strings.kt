@@ -1069,6 +1069,7 @@ object Strings {
         StringKey.BeekeeperLogFirstWall to "This needs more wax than the hive can hold. Time to make room.",
         StringKey.BeekeeperLogHoneySuperBought to "You stack a honey super on top. More room for honey.",
         StringKey.BeekeeperLogWaxTrayBought to "You slide in another wax tray.",
+        StringKey.FeltTransparent to "Transparent",
     )
 
     private val Spanish = mapOf(
@@ -2108,5 +2109,6 @@ object Strings {
         StringKey.BeekeeperLogFirstWall to "Esto necesita más cera de la que cabe en la colmena. Hay que hacer sitio.",
         StringKey.BeekeeperLogHoneySuperBought to "Colocas un alza de miel encima. Más espacio para la miel.",
         StringKey.BeekeeperLogWaxTrayBought to "Metes otra bandeja de cera.",
+        StringKey.FeltTransparent to "Transparente",
     )
 }

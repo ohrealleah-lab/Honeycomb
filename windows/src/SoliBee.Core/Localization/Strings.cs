@@ -1056,6 +1056,7 @@ public static class Strings
         [StringKey.BeekeeperLogFirstWall] = "This needs more wax than the hive can hold. Time to make room.",
         [StringKey.BeekeeperLogHoneySuperBought] = "You stack a honey super on top. More room for honey.",
         [StringKey.BeekeeperLogWaxTrayBought] = "You slide in another wax tray.",
+        [StringKey.FeltTransparent] = "Transparent",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -2096,5 +2097,6 @@ public static class Strings
         [StringKey.BeekeeperLogFirstWall] = "Esto necesita más cera de la que cabe en la colmena. Hay que hacer sitio.",
         [StringKey.BeekeeperLogHoneySuperBought] = "Colocas un alza de miel encima. Más espacio para la miel.",
         [StringKey.BeekeeperLogWaxTrayBought] = "Metes otra bandeja de cera.",
+        [StringKey.FeltTransparent] = "Transparente",
     };
 }

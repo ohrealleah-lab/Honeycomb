@@ -152,6 +152,7 @@ public partial class PreferencesView : UserControl
         ("Royal Blue", "RoyalBlue"),
         ("Charcoal", "Charcoal"),
         ("Desert", "Desert"),
+        ("Transparent", "Transparent"),
         ("Custom Color", "Custom"),
     };
 
@@ -328,6 +329,7 @@ public partial class PreferencesView : UserControl
         FeltColorTheme.RoyalBlue => "#1A3380",
         FeltColorTheme.Charcoal  => "#2E2E2E",
         FeltColorTheme.Desert    => "#C2967A",
+        FeltColorTheme.Transparent => "#00000000",
         FeltColorTheme.Custom    => options.CustomFeltColorHex,
         _                        => "#008000"
     };
@@ -1024,6 +1026,7 @@ public partial class PreferencesView : UserControl
         FeltColorTheme.RoyalBlue => "#1A3380",
         FeltColorTheme.Charcoal  => "#2E2E2E",
         FeltColorTheme.Desert    => "#C2967A",
+        FeltColorTheme.Transparent => "#2E2E2E", // opaque stand-in so rows/swatches stay visible
         FeltColorTheme.Custom    => theme.CustomFeltColorHex,
         _                        => "#008000"
     };

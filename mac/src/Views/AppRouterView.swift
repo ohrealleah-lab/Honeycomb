@@ -33,6 +33,14 @@ struct AppRouterView: View {
             }
         }
         .ignoresSafeArea()
+        .background(TransparentWindowApplier(isTransparent: coordinator.isTransparentTable))
+        // Faint edge so a fully clear window is still findable and draggable.
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .strokeBorder(Color.white.opacity(0.3), lineWidth: 1)
+                .allowsHitTesting(false)
+                .opacity(coordinator.isTransparentTable ? 1 : 0)
+        )
         .animation(.easeInOut(duration: 0.25), value: coordinator.gameMode)
         .environment(coordinator)
     }

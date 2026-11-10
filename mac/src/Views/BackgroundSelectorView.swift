@@ -89,6 +89,7 @@ public struct BackgroundSelectorView: View {
                     Text(coordinator.L(.feltRoyalBlue)).tag(FeltOrBackgroundSelection.felt(.royalBlue))
                     Text(coordinator.L(.feltCharcoal)).tag(FeltOrBackgroundSelection.felt(.charcoal))
                     Text(coordinator.L(.feltDesert)).tag(FeltOrBackgroundSelection.felt(.desert))
+                    Text(coordinator.L(.feltTransparent)).tag(FeltOrBackgroundSelection.felt(.transparent))
                     Text(coordinator.L(.feltCustomColor)).tag(FeltOrBackgroundSelection.felt(.custom))
                     if !CustomBackgroundManager.shared.customBackgrounds.isEmpty {
                         Divider()

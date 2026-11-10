@@ -1040,5 +1040,6 @@ enum StringsEnglish {
         .beekeeperLogFirstWall: "This needs more wax than the hive can hold. Time to make room.",
         .beekeeperLogHoneySuperBought: "You stack a honey super on top. More room for honey.",
         .beekeeperLogWaxTrayBought: "You slide in another wax tray.",
+        .feltTransparent: "Transparent",
     ]
 }

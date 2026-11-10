@@ -13,6 +13,8 @@ public enum FeltColorTheme
     RoyalBlue,
     Charcoal,
     Desert,
+    // See-through table: the window shows the desktop behind the cards.
+    Transparent,
     Custom
 }
 

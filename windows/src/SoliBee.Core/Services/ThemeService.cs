@@ -145,6 +145,21 @@ public static class ThemeService
             ThemeHintHighlight    = "#FFFFD700",
             ThemeToolbarButton    = "#FFFFFFFF",
         },
+        // See-through table; cards keep Default's solid look.
+        new SoliBeeTheme
+        {
+            Id             = new Guid("b0001111-0000-0000-0000-000000000020"),
+            Name           = "Transparent",
+            CardBackTheme  = "Solibee",
+            FeltColor      = FeltColorTheme.Transparent,
+            ThemeFaceBackNormal   = "#FFFFFAE4",
+            ThemeFaceBorderNormal = "#D9000000",
+            ThemeTextBlackNormal  = "#FF111111",
+            ThemeTextRed          = "#FFC41E1E",
+            ThemeCardShadow       = "#26000000",
+            ThemeHintHighlight    = "#FFFFD700",
+            ThemeToolbarButton    = "#FFFFFFFF",
+        },
     }.AsReadOnly();
 
     // Shared JSON-file load/save shape, used by the theme store below and the tombstone

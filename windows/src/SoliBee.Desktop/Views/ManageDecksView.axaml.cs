@@ -93,6 +93,7 @@ public partial class ManageDecksView : UserControl
             FeltColorTheme.RoyalBlue => "#1A3380",
             FeltColorTheme.Charcoal  => "#2E2E2E",
             FeltColorTheme.Desert    => "#C2967A",
+            FeltColorTheme.Transparent => "#2E2E2E", // opaque stand-in so panels stay visible
             _                        => "#008000"
         };
     }

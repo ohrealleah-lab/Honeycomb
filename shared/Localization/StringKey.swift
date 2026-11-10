@@ -2078,4 +2078,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogHoneySuperBought = "beekeeper_log_honey_super_bought"
     /// Story log
     case beekeeperLogWaxTrayBought = "beekeeper_log_wax_tray_bought"
+    /// Felt preset picker option; table is see-through to the desktop (Mac/Windows only)
+    case feltTransparent = "felt_transparent"
 }

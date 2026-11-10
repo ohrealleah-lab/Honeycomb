@@ -314,6 +314,7 @@ public partial class MainWindow : Window
                 FeltColorTheme.RoyalBlue => ("#1A3380", "#14296B"),
                 FeltColorTheme.Charcoal => ("#2E2E2E", "#242424"),
                 FeltColorTheme.Desert => ("#C2967A", "#B58A6E"),
+                FeltColorTheme.Transparent => ("#00000000", "#00000000"),
                 _ => ("#008000", "#007300")
             };
         }
@@ -334,7 +335,8 @@ public partial class MainWindow : Window
             // button rows instead (see BlackjackView/VideoPokerView).
             if (VignetteOverlay != null)
             {
-                VignetteOverlay.IsVisible = options.IsVignetteEnabled;
+                // Ignored (not toggled) while the table is transparent.
+                VignetteOverlay.IsVisible = options.IsVignetteEnabled && feltColor != FeltColorTheme.Transparent;
                 VignetteOverlay.ZIndex = -5;
                 UpdateVignetteSizeAndIntensity(options);
             }
