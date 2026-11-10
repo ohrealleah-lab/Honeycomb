@@ -137,7 +137,7 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.True(e.TradeAllCandles().Done);
         Assert.Equal(2m, e.State.Sage);
         Assert.Equal(7m, e.State.BeeswaxCandles);
-        Assert.Equal(1, e.State.HippieTrades);
+        Assert.Equal(2, e.State.HippieTrades);   // each bundle counts as a trade
     }
 
     [Fact]

@@ -73,12 +73,12 @@ public class BeekeeperStage4Tests : IDisposable
     }
 
     [Fact]
-    public void TradeAll_IsOneTrade_SoOneSeedAtMost()
+    public void TradeAll_CountsEveryBundleAsATrade()
     {
         var e = WithHippies(4);
         e.State.BeeswaxCandles = 100m;
         e.TradeAllCandles();
-        Assert.Equal(5, e.State.HippieTrades);
+        Assert.Equal(14, e.State.HippieTrades);
         Assert.Single(e.State.SeedsInHand);
     }
 

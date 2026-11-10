@@ -1186,7 +1186,8 @@ public sealed class BeekeeperEngine
         decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
         State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
         State.Sage += bundles;
-        State.HippieTrades++;
+        State.HippieTrades += (long)bundles;   // each bundle of 10 candles is a trade
+        // Before: State.HippieTrades++;
         State.SageRevealed = true;
 
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, bundles, null, bundles * Config.CandlesPerSage) };
