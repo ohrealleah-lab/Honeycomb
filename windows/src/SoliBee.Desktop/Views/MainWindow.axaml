@@ -506,6 +506,12 @@
         <SolidColorBrush x:Key="ToolbarFillBrush" Color="#26FFFFFF" />
         <SolidColorBrush x:Key="ToolbarHoverFillBrush" Color="#40FFFFFF" />
         <SolidColorBrush x:Key="ToolbarDisabledBrush" Color="#66FFFFFF" />
+        <!-- Avalonia 12's drawn title bar (the strip behind the min/max/close buttons) is
+             filled with the theme's solid white underneath our content, so a faded or
+             Transparent table showed as pale felt-over-white there instead of see-through.
+             Clear it: the window's felt Background already paints that strip, so at full
+             Table Opacity nothing changes. -->
+        <SolidColorBrush x:Key="TitleBarBackgroundBrush" Color="Transparent" />
     </Window.Resources>
 
     <Window.Styles>
