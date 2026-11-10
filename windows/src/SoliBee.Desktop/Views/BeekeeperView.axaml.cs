@@ -26,6 +26,8 @@ namespace SoliBee.Desktop.Views;
 public partial class BeekeeperView : UserControl
 {
     private static readonly IBrush SoftCoral = new SolidColorBrush(Color.Parse("#FFA38F"));
+    /// <summary>The wall colour (stage 7.5): a price that needs more storage, not merely unaffordable.</summary>
+    private static readonly IBrush WallBrush = SoftCoral;
     private static readonly IBrush WhiteBrush = Brushes.White;
     private static readonly IBrush AccentFallback = new SolidColorBrush(Color.Parse("#FFD300"));
 
@@ -158,7 +160,7 @@ public partial class BeekeeperView : UserControl
         PuffButton.IsEnabled = vm.CanPuff;
 
         // Hive: the title, the groups of rows (built from the view model), the move-hive row.
-        HiveCard.IsVisible = vm.HoneyRevealed;
+        HiveCard.IsVisible = vm.HiveCardShown;   // stage 7.5: the drip's first wax can come before any bee
         HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive);
         UpdateHive(vm, lang);
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
@@ -167,6 +169,7 @@ public partial class BeekeeperView : UserControl
             + " · " + BeekeeperText.WoodenHiveBlurb(N(vm.WoodenHiveBonusPercent));
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
+        ShowWall(WoodenHiveWallText, MoveHiveButton, vm.WoodenHiveIsWall, N(vm.WaxStorage));
 
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;
@@ -176,7 +179,8 @@ public partial class BeekeeperView : UserControl
         if (_agreementText != null)
         {
             _agreementText.IsVisible = vm.HasTradeAgreement;
-            SetRateTip(BeekeeperText.BeebitsPerSecond(N(vm.AgreementBeebitsPerSecond, 2)), _agreementText);
+            // Cut in stage 7.5 (spec 016): the agreement's rate hover (no auto-sale any more).
+            // SetRateTip(BeekeeperText.BeebitsPerSecond(N(vm.AgreementBeebitsPerSecond, 2)), _agreementText);
         }
 
         // Shop (also opens with The Workbench, so its upgrades are never out of sight)
@@ -186,13 +190,31 @@ public partial class BeekeeperView : UserControl
 
         // Combs: how many is on the Hive card; building one is The Workbench's first row (Leah).
 
-        // The Workbench: shows from the first 50 wax (combs); candles join at the 2nd comb.
-        WorkbenchCard.IsVisible = vm.CombsRevealed || vm.WorkbenchRevealed;
+        // The Workbench: shows from the first 5 wax (combs); candles join at the 3rd comb (stage 7.5).
+        WorkbenchCard.IsVisible = vm.CombRowShown;
         WorkbenchTitleText.Text = BeekeeperText.WorkbenchTitle;
         CombNameText.Text = BeekeeperText.Comb;
-        CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null) + " · " + BeekeeperText.CombBlurb(N(vm.StoragePerComb));
+        // Stage 7.5 (spec 016): a comb costs bees and wax, and gives honey and room for both.
+        CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null, bees: N(vm.CombBeeCost))
+            + " · " + BeekeeperText.CombBlurb(N(vm.HoneyPerComb, 2), N(vm.StoragePerComb), N(vm.WaxStoragePerComb, 1));
+        // Cut in stage 7.5: CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null) + " · " + BeekeeperText.CombBlurb(N(vm.StoragePerComb));
         BuildCombButton.Content = BeekeeperText.Build;
         BuildCombButton.IsEnabled = vm.CanBuildComb;
+        ShowWall(CombWallText, BuildCombButton, vm.CombIsWall, N(vm.WaxStorage));
+
+        // Capacity upgrades (stage 7.5): Beebits only, bought again and again, so never walls.
+        HoneySuperRow.IsVisible = vm.CapacityUpgradesShown;
+        HoneySuperNameText.Text = BeekeeperText.HoneySuper;
+        HoneySuperInfoText.Text = BeekeeperText.Price(N(vm.HoneySuperCost), null, null)
+            + " · " + BeekeeperText.HoneySuperBlurb(N(vm.HoneySuperCapacity), N(vm.HoneySupers));
+        BuyHoneySuperButton.Content = BeekeeperText.Add;
+        BuyHoneySuperButton.IsEnabled = vm.CanBuyHoneySuper;
+        WaxTrayRow.IsVisible = vm.CapacityUpgradesShown;
+        WaxTrayNameText.Text = BeekeeperText.WaxTray;
+        WaxTrayInfoText.Text = BeekeeperText.Price(N(vm.WaxTrayCost), null, null)
+            + " · " + BeekeeperText.WaxTrayBlurb(N(vm.WaxTrayCapacity, 1), N(vm.WaxTrays));
+        BuyWaxTrayButton.Content = BeekeeperText.Add;
+        BuyWaxTrayButton.IsEnabled = vm.CanBuyWaxTray;
         BeeswaxRow.IsVisible = vm.WorkbenchRevealed;
         BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
         BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
@@ -284,6 +306,19 @@ public partial class BeekeeperView : UserControl
         }
     }
 
+    /// <summary>A wall (stage 7.5, spec 016): the price is above the wax cap. The row says it needs more
+    /// storage in the wall colour, and the (disabled) button's hover names the ways past. A price the
+    /// player merely can't afford yet shows neither. The view model decides; this only draws.</summary>
+    private static void ShowWall(TextBlock text, Button button, bool wall, string holds)
+    {
+        text.IsVisible = wall;
+        text.Foreground = WallBrush;
+        text.Opacity = 1.0;
+        if (wall) text.Text = BeekeeperText.WaxWall(holds);
+        ToolTip.SetShowOnDisabled(button, true);
+        ToolTip.SetTip(button, wall ? BeekeeperText.WaxWallTip : null);
+    }
+
     // Batch buttons (x10, x100) are hidden until the whole batch can be paid for.
     private static void ShowBatch(Button button, int count, bool affordable)
     {
@@ -322,7 +357,8 @@ public partial class BeekeeperView : UserControl
         // Lines that come and go on ticks (combs full, a candle burning) are always built and just
         // shown or hidden, so they never trigger a rebuild under the mouse.
         static bool Transient(string id) =>
-            id is BeekeeperHiveRows.CombsFull or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
+            id is BeekeeperHiveRows.CombsFull or BeekeeperHiveRows.WaxFull
+                or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
         string sig = lang + "|" + string.Join(";", groups.Select(g =>
             g.Id + ":" + string.Join(",", g.Rows.Where(r => r.Visible && !Transient(r.Id)).Select(r => r.Id))));
         if (sig != _hiveSignature)
@@ -348,7 +384,7 @@ public partial class BeekeeperView : UserControl
                     {
                         // A whole-line row: a specialty, or the "combs are full" warning.
                         var line = new TextBlock { Classes = { "bk-body" } };
-                        if (r.Id == BeekeeperHiveRows.CombsFull) line.Foreground = SoftCoral;
+                        if (r.Id is BeekeeperHiveRows.CombsFull or BeekeeperHiveRows.WaxFull) line.Foreground = SoftCoral;
                         else line.Opacity = 0.9;
                         panel.Children.Add(line);
                         _hiveRows[r.Id] = (line, null);
@@ -484,6 +520,7 @@ public partial class BeekeeperView : UserControl
         {
             _shopSignature = sig;
             _shopButtons.Clear();
+            _shopWalls.Clear();
             ShopRows.Children.Clear();
 
             // Bought things are hidden (Leah, 2026-11-07): only the next tool is listed. A
@@ -510,7 +547,7 @@ public partial class BeekeeperView : UserControl
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id)), false,
                     BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis)),
-                    "upgrade:" + id, _ => vm.BuyUpgrade(id)));
+                    "upgrade:" + id, _ => vm.BuyUpgrade(id), withWall: true));
             }
         }
 
@@ -522,7 +559,13 @@ public partial class BeekeeperView : UserControl
         }
         if (_shopButtons.TryGetValue("catcher", out var cb)) cb.IsEnabled = vm.CanBuyWaxCatcher;
         foreach (var u in upgrades)
-            if (_shopButtons.TryGetValue("upgrade:" + u.Id, out var ub)) ub.IsEnabled = vm.CanBuyUpgrade(u.Id);
+        {
+            if (!_shopButtons.TryGetValue("upgrade:" + u.Id, out var ub)) continue;
+            ub.IsEnabled = vm.CanBuyUpgrade(u.Id);
+            // Stage 7.5: a wax price above the cap reads as needing more storage, and goes away by itself.
+            if (_shopWalls.TryGetValue("upgrade:" + u.Id, out var wall))
+                ShowWall(wall, ub, vm.UpgradeIsWall(u.Id), N(vm.WaxStorage));
+        }
     }
 
     // Trade rows are rebuilt only when a buyer arrives or the language changes, so a button is
@@ -598,12 +641,22 @@ public partial class BeekeeperView : UserControl
         }
     }
 
-    private Control MakeShopRow(string name, string blurb, bool owned, string price, string id, Action<object?> buy)
+    // The wall line under each Shop upgrade (stage 7.5), by the same id as its button.
+    private readonly Dictionary<string, TextBlock> _shopWalls = new();
+
+    private Control MakeShopRow(string name, string blurb, bool owned, string price, string id, Action<object?> buy,
+                                bool withWall = false)
     {
         var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
         var text = new StackPanel { Spacing = 2, VerticalAlignment = VerticalAlignment.Center };
         text.Children.Add(new TextBlock { Text = name, Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
         text.Children.Add(new TextBlock { Text = blurb, Classes = { "bk-muted" } });
+        if (withWall)
+        {
+            var wall = new TextBlock { Classes = { "bk-muted" }, IsVisible = false };
+            text.Children.Add(wall);
+            _shopWalls[id] = wall;
+        }
         row.Children.Add(text);
 
         var button = new Button
@@ -661,6 +714,8 @@ public partial class BeekeeperView : UserControl
 
     private void Catch_Click(object? sender, RoutedEventArgs e) => _vm?.CatchCommand.Execute(null);
     private void BuildComb_Click(object? sender, RoutedEventArgs e) => _vm?.BuildCombCommand.Execute(null);
+    private void BuyHoneySuper_Click(object? sender, RoutedEventArgs e) => _vm?.BuyHoneySuperCommand.Execute(null);
+    private void BuyWaxTray_Click(object? sender, RoutedEventArgs e) => _vm?.BuyWaxTrayCommand.Execute(null);
     private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
     private void CraftRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.CraftRepellentCommand.Execute(null);
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);

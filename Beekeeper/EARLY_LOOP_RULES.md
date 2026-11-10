@@ -4,7 +4,7 @@ Built from Leah's notes. Where Gemini's files disagree, that's listed at the bot
 **v2 change:** there is no limit on bees. Combs now store honey. Offline earnings are in (up to 3 days).
 Numbers marked as approved were checked with a first-hour simulation (Beekeeper/tools/simulate_first_hour.py).
 
-**v3 change (planned, Bee, 2026-11-09; stage 7.5, spec `windows/016-beekeeper-combs/`):** combs make the honey, bees and wax buy combs, and honey and wax each have a cap. **Rules marked "From stage 7.5" start when that stage is built; until then the game follows the rules marked "Replaced".** All new numbers are placeholders in `BeekeeperConfig`.
+**v3 change (Bee, 2026-11-09; stage 7.5, spec `windows/016-beekeeper-combs/`, built 2026-11-09):** combs make the honey, bees and wax buy combs, and honey and wax each have a cap. **The game follows the rules marked "From stage 7.5"; the ones marked "Replaced" are kept for the record (their code is commented out).** All new numbers are placeholders in `BeekeeperConfig`.
 
 ## What's in the first build
 Catch bees, honey, wax, the bear, the shop, combs, saving, offline earnings.

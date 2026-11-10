@@ -49,13 +49,26 @@ public class BeekeeperLoadFixesTests : IDisposable
         Assert.True(vm.State.BeeBread < 10m);
     }
 
+    // Cut in stage 7.5 (spec 016): older saves no longer load, and the agreement no longer sells honey while away.
+    // [Fact]
+    // public void AVersion4SaveWith120BearTrades_GetsTheAgreementForItsFirstTimeAway()
+    // {
+    //     var saved = new DateTime(2026, 11, 8, 0, 0, 0, DateTimeKind.Utc);
+    //     var s = new BeekeeperState { Version = 4, BearName = "B", Bees = 1000m, Honey = 200m, Trades = 120, SavedAtUtc = saved };
+    //     var vm = new BeekeeperViewModel(isHeadless: true, persist: false, initialState: s, clock: () => saved.AddHours(1));
+    //     Assert.True(vm.State.Beebits > 0m);
+    // }
+
     [Fact]
-    public void AVersion4SaveWith120BearTrades_GetsTheAgreementForItsFirstTimeAway()
+    public void ASaveWith30BearTrades_GetsTheBetterRateOnLoad_AndNothingIsSoldWhileAway()
     {
         var saved = new DateTime(2026, 11, 8, 0, 0, 0, DateTimeKind.Utc);
-        var s = new BeekeeperState { Version = 4, BearName = "B", Bees = 1000m, Honey = 200m, Trades = 120, SavedAtUtc = saved };
+        var s = new BeekeeperState { BearName = "B", HoneyRevealed = true, Combs = 5, Honey = 1400m, Trades = 30, BearRevealed = true, SavedAtUtc = saved };
         var vm = new BeekeeperViewModel(isHeadless: true, persist: false, initialState: s, clock: () => saved.AddHours(1));
-        Assert.True(vm.State.Beebits > 0m);
+        Assert.True(vm.HasTradeAgreement);
+        Assert.Equal(0m, vm.State.Beebits);
+        Assert.Equal(8m, vm.HoneyPerBeebitNow);
+        Assert.Equal(8m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);
     }
 
     [Fact]

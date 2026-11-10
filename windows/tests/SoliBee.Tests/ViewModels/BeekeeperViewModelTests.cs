@@ -34,7 +34,7 @@ public class BeekeeperViewModelTests : IDisposable
         public Func<DateTime> Func => () => Now;
     }
 
-    private static readonly BeekeeperConfig BigStorage = new() { StartingStorage = 1_000_000_000m };
+    private static readonly BeekeeperConfig BigStorage = new() { StartingHoneyCap = 1_000_000_000m };
 
     private BeekeeperViewModel Make(Clock clock, BeekeeperState? state = null, BeekeeperConfig? config = null,
                                     bool persist = false, IRandomSource? rng = null)
@@ -42,6 +42,9 @@ public class BeekeeperViewModelTests : IDisposable
                persist: persist, savePath: SavePath, initialState: state);
 
     private static bool Logged(BeekeeperViewModel vm, string key) => vm.Log.Any(e => e.Key == key);
+
+    // Stage 7.5 (spec 016): honey comes from the combs once the first bee is caught; 5 combs make
+    // 1 honey a second (the tests below used to give the hive 100 bees for that).
 
     // ============================================================ starting and clicking
 
@@ -86,7 +89,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void ATickAboutASecondLater_MakesHoney()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" });
         clock.Advance(1);
         vm.Tick();
         Assert.Equal(1m, vm.Honey);
@@ -96,7 +99,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void LeftoverFractionsOfASecond_AreCarriedForward()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" });
 
         clock.Advance(0.6); vm.Tick();
         Assert.Equal(0m, vm.Honey);          // not a whole second yet
@@ -110,7 +113,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void AGapOverTwoSeconds_IsCreditedAsTimeAway_Quietly()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage);
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, BigStorage);
         clock.Advance(7200);
         vm.Tick();
         Assert.Equal(7200m, vm.Honey);
@@ -123,7 +126,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void TenDaysAway_PaysOnlyThreeDays()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage);
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, BigStorage);
         clock.Advance(10 * 24 * 3600);
         vm.Tick();
         Assert.Equal(100m * 0.01m * 259_200m, vm.Honey);
@@ -133,7 +136,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void AClockSetBackwards_PaysNothing_AndTheNextTickStillWorks()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage);
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, BigStorage);
         clock.Advance(-3 * 3600);
         vm.Tick();
         Assert.Equal(0m, vm.Honey);
@@ -147,7 +150,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void WhenStorageFills_TheLogSaysSoOnce()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100000m, Honey = 199m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Honey = 199.5m, BearName = "Bruno" });   // 1 comb: 0.2 a second, room for 200
         for (int i = 0; i < 5; i++) { clock.Advance(1); vm.Tick(); }
         Assert.Equal(1, vm.Log.Count(e => e.Key == BeekeeperEvents.StorageFull));
         Assert.True(vm.StorageIsFull);
@@ -173,7 +176,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void SellButtons_AreOffUntilThereIsTenHoney_AndTellTheScreenWhenThatChanges()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 1000m, BearName = "Bruno" }); // 10 honey/s
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 50, BearName = "Bruno" }); // 10 honey/s
         int changes = 0;
         vm.SellTenCommand.CanExecuteChanged += (_, _) => changes++;
 
@@ -188,7 +191,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void Selling_BuyingAndBuilding_GoThroughTheEngineAndTheLog()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 25m, BearName = "Bruno" });
 
         vm.SellAllCommand.Execute(null);
         Assert.Equal(15m, vm.Beebits);
@@ -200,8 +203,10 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.Equal(2, vm.BeesPerClick);
 
         vm.BuildCombCommand.Execute(null);
-        Assert.Equal(1, vm.Combs);
-        Assert.Equal(400m, vm.HoneyStorage);
+        Assert.Equal(2, vm.Combs);                       // the starter and one bought (stage 7.5)
+        Assert.Equal(500m, vm.HoneyStorage);
+        Assert.Equal(22m, vm.WaxStorage);
+        Assert.Equal(5m, vm.Bees);                       // 20 bees moved in
         Assert.True(Logged(vm, BeekeeperEvents.CombBuilt));
     }
 
@@ -219,7 +224,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void PropertyChanged_IsRaisedOnTick()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" });
         int raised = 0;
         vm.PropertyChanged += (_, _) => raised++;
         clock.Advance(1);
@@ -239,12 +244,22 @@ public class BeekeeperViewModelTests : IDisposable
     }
 
     [Fact]
+    public void NewGame_StillAsks_WithZeroFreeBees_OnceTheFirstBeeWasCaught()
+    {
+        var vm = Make(new Clock(), new BeekeeperState { HoneyRevealed = true, Bees = 20m, Wax = 10m, BearName = "Bruno" });
+        vm.BuildCombCommand.Execute(null);
+        Assert.Equal(0m, vm.Bees);
+        Assert.True(vm.NewGameNeedsConfirmation);
+        Assert.False(Make(new Clock(), new BeekeeperState { Wax = 15m, WaxRevealed = true }).NewGameNeedsConfirmation);
+    }
+
+    [Fact]
     public void StartNewGame_ResetsTheHive_AndLogsAFreshStart()
     {
         var vm = Make(new Clock(), new BeekeeperState { Bees = 50m, Combs = 2, BearName = "Bruno", Log = { new BeekeeperLogEntry { Key = "old" } } });
         vm.StartNewGame();
         Assert.Equal(0m, vm.Bees);
-        Assert.Equal(0, vm.Combs);
+        Assert.Equal(1, vm.Combs);                       // the starter comb (stage 7.5)
         Assert.Single(vm.Log);
         Assert.Equal(BeekeeperEvents.NewGame, vm.Log[0].Key);
     }
@@ -255,7 +270,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void AutosavesEveryFiveSeconds_NotBefore()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, persist: true);
+        var vm = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, persist: true);
         for (int i = 0; i < 4; i++) { clock.Advance(1); vm.Tick(); }
         Assert.False(File.Exists(SavePath));
 
@@ -277,7 +292,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void Reopening_TwoHoursLater_CreditsTwoHours_AndWelcomesThePlayerBack()
     {
         var clock = new Clock();
-        var first = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage, persist: true);
+        var first = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, BigStorage, persist: true);
         first.Dispose();                                   // saved at "now"
 
         clock.Advance(7200);
@@ -291,7 +306,7 @@ public class BeekeeperViewModelTests : IDisposable
     public void ReopeningRightAway_CreditsNothingExtra()
     {
         var clock = new Clock();
-        var first = Make(clock, new BeekeeperState { Bees = 100m, BearName = "Bruno" }, BigStorage, persist: true);
+        var first = Make(clock, new BeekeeperState { HoneyRevealed = true, Combs = 5, Bees = 100m, BearName = "Bruno" }, BigStorage, persist: true);
         first.Dispose();
 
         clock.Advance(1);

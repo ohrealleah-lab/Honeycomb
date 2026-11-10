@@ -57,7 +57,8 @@ public class BeekeeperCoordinatorTests : DataSandbox
         var c = Fresh(clock);
         c.SwitchToBeekeeper();
         var hive = c.BeekeeperViewModel;
-        hive.State.Bees = 100m;
+        hive.State.HoneyRevealed = true;        // stage 7.5: 5 combs make 1 honey a second
+        hive.State.Combs = 5;
         hive.State.BearName = "Bruno";
 
         c.SwitchToGame();                       // off to Klondike
@@ -120,14 +121,15 @@ public class BeekeeperCoordinatorTests : DataSandbox
         var clock = new Clock();
         var first = Fresh(clock);
         first.SwitchToBeekeeper();
-        first.BeekeeperViewModel.State.Bees = 100m;
+        first.BeekeeperViewModel.State.HoneyRevealed = true;   // stage 7.5: 5 combs, 1 honey a second
+        first.BeekeeperViewModel.State.Combs = 5;
         first.BeekeeperViewModel.State.BearName = "Bruno";
         first.SaveBeekeeper();                  // saved "now"
 
         clock.Now = clock.Now.AddHours(1);      // the app stays open on another game for an hour
         var second = new AppCoordinator(clock.Func);
         second.SwitchToBeekeeper();
-        // An hour of 100 bees would make 3,600 honey, but storage holds only 200.
-        Assert.Equal(200m, second.BeekeeperViewModel.Honey);
+        // An hour of 5 combs would make 3,600 honey, but storage holds only 1,400.
+        Assert.Equal(1400m, second.BeekeeperViewModel.Honey);
     }
 }

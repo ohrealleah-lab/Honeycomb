@@ -105,12 +105,15 @@
                                         <MenuItem Header="Hippie trades to 19" Click="DebugBeekeeper_Click" Tag="Hippies19" />
                                         <MenuItem Header="+10 pollen" Click="DebugBeekeeper_Click" Tag="Pollen" />
                                         <MenuItem Header="+10 bee bread" Click="DebugBeekeeper_Click" Tag="BeeBread" />
-                                        <MenuItem Header="Bear trades to 99" Click="DebugBeekeeper_Click" Tag="Trades" />
+                                        <MenuItem Header="Bear trades to almost agreement" Click="DebugBeekeeper_Click" Tag="Trades" />
                                         <MenuItem Header="Spend 8 hours away" Click="DebugBeekeeper_Click" Tag="Away" />
                                         <MenuItem Header="Bees ×10" Click="DebugBeekeeper_Click" Tag="BeesX10" />
                                         <MenuItem Header="+500 honey" Click="DebugBeekeeper_Click" Tag="Honey" />
                                         <MenuItem Header="Bribes to 4" Click="DebugBeekeeper_Click" Tag="Bribes" />
                                         <MenuItem Header="Bring the emissary" Click="DebugBeekeeper_Click" Tag="Emissary" />
+                                        <MenuItem Header="+5 combs" Click="DebugBeekeeper_Click" Tag="Combs5" />
+                                        <MenuItem Header="Fill wax to the cap" Click="DebugBeekeeper_Click" Tag="FillWax" />
+                                        <MenuItem Header="+10,000 free bees" Click="DebugBeekeeper_Click" Tag="Bees10k" />
                                     </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">

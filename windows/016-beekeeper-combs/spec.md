@@ -2,7 +2,7 @@
 
 **Feature Branch**: `016-beekeeper-combs`
 **Created**: 2026-11-09
-**Status**: Specced, not built, from Bee's decisions in the planning session (earlier docs call Bee "Leah"). **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
+**Status**: Built 2026-11-09 (Bee to hand-test), from Bee's decisions in the planning session (earlier docs call Bee "Leah"). **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009–015. Design: `Beekeeper/LONG_TERM_DESIGN.md`, "Update: Combs, bees as currency". Rules: `Beekeeper/EARLY_LOOP_RULES.md` v3.
 

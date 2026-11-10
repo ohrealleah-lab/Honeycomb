@@ -49,14 +49,16 @@ public static class BeekeeperHiveRows
     public const string GroupCrafts = "crafts";
     public const string GroupTradeGoods = "trade_goods";
 
-    public const string Honeybees = "honeybees";          // Value = bees; Rate = bees/s from the queen
+    // Stage 7.5 (spec 016): the bees row is the free bees (the view labels it "Free bees").
+    public const string Honeybees = "honeybees";          // Value = free bees; Rate = bees/s from the queen
     public const string Queen = "queen";                  // Value = 1 laying, 0 resting
     public const string Foraging = "foraging";            // full-width line; Value = pollen a minute
     public const string Guarding = "guarding";            // full-width line; Value = extra honey percent
     public const string Honey = "honey";                  // Value = stored, Value2 = storage; Rate = honey/s
-    public const string Wax = "wax";                      // Rate = wax/s
+    public const string Wax = "wax";                      // Value = stored (rounded down), Value2 = wax cap; Rate = wax/s
     public const string Combs = "combs";
     public const string CombsFull = "combs_full";         // full-width warning line
+    public const string WaxFull = "wax_full";             // full-width warning line (stage 7.5)
     public const string Seeds = "seeds";
     public const string Pollen = "pollen";                // Rate = pollen/s while foraging
     public const string BeeBread = "bee_bread";           // Rate = bee bread eaten/s, Rate2 = pantry seconds
@@ -178,7 +180,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public string BeesDisplay => NumberFormatter.Format(State.Bees, CurrentLanguage);
     public string HoneyDisplay =>
         NumberFormatter.Format(State.Honey, CurrentLanguage) + " / " + NumberFormatter.Format(Engine.HoneyStorage, CurrentLanguage);
-    public string WaxDisplay => NumberFormatter.Format(State.Wax, CurrentLanguage);
+    /// <summary>Wax shows how full its cap is too ("12 / 20"), rounded down like honey (stage 7.5).</summary>
+    public string WaxDisplay =>
+        NumberFormatter.Format(Math.Floor(State.Wax), CurrentLanguage) + " / " + NumberFormatter.Format(Engine.WaxStorage, CurrentLanguage);
+    // Cut in stage 7.5 (spec 016): public string WaxDisplay => NumberFormatter.Format(State.Wax, CurrentLanguage);
     public string BeebitsDisplay => NumberFormatter.Format(State.Beebits, CurrentLanguage);
 
     public decimal Bees => State.Bees;
@@ -189,16 +194,29 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>What the hive makes in wax right now.</summary>
     public decimal WaxPerSecond => Engine.WaxPerSecondNow;
     public decimal Wax => State.Wax;
-    public decimal WaxProgress => State.WaxProgress;
-    public decimal HoneyPerWax => Config.HoneyPerWax;
+    // Cut in stage 7.5 (spec 016): wax no longer follows honey.
+    // public decimal WaxProgress => State.WaxProgress;
+    // public decimal HoneyPerWax => Config.HoneyPerWax;
     public decimal Beebits => State.Beebits;
     public int ToolLevel => State.ToolLevel;
     public int BeesPerClick => Engine.BeesPerClick;
     public bool HasWaxCatcher => State.HasWaxCatcher;
     public int Combs => State.Combs;
+    /// <summary>The next comb's wax price.</summary>
     public decimal CombCost => Engine.CombCost;
-    /// <summary>Honey storage the next comb adds (bigger with the Bigger Combs upgrades).</summary>
+    /// <summary>The next comb's bee price (stage 7.5): these free bees move in.</summary>
+    public decimal CombBeeCost => Engine.CombBeeCost;
+    /// <summary>Honey storage the next comb adds (bigger with the Technologies).</summary>
     public decimal StoragePerComb => Engine.StoragePerComb;
+    /// <summary>Wax storage the next comb adds (bigger with the Technologies).</summary>
+    public decimal WaxStoragePerComb => Engine.WaxStoragePerComb;
+    /// <summary>Honey a second the next comb adds, with the lasting boosts.</summary>
+    public decimal HoneyPerComb => Engine.HoneyPerCombNow;
+    /// <summary>The wax cap (stage 7.5).</summary>
+    public decimal WaxStorage => Engine.WaxStorage;
+    public bool WaxIsFull => Engine.IsWaxFull;
+    /// <summary>The first bee has been caught: the combs make honey from then on, even at 0 free bees.</summary>
+    public bool HiveStarted => Engine.HiveStarted;
     public string BearName => State.BearName;
     public long Trades => State.Trades;
     public BeekeeperTool? NextTool => Engine.NextTool;
@@ -221,6 +239,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public int BedRowCount => Math.Max(BedCount, State.Beds.Count);
 
     public bool HoneyRevealed => State.HoneyRevealed;
+    /// <summary>The Hive card: the first bee, or the first whole wax from the drip (stage 7.5: wax
+    /// can come before any bee is caught).</summary>
+    public bool HiveCardShown => State.HoneyRevealed || State.WaxRevealed;
     public bool BearRevealed => State.BearRevealed;
     public bool BeebitsRevealed => State.BeebitsRevealed;
     public bool WaxRevealed => State.WaxRevealed;
@@ -261,9 +282,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         get
         {
             var offers = new List<BeekeeperTradeOffer>();
+            // Stage 7.5 (spec 016): the bundle of the moment, 10 honey, or 8 under the agreement.
             if (State.BearRevealed)
                 offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
-                    Config.HoneyPerBeebit, "honey", 1m, "beebits", CanSell, SellTen, SellAll));
+                    Engine.HoneyPerBeebitNow, "honey", 1m, "beebits", CanSell, SellTen, SellAll));
+            // Cut in stage 7.5 (spec 016): Config.HoneyPerBeebit (always 10).
             if (State.HippiesRevealed)
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
                     Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
@@ -331,8 +354,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>How long the pantry lasts at this rate (0 while she rests).</summary>
     public decimal PantrySecondsLeft => Engine.PantrySecondsLeft;
     public bool HasTradeAgreement => State.HasTradeAgreement;
-    /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
-    public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
+    /// <summary>Honey in one bundle right now (10, or 8 under the agreement).</summary>
+    public decimal HoneyPerBeebitNow => Engine.HoneyPerBeebitNow;
+    // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.
+    // /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
+    // public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
 
     // Stage 6: specialties and the wasp emissary
     /// <summary>The hive's specialties (foraging, guarding, nursing, resin), from the sprouted plants.</summary>
@@ -386,6 +412,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             var specialties = Engine.Specialties;
             var bees = new List<BeekeeperHiveRow>
             {
+                // Stage 7.5: free bees (they can be 0 in a running game).
                 new(BeekeeperHiveRows.Honeybees, true, State.Bees,
                     Rate: Engine.HasQueen ? Engine.QueenBeesPerSecondNow : null),
                 new(BeekeeperHiveRows.Queen, Engine.HasQueen, Engine.IsQueenLaying ? 1m : 0m),
@@ -410,10 +437,16 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupBees, bees),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupHive, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.Honey, true, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
-                    new(BeekeeperHiveRows.Wax, State.WaxRevealed, State.Wax, Rate: Engine.WaxPerSecondNow),
+                    // Stage 7.5 (spec 016): honey from the first bee; wax with its cap, rounded down.
+                    new(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
+                    new(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), Engine.WaxStorage, Engine.WaxPerSecondNow),
                     new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
-                    new(BeekeeperHiveRows.CombsFull, StorageIsFull),
+                    new(BeekeeperHiveRows.CombsFull, StorageIsFull && Engine.HiveStarted),
+                    new(BeekeeperHiveRows.WaxFull, State.WaxRevealed && Engine.IsWaxFull),
+                    // Cut in stage 7.5 (spec 016):
+                    // new(BeekeeperHiveRows.Honey, true, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow),
+                    // new(BeekeeperHiveRows.Wax, State.WaxRevealed, State.Wax, Rate: Engine.WaxPerSecondNow),
+                    // new(BeekeeperHiveRows.CombsFull, StorageIsFull),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupGarden, new BeekeeperHiveRow[]
                 {
@@ -452,6 +485,27 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanBuyWaxCatcher => Engine.CanBuyWaxCatcher;
     public bool CanBuildComb => Engine.CanBuildComb;
 
+    // ---- stage 7.5: walls and capacity upgrades. A wall (a price above a cap) is its own state,
+    // separate from "can't afford yet": the view only reads these (spec 016, FR-710).
+    /// <summary>The comb row is on screen (the Combs panel, at The Workbench).</summary>
+    public bool CombRowShown => Engine.CombRowShown;
+    /// <summary>The next comb's wax price is above the wax cap: it needs more storage.</summary>
+    public bool CombIsWall => Engine.CombIsWall;
+    /// <summary>The wooden hive's wax price is above the wax cap.</summary>
+    public bool WoodenHiveIsWall => Engine.WoodenHiveIsWall;
+    /// <summary>A Shop upgrade's wax price is above the wax cap.</summary>
+    public bool UpgradeIsWall(string id) => Engine.UpgradeIsWall(id);
+    /// <summary>Honey Super and Wax Tray rows (Shop open and Combs panel shown).</summary>
+    public bool CapacityUpgradesShown => Engine.CapacityUpgradesShown;
+    public int HoneySupers => State.HoneySupers;
+    public int WaxTrays => State.WaxTrays;
+    public decimal HoneySuperCost => Engine.HoneySuperCost;
+    public decimal WaxTrayCost => Engine.WaxTrayCost;
+    public decimal HoneySuperCapacity => Config.HoneySuperCapacity * Engine.StorageMultiplier;
+    public decimal WaxTrayCapacity => Config.WaxTrayCapacity * Engine.StorageMultiplier;
+    public bool CanBuyHoneySuper => Engine.CanBuyHoneySuper;
+    public bool CanBuyWaxTray => Engine.CanBuyWaxTray;
+
     /// <summary>What the last Catch Bee click did; <see cref="CatchSerial"/> goes up on every
     /// click so the view can play its popup even when two clicks look the same.</summary>
     public CatchResult? LastCatch { get; private set; }
@@ -484,6 +538,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(CanBuildComb))]
     public void BuildComb() => Apply(Engine.BuildComb());
+
+    [RelayCommand(CanExecute = nameof(CanBuyHoneySuper))]
+    public void BuyHoneySuper() => Apply(Engine.BuyHoneySuper());
+
+    [RelayCommand(CanExecute = nameof(CanBuyWaxTray))]
+    public void BuyWaxTray() => Apply(Engine.BuyWaxTray());
 
     [RelayCommand(CanExecute = nameof(CanCraftBeeswax))]
     public void CraftBeeswax() => Apply(Engine.CraftBeeswax());
@@ -644,6 +704,22 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
+    /// <summary>Debug builds only (stage 7.5): five more combs, free of charge.</summary>
+    public void DebugAddCombs(int count)
+    {
+        LogEvents(Engine.DebugAddCombs(count));
+        SaveNow();
+        Refresh();
+    }
+
+    /// <summary>Debug builds only (stage 7.5): wax up to the wax cap.</summary>
+    public void DebugFillWax()
+    {
+        LogEvents(Engine.DebugFillWax());
+        SaveNow();
+        Refresh();
+    }
+
     /// <summary>Debug builds only: credits time away as if the app had been closed, welcome-back lines included.</summary>
     public void DebugSpendAway(decimal seconds)
     {
@@ -683,8 +759,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>The "Start over? Your hive will be lost." question is only asked when there
-    /// is something to lose (a brand-new hive with no bees starts over silently).</summary>
-    public bool NewGameNeedsConfirmation => State.Bees > 0m;
+    /// is something to lose: once the first bee has been caught, even with 0 free bees left (stage
+    /// 7.5, FR-713). A brand-new hive with no bee caught yet starts over silently.</summary>
+    public bool NewGameNeedsConfirmation => Engine.HiveStarted;
+    // Cut in stage 7.5 (spec 016): public bool NewGameNeedsConfirmation => State.Bees > 0m;
 
     /// <summary>Starts over. The view calls this after any confirmation.</summary>
     public void StartNewGame()
@@ -826,6 +904,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         BuyNextToolCommand.NotifyCanExecuteChanged();
         BuyWaxCatcherCommand.NotifyCanExecuteChanged();
         BuildCombCommand.NotifyCanExecuteChanged();
+        BuyHoneySuperCommand.NotifyCanExecuteChanged();
+        BuyWaxTrayCommand.NotifyCanExecuteChanged();
         CraftBeeswaxCommand.NotifyCanExecuteChanged();
         CraftRepellentCommand.NotifyCanExecuteChanged();
         TradeTenCandlesCommand.NotifyCanExecuteChanged();

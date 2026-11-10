@@ -30,7 +30,8 @@ public class BeekeeperStage5Tests : IDisposable
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 
     // A wooden hive with the queen settled, lots of room, and `beeBread` in the pantry.
-    // 0.01 honey per bee per second × 1.25 for the wooden hive = 0.0125.
+    // Stage 7.5 (spec 016): the combs make the honey (0.2 × 1.25 a comb a second) and the free bees
+    // make the wax (0.005 + 0.0001 a bee a second), so the queen's growing line now feeds wax.
     private static BeekeeperState Queen(decimal beeBread, decimal bees = 1000m, int combs = 1000) => new()
     {
         Bees = bees, HasWoodenHive = true, QueenSettled = true, BeeBread = beeBread,
@@ -100,13 +101,25 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal(20m, r.BeesRaised);
     }
 
+    // Cut in stage 7.5 (spec 016): honey came from every bee-second.
+    // [Fact]
+    // public void HoneyOverAStretch_IsTheAreaUnderTheGrowingLine()
+    // {
+    //     var e = Make(Queen(10m));
+    //     e.AdvanceAway(60m);
+    //     // 0.0125 × (1000 × 60 + 20/60 × 60² / 2) = 0.0125 × 60,600
+    //     Assert.Equal(757.5, (double)e.State.Honey, Places);
+    // }
+
     [Fact]
-    public void HoneyOverAStretch_IsTheAreaUnderTheGrowingLine()
+    public void WaxOverAStretch_IsTheAreaUnderTheGrowingLine_AndHoneyIsFlat()
     {
         var e = Make(Queen(10m));
         e.AdvanceAway(60m);
-        // 0.0125 × (1000 × 60 + 20/60 × 60² / 2) = 0.0125 × 60,600
-        Assert.Equal(757.5, (double)e.State.Honey, Places);
+        // 0.005 × 60 + 0.0001 × (1000 × 60 + 20/60 × 60² / 2) = 0.3 + 6.06
+        Assert.Equal(6.36, (double)e.State.Wax, Places);
+        // 1,000 combs × 0.2 × 1.25 × 60, whatever the bees did
+        Assert.Equal(15000m, e.State.Honey);
     }
 
     [Fact]
@@ -118,8 +131,11 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal(0m, e.State.BeeBread);
         Assert.True(Has(r.Events, BeekeeperEvents.PantryEmpty));
         Assert.False(e.IsQueenLaying);
-        // 0.0125 × (1000 × 600 + (1/3) × 300² / 2 + 100 × 300)
-        Assert.Equal(8062.5, (double)e.State.Honey, Places);
+        // Stage 7.5: wax = 0.005 × 600 + 0.0001 × (1000 × 600 + (1/3) × 300² / 2 + 100 × 300)
+        Assert.Equal(67.5, (double)e.State.Wax, Places);
+        // Cut in stage 7.5 (spec 016): honey followed the bees.
+        // // 0.0125 × (1000 × 600 + (1/3) × 300² / 2 + 100 × 300)
+        // Assert.Equal(8062.5, (double)e.State.Honey, Places);
     }
 
     [Fact]
@@ -166,9 +182,14 @@ public class BeekeeperStage5Tests : IDisposable
         var e = Make(Queen(10m));
         e.State.CalmSecondsLeft = 60m;
         e.Advance(120m);
-        // Calm first: 2 × (1000×60 + 600) = 121,200; then (1020×60 + 600) = 61,800. × 0.0125
-        Assert.Equal(2287.5, (double)e.State.Honey, Places);
+        // Stage 7.5: calm doubles the combs' honey only: 250 a second × (2 × 60 + 60).
+        Assert.Equal(45000m, e.State.Honey);
+        // The wax follows the growing bees, calm or not: 0.005 × 120 + 0.0001 × (60,600 + 61,800).
+        Assert.Equal(12.84, (double)e.State.Wax, Places);
         Assert.Equal(1040m, e.State.Bees);
+        // Cut in stage 7.5 (spec 016):
+        // // Calm first: 2 × (1000×60 + 600) = 121,200; then (1020×60 + 600) = 61,800. × 0.0125
+        // Assert.Equal(2287.5, (double)e.State.Honey, Places);
     }
 
     [Fact]
@@ -200,14 +221,15 @@ public class BeekeeperStage5Tests : IDisposable
     {
         Assert.Equal((double)live.State.Bees, (double)away.State.Bees, Places);
         Assert.Equal((double)live.State.Honey, (double)away.State.Honey, Places);
-        // Wax drops in whole batches, so a hair of rounding can land either side of a batch:
-        // compare all the honey counted towards wax instead, and the wax to within one batch.
-        decimal waxHoney(BeekeeperEngine x) => x.State.Wax / x.WaxPerBatch * x.Config.HoneyPerWax + x.State.WaxProgress;
-        Assert.Equal((double)waxHoney(live), (double)waxHoney(away), 4);
-        Assert.True(Math.Abs(live.State.Wax - away.State.Wax) <= live.WaxPerBatch);
+        // Stage 7.5: wax is fractional and follows the free bees, so it compares directly.
+        Assert.Equal((double)live.State.Wax, (double)away.State.Wax, Places);
+        // Cut in stage 7.5 (spec 016): wax dropped in whole batches of honey.
+        // decimal waxHoney(BeekeeperEngine x) => x.State.Wax / x.WaxPerBatch * x.Config.HoneyPerWax + x.State.WaxProgress;
+        // Assert.Equal((double)waxHoney(live), (double)waxHoney(away), 4);
+        // Assert.True(Math.Abs(live.State.Wax - away.State.Wax) <= live.WaxPerBatch);
         Assert.Equal((double)live.State.BeeBread, (double)away.State.BeeBread, Places);
         Assert.Equal(live.State.Beebits, away.State.Beebits);
-        Assert.Equal((double)live.State.AgreementHoneyProgress, (double)away.State.AgreementHoneyProgress, 4);
+        // Cut in stage 7.5 (spec 016): Assert.Equal((double)live.State.AgreementHoneyProgress, (double)away.State.AgreementHoneyProgress, 4);
     }
 
     private static (BeekeeperEngine live, BeekeeperEngine away) RunBoth(Func<BeekeeperState> start, int seconds)
@@ -236,21 +258,40 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal(1200m, away.State.Bees);
     }
 
+    // Cut in stage 7.5 (spec 016): the bear sold the overflow under the agreement.
+    // [Fact]
+    // public void LiveAndAway_Agree_WithFullCombsAndTheAgreement()
+    // {
+    //     BeekeeperState Start()
+    //     {
+    //         var s = Queen(5m, combs: 0);
+    //         s.Honey = 150m;
+    //         s.HasTradeAgreement = true;
+    //         s.Trades = 100;
+    //         return s;
+    //     }
+    //     var (live, away) = RunBoth(Start, 3600);
+    //     AssertSame(live, away);
+    //     Assert.Equal(200m, away.State.Honey);
+    //     Assert.True(away.State.Beebits > 0m);
+    // }
+
     [Fact]
-    public void LiveAndAway_Agree_WithFullCombsAndTheAgreement()
+    public void LiveAndAway_Agree_WithFullCombsAndTheAgreement_NoAutoSale()
     {
         BeekeeperState Start()
         {
-            var s = Queen(5m, combs: 0);
+            var s = Queen(5m, combs: 1);   // honey cap 200, wax cap 20: both fill part-way
             s.Honey = 150m;
             s.HasTradeAgreement = true;
-            s.Trades = 100;
+            s.Trades = 25;
             return s;
         }
         var (live, away) = RunBoth(Start, 3600);
         AssertSame(live, away);
         Assert.Equal(200m, away.State.Honey);
-        Assert.True(away.State.Beebits > 0m);
+        Assert.Equal(20m, away.State.Wax);
+        Assert.Equal(0m, away.State.Beebits);   // no auto-sale, live or away
     }
 
     // ============================================================ the slice cap
@@ -277,104 +318,169 @@ public class BeekeeperStage5Tests : IDisposable
 
     // ============================================================ the trade agreement
 
+    // Cut in stage 7.5 (spec 016): the agreement came at 100 trades.
+    // [Fact]
+    // public void TheHundredthBearTrade_BringsTheAgreement()
+    // {
+    //     var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 99, Honey = 100m });
+    //     var r = e.SellAll();
+    //     var offer = r.Events.Single(x => x.Key == BeekeeperEvents.TradeAgreement);
+    //     Assert.Equal("Bruno", offer.Text);
+    //     Assert.True(e.State.HasTradeAgreement);
+    //     Assert.Equal(100, e.State.Trades);   // Sell All counts as one
+    //     Assert.False(Has(e.SellTen().Events, BeekeeperEvents.TradeAgreement));
+    // }
+
     [Fact]
-    public void TheHundredthBearTrade_BringsTheAgreement()
+    public void The25thBearTrade_BringsTheAgreement_AndIsPaidAtTheOldRate()
     {
-        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 99, Honey = 100m });
+        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 24, Honey = 100m });
         var r = e.SellAll();
         var offer = r.Events.Single(x => x.Key == BeekeeperEvents.TradeAgreement);
         Assert.Equal("Bruno", offer.Text);
         Assert.True(e.State.HasTradeAgreement);
-        Assert.Equal(100, e.State.Trades);   // Sell All counts as one
+        Assert.Equal(25, e.State.Trades);   // Sell All counts as one
+        Assert.Equal(10m, e.State.Beebits); // the sale that reached it: 10 honey a Beebit
+        Assert.Equal(0m, e.State.Honey);
+        var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
+        Assert.Equal(100m, sale.Value2);
+        e.State.Honey = 8m;
         Assert.False(Has(e.SellTen().Events, BeekeeperEvents.TradeAgreement));
+        Assert.Equal(11m, e.State.Beebits); // from now on 8 honey a Beebit
     }
 
+    // Cut in stage 7.5 (spec 016): the agreement came at 100 trades.
+    // [Fact]
+    // public void AnOlderSavePast100Trades_GetsTheAgreementOnLoad()
+    // {
+    //     var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 150 });
+    //     Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.TradeAgreement));
+    //     Assert.True(e.State.HasTradeAgreement);
+    // }
+
     [Fact]
-    public void AnOlderSavePast100Trades_GetsTheAgreementOnLoad()
+    public void ASavePast25Trades_GetsTheAgreementOnLoad()
     {
-        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 150 });
+        var e = Make(new BeekeeperState { BearRevealed = true, BearName = "Bruno", Trades = 30 });
         Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.TradeAgreement));
         Assert.True(e.State.HasTradeAgreement);
     }
 
     [Fact]
-    public void WithTheAgreement_OverflowSellsAtHalfPrice_FractionsKept()
+    public void WithTheAgreement_SellingUsesBundlesOf8_AndTheLeftoverStays()
     {
-        // Skep, 1000 bees: 10 honey a second. Combs full, so 30 s = 300 honey, all overflow.
-        var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, BearName = "Bruno" });
+        var e = Make(new BeekeeperState { Honey = 47m, HasTradeAgreement = true, BearName = "Bruno" });
+        Assert.Equal(8m, e.HoneyPerBeebitNow);
+        var r = e.SellAll();
+        Assert.Equal(5m, e.State.Beebits);
+        Assert.Equal(7m, e.State.Honey);
+        Assert.Equal(40m, r.Events.Single(x => x.Key == BeekeeperEvents.Sale).Value2);
+
+        var low = Make(new BeekeeperState { Honey = 8m, HasTradeAgreement = true });
+        Assert.True(low.CanSell);
+        var none = Make(new BeekeeperState { Honey = 9m });
+        Assert.False(none.CanSell);
+        Assert.Equal(10m, none.HoneyPerBeebitNow);
+        Assert.False(Make(new BeekeeperState { Honey = 7.9m, HasTradeAgreement = true }).CanSell);
+    }
+
+    [Fact]
+    public void WithTheAgreement_FullCombsSimplyStop_AndNoBeebitsArrive()
+    {
+        var e = Make(new BeekeeperState { HoneyRevealed = true, Combs = 50, Honey = 14_900m, HasTradeAgreement = true, BearName = "Bruno" });
         var r = e.Advance(31m);
-        Assert.Equal(15m, e.State.Beebits);            // 310 / 20 = 15, 10 honey kept towards the next
-        Assert.Equal(10m, e.State.AgreementHoneyProgress);
-        Assert.Equal(15m, r.AgreementBeebits);
-        Assert.Equal(200m, e.State.Honey);
-        Assert.Equal(6m, e.State.Wax);                 // wax still follows all 310 honey made
-    }
-
-    [Fact]
-    public void WithoutTheAgreement_OverflowIsLost()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, BearName = "Bruno" });
-        e.Advance(30m);
+        Assert.Equal(e.HoneyStorage, e.State.Honey);
         Assert.Equal(0m, e.State.Beebits);
-        Assert.Equal(0m, e.State.AgreementHoneyProgress);
+        Assert.Equal(0, e.State.Trades);
+        var away = e.AdvanceAway(3600m);
+        Assert.Equal(0m, e.State.Beebits);
+        Assert.DoesNotContain(away.WelcomeBack, x => x.Key == "welcome_back_bear");
     }
 
-    [Fact]
-    public void SellingByHand_StaysAtFullPrice_AndAutoSalesAreNotTrades()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, BearRevealed = true, Trades = 100, BearName = "Bruno" });
-        e.Advance(20m);
-        Assert.Equal(100, e.State.Trades);
-        decimal before = e.State.Beebits;
-        e.SellTen();
-        Assert.Equal(before + 1m, e.State.Beebits);
-        Assert.Equal(190m, e.State.Honey);
-    }
+    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
+    // [Fact]
+    // public void WithTheAgreement_OverflowSellsAtHalfPrice_FractionsKept()
+    // {
+    //     // Skep, 1000 bees: 10 honey a second. Combs full, so 30 s = 300 honey, all overflow.
+    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, BearName = "Bruno" });
+    //     var r = e.Advance(31m);
+    //     Assert.Equal(15m, e.State.Beebits);            // 310 / 20 = 15, 10 honey kept towards the next
+    //     Assert.Equal(10m, e.State.AgreementHoneyProgress);
+    //     Assert.Equal(15m, r.AgreementBeebits);
+    //     Assert.Equal(200m, e.State.Honey);
+    //     Assert.Equal(6m, e.State.Wax);                 // wax still follows all 310 honey made
+    // }
 
-    [Fact]
-    public void CalmBees_SendTheirDoubleHoneyToTheBearToo()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, CalmSecondsLeft = 60m, BearName = "Bruno" });
-        e.Advance(20m);   // 20 honey a second while calm
-        Assert.Equal(20m, e.State.Beebits);
-    }
+    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
+    // [Fact]
+    // public void WithoutTheAgreement_OverflowIsLost()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, BearName = "Bruno" });
+    //     e.Advance(30m);
+    //     Assert.Equal(0m, e.State.Beebits);
+    //     Assert.Equal(0m, e.State.AgreementHoneyProgress);
+    // }
 
-    [Fact]
-    public void AgreementRate_ShowsOnlyWhileTheCombsAreFull()
-    {
-        var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true });
-        Assert.Equal(0.5m, e.AgreementBeebitsPerSecondNow);
-        e.State.Honey = 100m;
-        Assert.Equal(0m, e.AgreementBeebitsPerSecondNow);
-    }
+    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
+    // [Fact]
+    // public void SellingByHand_StaysAtFullPrice_AndAutoSalesAreNotTrades()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, BearRevealed = true, Trades = 100, BearName = "Bruno" });
+    //     e.Advance(20m);
+    //     Assert.Equal(100, e.State.Trades);
+    //     decimal before = e.State.Beebits;
+    //     e.SellTen();
+    //     Assert.Equal(before + 1m, e.State.Beebits);
+    //     Assert.Equal(190m, e.State.Honey);
+    // }
+
+    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
+    // [Fact]
+    // public void CalmBees_SendTheirDoubleHoneyToTheBearToo()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, CalmSecondsLeft = 60m, BearName = "Bruno" });
+    //     e.Advance(20m);   // 20 honey a second while calm
+    //     Assert.Equal(20m, e.State.Beebits);
+    // }
+
+    // Cut in stage 7.5 (spec 016): the auto-sale is commented out; see the tests of the better rate above.
+    // [Fact]
+    // public void AgreementRate_ShowsOnlyWhileTheCombsAreFull()
+    // {
+    //     var e = Make(new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true });
+    //     Assert.Equal(0.5m, e.AgreementBeebitsPerSecondNow);
+    //     e.State.Honey = 100m;
+    //     Assert.Equal(0m, e.AgreementBeebitsPerSecondNow);
+    // }
 
     // ============================================================ welcome back
 
     [Fact]
     public void WelcomeBack_SaysWhatHappened_LineByLine()
     {
-        var s = Queen(10m, combs: 0);
+        var s = Queen(10m, combs: 1);
         s.HasTradeAgreement = true;
         var e = Make(s);
         var r = e.AdvanceAway(8m * 3600m);
         var keys = r.WelcomeBack.Select(x => x.Key).ToList();
-        // In reading order, top line first: honey, queen, bear, pantry.
+        // In reading order, top line first: honey, queen, pantry (stage 7.5: no bear line).
         Assert.Equal(new[]
         {
-            BeekeeperEvents.WelcomeBack, BeekeeperEvents.WelcomeBackQueen,
-            BeekeeperEvents.WelcomeBackBear, BeekeeperEvents.WelcomeBackPantry,
+            BeekeeperEvents.WelcomeBack, BeekeeperEvents.WelcomeBackQueen, BeekeeperEvents.WelcomeBackPantry,
         }, keys);
         Assert.All(r.Events, x => Assert.False(BeekeeperEvents.IsWelcomeBack(x.Key)));
         Assert.False(Has(r.Events, BeekeeperEvents.PantryEmpty));
         Assert.Equal(1000m, r.WelcomeBack.Single(x => x.Key == BeekeeperEvents.WelcomeBackQueen).Value);
-        Assert.Equal(e.State.Beebits, r.WelcomeBack.Single(x => x.Key == BeekeeperEvents.WelcomeBackBear).Value);
+        Assert.Equal(200m, r.WelcomeBack.Single(x => x.Key == BeekeeperEvents.WelcomeBack).Value);
+        Assert.Equal(0m, e.State.Beebits);
+        // Cut in stage 7.5 (spec 016): BeekeeperEvents.WelcomeBackBear and its Beebits.
         Assert.True(r.PantryEmptied);
     }
 
     [Fact]
     public void WelcomeBack_LeavesOutWhatDidNotHappen()
     {
-        var e = Make(new BeekeeperState { Bees = 10m, Combs = 10 });
+        var e = Make(new BeekeeperState { Bees = 10m, Combs = 10, HoneyRevealed = true });
         var keys = e.AdvanceAway(600m).WelcomeBack.Select(x => x.Key).ToList();
         Assert.Equal(new[] { BeekeeperEvents.WelcomeBack }, keys);
     }
@@ -388,7 +494,7 @@ public class BeekeeperStage5Tests : IDisposable
         var path = Path.Combine(_dir, "v5.json");
         var s = Queen(4.5m);
         s.HasTradeAgreement = true;
-        s.AgreementHoneyProgress = 12.25m;
+        // Cut in stage 7.5 (spec 016): s.AgreementHoneyProgress = 12.25m;
         s.PantryEmptyAnnounced = true;
         Assert.True(BeekeeperSaveService.Save(s, path, DateTime.UtcNow));
 
@@ -396,39 +502,53 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.True(back.QueenSettled);
         Assert.True(back.HasTradeAgreement);
-        Assert.Equal(12.25m, back.AgreementHoneyProgress);
+        // Cut in stage 7.5 (spec 016): Assert.Equal(12.25m, back.AgreementHoneyProgress);
         Assert.Equal(4.5m, back.BeeBread);
         Assert.True(back.PantryEmptyAnnounced);
     }
 
+    // Cut in stage 7.5 (spec 016): older saves no longer load; they start a new game.
+    // [Fact]
+    // public void AVersion4Save_LoadsWithNothingLost_AndGetsTheQueenAndAgreement()
+    // {
+    //     Directory.CreateDirectory(_dir);
+    //     var path = Path.Combine(_dir, "v4.json");
+    //     File.WriteAllText(path, "{\"Version\":4,\"Bees\":5000,\"Honey\":120.5,\"Wax\":30,\"Beebits\":77,\"BearName\":\"Bruno\","
+    //         + "\"BearRevealed\":true,\"Trades\":140,\"HasWoodenHive\":true,\"BeeBread\":7,\"Pollen\":3,\"ForagerBees\":12}");
+    //     var s = BeekeeperSaveService.Load(path)!;
+    //     Assert.Equal(5000m, s.Bees);
+    //     Assert.Equal(120.5m, s.Honey);
+    //     Assert.Equal(77m, s.Beebits);
+    //     Assert.Equal(7m, s.BeeBread);
+    //     Assert.Equal(12m, s.ForagerBees);
+    //     Assert.False(s.QueenSettled);
+    //     Assert.False(s.HasTradeAgreement);
+    //
+    //     var e = Make(s);
+    //     var events = e.RevealOnLoad();
+    //     Assert.True(Has(events, BeekeeperEvents.QueenSettles));
+    //     Assert.True(Has(events, BeekeeperEvents.TradeAgreement));
+    // }
+
     [Fact]
-    public void AVersion4Save_LoadsWithNothingLost_AndGetsTheQueenAndAgreement()
+    public void AVersion4Save_StartsANewGame()
     {
         Directory.CreateDirectory(_dir);
         var path = Path.Combine(_dir, "v4.json");
         File.WriteAllText(path, "{\"Version\":4,\"Bees\":5000,\"Honey\":120.5,\"Wax\":30,\"Beebits\":77,\"BearName\":\"Bruno\","
             + "\"BearRevealed\":true,\"Trades\":140,\"HasWoodenHive\":true,\"BeeBread\":7,\"Pollen\":3,\"ForagerBees\":12}");
-        var s = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(5000m, s.Bees);
-        Assert.Equal(120.5m, s.Honey);
-        Assert.Equal(77m, s.Beebits);
-        Assert.Equal(7m, s.BeeBread);
-        Assert.Equal(12m, s.ForagerBees);
-        Assert.False(s.QueenSettled);
-        Assert.False(s.HasTradeAgreement);
-
-        var e = Make(s);
-        var events = e.RevealOnLoad();
-        Assert.True(Has(events, BeekeeperEvents.QueenSettles));
-        Assert.True(Has(events, BeekeeperEvents.TradeAgreement));
-    }
-
-    [Fact]
-    public void ANegativeAgreementProgress_IsRejected()
-    {
-        Directory.CreateDirectory(_dir);
-        var path = Path.Combine(_dir, "bad.json");
-        File.WriteAllText(path, "{\"Version\":5,\"AgreementHoneyProgress\":-1}");
         Assert.Null(BeekeeperSaveService.Load(path));
+        Assert.False(File.Exists(path));
+        Assert.True(File.Exists(path + ".unreadable"));
     }
+
+    // Cut in stage 7.5 (spec 016): the agreement progress is no longer saved.
+    // [Fact]
+    // public void ANegativeAgreementProgress_IsRejected()
+    // {
+    //     Directory.CreateDirectory(_dir);
+    //     var path = Path.Combine(_dir, "bad.json");
+    //     File.WriteAllText(path, "{\"Version\":5,\"AgreementHoneyProgress\":-1}");
+    //     Assert.Null(BeekeeperSaveService.Load(path));
+    // }
 }

@@ -90,35 +90,42 @@ public class BeekeeperQueenViewModelTests : IDisposable
     }
 
     [Fact]
-    public void BearTradesTo99_ThenOneSale_BringsTheAgreement()
+    public void BearTradesToAlmostAgreement_ThenOneSale_BringsTheBetterRate()
     {
         var vm = Make(new Clock(), new BeekeeperState { Bees = 10m, Honey = 50m, HoneyRevealed = true, BearRevealed = true, BearName = "Bruno" });
         vm.DebugBearTradesToAlmostAgreement();
-        Assert.Equal(99, vm.Trades);
+        Assert.Equal(24, vm.Trades);          // stage 7.5: the agreement comes at 25 (was 100)
         Assert.False(vm.HasTradeAgreement);
-        vm.SellTen();
+        Assert.Equal(10m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);
+        vm.SellTen();                         // paid at the old rate
+        Assert.Equal(40m, vm.Honey);
         Assert.True(vm.HasTradeAgreement);
         Assert.True(Logged(vm, BeekeeperEvents.TradeAgreement));
+        Assert.Equal(8m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);   // every button shows the new bundle
+        vm.SellTen();
+        Assert.Equal(32m, vm.Honey);
     }
 
-    [Fact]
-    public void TheAgreementRate_ShowsWhileTheCombsAreFull()
-    {
-        var vm = Make(new Clock(), new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, HoneyRevealed = true, BearName = "Bruno" });
-        Assert.Equal(0.5m, vm.AgreementBeebitsPerSecond);
-    }
+    // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.
+    // [Fact]
+    // public void TheAgreementRate_ShowsWhileTheCombsAreFull()
+    // {
+    //     var vm = Make(new Clock(), new BeekeeperState { Bees = 1000m, Honey = 200m, HasTradeAgreement = true, HoneyRevealed = true, BearName = "Bruno" });
+    //     Assert.Equal(0.5m, vm.AgreementBeebitsPerSecond);
+    // }
 
     [Fact]
     public void SpendingTimeAway_LogsTheWelcomeBackLines()
     {
         var s = Queen(10m);
-        s.Combs = 0;
+        s.Combs = 1;
         s.HasTradeAgreement = true;
         var vm = Make(new Clock(), s);
         vm.DebugSpendAway(8m * 3600m);
         Assert.True(Logged(vm, BeekeeperEvents.WelcomeBack));
         Assert.True(Logged(vm, BeekeeperEvents.WelcomeBackQueen));
-        Assert.True(Logged(vm, BeekeeperEvents.WelcomeBackBear));
+        // Cut in stage 7.5 (spec 016): Assert.True(Logged(vm, BeekeeperEvents.WelcomeBackBear));
+        Assert.Equal(0m, vm.Beebits);   // no auto-sale
         Assert.True(Logged(vm, BeekeeperEvents.WelcomeBackPantry));
         Assert.Equal(BeekeeperEvents.WelcomeBack, vm.Log[0].Key);   // newest first: the honey line on top
         Assert.Equal(2000m, Math.Round(vm.Bees, 6));

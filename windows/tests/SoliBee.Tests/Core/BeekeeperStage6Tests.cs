@@ -27,7 +27,8 @@ public class BeekeeperStage6Tests : IDisposable
         public int Next(int maxExclusive) => 0;
     }
 
-    private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    private static readonly BeekeeperConfig BigCombs = new() { StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
         => new(config ?? BeekeeperConfig.Default, state, new FakeRandom());
@@ -36,7 +37,8 @@ public class BeekeeperStage6Tests : IDisposable
 
     private static BeekeeperState Garden(params string[] plants)
     {
-        var s = new BeekeeperState { GardenRevealed = true, SeedsGiven = plants.Length, SeedsPlanted = plants.Length };
+        var s = new BeekeeperState { GardenRevealed = true };
+        // Cut in stage 7.5 (spec 016): SeedsGiven = plants.Length, SeedsPlanted = plants.Length (no longer saved).
         s.Plants.AddRange(plants);
         return s;
     }
@@ -63,7 +65,7 @@ public class BeekeeperStage6Tests : IDisposable
         Assert.Equal(30m, e.State.Pollen);
         e.Advance(600m);
         Assert.Equal(60m, e.State.Pollen);
-        Assert.Equal(0m, e.State.ForagerBees);   // no counts any more
+        // Cut in stage 7.5 (spec 016): Assert.Equal(0m, e.State.ForagerBees);   // no counts any more
     }
 
     [Fact]
@@ -100,10 +102,11 @@ public class BeekeeperStage6Tests : IDisposable
     [Fact]
     public void Bramble_GivesGuarding_AQuarterMoreHoney()
     {
-        var e = Make(new BeekeeperState { Bees = 1000m, Plants = { BeekeeperPlants.Bramble } }, BigCombs);
+        // Stage 7.5 (spec 016): 50 combs make 10 honey a second.
+        var e = Make(new BeekeeperState { HoneyRevealed = true, Combs = 50, Plants = { BeekeeperPlants.Bramble } }, BigCombs);
         Assert.Equal(new[] { BeekeeperSpecialties.Guarding }, e.Specialties);
         Assert.Equal(1.25m, e.HiveMultiplier);
-        Assert.Equal(12.5m, e.HoneyPerSecond);        // 1,000 bees × 0.01 × 1.25
+        Assert.Equal(12.5m, e.HoneyPerSecond);        // 50 combs × 0.2 × 1.25
         Assert.Equal(12.5m, e.HoneyPerSecondNow);     // the hover rate sees it
         e.Advance(10m);
         Assert.Equal(125m, e.State.Honey);
@@ -130,7 +133,7 @@ public class BeekeeperStage6Tests : IDisposable
     [Fact]
     public void Guarding_CountsWhileAwayToo()
     {
-        var e = Make(new BeekeeperState { Bees = 1000m, Plants = { BeekeeperPlants.Bramble } }, BigCombs);
+        var e = Make(new BeekeeperState { HoneyRevealed = true, Combs = 50, Plants = { BeekeeperPlants.Bramble } }, BigCombs);
         e.AdvanceAway(100m);
         Assert.Equal(1250m, e.State.Honey);
     }
@@ -139,7 +142,8 @@ public class BeekeeperStage6Tests : IDisposable
     public void Guarding_CountsOnlyFromTheMomentTheBrambleSprouts()
     {
         var s = Garden(BeekeeperPlants.Wildflowers);
-        s.Bees = 1000m;
+        s.HoneyRevealed = true;
+        s.Combs = 50;   // stage 7.5: 10 honey a second from the combs (was 1,000 bees)
         s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });   // the bramble is growing
         var e = Make(s, BigCombs);
         e.AdvanceAway(120m);
@@ -154,7 +158,8 @@ public class BeekeeperStage6Tests : IDisposable
     {
         Bees = 1000m, HasWoodenHive = true, QueenSettled = true, BeeBread = 5m, BeeBreadRevealed = true,
         HoneyRevealed = true, Plants = { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble },
-        GardenRevealed = true, SeedsGiven = 2, SeedsPlanted = 2,
+        GardenRevealed = true, Combs = 50,
+        // Cut in stage 7.5 (spec 016): SeedsGiven = 2, SeedsPlanted = 2,
     };
 
     private static void AssertSame(BeekeeperEngine live, BeekeeperEngine away)
@@ -163,7 +168,8 @@ public class BeekeeperStage6Tests : IDisposable
         Assert.Equal((double)away.State.Bees, (double)live.State.Bees, Places);
         Assert.Equal((double)away.State.Pollen, (double)live.State.Pollen, Places);
         Assert.Equal((double)away.State.BeeBread, (double)live.State.BeeBread, Places);
-        Assert.Equal(away.State.Wax, live.State.Wax);
+        // Stage 7.5: wax is fractional now, so it compares like honey (to 6 places).
+        Assert.Equal((double)away.State.Wax, (double)live.State.Wax, 6);
     }
 
     [Fact]
@@ -198,72 +204,76 @@ public class BeekeeperStage6Tests : IDisposable
 
     // ============================================================ old saves (User Story 3)
 
-    [Fact]
-    public void AnOldSavesCounts_BecomeSpecialties_AndAreAnnouncedOnce()
-    {
-        var s = Garden(BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble);
-        s.ForagerBees = 40m;
-        s.GuardBees = 12m;
-        var e = Make(s);
-        Assert.Equal(new[] { BeekeeperSpecialties.Foraging, BeekeeperSpecialties.Guarding }, e.Specialties);
-        Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
-        Assert.False(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
-        Assert.Equal(40m, e.State.ForagerBees);   // kept in the save, unused
-    }
+    // Cut in stage 7.5 (spec 016): older saves no longer load, so their counts are never announced.
+    // [Fact]
+    // public void AnOldSavesCounts_BecomeSpecialties_AndAreAnnouncedOnce()
+    // {
+    //     var s = Garden(BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble);
+    //     s.ForagerBees = 40m;
+    //     s.GuardBees = 12m;
+    //     var e = Make(s);
+    //     Assert.Equal(new[] { BeekeeperSpecialties.Foraging, BeekeeperSpecialties.Guarding }, e.Specialties);
+    //     Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
+    //     Assert.False(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
+    //     Assert.Equal(40m, e.State.ForagerBees);   // kept in the save, unused
+    // }
 
-    [Fact]
-    public void NoCounts_NoAnnouncement()
-    {
-        var e = Make(Garden(BeekeeperPlants.Wildflowers));
-        Assert.False(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
-        Assert.True(e.State.OldCountsAnnounced);
-    }
+    // Cut in stage 7.5 (spec 016): older saves no longer load, so their counts are never announced.
+    // [Fact]
+    // public void NoCounts_NoAnnouncement()
+    // {
+    //     var e = Make(Garden(BeekeeperPlants.Wildflowers));
+    //     Assert.False(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
+    //     Assert.True(e.State.OldCountsAnnounced);
+    // }
 
-    [Fact]
-    public void AVersion5Save_LoadsWithNothingLost_AndNoBribesYet()
-    {
-        Directory.CreateDirectory(_dir);
-        var path = Path.Combine(_dir, "v5.json");
-        File.WriteAllText(path, "{\"Version\":5,\"Bees\":5000,\"Honey\":120.5,\"Wax\":30,\"BearName\":\"Bruno\","
-            + "\"Seeds\":1,\"SeedsGiven\":2,\"SeedsPlanted\":2,\"GrowSecondsLeft\":125,\"Plants\":[\"wildflowers\"],"
-            + "\"ForagerBees\":33,\"GuardBees\":0,\"Pollen\":17.5,\"BeeBread\":6,\"HasWoodenHive\":true,\"QueenSettled\":true,"
-            + "\"RepellentUnlocked\":true,\"RepellentCandles\":4,\"Log\":[]}");
-        var s = BeekeeperSaveService.Load(path)!;
-        Assert.NotNull(s);
-        Assert.Equal(5000m, s.Bees);
-        Assert.Equal(1, s.Seeds);
-        Assert.Equal(125m, s.GrowSecondsLeft);
-        Assert.Equal(17.5m, s.Pollen);
-        Assert.Equal(6m, s.BeeBread);
-        Assert.True(s.QueenSettled);
-        Assert.Equal(4m, s.RepellentCandles);
-        Assert.Equal(0, s.BribesTotal);
-        Assert.False(s.EmissaryCome);
-        Assert.Equal(0m, s.Paper);
-
-        var e = Make(s);
-        Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
-        // Stage 7: the growing seed went into bed 1, time kept; the seed order was plant order.
-        Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(e.State.Beds).PlantId);
-        Assert.Equal(125m, e.State.Beds[0].SecondsLeft);
-    }
+    // Cut in stage 7.5 (spec 016): older saves start a new game (BeekeeperSaveTests).
+    // [Fact]
+    // public void AVersion5Save_LoadsWithNothingLost_AndNoBribesYet()
+    // {
+    //     Directory.CreateDirectory(_dir);
+    //     var path = Path.Combine(_dir, "v5.json");
+    //     File.WriteAllText(path, "{\"Version\":5,\"Bees\":5000,\"Honey\":120.5,\"Wax\":30,\"BearName\":\"Bruno\","
+    //         + "\"Seeds\":1,\"SeedsGiven\":2,\"SeedsPlanted\":2,\"GrowSecondsLeft\":125,\"Plants\":[\"wildflowers\"],"
+    //         + "\"ForagerBees\":33,\"GuardBees\":0,\"Pollen\":17.5,\"BeeBread\":6,\"HasWoodenHive\":true,\"QueenSettled\":true,"
+    //         + "\"RepellentUnlocked\":true,\"RepellentCandles\":4,\"Log\":[]}");
+    //     var s = BeekeeperSaveService.Load(path)!;
+    //     Assert.NotNull(s);
+    //     Assert.Equal(5000m, s.Bees);
+    //     Assert.Equal(1, s.Seeds);
+    //     Assert.Equal(125m, s.GrowSecondsLeft);
+    //     Assert.Equal(17.5m, s.Pollen);
+    //     Assert.Equal(6m, s.BeeBread);
+    //     Assert.True(s.QueenSettled);
+    //     Assert.Equal(4m, s.RepellentCandles);
+    //     Assert.Equal(0, s.BribesTotal);
+    //     Assert.False(s.EmissaryCome);
+    //     Assert.Equal(0m, s.Paper);
+    //
+    //     var e = Make(s);
+    //     Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.OldCountsSettle));
+    //     // Stage 7: the growing seed went into bed 1, time kept; the seed order was plant order.
+    //     Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(e.State.Beds).PlantId);
+    //     Assert.Equal(125m, e.State.Beds[0].SecondsLeft);
+    // }
 
     [Fact]
     public void Stage6Fields_SurviveASave_AndBadNumbersAreRefused()
     {
         Directory.CreateDirectory(_dir);
         var path = Path.Combine(_dir, "v6.json");
-        var s = new BeekeeperState { BribesTotal = 5, EmissaryCome = true, WaspTrades = 7, Paper = 23m, OldCountsAnnounced = true };
+        var s = new BeekeeperState { BribesTotal = 5, EmissaryCome = true, WaspTrades = 7, Paper = 23m };
+        // Cut in stage 7.5 (spec 016): OldCountsAnnounced = true (no longer saved).
         Assert.True(BeekeeperSaveService.Save(s, path, DateTime.UtcNow));
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(7, back.Version);
+        Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.Equal(5, back.BribesTotal);
         Assert.True(back.EmissaryCome);
         Assert.Equal(7, back.WaspTrades);
         Assert.Equal(23m, back.Paper);
-        Assert.True(back.OldCountsAnnounced);
+        // Cut in stage 7.5 (spec 016): Assert.True(back.OldCountsAnnounced);
 
-        foreach (var bad in new[] { "{\"Version\":6,\"Paper\":-1}", "{\"Version\":6,\"BribesTotal\":-1}", "{\"Version\":6,\"WaspTrades\":-2}" })
+        foreach (var bad in new[] { "{\"Version\":8,\"Paper\":-1}", "{\"Version\":8,\"BribesTotal\":-1}", "{\"Version\":8,\"WaspTrades\":-2}" })
         {
             File.WriteAllText(path, bad);
             Assert.Null(BeekeeperSaveService.Load(path));
@@ -274,7 +284,8 @@ public class BeekeeperStage6Tests : IDisposable
 
     private static BeekeeperState Workshop(decimal honey = 10_000m) => new()
     {
-        Bees = 1000m, Honey = honey, Combs = 2, WorkbenchRevealed = true, HoneyRevealed = true,
+        // Stage 7.5: 50 combs make 10 honey a second (the raid's 3 minutes); the bees are free bees.
+        Bees = 1000m, Honey = honey, Combs = 50, WorkbenchRevealed = true, HoneyRevealed = true,
     };
 
     [Fact]
@@ -284,7 +295,7 @@ public class BeekeeperStage6Tests : IDisposable
         {
             var s = Workshop();
             if (guarded) s.Plants.Add(BeekeeperPlants.Bramble);
-            s.GuardBees = 0m;
+            // Cut in stage 7.5 (spec 016): s.GuardBees = 0m;
             var e = Make(s, BigCombs);
             e.DebugCallWasp();
             var raid = e.ThrowShoe().Events.Single();            // 0.99: a miss, so a raid

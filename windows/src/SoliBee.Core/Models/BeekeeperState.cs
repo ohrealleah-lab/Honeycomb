@@ -28,15 +28,21 @@ public sealed class BeekeeperState
     /// <summary>1 = first build; 2 = stage 2 (Workbench, candles, Hippies, wasps); 3 = stage 3
     /// (more tools, the Smoker); 4 = stage 4 (the Garden, pollen, the wooden hive); 5 = stage 5 (the
     /// queen, the trade agreement); 6 = stage 6 (specialties, the wasp emissary, paper); 7 = stage 7
-    /// (named seeds, beds, propolis, two candles). Older files load as they are: anything newer
-    /// starts at zero, and the engine turns a file older than 7 into named seeds and beds.</summary>
-    public int Version { get; set; } = 7;
+    /// (named seeds, beds, propolis, two candles); 8 = stage 7.5 (combs make the honey, bees as
+    /// currency, honey and wax caps). Since version 8 an older file is not loaded at all: it is moved
+    /// aside and a new game starts (spec 016, FR-714).</summary>
+    public int Version { get; set; } = 8;
 
     // Resources
+    /// <summary>Free bees (stage 7.5, spec 016): the bees not living in a comb. They make the wax,
+    /// and a comb is paid for with them (those bees move in and leave this count for good). The
+    /// catch slice reads this. Can be 0 in a running game: never use it to mean "started".</summary>
     public decimal Bees { get; set; }
     public decimal Honey { get; set; }
-    /// <summary>Honey stored since the last wax dropped (0 up to HoneyPerWax).</summary>
-    public decimal WaxProgress { get; set; }
+    // Cut in stage 7.5 (spec 016): wax no longer follows honey.
+    // /// <summary>Honey stored since the last wax dropped (0 up to HoneyPerWax).</summary>
+    // public decimal WaxProgress { get; set; }
+    /// <summary>Fractional since stage 7.5 (the screen shows it rounded down, as honey).</summary>
     public decimal Wax { get; set; }
     public decimal Beebits { get; set; }
 
@@ -44,7 +50,9 @@ public sealed class BeekeeperState
     /// <summary>0 = Bare Hands, 1 = Gloves, 2 = Net, 3 = Vacuum.</summary>
     public int ToolLevel { get; set; }
     public bool HasWaxCatcher { get; set; }
-    public int Combs { get; set; }
+    /// <summary>Combs held, the starter comb counted (stage 7.5: a new game has 1, never fewer).
+    /// Prices and caps count combs bought, Combs - 1.</summary>
+    public int Combs { get; set; } = 1;
 
     // The bear
     public string BearName { get; set; } = "";
@@ -89,24 +97,24 @@ public sealed class BeekeeperState
     public decimal CalmSecondsLeft { get; set; }
 
     // ----- Stage 4: the Garden (version 4)
-    // Obsolete since stage 7 (spec 015): seeds are named and live in SeedsInHand, SeedsGivenIds
-    // and Beds. These four are still read so stage 4 to 6 files load; the engine turns them into
-    // named seeds and a bed when it loads a file older than version 7, and never uses them again.
-    /// <summary>Obsolete (stage 7): seeds the Hippies gave in all (the Nth was the Nth plant's seed).</summary>
-    public int SeedsGiven { get; set; }
-    /// <summary>Obsolete (stage 7): seeds in hand, not yet planted.</summary>
-    public int Seeds { get; set; }
-    /// <summary>Obsolete (stage 7): seeds planted in all; the next one grew Plants[SeedsPlanted].</summary>
-    public int SeedsPlanted { get; set; }
-    /// <summary>Obsolete (stage 7): seconds until the growing seed sprouted; 0 = nothing growing.</summary>
-    public decimal GrowSecondsLeft { get; set; }
+    // Cut in stage 7.5 (spec 016): files older than version 8 no longer load, so the stage 4 to 6
+    // seed counts that older files were converted from are not needed.
+    // /// <summary>Obsolete (stage 7): seeds the Hippies gave in all (the Nth was the Nth plant's seed).</summary>
+    // public int SeedsGiven { get; set; }
+    // /// <summary>Obsolete (stage 7): seeds in hand, not yet planted.</summary>
+    // public int Seeds { get; set; }
+    // /// <summary>Obsolete (stage 7): seeds planted in all; the next one grew Plants[SeedsPlanted].</summary>
+    // public int SeedsPlanted { get; set; }
+    // /// <summary>Obsolete (stage 7): seconds until the growing seed sprouted; 0 = nothing growing.</summary>
+    // public decimal GrowSecondsLeft { get; set; }
     /// <summary>Plant ids that have sprouted, in order.</summary>
     public List<string> Plants { get; set; } = new();
-    /// <summary>Obsolete since stage 6 (spec 014): plants give specialties instead. Still read so
-    /// stage 4 and 5 files load, and kept so the counts could come back; never used or shown.</summary>
-    public decimal ForagerBees { get; set; }
-    /// <summary>Obsolete since stage 6 (spec 014); see <see cref="ForagerBees"/>.</summary>
-    public decimal GuardBees { get; set; }
+    // Cut in stage 7.5 (spec 016): older files no longer load.
+    // /// <summary>Obsolete since stage 6 (spec 014): plants give specialties instead. Still read so
+    // /// stage 4 and 5 files load, and kept so the counts could come back; never used or shown.</summary>
+    // public decimal ForagerBees { get; set; }
+    // /// <summary>Obsolete since stage 6 (spec 014); see <see cref="ForagerBees"/>.</summary>
+    // public decimal GuardBees { get; set; }
     public decimal Pollen { get; set; }
     public decimal BeeBread { get; set; }
     public bool HasWoodenHive { get; set; }
@@ -120,9 +128,12 @@ public sealed class BeekeeperState
     public bool QueenSettled { get; set; }
     /// <summary>True once "the pantry is empty" has been said; cleared when bee bread comes back.</summary>
     public bool PantryEmptyAnnounced { get; set; }
+    /// <summary>The bear's trade agreement. Since stage 7.5 (spec 016) it means a better selling
+    /// rate (BetterHoneyPerBeebit); before, the bear took the honey that didn't fit.</summary>
     public bool HasTradeAgreement { get; set; }
-    /// <summary>Overflow honey the bear has taken towards the next Beebit (0 up to AgreementHoneyPerBeebit).</summary>
-    public decimal AgreementHoneyProgress { get; set; }
+    // Cut in stage 7.5 (spec 016): no auto-sale.
+    // /// <summary>Overflow honey the bear has taken towards the next Beebit (0 up to AgreementHoneyPerBeebit).</summary>
+    // public decimal AgreementHoneyProgress { get; set; }
 
     // ----- Stage 6: specialties and the wasp emissary (version 6)
     /// <summary>Wasps bribed in all (never reset); the emissary comes at BribesForEmissary.</summary>
@@ -132,9 +143,10 @@ public sealed class BeekeeperState
     /// <summary>Trades with the wasps (their reputation); a batch counts as one.</summary>
     public long WaspTrades { get; set; }
     public decimal Paper { get; set; }
-    /// <summary>True once an older save's forager and guard counts have been turned into
-    /// specialties and announced (said once).</summary>
-    public bool OldCountsAnnounced { get; set; }
+    // Cut in stage 7.5 (spec 016): older files no longer load.
+    // /// <summary>True once an older save's forager and guard counts have been turned into
+    // /// specialties and announced (said once).</summary>
+    // public bool OldCountsAnnounced { get; set; }
 
     // ----- Stage 7: more seeds, the poplar and propolis (version 7)
     /// <summary>Seeds in hand, by plant id, not yet planted.</summary>
@@ -155,6 +167,16 @@ public sealed class BeekeeperState
     public decimal BeeBoostSecondsLeft { get; set; }
     /// <summary>Seconds of sage-propolis left (honey up); burns while the app is closed too.</summary>
     public decimal SagePropolisSecondsLeft { get; set; }
+
+    // ----- Stage 7.5: combs, bees as currency (version 8)
+    /// <summary>Honey Supers bought (each adds honey room; bought again and again).</summary>
+    public int HoneySupers { get; set; }
+    /// <summary>Wax Trays bought (each adds wax room; bought again and again).</summary>
+    public int WaxTrays { get; set; }
+    /// <summary>True once "there's no more room for wax" has been said; cleared when room opens up.</summary>
+    public bool WaxFullAnnounced { get; set; }
+    /// <summary>True once the first wall (a price above a cap) has been told in the log (said once).</summary>
+    public bool FirstWallAnnounced { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

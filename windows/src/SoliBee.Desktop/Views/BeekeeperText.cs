@@ -64,7 +64,24 @@ internal static class BeekeeperText
     public static string WaxPerSecond(string n) => Fill(T(StringKey.BeekeeperWaxPerSecFmt), n);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
     public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
-    public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
+    /// <summary>What a comb gives (stage 7.5): "+0.2 honey a second, room for 300 honey and 2 wax".</summary>
+    public static string CombBlurb(string honeyPerSecond, string honeyRoom, string waxRoom) =>
+        Fill(T(StringKey.BeekeeperCombBlurbFmt), honeyPerSecond, honeyRoom, waxRoom);
+    // Cut in stage 7.5 (spec 016): public static string CombBlurb(string storageAdded) => Fill(T(StringKey.BeekeeperCombBlurbFmt), storageAdded);
+
+    // ---- stage 7.5: walls and capacity upgrades
+    /// <summary>"Needs more wax storage (holds 32)": a price above the wax cap.</summary>
+    public static string WaxWall(string holds) => Fill(T(StringKey.BeekeeperWallWaxFmt), holds);
+    /// <summary>"Needs more honey storage (holds 200)": a price above the honey cap.</summary>
+    public static string HoneyWall(string holds) => Fill(T(StringKey.BeekeeperWallHoneyFmt), holds);
+    /// <summary>The hover on a button held back by a wall: the ways past it.</summary>
+    public static string WaxWallTip => T(StringKey.BeekeeperWallWaxTip);
+    public static string HoneyWallTip => T(StringKey.BeekeeperWallHoneyTip);
+    public static string HoneySuper => T(StringKey.BeekeeperHoneySuper);
+    public static string HoneySuperBlurb(string room, string owned) => Fill(T(StringKey.BeekeeperHoneySuperBlurbFmt), room, owned);
+    public static string WaxTray => T(StringKey.BeekeeperWaxTray);
+    public static string WaxTrayBlurb(string room, string owned) => Fill(T(StringKey.BeekeeperWaxTrayBlurbFmt), room, owned);
+    public static string Add => T(StringKey.BeekeeperAdd);
 
     // ---- stage 2: The Workbench, Hippies, wasps, upgrades
 
@@ -118,12 +135,14 @@ internal static class BeekeeperText
     public static string LightCandle => T(StringKey.BeekeeperLightCandle);
     public static string CandleBurning(string time) => Fill(T(StringKey.BeekeeperCandleBurningFmt), time);
 
-    /// <summary>A price that may mix resources: "300 beebits · 100 wax · 2 sage".</summary>
+    /// <summary>A price that may mix resources: "300 beebits · 100 wax · 2 sage". Since stage 7.5 a
+    /// price can include free bees, shown first ("20 bees · 10 wax").</summary>
     public static string Price(string? beebits, string? wax, string? sage,
                                string? pollen = null, string? honey = null, string? beeBread = null,
-                               string? paper = null, string? propolis = null)
+                               string? paper = null, string? propolis = null, string? bees = null)
     {
         var parts = new System.Collections.Generic.List<string>();
+        if (bees != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeesFmt), bees));
         if (beebits != null) parts.Add(beebits + " " + BeebitsLabel.ToLowerInvariant());
         if (wax != null) parts.Add(Fill(T(StringKey.BeekeeperCostWaxFmt), wax));
         if (sage != null) parts.Add(Fill(T(StringKey.BeekeeperCostSageFmt), sage));
@@ -235,7 +254,8 @@ internal static class BeekeeperText
     public static string BeesPerSecond(string n) => Fill(T(StringKey.BeekeeperBeesPerSecFmt), n);
     public static string BeeBreadPerSecond(string n) => Fill(T(StringKey.BeekeeperBeeBreadPerSecFmt), n);
     public static string AgreementLine => T(StringKey.BeekeeperAgreementLine);
-    public static string BeebitsPerSecond(string n) => Fill(T(StringKey.BeekeeperBeebitsPerSecFmt), n);
+    // Cut in stage 7.5 (spec 016): the agreement's rate hover (the bear no longer sells by himself).
+    // public static string BeebitsPerSecond(string n) => Fill(T(StringKey.BeekeeperBeebitsPerSecFmt), n);
 
     /// <summary>"The pantry lasts about 8 hours." Minutes under an hour and a half, hours after.</summary>
     public static string PantryLasts(decimal seconds)
@@ -262,7 +282,7 @@ internal static class BeekeeperText
     /// <summary>True for rows drawn as one full-width line (no label and value columns).</summary>
     public static bool IsHiveLine(string id) =>
         id is BeekeeperHiveRows.Foraging or BeekeeperHiveRows.Guarding or BeekeeperHiveRows.CombsFull
-            or BeekeeperHiveRows.Nursing or BeekeeperHiveRows.Resin
+            or BeekeeperHiveRows.WaxFull or BeekeeperHiveRows.Nursing or BeekeeperHiveRows.Resin
             or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
 
     /// <summary>A Hive row's label, or for a full-width row its whole line.</summary>
@@ -286,6 +306,7 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Wax => T(StringKey.BeekeeperHiveWax),
             BeekeeperHiveRows.Combs => T(StringKey.BeekeeperHiveCombs),
             BeekeeperHiveRows.CombsFull => T(StringKey.BeekeeperCombsFull),
+            BeekeeperHiveRows.WaxFull => T(StringKey.BeekeeperWaxFull),
             BeekeeperHiveRows.Seeds => T(StringKey.BeekeeperHiveSeeds),
             BeekeeperHiveRows.Pollen => T(StringKey.BeekeeperHivePollen),
             BeekeeperHiveRows.BeeBread => T(StringKey.BeekeeperHiveBeeBread),
@@ -305,6 +326,7 @@ internal static class BeekeeperText
         return r.Id switch
         {
             BeekeeperHiveRows.Honey => N(r.Value) + " / " + N(r.Value2),
+            BeekeeperHiveRows.Wax => N(r.Value) + " / " + N(r.Value2),   // stage 7.5: wax has a cap
             BeekeeperHiveRows.Queen => QueenStatus(r.Value > 0m),
             _ when IsHiveLine(r.Id) => "",
             _ => N(r.Value),
@@ -422,7 +444,7 @@ internal static class BeekeeperText
             }),
             BeekeeperEvents.WaxCatcherBought => L(StringKey.BeekeeperLogWaxCatcher),
             BeekeeperEvents.CombsAvailable => L(StringKey.BeekeeperLogCombsAvailable),
-            BeekeeperEvents.CombBuilt => Fill(L(StringKey.BeekeeperLogCombBuiltFmt), N(e.Value)),
+            BeekeeperEvents.CombBuilt => Fill(L(StringKey.BeekeeperLogCombBuiltFmt), N(e.Value)),   // stage 7.5: bees that moved in
             BeekeeperEvents.WelcomeBack => Fill(L(StringKey.BeekeeperLogWelcomeBackFmt), N(e.Value)),
             BeekeeperEvents.WelcomeBackNothing => L(StringKey.BeekeeperLogWelcomeBackNothing),
             BeekeeperEvents.WorkbenchOpened => L(StringKey.BeekeeperLogWorkbenchOpened),
@@ -485,8 +507,9 @@ internal static class BeekeeperText
             BeekeeperEvents.TradeAgreement => Fill(L(StringKey.BeekeeperLogTradeAgreementFmt), e.Text ?? ""),
             BeekeeperEvents.WelcomeBackQueen => e.Value == 1m ? L(StringKey.BeekeeperLogWelcomeBackQueenOne)
                 : Fill(L(StringKey.BeekeeperLogWelcomeBackQueenFmt), N(e.Value)),
-            BeekeeperEvents.WelcomeBackBear => e.Value == 1m ? Fill(L(StringKey.BeekeeperLogWelcomeBackBearOneFmt), e.Text ?? "")
-                : Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
+            // Cut in stage 7.5 (spec 016): the bear no longer sells honey while you are away.
+            // BeekeeperEvents.WelcomeBackBear => e.Value == 1m ? Fill(L(StringKey.BeekeeperLogWelcomeBackBearOneFmt), e.Text ?? "")
+            //     : Fill(L(StringKey.BeekeeperLogWelcomeBackBearFmt), e.Text ?? "", N(e.Value)),
             BeekeeperEvents.WelcomeBackPantry => L(StringKey.BeekeeperLogWelcomeBackPantry),
             BeekeeperEvents.OldCountsSettle => L(StringKey.BeekeeperLogOldCountsSettle),
             BeekeeperEvents.BribeHint => L(StringKey.BeekeeperLogBribeHint),
@@ -500,6 +523,11 @@ internal static class BeekeeperText
             BeekeeperEvents.WelcomeBackSageOut => L(StringKey.BeekeeperLogWelcomeBackSageOut),
             BeekeeperEvents.WelcomeBackPropolis => Fill(L(StringKey.BeekeeperLogWelcomeBackPropolisFmt), N(e.Value)),
             BeekeeperEvents.WaspTrade => Fill(L(StringKey.BeekeeperLogTradeWaspsFmt), N(e.Value2), N(e.Value)),
+            // Stage 7.5 (spec 016)
+            BeekeeperEvents.WaxFull => L(StringKey.BeekeeperLogWaxFull),
+            BeekeeperEvents.FirstWall => L(StringKey.BeekeeperLogFirstWall),
+            BeekeeperEvents.HoneySuperBought => L(StringKey.BeekeeperLogHoneySuperBought),
+            BeekeeperEvents.WaxTrayBought => L(StringKey.BeekeeperLogWaxTrayBought),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),

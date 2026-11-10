@@ -32,7 +32,8 @@ public class BeekeeperStage2Tests : IDisposable
     // A hive that already has The Workbench open.
     private static BeekeeperState Workshop(Action<BeekeeperState>? tweak = null)
     {
-        var s = new BeekeeperState { Combs = 2, WorkbenchRevealed = true, BearName = "Bruno" };
+        // Stage 7.5 (spec 016): The Workbench opens at the 3rd comb, the starter counted (was 2).
+        var s = new BeekeeperState { Combs = 3, WorkbenchRevealed = true, BearName = "Bruno" };
         tweak?.Invoke(s);
         return s;
     }
@@ -41,12 +42,26 @@ public class BeekeeperStage2Tests : IDisposable
 
     // ============================================================ The Workbench
 
+    // Cut in stage 7.5 (spec 016): The Workbench opened with the 2nd comb.
+    // [Fact]
+    // public void TheWorkbench_OpensWithTheSecondComb()
+    // {
+    //     var e = Make(new BeekeeperState { Combs = 1, Wax = 1000m });
+    //     Assert.False(e.CanCraftBeeswax);
+    //     var r = e.BuildComb();
+    //     Assert.True(e.State.WorkbenchRevealed);
+    //     Assert.True(Has(r.Events, BeekeeperEvents.WorkbenchOpened));
+    //     Assert.False(Has(e.BuildComb().Events, BeekeeperEvents.WorkbenchOpened));   // once only
+    // }
+
     [Fact]
-    public void TheWorkbench_OpensWithTheSecondComb()
+    public void TheWorkbench_OpensWithTheThirdComb_TheStarterCounted()
     {
-        var e = Make(new BeekeeperState { Combs = 1, Wax = 1000m });
+        var e = Make(new BeekeeperState { Combs = 1, Wax = 1000m, Bees = 1000m });
+        Assert.False(Has(e.BuildComb().Events, BeekeeperEvents.WorkbenchOpened));   // the 2nd
+        Assert.False(e.State.WorkbenchRevealed);
         Assert.False(e.CanCraftBeeswax);
-        var r = e.BuildComb();
+        var r = e.BuildComb();                                                        // the 3rd
         Assert.True(e.State.WorkbenchRevealed);
         Assert.True(Has(r.Events, BeekeeperEvents.WorkbenchOpened));
         Assert.False(Has(e.BuildComb().Events, BeekeeperEvents.WorkbenchOpened));   // once only
@@ -177,23 +192,48 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.Equal(5m, e.State.Sage);
     }
 
-    [Fact]
-    public void BiggerCombs_GrowAllHoneyStorage()
-    {
-        var e = Make(Workshop());
-        Assert.Equal(600m, e.HoneyStorage);
-        e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1);
-        Assert.Equal(900m, e.HoneyStorage);
-        e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs2);
-        Assert.Equal(1200m, e.HoneyStorage);
-    }
+    // Cut in stage 7.5 (spec 016): Bigger Combs grew honey storage only.
+    // [Fact]
+    // public void BiggerCombs_GrowAllHoneyStorage()
+    // {
+    //     var e = Make(Workshop());
+    //     Assert.Equal(600m, e.HoneyStorage);
+    //     e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1);
+    //     Assert.Equal(900m, e.HoneyStorage);
+    //     e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs2);
+    //     Assert.Equal(1200m, e.HoneyStorage);
+    // }
 
     [Fact]
-    public void BetterWaxCatcher_GivesThreeWaxPerFiftyHoney()
+    public void BiggerCombs_GrowBothCaps()
     {
-        var e = Make(Workshop(s => { s.Bees = 5000m; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
-        e.Advance(1m);   // 50 honey
-        Assert.Equal(3m, e.State.Wax);
+        var e = Make(Workshop());                     // 3 combs: 200 + 2 × 300 honey, 20 + 2 × 2 wax
+        Assert.Equal(800m, e.HoneyStorage);
+        Assert.Equal(24m, e.WaxStorage);
+        e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1);
+        Assert.Equal(1200m, e.HoneyStorage);
+        Assert.Equal(36m, e.WaxStorage);
+        e.State.Upgrades.Add(BeekeeperUpgrades.BiggerCombs2);   // replaces I
+        Assert.Equal(1600m, e.HoneyStorage);
+        Assert.Equal(48m, e.WaxStorage);
+    }
+
+    // Cut in stage 7.5 (spec 016): wax came per 50 honey.
+    // [Fact]
+    // public void BetterWaxCatcher_GivesThreeWaxPerFiftyHoney()
+    // {
+    //     var e = Make(Workshop(s => { s.Bees = 5000m; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
+    //     e.Advance(1m);   // 50 honey
+    //     Assert.Equal(3m, e.State.Wax);
+    // }
+
+    [Fact]
+    public void BetterWaxCatcher_TriplesTheWaxRate()
+    {
+        var e = Make(Workshop(s => { s.Bees = 1000m; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
+        Assert.Equal(0.315m, e.WaxPerSecondNow);   // (0.005 + 1,000 × 0.0001) × 3
+        e.Advance(10m);
+        Assert.Equal(3.15m, e.State.Wax);
     }
 
     [Fact]
@@ -230,7 +270,8 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void NoResponseForAMinute_TheWaspRaids()
     {
-        var e = Make(Workshop(s => { s.Bees = 1000m; s.Honey = 500m; s.Wax = 40m; s.Sage = 3m; s.BeeswaxCandles = 4m; }), 0.0);
+        // Stage 7.5: 50 combs make 10 honey a second.
+        var e = Make(Workshop(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.Combs = 50; s.Honey = 500m; s.Wax = 40m; s.Sage = 3m; s.BeeswaxCandles = 4m; }), 0.0);
         e.AdvanceWaspTime(240m);
         Assert.Empty(e.AdvanceWaspCountdown(59m));
         var raid = e.AdvanceWaspCountdown(1m).Single();
@@ -248,7 +289,7 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void ARaid_TakesThreeMinutesOfHoney_WhenThereIsPlenty()
     {
-        var e = Make(Workshop(s => { s.Bees = 100m; s.Honey = 590m; }), 0.0);   // 1 honey/s
+        var e = Make(Workshop(s => { s.Bees = 100m; s.HoneyRevealed = true; s.Combs = 5; s.Honey = 590m; }), 0.0);   // 1 honey/s (5 combs)
         e.AdvanceWaspTime(240m);
         e.AdvanceWaspCountdown(60m);
         Assert.Equal(410m, e.State.Honey);
@@ -350,27 +391,28 @@ public class BeekeeperStage2Tests : IDisposable
 
     // ============================================================ saving
 
-    [Fact]
-    public void AFirstBuildSave_LoadsWithNothingLost()
-    {
-        Directory.CreateDirectory(_dir);
-        string path = Path.Combine(_dir, "beekeeper.json");
-        File.WriteAllText(path,
-            "{\"Version\":1,\"Bees\":120,\"Honey\":45.5,\"Wax\":30,\"Beebits\":12,\"Combs\":2,\"BearName\":\"Baloo\"," +
-            "\"HoneyRevealed\":true,\"Log\":[{\"Key\":\"new_game\",\"Value\":0}]," +
-            "\"SavedAtUtc\":\"2026-11-06T12:00:00Z\"}");
-
-        var loaded = BeekeeperSaveService.Load(path);
-        Assert.NotNull(loaded);
-        Assert.Equal(120m, loaded!.Bees);
-        Assert.Equal(45.5m, loaded.Honey);
-        Assert.Equal("Baloo", loaded.BearName);
-        Assert.Equal(0m, loaded.Sage);
-        Assert.Empty(loaded.Upgrades);
-
-        var e = new BeekeeperEngine(BeekeeperConfig.Default, loaded);
-        Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.WorkbenchOpened));
-    }
+    // Cut in stage 7.5 (spec 016): older saves start a new game (BeekeeperSaveTests).
+    // [Fact]
+    // public void AFirstBuildSave_LoadsWithNothingLost()
+    // {
+    //     Directory.CreateDirectory(_dir);
+    //     string path = Path.Combine(_dir, "beekeeper.json");
+    //     File.WriteAllText(path,
+    //         "{\"Version\":1,\"Bees\":120,\"Honey\":45.5,\"Wax\":30,\"Beebits\":12,\"Combs\":2,\"BearName\":\"Baloo\"," +
+    //         "\"HoneyRevealed\":true,\"Log\":[{\"Key\":\"new_game\",\"Value\":0}]," +
+    //         "\"SavedAtUtc\":\"2026-11-06T12:00:00Z\"}");
+    //
+    //     var loaded = BeekeeperSaveService.Load(path);
+    //     Assert.NotNull(loaded);
+    //     Assert.Equal(120m, loaded!.Bees);
+    //     Assert.Equal(45.5m, loaded.Honey);
+    //     Assert.Equal("Baloo", loaded.BearName);
+    //     Assert.Equal(0m, loaded.Sage);
+    //     Assert.Empty(loaded.Upgrades);
+    //
+    //     var e = new BeekeeperEngine(BeekeeperConfig.Default, loaded);
+    //     Assert.True(Has(e.RevealOnLoad(), BeekeeperEvents.WorkbenchOpened));
+    // }
 
     [Fact]
     public void Stage2Things_AreSaved_ButAnApproachingWaspIsNot()

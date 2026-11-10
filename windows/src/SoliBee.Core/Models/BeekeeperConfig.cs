@@ -59,7 +59,7 @@ public static class BeekeeperSpecialties
 {
     /// <summary>A steady trickle of pollen.</summary>
     public const string Foraging = "foraging";
-    /// <summary>"The hive feels safe": every honeybee makes more honey.</summary>
+    /// <summary>"The hive feels safe": the combs make more honey (since stage 7.5; before, every honeybee did).</summary>
     public const string Guarding = "guarding";
     /// <summary>Stage 7: the queen lays faster (a multiplier on her rate).</summary>
     public const string Nursing = "nursing";
@@ -103,15 +103,48 @@ public static class BeekeeperUpgrades
 public sealed class BeekeeperConfig
 {
     // --- Honey and wax -------------------------------------------------------
-    public decimal HoneyPerBeePerSecond { get; init; } = 0.01m;
-    public decimal HoneyPerWax { get; init; } = 50m;
+    // Cut in stage 7.5 (spec 016): bees made the honey and wax followed it.
+    // public decimal HoneyPerBeePerSecond { get; init; } = 0.01m;
+    // public decimal HoneyPerWax { get; init; } = 50m;
+    /// <summary>Stage 7.5 (spec 016): the Wax-Catcher multiplies the wax rate by this (×2);
+    /// the Better Wax-Catcher by <see cref="BetterWaxCatcherBonus"/> on top (×3).</summary>
     public int WaxCatcherMultiplier { get; init; } = 2;
 
-    // --- Honey storage (combs) ----------------------------------------------
-    public decimal StartingStorage { get; init; } = 200m;   // approved by Leah 2026-11-06 for the first build; revisit after play-testing
-    public decimal StoragePerComb { get; init; } = 200m;    // approved by Leah 2026-11-06 for the first build; revisit after play-testing
-    public decimal CombBaseWaxCost { get; init; } = 50m;
+    // ===== Stage 7.5 (spec 016): combs make the honey, free bees make the wax. All placeholders (Bee).
+    /// <summary>Honey a second from each comb, however many bees live in it.</summary>
+    public decimal HoneyPerCombPerSecond { get; init; } = 0.2m;
+    /// <summary>The tiny wax drip that runs from the start of the game, bees or not.</summary>
+    public decimal WaxBasePerSecond { get; init; } = 0.005m;
+    /// <summary>Wax a second from each free bee (bees not living in a comb).</summary>
+    public decimal WaxPerFreeBeePerSecond { get; init; } = 0.0001m;
+    /// <summary>Wax first seen at this much (whole wax): the Wax row comes.</summary>
+    public decimal WaxRevealWax { get; init; } = 1m;
+
+    // --- Honey and wax caps (combs). The starting caps include the starter comb.
+    public decimal StartingHoneyCap { get; init; } = 200m;
+    public decimal HoneyCapPerComb { get; init; } = 300m;
+    /// <summary>Small on purpose: a price above it is a wall (spec 016).</summary>
+    public decimal StartingWaxCap { get; init; } = 20m;
+    public decimal WaxCapPerComb { get; init; } = 2m;
+
+    // --- Comb prices: floor(base × growth^n), n = combs bought (the starter doesn't count).
+    public decimal CombBaseBeeCost { get; init; } = 20m;
+    public decimal CombBeeCostGrowth { get; init; } = 1.4m;
+    public decimal CombBaseWaxCost { get; init; } = 10m;
     public decimal CombCostGrowth { get; init; } = 1.25m;
+
+    // --- Capacity upgrades: bought again and again, for Beebits only, at The Workbench.
+    public decimal HoneySuperCapacity { get; init; } = 1_000m;
+    public decimal HoneySuperBaseCost { get; init; } = 75m;
+    public decimal HoneySuperCostGrowth { get; init; } = 1.5m;
+    public decimal WaxTrayCapacity { get; init; } = 8m;
+    public decimal WaxTrayBaseCost { get; init; } = 100m;
+    public decimal WaxTrayCostGrowth { get; init; } = 1.6m;
+
+    // Cut in stage 7.5 (spec 016): honey storage only, no starter comb.
+    // public decimal StartingStorage { get; init; } = 200m;   // approved by Leah 2026-11-06 for the first build; revisit after play-testing
+    // public decimal StoragePerComb { get; init; } = 200m;    // approved by Leah 2026-11-06 for the first build; revisit after play-testing
+    // public decimal CombBaseWaxCost { get; init; } = 50m;
 
     // --- Catching ------------------------------------------------------------
     public double StingChance { get; init; } = 0.20;
@@ -141,6 +174,8 @@ public sealed class BeekeeperConfig
 
     // --- Trading -------------------------------------------------------------
     public decimal HoneyPerBeebit { get; init; } = 10m;
+    /// <summary>Stage 7.5 (spec 016): honey per Beebit under the bear's trade agreement (a better rate).</summary>
+    public decimal BetterHoneyPerBeebit { get; init; } = 8m;
     public IReadOnlyList<string> BearNames { get; init; } = new[]
     {
         "Barnaby", "Billy", "Berenstein", "Bruno", "Baloo", "Buster", "Bartholomew",
@@ -149,7 +184,8 @@ public sealed class BeekeeperConfig
     // --- When things appear --------------------------------------------------
     public decimal BearRevealHoney { get; init; } = 10m;
     public decimal ShopRevealBeebits { get; init; } = 15m;
-    public decimal CombsRevealWax { get; init; } = 50m;
+    /// <summary>Stage 7.5 (spec 016): was 50. Comes before a comb can be paid for.</summary>
+    public decimal CombsRevealWax { get; init; } = 5m;
 
     // --- Time away (offline earnings) ---------------------------------------
     /// <summary>Longest stretch that is paid: 3 days.</summary>
@@ -166,8 +202,9 @@ public sealed class BeekeeperConfig
     // (Leah, 2026-11-07), except where marked as Leah's number.
 
     // --- The Workbench and candles ------------------------------------------
-    /// <summary>The Workbench opens with this many combs (Leah).</summary>
-    public int WorkbenchCombs { get; init; } = 2;
+    /// <summary>The Workbench opens with this many combs, the starter counted (stage 7.5, spec 016:
+    /// was 2 built; now 3 counting the starter, so it opens at the same point).</summary>
+    public int WorkbenchCombs { get; init; } = 3;
     /// <summary>Wax for a beeswax candle (Leah).</summary>
     public decimal BeeswaxCandleWax { get; init; } = 10m;
     public decimal RepellentCandleWax { get; init; } = 10m;
@@ -200,6 +237,7 @@ public sealed class BeekeeperConfig
     public decimal IdleSeconds { get; init; } = 5m * 60m;
 
     // --- Upgrades (sold in the Beekeeper's Shop) -----------------------------
+    // Stage 7.5 (spec 016): Bigger Combs and the Propolis Seal grow both caps, honey and wax.
     public decimal BiggerCombs1Multiplier { get; init; } = 1.5m;   // Leah: +50%
     public decimal BiggerCombs2Multiplier { get; init; } = 2m;     // Leah: +100%
     public decimal BetterWaxCatcherBonus { get; init; } = 1.5m;    // Leah: 50% more effective
@@ -269,7 +307,7 @@ public sealed class BeekeeperConfig
     public decimal BeeBreadHoney { get; init; } = 10m;
     public decimal WoodenHiveWax { get; init; } = 200m;
     public decimal WoodenHiveBeeBread { get; init; } = 10m;
-    /// <summary>Honey from every honeybee in a wooden hive (+25%).</summary>
+    /// <summary>Honey from the combs in a wooden hive (+25%; before stage 7.5, from every honeybee).</summary>
     public decimal WoodenHiveHoneyMultiplier { get; init; } = 1.25m;
 
     // ===== Stage 5 (spec 013): the queen, the brood and the trade agreement. All placeholders.
@@ -282,10 +320,12 @@ public sealed class BeekeeperConfig
     /// <summary>The slice of the hive a click brings in is never more than this many times
     /// the bees the tool catches (after Practice).</summary>
     public decimal SliceCapMultiple { get; init; } = 10m;
-    /// <summary>The bear offers the trade agreement on this trade (Sell All counts as one).</summary>
-    public long AgreementTrades { get; init; } = 100;
-    /// <summary>Honey that doesn't fit, per Beebit, under the agreement (Leah: half price).</summary>
-    public decimal AgreementHoneyPerBeebit { get; init; } = 20m;
+    /// <summary>The bear offers the trade agreement on this trade (Sell All counts as one).
+    /// Stage 7.5 (spec 016): was 100; the agreement is now a better selling rate.</summary>
+    public long AgreementTrades { get; init; } = 25;
+    // Cut in stage 7.5 (spec 016): the bear no longer takes the overflow; see BetterHoneyPerBeebit.
+    // /// <summary>Honey that doesn't fit, per Beebit, under the agreement (Leah: half price).</summary>
+    // public decimal AgreementHoneyPerBeebit { get; init; } = 20m;
 
     // ===== Stage 6 (spec 014): specialties and the wasp emissary. All placeholders.
     // (The specialties' strengths are on the plants above.)
@@ -302,7 +342,8 @@ public sealed class BeekeeperConfig
     /// <summary>Garden beds at the start: two seeds can grow at once. The Third Bed upgrade adds one.</summary>
     public int StartingBeds { get; init; } = 2;
     public int ThirdBedBeds { get; init; } = 1;
-    /// <summary>The Propolis Seal multiplies honey storage by this (+25%), on top of Bigger Combs.</summary>
+    /// <summary>The Propolis Seal multiplies storage by this (+25%), on top of Bigger Combs
+    /// (honey and, since stage 7.5, wax).</summary>
     public decimal PropolisSealStorageMultiplier { get; init; } = 1.25m;
 
     // --- The bee-boost candle (wax and propolis): live play only, like calm.

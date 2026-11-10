@@ -17,7 +17,8 @@ public class BeekeeperHardeningTests : IDisposable
         public int Next(int maxExclusive) => 0;
     }
 
-    private static readonly BeekeeperConfig Roomy = new() { StartingStorage = 1e18m };
+    // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig Roomy = new() { StartingStorage = 1e18m };
+    private static readonly BeekeeperConfig Roomy = new() { StartingHoneyCap = 1e18m, StartingWaxCap = 1e18m };
 
     private readonly string _dir = Path.Combine(Path.GetTempPath(), "beekeeper-hardening-" + Guid.NewGuid().ToString("N"));
 
@@ -61,7 +62,7 @@ public class BeekeeperHardeningTests : IDisposable
         Assert.Equal(away.State.BeeBread, live.State.BeeBread);
         Assert.Equal(away.State.Honey, live.State.Honey);
         Assert.Equal(away.State.Wax, live.State.Wax);
-        Assert.Equal(away.State.WaxProgress, live.State.WaxProgress);
+        // Cut in stage 7.5 (spec 016): Assert.Equal(away.State.WaxProgress, live.State.WaxProgress);
         Assert.Equal(away.BeesPerCatch, live.BeesPerCatch);
     }
 
@@ -95,19 +96,20 @@ public class BeekeeperHardeningTests : IDisposable
     {
         var e = With(new BeekeeperState { Bees = 1m, HoneyRevealed = true });
 
-        Assert.Contains(e.AdvanceAway(100m).WelcomeBack, x => x.Key == BeekeeperEvents.WelcomeBack && x.Value == 1m);
+        // Stage 7.5: the starter comb makes 0.2 honey a second.
+        Assert.Contains(e.AdvanceAway(5m).WelcomeBack, x => x.Key == BeekeeperEvents.WelcomeBack && x.Value == 1m);
     }
 
     // ------------------------------------------------------------------ absurd numbers
 
     [Theory]
     [InlineData("Wax")]
-    [InlineData("WaxProgress")]
+    // Cut in stage 7.5 (spec 016): [InlineData("WaxProgress")]
     [InlineData("Beebits")]
     [InlineData("BeeBread")]
     [InlineData("Pollen")]
     [InlineData("Propolis")]
-    [InlineData("AgreementHoneyProgress")]
+    // Cut in stage 7.5 (spec 016): [InlineData("AgreementHoneyProgress")]
     public void AnAbsurdAmount_IsRefusedAndKeptAside(string field)
     {
         var state = new BeekeeperState { Bees = 10m };
@@ -129,8 +131,9 @@ public class BeekeeperHardeningTests : IDisposable
     {
         var loaded = BeekeeperSaveService.Load(SaveToFile(new BeekeeperState
         {
-            Bees = 1e20m, Wax = 1e24m, WaxProgress = 1e24m, Beebits = 1e24m, Pollen = 1e24m, Propolis = 1e24m,
-            BeeBread = 1e24m, AgreementHoneyProgress = 1e24m, HasTradeAgreement = true,
+            Bees = 1e20m, Wax = 1e24m, Beebits = 1e24m, Pollen = 1e24m, Propolis = 1e24m,
+            BeeBread = 1e24m, HasTradeAgreement = true, HoneyRevealed = true,
+            // Cut in stage 7.5 (spec 016): WaxProgress = 1e24m, AgreementHoneyProgress = 1e24m,
             HasWoodenHive = true, QueenSettled = true, Plants = { BeekeeperPlants.Wildflowers },
         }));
         Assert.NotNull(loaded);

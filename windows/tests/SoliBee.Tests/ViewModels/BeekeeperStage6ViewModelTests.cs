@@ -35,7 +35,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
     }
 
     private BeekeeperViewModel Make(Clock clock, BeekeeperState? state = null, bool persist = false, bool noStress = false)
-        => new(isHeadless: true, config: new BeekeeperConfig { StartingStorage = 1_000_000m }, rng: new LowRandom(),
+        => new(isHeadless: true, config: new BeekeeperConfig { StartingHoneyCap = 1_000_000m }, rng: new LowRandom(),
                clock: clock.Func, persist: persist, savePath: SavePath, initialState: state, noStressMode: () => noStress);
 
     private static bool Logged(BeekeeperViewModel vm, string key) => vm.Log.Any(e => e.Key == key);
@@ -57,7 +57,8 @@ public class BeekeeperStage6ViewModelTests : IDisposable
 
     private static BeekeeperState Workshop() => new()
     {
-        Bees = 1000m, Honey = 50_000m, Combs = 2, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
+        // Stage 7.5: 50 combs make 10 honey a second (was 1,000 bees); the bees are free bees.
+        Bees = 1000m, Honey = 50_000m, Combs = 50, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
         BearRevealed = true,
     };
 
@@ -86,7 +87,8 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         var vm = Make(new Clock(), Workshop());
         string[] Ids(string g) => Group(vm, g).Rows.Select(r => r.Id).ToArray();
         Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Queen }, Ids(BeekeeperHiveRows.GroupBees));
-        Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs, BeekeeperHiveRows.CombsFull },
+        Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs, BeekeeperHiveRows.CombsFull,
+                BeekeeperHiveRows.WaxFull },   // stage 7.5
             Ids(BeekeeperHiveRows.GroupHive));
         Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread, BeekeeperHiveRows.Propolis },
             Ids(BeekeeperHiveRows.GroupGarden));
@@ -104,8 +106,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
     {
         var s = Workshop();
         s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
-        s.ForagerBees = 40m;
-        s.GuardBees = 9m;
+        // Cut in stage 7.5 (spec 016): s.ForagerBees = 40m; s.GuardBees = 9m; (no longer saved)
         s.PollenRevealed = true;
         var vm = Make(new Clock(), s);
         var bees = Group(vm, BeekeeperHiveRows.GroupBees).Rows.Where(r => r.Visible).Select(r => r.Id).ToArray();
@@ -124,7 +125,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         s.WaxRevealed = true;
         var vm = Make(new Clock(), s);
         Assert.Equal(0.05m, Row(vm, BeekeeperHiveRows.Pollen)!.Rate);
-        Assert.Equal(12.5m, Row(vm, BeekeeperHiveRows.Honey)!.Rate);      // 1,000 bees × 0.01 × 1.25
+        Assert.Equal(12.5m, Row(vm, BeekeeperHiveRows.Honey)!.Rate);      // 50 combs × 0.2 × 1.25 (stage 7.5)
         Assert.Equal(vm.WaxPerSecond, Row(vm, BeekeeperHiveRows.Wax)!.Rate);
         Assert.Null(Row(vm, BeekeeperHiveRows.Honeybees)!.Rate);          // no queen yet
     }
@@ -147,20 +148,21 @@ public class BeekeeperStage6ViewModelTests : IDisposable
 
     // ============================================================ old saves (User Story 3)
 
-    [Fact]
-    public void AnOldSave_SaysOnce_ThatTheForagersAndGuardsSettledIn()
-    {
-        var s = Workshop();
-        s.Plants.Add(BeekeeperPlants.Wildflowers);
-        s.ForagerBees = 12m;
-        var vm = Make(new Clock(), s, persist: true);
-        Assert.True(Logged(vm, BeekeeperEvents.OldCountsSettle));
-        vm.SaveNow();
-        vm.Dispose();
-
-        var again = Make(new Clock(), state: null, persist: true);
-        Assert.Single(again.Log, e => e.Key == BeekeeperEvents.OldCountsSettle);
-    }
+    // Cut in stage 7.5 (spec 016): older saves no longer load.
+    // [Fact]
+    // public void AnOldSave_SaysOnce_ThatTheForagersAndGuardsSettledIn()
+    // {
+    //     var s = Workshop();
+    //     s.Plants.Add(BeekeeperPlants.Wildflowers);
+    //     s.ForagerBees = 12m;
+    //     var vm = Make(new Clock(), s, persist: true);
+    //     Assert.True(Logged(vm, BeekeeperEvents.OldCountsSettle));
+    //     vm.SaveNow();
+    //     vm.Dispose();
+    //
+    //     var again = Make(new Clock(), state: null, persist: true);
+    //     Assert.Single(again.Log, e => e.Key == BeekeeperEvents.OldCountsSettle);
+    // }
 
     // ============================================================ No Stress Mode (User Story 11)
 

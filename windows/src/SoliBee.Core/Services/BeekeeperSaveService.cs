@@ -14,9 +14,11 @@ namespace SoliBee.Core.Services;
 /// </summary>
 public static class BeekeeperSaveService
 {
-    /// <summary>7 = stage 7. Older files still load: the new fields start at zero, and the engine
-    /// turns an older file's seeds into named seeds and a bed.</summary>
-    public const int CurrentVersion = 7;
+    /// <summary>8 = stage 7.5 (spec 016, FR-714). A file older than this is not loaded: it goes the
+    /// same way as a too-new or damaged one (moved aside, a new game starts), with no conversion.</summary>
+    public const int CurrentVersion = 8;
+    // Cut in stage 7.5 (spec 016): older files loaded, new fields at zero, older seeds converted.
+    // public const int CurrentVersion = 7;
 
     /// <summary>The story log keeps this many lines, newest first.</summary>
     public const int MaxLogEntries = 50;
@@ -57,7 +59,9 @@ public static class BeekeeperSaveService
             // fall through: treated as unreadable below
         }
 
-        if (state is null || state.Version > CurrentVersion || !LooksSane(state))
+        // Stage 7.5 (spec 016): an older version is set aside like an unreadable file.
+        if (state is null || state.Version != CurrentVersion || !LooksSane(state))
+        // Cut in stage 7.5: if (state is null || state.Version > CurrentVersion || !LooksSane(state))
         {
             if (!MoveAside(path)) keepFile = true;
             return null;
@@ -119,16 +123,21 @@ public static class BeekeeperSaveService
     private static bool LooksSane(BeekeeperState s)
     {
         int maxTool = BeekeeperConfig.Default.Tools.Count;
+        // Cut in stage 7.5 (spec 016): WaxProgress, GrowSecondsLeft, ForagerBees, GuardBees and
+        // AgreementHoneyProgress (no longer saved).
         decimal[] amounts =
         {
-            s.Honey, s.Wax, s.WaxProgress, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
-            s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown, s.GrowSecondsLeft,
-            s.ForagerBees, s.GuardBees, s.Pollen, s.BeeBread, s.AgreementHoneyProgress, s.Paper,
+            s.Honey, s.Wax, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
+            s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown,
+            s.Pollen, s.BeeBread, s.Paper,
             s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles,
         };
         return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
-            && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.WaxProgress >= 0m && s.Beebits >= 0m
-            && s.Combs >= 0 && s.Trades >= 0
+            && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m
+            // Stage 7.5: the starter comb is always there; capacity levels are never negative.
+            && s.Combs >= 1 && s.HoneySupers >= 0 && s.WaxTrays >= 0
+            && s.HoneySupers <= MaxCombs && s.WaxTrays <= MaxCombs
+            && s.Trades >= 0
             && s.ToolLevel >= 0 && s.ToolLevel <= maxTool
             && s.Log is not null
             && s.BeeswaxCandles >= 0m && s.RepellentCandles >= 0m && s.CandlesCrafted >= 0
@@ -136,10 +145,8 @@ public static class BeekeeperSaveService
             && s.RepellentSecondsLeft >= 0m && s.NextWaspInSeconds >= 0m
             && s.Upgrades is not null
             && s.CalmMeter >= 0 && s.CalmSecondsLeft >= 0m
-            && s.SeedsGiven >= 0 && s.Seeds >= 0 && s.SeedsPlanted >= 0 && s.GrowSecondsLeft >= 0m
             && s.Plants is not null
-            && s.ForagerBees >= 0m && s.GuardBees >= 0m && s.Pollen >= 0m && s.BeeBread >= 0m
-            && s.AgreementHoneyProgress >= 0m
+            && s.Pollen >= 0m && s.BeeBread >= 0m
             && s.BribesTotal >= 0 && s.WaspTrades >= 0 && s.Paper >= 0m
             // Stage 7: no negative amounts or times. (Too many beds and unknown plant ids are
             // trimmed by the engine instead, so one odd entry never costs the whole hive.)

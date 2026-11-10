@@ -31,7 +31,8 @@ public static class BeekeeperEvents
     public const string ToolBought = "tool_bought";        // Value = new tool level, Text = tool id
     public const string WaxCatcherBought = "wax_catcher_bought";
     public const string CombsAvailable = "combs_available";
-    public const string CombBuilt = "comb_built";          // Value = storage added
+    // Value = bees that moved in (stage 7.5, spec 016); before stage 7.5 it was the honey storage added.
+    public const string CombBuilt = "comb_built";
     public const string WelcomeBack = "welcome_back";      // Value = honey made while away
     public const string WelcomeBackNothing = "welcome_back_nothing";
 
@@ -72,7 +73,8 @@ public static class BeekeeperEvents
     public const string QueenResumes = "queen_resumes";
     public const string TradeAgreement = "trade_agreement";    // Text = bear name
     public const string WelcomeBackQueen = "welcome_back_queen";   // Value = bees raised while away
-    public const string WelcomeBackBear = "welcome_back_bear";     // Value = Beebits from the agreement, Text = bear name
+    // Cut in stage 7.5 (spec 016): the bear no longer sells honey while you are away.
+    // public const string WelcomeBackBear = "welcome_back_bear";     // Value = Beebits from the agreement, Text = bear name
     public const string WelcomeBackPantry = "welcome_back_pantry";
 
     // Stage 6
@@ -92,27 +94,40 @@ public static class BeekeeperEvents
     public const string WelcomeBackPropolis = "welcome_back_propolis";   // Value = propolis gathered while away
     public const string WelcomeBackSageOut = "welcome_back_sage_out";
 
+    // Stage 7.5 (spec 016)
+    public const string WaxFull = "wax_full";                    // there's no more room for wax
+    public const string FirstWall = "first_wall";                // a price is above a cap (said once)
+    public const string HoneySuperBought = "honey_super_bought"; // Value = level now owned
+    public const string WaxTrayBought = "wax_tray_bought";       // Value = level now owned
+
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
-        key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry
+        key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackPantry
             or WelcomeBackPropolis or WelcomeBackSageOut;
+    // Cut in stage 7.5 (spec 016): WelcomeBackBear.
+    //     key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry
+    //         or WelcomeBackPropolis or WelcomeBackSageOut;
 }
 
 public readonly record struct BeekeeperEvent(string Key, decimal Value = 0m, string? Text = null, decimal Value2 = 0m);
 
 public sealed record CatchResult(bool Stung, decimal BeesGained, IReadOnlyList<BeekeeperEvent> Events);
 
-/// <summary><see cref="BeesRaised"/>: bees the queen raised; <see cref="AgreementBeebits"/>:
-/// whole Beebits the bear paid for honey that didn't fit.</summary>
+/// <summary><see cref="BeesRaised"/>: bees the queen raised. <see cref="WaxMade"/>: wax stored
+/// (since stage 7.5 it stops at the wax cap).</summary>
 public sealed record AdvanceResult(decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
-    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m);
+    decimal BeesRaised = 0m);
+// Cut in stage 7.5 (spec 016): AgreementBeebits, the whole Beebits the bear paid for honey that didn't fit.
+// public sealed record AdvanceResult(decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
+//     decimal BeesRaised = 0m, decimal AgreementBeebits = 0m);
 
 /// <summary><see cref="Events"/>: what happened, in the order it happened. <see cref="WelcomeBack"/>:
 /// the "While you were away" summary, in reading order (top line first); empty for
 /// <see cref="BeekeeperEngine.AdvanceGap"/>, which is the app staying open. The caller decides how
 /// to put them in its log.</summary>
 public sealed record AwayResult(decimal CreditedSeconds, decimal HoneyStored, decimal WaxMade, IReadOnlyList<BeekeeperEvent> Events,
-    decimal BeesRaised = 0m, decimal AgreementBeebits = 0m, bool PantryEmptied = false)
+    decimal BeesRaised = 0m, bool PantryEmptied = false)
+// Cut in stage 7.5 (spec 016): AgreementBeebits (after BeesRaised).
 {
     public IReadOnlyList<BeekeeperEvent> WelcomeBack { get; init; } = Array.Empty<BeekeeperEvent>();
 }
@@ -141,31 +156,34 @@ public sealed class BeekeeperEngine
         State = state ?? NewState();
         if (state is not null)
         {
-            if (state.Version < 7) ConvertOldSeeds(state);
+            // Cut in stage 7.5 (spec 016): files older than version 8 never reach the engine (the save
+            // service moves them aside), so there are no old seed counts to convert.
+            // if (state.Version < 7) ConvertOldSeeds(state);
             Tidy(state);
         }
     }
 
-    /// <summary>A file older than version 7 counted seeds; seed N was plant N (spec 015, FR-609).
-    /// The sprouted plants are already in the list; the growing seed (if any) goes into bed 1 with its
-    /// time left, the seeds in hand become named, and every seed given counts as given.</summary>
-    private void ConvertOldSeeds(BeekeeperState s)
-    {
-        var plants = Config.Plants;
-        for (int i = 0; i < s.SeedsGiven && i < plants.Count; i++)
-        {
-            if (!s.SeedsGivenIds.Contains(plants[i].Id)) s.SeedsGivenIds.Add(plants[i].Id);
-            if (i >= s.SeedsPlanted && !s.SeedsInHand.Contains(plants[i].Id)) s.SeedsInHand.Add(plants[i].Id);
-        }
-        if (s.GrowSecondsLeft > 0m && s.SeedsPlanted >= 1 && s.SeedsPlanted <= plants.Count && s.Beds.Count == 0)
-        {
-            var growing = plants[s.SeedsPlanted - 1];
-            s.Beds.Add(new BeekeeperBed { PlantId = growing.Id, SecondsLeft = s.GrowSecondsLeft });
-            if (!s.SeedsGivenIds.Contains(growing.Id)) s.SeedsGivenIds.Add(growing.Id);
-        }
-        if (s.SeedsGiven > 0 || s.SeedsPlanted > 0) s.GardenRevealed = true;
-        s.Version = 7;
-    }
+    // Cut in stage 7.5 (spec 016): older saves start a new game instead of being converted.
+    // /// <summary>A file older than version 7 counted seeds; seed N was plant N (spec 015, FR-609).
+    // /// The sprouted plants are already in the list; the growing seed (if any) goes into bed 1 with its
+    // /// time left, the seeds in hand become named, and every seed given counts as given.</summary>
+    // private void ConvertOldSeeds(BeekeeperState s)
+    // {
+    //     var plants = Config.Plants;
+    //     for (int i = 0; i < s.SeedsGiven && i < plants.Count; i++)
+    //     {
+    //         if (!s.SeedsGivenIds.Contains(plants[i].Id)) s.SeedsGivenIds.Add(plants[i].Id);
+    //         if (i >= s.SeedsPlanted && !s.SeedsInHand.Contains(plants[i].Id)) s.SeedsInHand.Add(plants[i].Id);
+    //     }
+    //     if (s.GrowSecondsLeft > 0m && s.SeedsPlanted >= 1 && s.SeedsPlanted <= plants.Count && s.Beds.Count == 0)
+    //     {
+    //         var growing = plants[s.SeedsPlanted - 1];
+    //         s.Beds.Add(new BeekeeperBed { PlantId = growing.Id, SecondsLeft = s.GrowSecondsLeft });
+    //         if (!s.SeedsGivenIds.Contains(growing.Id)) s.SeedsGivenIds.Add(growing.Id);
+    //     }
+    //     if (s.SeedsGiven > 0 || s.SeedsPlanted > 0) s.GardenRevealed = true;
+    //     s.Version = 7;
+    // }
 
     /// <summary>Sanity for a loaded file: unknown plant ids dropped, every plant in one place only
     /// (sprouted, else in a bed, else in hand), no more beds than owned (the seeds from extra beds
@@ -192,6 +210,7 @@ public sealed class BeekeeperEngine
         s.CalmSecondsLeft = Math.Min(s.CalmSecondsLeft, Config.CalmSeconds);
         s.BeeBoostSecondsLeft = Math.Min(s.BeeBoostSecondsLeft, Config.BeeBoostCapSeconds);
         s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
+        s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
     }
 
     private BeekeeperState NewState() => new() { BearName = PickBearName() };
@@ -211,17 +230,49 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ numbers the screen shows
 
-    /// <summary>All honey storage (starting room plus combs), grown by the Bigger Combs upgrades.</summary>
+    // Cut in stage 7.5 (spec 016): honey storage only, and no starter comb.
+    // public decimal HoneyStorage =>
+    //     (Config.StartingStorage + State.Combs * Config.StoragePerComb) * StorageMultiplier;
+
+    /// <summary>The hive has started: the first bee has been caught (sticky; spec 016, FR-703).
+    /// From then on the combs make honey, the welcome-back is told and New Game asks first, even
+    /// with 0 free bees. Never test <c>State.Bees &gt; 0</c> for this: paying for a comb can take
+    /// free bees to 0.</summary>
+    public bool HiveStarted => State.HoneyRevealed;
+
+    /// <summary>Combs bought: the starter comb doesn't count. Prices and the caps' comb room use this.</summary>
+    public int CombsBought => Math.Max(0, State.Combs - 1);
+
+    /// <summary>The honey cap: the starting room (the starter comb's), plus room for each comb
+    /// bought and each Honey Super, grown by the Technologies (Bigger Combs, the Propolis Seal).</summary>
     public decimal HoneyStorage =>
-        (Config.StartingStorage + State.Combs * Config.StoragePerComb) * StorageMultiplier;
+        (Config.StartingHoneyCap + CombsBought * Config.HoneyCapPerComb + State.HoneySupers * Config.HoneySuperCapacity)
+        * StorageMultiplier;
+
+    /// <summary>The wax cap, small on purpose (spec 016): the starting room, plus a little for each
+    /// comb bought and each Wax Tray, grown by the same Technologies.</summary>
+    public decimal WaxStorage =>
+        (Config.StartingWaxCap + CombsBought * Config.WaxCapPerComb + State.WaxTrays * Config.WaxTrayCapacity)
+        * StorageMultiplier;
 
     /// <summary>The combs are full: no more honey is stored (the one place this is decided).</summary>
     public bool IsStorageFull => State.Honey >= HoneyStorage;
 
-    /// <summary>Honey storage one comb adds right now.</summary>
-    public decimal StoragePerComb => Config.StoragePerComb * StorageMultiplier;
+    /// <summary>There's no room for more wax: no more wax is stored.</summary>
+    public bool IsWaxFull => State.Wax >= WaxStorage;
 
-    private decimal StorageMultiplier =>
+    /// <summary>Honey storage one comb adds right now.</summary>
+    public decimal StoragePerComb => Config.HoneyCapPerComb * StorageMultiplier;
+    // Cut in stage 7.5 (spec 016): public decimal StoragePerComb => Config.StoragePerComb * StorageMultiplier;
+
+    /// <summary>Wax storage one comb adds right now.</summary>
+    public decimal WaxStoragePerComb => Config.WaxCapPerComb * StorageMultiplier;
+
+    /// <summary>Honey a second one comb adds, with the lasting boosts (the wooden hive, guarding).</summary>
+    public decimal HoneyPerCombNow => Config.HoneyPerCombPerSecond * HiveMultiplier;
+
+    /// <summary>The Technologies' multiplier on both caps (honey and wax since stage 7.5).</summary>
+    public decimal StorageMultiplier =>
         (Owns(BeekeeperUpgrades.BiggerCombs2) ? Config.BiggerCombs2Multiplier
          : Owns(BeekeeperUpgrades.BiggerCombs1) ? Config.BiggerCombs1Multiplier
          : 1m)
@@ -249,12 +300,17 @@ public sealed class BeekeeperEngine
     /// <summary>The most bees the slice can bring in on one click.</summary>
     public decimal SliceCap => Math.Floor(BeesPerClick * Config.SliceCapMultiple);
 
-    /// <summary>The colony's base rate. Raids and the like use this, never the calm boost.</summary>
-    public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond * HiveMultiplier;
+    /// <summary>The hive's base honey rate: each comb makes a flat rate (spec 016, FR-703), from the
+    /// first bee caught on, however many bees there are. Raids and the like use this, never the
+    /// calm boost.</summary>
+    public decimal HoneyPerSecond =>
+        HiveStarted ? State.Combs * Config.HoneyPerCombPerSecond * HiveMultiplier : 0m;
+    // Cut in stage 7.5 (spec 016): every bee made honey.
+    // public decimal HoneyPerSecond => State.Bees * Config.HoneyPerBeePerSecond * HiveMultiplier;
 
-    /// <summary>Lasting boosts to every honeybee's honey: the wooden hive and guarding ("the hive
-    /// feels safe"), multiplied together. Everything that reads honey per second (production, the
-    /// queen's growing hive, raids, hover rates, the trade agreement) sees it, live and away alike.</summary>
+    /// <summary>Lasting boosts to the combs' honey: the wooden hive and guarding ("the hive
+    /// feels safe"), multiplied together. Everything that reads honey per second (production,
+    /// raids, hover rates) sees it, live and away alike. Wax never does.</summary>
     public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier;
 
     /// <summary>What the hive makes right now: the base rate with whichever boosts are on (calm
@@ -269,48 +325,144 @@ public sealed class BeekeeperEngine
     /// <summary>The sage-propolis candle's boost, on while it burns, live or away.</summary>
     public decimal SagePropolisBoostNow => IsSagePropolisBurning ? Config.SagePropolisHoneyMultiplier : 1m;
 
-    /// <summary>Wax the hive makes right now: follows all honey made (full combs or not),
-    /// with the Wax-Catcher, its upgrade and calm bees counted.</summary>
-    public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
+    /// <summary>Wax the hive makes right now (spec 016, FR-705): a tiny drip plus a little from
+    /// every free bee, times the Wax-Catchers. Not multiplied by combs, and no calm, candle,
+    /// wooden-hive or guarding term: those boost honey only.</summary>
+    public decimal WaxPerSecondNow =>
+        (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier;
+    // Cut in stage 7.5 (spec 016): wax followed all the honey made, calm counted.
+    // public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
 
-    /// <summary>Wax per 50 honey: 1, 2 with the Wax-Catcher, 3 with the Better Wax-Catcher.</summary>
-    public decimal WaxPerBatch =>
+    /// <summary>The Wax-Catchers on the wax rate: 1, 2 with the Wax-Catcher, 3 with the Better
+    /// Wax-Catcher (was WaxPerBatch, wax per 50 honey, before stage 7.5).</summary>
+    public decimal WaxMultiplier =>
         !State.HasWaxCatcher ? 1m
         : Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.WaxCatcherMultiplier * Config.BetterWaxCatcherBonus
         : Config.WaxCatcherMultiplier;
 
     public bool Owns(string upgradeId) => State.Upgrades.Contains(upgradeId);
 
-    /// <summary>floor(50 × 1.25^N) where N = combs already built.</summary>
-    public decimal CombCost
+    /// <summary>floor(base × growth^n), or decimal.MaxValue (effectively unbuyable) on overflow.</summary>
+    private static decimal GrowingPrice(decimal basePrice, decimal growth, int n)
     {
-        get
+        try
         {
-            try
-            {
-                decimal cost = Config.CombBaseWaxCost;
-                for (int i = 0; i < State.Combs; i++) cost *= Config.CombCostGrowth;
-                return Math.Floor(cost);
-            }
-            catch (OverflowException)
-            {
-                return decimal.MaxValue; // effectively unbuyable
-            }
+            decimal cost = basePrice;
+            for (int i = 0; i < n; i++) cost *= growth;
+            return Math.Floor(cost);
+        }
+        catch (OverflowException)
+        {
+            return decimal.MaxValue;
         }
     }
+
+    /// <summary>The next comb's wax price: floor(10 × 1.25^n), n = combs bought (the starter doesn't count).</summary>
+    public decimal CombCost => GrowingPrice(Config.CombBaseWaxCost, Config.CombCostGrowth, CombsBought);
+    // Cut in stage 7.5 (spec 016): floor(50 × 1.25^N) where N = combs already built (no starter comb).
+
+    /// <summary>The next comb's bee price: floor(20 × 1.4^n), n = combs bought. These bees move in
+    /// and leave the free-bee count; "how many bees fit in a comb" is simply this price.</summary>
+    public decimal CombBeeCost => GrowingPrice(Config.CombBaseBeeCost, Config.CombBeeCostGrowth, CombsBought);
+
+    /// <summary>The next Honey Super's price in Beebits: floor(75 × 1.5^level).</summary>
+    public decimal HoneySuperCost => GrowingPrice(Config.HoneySuperBaseCost, Config.HoneySuperCostGrowth, State.HoneySupers);
+
+    /// <summary>The next Wax Tray's price in Beebits: floor(100 × 1.6^level).</summary>
+    public decimal WaxTrayCost => GrowingPrice(Config.WaxTrayBaseCost, Config.WaxTrayCostGrowth, State.WaxTrays);
 
     /// <summary>The next tool in the shop, or null when the Vacuum is owned.</summary>
     public BeekeeperTool? NextTool =>
         State.ToolLevel < Config.Tools.Count ? Config.Tools[State.ToolLevel] : null;
 
-    public bool CanSell => State.Honey >= Config.HoneyPerBeebit;
+    /// <summary>Honey in one bundle for 1 Beebit right now: 10, or 8 under the trade agreement
+    /// (stage 7.5, spec 016, FR-711). Everything about selling reads this.</summary>
+    public decimal HoneyPerBeebitNow => State.HasTradeAgreement ? Config.BetterHoneyPerBeebit : Config.HoneyPerBeebit;
+
+    public bool CanSell => State.Honey >= HoneyPerBeebitNow;
+    // Cut in stage 7.5 (spec 016): public bool CanSell => State.Honey >= Config.HoneyPerBeebit;
 
     public bool CanBuyNextTool => NextTool is { } t && State.ShopRevealed && State.Beebits >= t.Cost;
 
     public bool CanBuyWaxCatcher =>
         !State.HasWaxCatcher && State.ShopRevealed && State.Beebits >= Config.WaxCatcherCost;
 
-    public bool CanBuildComb => State.Wax >= CombCost;
+    /// <summary>A comb needs both its bees and its wax (spec 016, FR-708).</summary>
+    public bool CanBuildComb => State.Bees >= CombBeeCost && State.Wax >= CombCost;
+    // Cut in stage 7.5 (spec 016): public bool CanBuildComb => State.Wax >= CombCost;
+
+    // ------------------------------------------------------------------ walls (stage 7.5)
+
+    /// <summary>A wax price above the wax cap: a wall (spec 016, FR-710). Walls are intended; the
+    /// screen says it needs more storage. Nothing ever lowers a price or raises a cap because of one.</summary>
+    public bool IsWaxWall(decimal wax) => wax > WaxStorage;
+
+    /// <summary>A honey price above the honey cap: the same kind of wall.</summary>
+    public bool IsHoneyWall(decimal honey) => honey > HoneyStorage;
+
+    /// <summary>The next comb's price doesn't fit in the hive.</summary>
+    public bool CombIsWall => IsWaxWall(CombCost);
+
+    /// <summary>The wooden hive's price doesn't fit in the hive.</summary>
+    public bool WoodenHiveIsWall => IsWaxWall(Config.WoodenHiveWax);
+
+    /// <summary>A Shop upgrade's price doesn't fit in the hive.</summary>
+    public bool UpgradeIsWall(string id) =>
+        Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u && IsWaxWall(u.Wax);
+
+    /// <summary>The Shop is on screen (it also opens with The Workbench).</summary>
+    public bool ShopShown => State.ShopRevealed || State.WorkbenchRevealed;
+
+    /// <summary>The comb row is on screen (the Combs panel, at The Workbench).</summary>
+    public bool CombRowShown => State.CombsRevealed || State.WorkbenchRevealed;
+
+    /// <summary>Any price the player can see is a wall: the comb, the wooden hive, a Shop upgrade.</summary>
+    public bool AnyWallShown =>
+        (CombRowShown && CombIsWall)
+        || (WoodenHiveOffered && WoodenHiveIsWall)
+        || (ShopShown && ShopUpgrades.Any(u => IsWaxWall(u.Wax)));
+
+    /// <summary>The first wall the player sees is told once in the log. Only a flag and an event.</summary>
+    private void CheckWalls(List<BeekeeperEvent> events)
+    {
+        if (State.FirstWallAnnounced || !AnyWallShown) return;
+        State.FirstWallAnnounced = true;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWall));
+    }
+
+    // ------------------------------------------------------------------ capacity upgrades (stage 7.5)
+
+    /// <summary>Honey Super and Wax Tray rows show at The Workbench once the Shop has opened and
+    /// the Combs panel has appeared. Beebits only, so selling honey always pays past a wall.</summary>
+    public bool CapacityUpgradesShown => State.ShopRevealed && State.CombsRevealed;
+
+    public bool CanBuyHoneySuper => CapacityUpgradesShown && State.Beebits >= HoneySuperCost;
+
+    public bool CanBuyWaxTray => CapacityUpgradesShown && State.Beebits >= WaxTrayCost;
+
+    /// <summary>One more Honey Super: more honey room. Bought again and again.</summary>
+    public ActionResult BuyHoneySuper()
+    {
+        if (!CanBuyHoneySuper) return ActionResult.Refused;
+        decimal cost = HoneySuperCost;
+        State.Beebits -= cost;
+        State.HoneySupers++;
+        RefreshStorageFlag();
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.HoneySuperBought, State.HoneySupers) };
+        return new ActionResult(true, cost, events);
+    }
+
+    /// <summary>One more Wax Tray: more wax room. Bought again and again.</summary>
+    public ActionResult BuyWaxTray()
+    {
+        if (!CanBuyWaxTray) return ActionResult.Refused;
+        decimal cost = WaxTrayCost;
+        State.Beebits -= cost;
+        State.WaxTrays++;
+        RefreshStorageFlag();
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WaxTrayBought, State.WaxTrays) };
+        return new ActionResult(true, cost, events);
+    }
 
     /// <summary>A gap longer than the threshold counts as time away.</summary>
     public bool IsAway(decimal gapSeconds) => gapSeconds > Config.AwayThresholdSeconds;
@@ -379,7 +531,7 @@ public sealed class BeekeeperEngine
                 if (State.BeeBoostSecondsLeft <= 0m) { State.BeeBoostSecondsLeft = 0m; events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBoostOut)); }
             }
         }
-        return new AdvanceResult(total.Stored, total.Wax, events, total.Raised, total.AgreementBeebits);
+        return new AdvanceResult(total.Stored, total.Wax, events, total.Raised);
     }
 
     // ------------------------------------------------------------------ the Smoker (stage 3)
@@ -418,14 +570,18 @@ public sealed class BeekeeperEngine
         if (m.PantryEmptied) events.RemoveAll(e => e.Key == BeekeeperEvents.PantryEmpty);
         bool sageOut = events.RemoveAll(e => e.Key == BeekeeperEvents.SagePropolisOut) > 0;
 
-        // In reading order, top line first: "the bees made…", "the queen raised…", "propolis…",
-        // "the bear left…", "the pantry…", "the candle…".
+        // In reading order, top line first: "the combs filled…", "the queen raised…", "propolis…",
+        // "the pantry…", "the candle…".
         var welcome = new List<BeekeeperEvent>();
-        if (State.Bees > 0m)
+        // Stage 7.5 (spec 016, FR-713): told once the first bee has been caught, even with 0 free
+        // bees. Before that there is no message, though the wax drip still counted.
+        // Cut in stage 7.5: if (State.Bees > 0m)
+        if (HiveStarted)
         {
-            // Honey that found a home: stored, or taken by the bear under the agreement.
-            // Under 1 honey would read "made 0 honey", so that counts as nothing.
-            decimal honey = m.Stored + m.Taken;
+            // Under 1 honey would read "filled with 0 honey", so that counts as nothing.
+            decimal honey = m.Stored;
+            // Cut in stage 7.5 (spec 016): honey that found a home included the bear's take.
+            // decimal honey = m.Stored + m.Taken;
             welcome.Add(honey >= 1m
                 ? new BeekeeperEvent(BeekeeperEvents.WelcomeBack, honey)
                 : new BeekeeperEvent(BeekeeperEvents.WelcomeBackNothing));
@@ -433,12 +589,13 @@ public sealed class BeekeeperEngine
             if (raised > 0m) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackQueen, raised));
             decimal gathered = Math.Floor(State.Propolis - propolisBefore);
             if (gathered > 0m) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPropolis, gathered));
-            if (m.AgreementBeebits > 0m)
-                welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
+            // Cut in stage 7.5 (spec 016): the bear's Beebits for the overflow.
+            // if (m.AgreementBeebits > 0m)
+            //     welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBear, m.AgreementBeebits, State.BearName));
             if (m.PantryEmptied) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
             if (sageOut) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackSageOut));
         }
-        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.AgreementBeebits, m.PantryEmptied)
+        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.PantryEmptied)
         {
             WelcomeBack = welcome,
         };
@@ -455,7 +612,7 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent>();
         if (gapSeconds <= 0m) return new AwayResult(0m, 0m, 0m, events);
         var (credited, m) = AwayStretch(gapSeconds, events);
-        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.AgreementBeebits, m.PantryEmptied);
+        return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.PantryEmptied);
     }
 
     /// <summary>The one place a gap is worked out, shared by <see cref="AdvanceAway"/> and
@@ -467,13 +624,19 @@ public sealed class BeekeeperEngine
         return (credited, m);
     }
 
-    /// <summary>What one stretch made. <see cref="Taken"/> is the overflow honey the bear took.</summary>
-    private readonly record struct Made(decimal Stored, decimal Wax, decimal Raised, decimal Taken,
-                                        decimal AgreementBeebits, bool PantryEmptied)
+    /// <summary>What one stretch made: honey and wax stored, bees raised.</summary>
+    private readonly record struct Made(decimal Stored, decimal Wax, decimal Raised, bool PantryEmptied)
     {
         public static Made operator +(Made x, Made y) => new(x.Stored + y.Stored, x.Wax + y.Wax, x.Raised + y.Raised,
-            x.Taken + y.Taken, x.AgreementBeebits + y.AgreementBeebits, x.PantryEmptied || y.PantryEmptied);
+            x.PantryEmptied || y.PantryEmptied);
     }
+    // Cut in stage 7.5 (spec 016): Taken (the overflow honey the bear took) and AgreementBeebits.
+    // private readonly record struct Made(decimal Stored, decimal Wax, decimal Raised, decimal Taken,
+    //                                     decimal AgreementBeebits, bool PantryEmptied)
+    // {
+    //     public static Made operator +(Made x, Made y) => new(x.Stored + y.Stored, x.Wax + y.Wax, x.Raised + y.Raised,
+    //         x.Taken + y.Taken, x.AgreementBeebits + y.AgreementBeebits, x.PantryEmptied || y.PantryEmptied);
+    // }
 
     /// <summary>
     /// The hive and the garden work for <paramref name="seconds"/>. If the growing seed sprouts
@@ -519,6 +682,7 @@ public sealed class BeekeeperEngine
             }
             GrowBeds(step, events);
         }
+        CheckWalls(events);   // a sprout or the first propolis may show a new price
         return made;
     }
 
@@ -554,10 +718,14 @@ public sealed class BeekeeperEngine
 
     /// <summary>
     /// The hive works for <paramref name="seconds"/> in one exact step, so many short stretches
-    /// add up to one long one (FR-402, FR-403). While the queen lays, the bees grow in a straight
-    /// line, so the honey is the area under that line; the stretch is split where the pantry runs
-    /// out (growth before, flat after). Honey beyond the room left overflows: the bear buys it
-    /// under the trade agreement, otherwise it is lost. Wax follows all honey made.
+    /// add up to one long one (FR-402, FR-403; spec 016, FR-706).
+    /// <para>Honey (stage 7.5): each comb makes a flat rate, times the boosts, from the first bee
+    /// on (none before). Wax: a tiny drip plus a little from every free bee, times the Wax-Catchers.
+    /// While the queen lays, the free bees grow in a straight line, so the wax from them is the area
+    /// under that line; the stretch is split where the pantry runs out (growth before, flat after).</para>
+    /// <para>Each is stored up to the room left; the rest stops (nothing is wasted into the other,
+    /// nothing is sold). The rates never read what is stored, so <c>min(made, room)</c> keeps many
+    /// short stretches equal to one long one, even when a cap is reached part-way.</para>
     /// </summary>
     private Made Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
     {
@@ -599,9 +767,17 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.PantryEmpty));
         }
 
-        if (beeSeconds <= 0m) return new Made(0m, 0m, raised, 0m, 0m, emptied);
+        // Cut in stage 7.5 (spec 016): with no bee-seconds nothing was made. Now the wax drips and
+        // the reveals run with no bees at all.
+        // if (beeSeconds <= 0m) return new Made(0m, 0m, raised, 0m, 0m, emptied);
 
-        decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * SagePropolisBoostNow * HiveMultiplier;
+        // Honey: flat per comb (spec 016, FR-703), boosted by calm and candles (boost, the
+        // sage-propolis candle) and the hive (wooden hive, guarding). None before the first bee.
+        decimal made = HiveStarted
+            ? State.Combs * Config.HoneyPerCombPerSecond * seconds * boost * SagePropolisBoostNow * HiveMultiplier
+            : 0m;
+        // Cut in stage 7.5 (spec 016): every bee-second made honey.
+        // decimal made = beeSeconds * Config.HoneyPerBeePerSecond * boost * SagePropolisBoostNow * HiveMultiplier;
         decimal room = Math.Max(0m, HoneyStorage - State.Honey);
         decimal stored = Math.Min(made, room);
         State.Honey = Snap(State.Honey + stored);
@@ -612,40 +788,60 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.StorageFull));
         }
 
-        // The trade agreement: the bear takes the overflow at half price, fractions kept (FR-404).
-        decimal taken = 0m, agreementBeebits = 0m;
-        if (State.HasTradeAgreement && made > stored)
-        {
-            taken = made - stored;
-            State.AgreementHoneyProgress = Snap(State.AgreementHoneyProgress + taken);
-            agreementBeebits = Math.Floor(State.AgreementHoneyProgress / Config.AgreementHoneyPerBeebit);
-            if (agreementBeebits > 0m)
-            {
-                State.AgreementHoneyProgress -= agreementBeebits * Config.AgreementHoneyPerBeebit;
-                State.Beebits += agreementBeebits;
-                State.BeebitsRevealed = true;
-            }
-        }
+        // Cut in stage 7.5 (spec 016): the trade agreement's auto-sale. Full combs simply stop.
+        // // The trade agreement: the bear takes the overflow at half price, fractions kept (FR-404).
+        // decimal taken = 0m, agreementBeebits = 0m;
+        // if (State.HasTradeAgreement && made > stored)
+        // {
+        //     taken = made - stored;
+        //     State.AgreementHoneyProgress = Snap(State.AgreementHoneyProgress + taken);
+        //     agreementBeebits = Math.Floor(State.AgreementHoneyProgress / Config.AgreementHoneyPerBeebit);
+        //     if (agreementBeebits > 0m)
+        //     {
+        //         State.AgreementHoneyProgress -= agreementBeebits * Config.AgreementHoneyPerBeebit;
+        //         State.Beebits += agreementBeebits;
+        //         State.BeebitsRevealed = true;
+        //     }
+        // }
 
-        // Wax follows all the honey the bees make, so it keeps coming when the combs are
-        // full (Leah, 2026-11-07). Selling honey never touches it.
-        decimal waxMade = 0m;
-        State.WaxProgress = Snap(State.WaxProgress + made);
-        decimal batches = Math.Floor(State.WaxProgress / Config.HoneyPerWax);
-        if (batches > 0m)
+        // Cut in stage 7.5 (spec 016): wax followed all the honey the bees made.
+        // // Wax follows all the honey the bees make, so it keeps coming when the combs are
+        // // full (Leah, 2026-11-07). Selling honey never touches it.
+        // decimal waxMade = 0m;
+        // State.WaxProgress = Snap(State.WaxProgress + made);
+        // decimal batches = Math.Floor(State.WaxProgress / Config.HoneyPerWax);
+        // if (batches > 0m)
+        // {
+        //     State.WaxProgress -= batches * Config.HoneyPerWax;
+        //     waxMade = batches * WaxPerBatch;
+        //     State.Wax += waxMade;
+        //     if (!State.WaxRevealed)
+        //     {
+        //         State.WaxRevealed = true;
+        //         events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWax));
+        //     }
+        // }
+
+        // Wax (spec 016, FR-705/706): the drip plus the free bees' share, times the Wax-Catchers;
+        // no calm, candle, wooden-hive or guarding term. Stored up to the wax cap; the rest stops.
+        decimal waxMade = (Config.WaxBasePerSecond * seconds + beeSeconds * Config.WaxPerFreeBeePerSecond) * WaxMultiplier;
+        decimal waxRoom = Math.Max(0m, WaxStorage - State.Wax);
+        decimal waxStored = Math.Min(waxMade, waxRoom);
+        State.Wax = Snap(State.Wax + waxStored);
+
+        if (waxMade > 0m && State.Wax >= WaxStorage && !State.WaxFullAnnounced)
         {
-            State.WaxProgress -= batches * Config.HoneyPerWax;
-            waxMade = batches * WaxPerBatch;
-            State.Wax += waxMade;
-            if (!State.WaxRevealed)
-            {
-                State.WaxRevealed = true;
-                events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWax));
-            }
+            State.WaxFullAnnounced = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.WaxFull));
+        }
+        if (!State.WaxRevealed && State.Wax >= Config.WaxRevealWax)
+        {
+            State.WaxRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWax));
         }
 
         CheckReveals(events);
-        return new Made(stored, waxMade, raised, taken, agreementBeebits, emptied);
+        return new Made(stored, waxStored, raised, emptied);
     }
 
     // ------------------------------------------------------------------ the queen (stage 5)
@@ -698,10 +894,12 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the trade agreement (stage 5)
 
-    /// <summary>Beebits a second the agreement brings while the combs are full.</summary>
-    public decimal AgreementBeebitsPerSecondNow =>
-        State.HasTradeAgreement && IsStorageFull ? HoneyPerSecondNow / Config.AgreementHoneyPerBeebit : 0m;
+    // Cut in stage 7.5 (spec 016): the agreement no longer sells the overflow; it is a better rate.
+    // /// <summary>Beebits a second the agreement brings while the combs are full.</summary>
+    // public decimal AgreementBeebitsPerSecondNow =>
+    //     State.HasTradeAgreement && IsStorageFull ? HoneyPerSecondNow / Config.AgreementHoneyPerBeebit : 0m;
 
+    /// <summary>At 25 trades (stage 7.5) the bear offers a better rate from the next sale on.</summary>
     private void OfferAgreementIfDue(List<BeekeeperEvent> events)
     {
         if (State.HasTradeAgreement || State.Trades < Config.AgreementTrades) return;
@@ -711,24 +909,31 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the bear
 
-    /// <summary>Sell exactly one bundle (10 honey for 1 Beebit).</summary>
+    /// <summary>Sell exactly one bundle (10 honey for 1 Beebit; 8 under the agreement).</summary>
     public ActionResult SellTen() => Sell(all: false);
 
     /// <summary>Sell as many whole bundles as possible; the remainder stays. Counts as one trade.</summary>
     public ActionResult SellAll() => Sell(all: true);
 
+    /// <summary>Whole bundles at the rate of the moment (spec 016, FR-711): the sale that brings
+    /// the agreement is still paid at the old rate.</summary>
     private ActionResult Sell(bool all)
     {
         if (!CanSell) return ActionResult.Refused;
 
-        decimal bundles = all ? Math.Floor(State.Honey / Config.HoneyPerBeebit) : 1m;
-        State.Honey -= bundles * Config.HoneyPerBeebit;
+        decimal bundle = HoneyPerBeebitNow;
+        decimal bundles = all ? Math.Floor(State.Honey / bundle) : 1m;
+        State.Honey -= bundles * bundle;
         State.Beebits += bundles;
         State.Trades++;
         State.BeebitsRevealed = true;
         RefreshStorageFlag();
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * Config.HoneyPerBeebit) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * bundle) };
+        // Cut in stage 7.5 (spec 016): bundles were always Config.HoneyPerBeebit.
+        // decimal bundles = all ? Math.Floor(State.Honey / Config.HoneyPerBeebit) : 1m;
+        // State.Honey -= bundles * Config.HoneyPerBeebit;
+        // var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, bundles, State.BearName, bundles * Config.HoneyPerBeebit) };
         OfferAgreementIfDue(events);
         CheckReveals(events);
         return new ActionResult(true, bundles, events);
@@ -744,6 +949,7 @@ public sealed class BeekeeperEngine
         State.Beebits -= tool.Cost;
         State.ToolLevel++;
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.ToolBought, State.ToolLevel, tool.Id) };
+        CheckWalls(events);   // the Vacuum brings upgrades that may be walls
         return new ActionResult(true, tool.Cost, events);
     }
 
@@ -755,23 +961,38 @@ public sealed class BeekeeperEngine
         State.Beebits -= Config.WaxCatcherCost;
         State.HasWaxCatcher = true;
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WaxCatcherBought) };
+        CheckWalls(events);
         return new ActionResult(true, Config.WaxCatcherCost, events);
     }
 
     // ------------------------------------------------------------------ combs
 
+    /// <summary>A new comb (spec 016, FR-708): its bee price leaves the free-bee count for good (the
+    /// bees move in; no per-comb count is kept) and its wax is spent. Both caps grow.</summary>
     public ActionResult BuildComb()
     {
-        decimal cost = CombCost;
-        if (State.Wax < cost) return ActionResult.Refused;
+        if (!CanBuildComb) return ActionResult.Refused;
+        decimal bees = CombBeeCost, wax = CombCost;
 
-        decimal storageBefore = HoneyStorage;
-        State.Wax -= cost;
+        State.Bees -= bees;
+        State.Wax -= wax;
         State.Combs++;
+        State.CombsRevealed = true;
         RefreshStorageFlag();
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, HoneyStorage - storageBefore) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, bees) };
         OpenWorkbenchIfDue(events);
-        return new ActionResult(true, cost, events);
+        CheckWalls(events);
+        return new ActionResult(true, wax, events);
+        // Cut in stage 7.5 (spec 016): wax only, and the event carried the honey storage added.
+        // decimal cost = CombCost;
+        // if (State.Wax < cost) return ActionResult.Refused;
+        // decimal storageBefore = HoneyStorage;
+        // State.Wax -= cost;
+        // State.Combs++;
+        // RefreshStorageFlag();
+        // var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, HoneyStorage - storageBefore) };
+        // OpenWorkbenchIfDue(events);
+        // return new ActionResult(true, cost, events);
     }
 
     // ------------------------------------------------------------------ The Workbench (stage 2)
@@ -788,21 +1009,24 @@ public sealed class BeekeeperEngine
         OpenWorkbenchIfDue(events);
         SettleQueenIfDue(events);
         OfferAgreementIfDue(events);
-        AnnounceOldCountsIfDue(events);
+        // Cut in stage 7.5 (spec 016): older saves no longer load.
+        // AnnounceOldCountsIfDue(events);
         SendEmissaryIfDue(events);
-        GiveSeedsIfDue(events);   // an older save past a seed's trade count gets that seed (stage 7)
+        GiveSeedsIfDue(events);   // a save past a seed's trade count gets that seed (stage 7)
+        CheckWalls(events);
         return events;
     }
 
-    /// <summary>Stage 4 and 5 saves counted forager and guard bees. The specialties come from the
-    /// plants on their own; this only says so once, if there was a count to speak of.</summary>
-    private void AnnounceOldCountsIfDue(List<BeekeeperEvent> events)
-    {
-        if (State.OldCountsAnnounced) return;
-        State.OldCountsAnnounced = true;
-        if (State.ForagerBees > 0m || State.GuardBees > 0m)
-            events.Add(new BeekeeperEvent(BeekeeperEvents.OldCountsSettle));
-    }
+    // Cut in stage 7.5 (spec 016): older saves no longer load.
+    // /// <summary>Stage 4 and 5 saves counted forager and guard bees. The specialties come from the
+    // /// plants on their own; this only says so once, if there was a count to speak of.</summary>
+    // private void AnnounceOldCountsIfDue(List<BeekeeperEvent> events)
+    // {
+    //     if (State.OldCountsAnnounced) return;
+    //     State.OldCountsAnnounced = true;
+    //     if (State.ForagerBees > 0m || State.GuardBees > 0m)
+    //         events.Add(new BeekeeperEvent(BeekeeperEvents.OldCountsSettle));
+    // }
 
     private void OpenWorkbenchIfDue(List<BeekeeperEvent> events)
     {
@@ -961,6 +1185,7 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
         }
         GiveSeedsIfDue(events);
+        CheckWalls(events);   // the repellent candle brings Stronger Candles, which may be a wall
         return new ActionResult(true, bundles, events);
     }
 
@@ -1057,7 +1282,9 @@ public sealed class BeekeeperEngine
         State.Propolis -= u.Propolis;
         State.Upgrades.Add(id);
         RefreshStorageFlag();
-        return new ActionResult(true, u.Beebits, new[] { new BeekeeperEvent(BeekeeperEvents.UpgradeBought, 0m, id) });
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.UpgradeBought, 0m, id) };
+        CheckWalls(events);   // the next upgrade in a line may be a wall
+        return new ActionResult(true, u.Beebits, events);
     }
 
     // ------------------------------------------------------------------ wasps
@@ -1232,6 +1459,7 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.WaspTrade, count, null, honey) };
         if (State.WaspTrades == 1) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstPaper));
         GiveSeedsIfDue(events);   // the wasps' reputation brings the poplar seed
+        CheckWalls(events);   // paper brings the Third Bed, which may be a wall
         return new ActionResult(true, count, events);
     }
 
@@ -1419,6 +1647,7 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
         NoteBeeBreadAdded(events);
+        CheckWalls(events);   // the wooden hive is offered now, and may be a wall
         return new ActionResult(true, count, events);
     }
 
@@ -1613,6 +1842,34 @@ public sealed class BeekeeperEngine
         return events;
     }
 
+    /// <summary>Debug builds only (stage 7.5): <paramref name="count"/> more combs, free of charge.
+    /// The Combs panel shows, and The Workbench opens if this reaches it.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugAddCombs(int count)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (count <= 0) return events;
+        State.Combs += count;
+        State.CombsRevealed = true;
+        RefreshStorageFlag();
+        OpenWorkbenchIfDue(events);
+        CheckReveals(events);
+        return events;
+    }
+
+    /// <summary>Debug builds only (stage 7.5): wax up to the wax cap (never down).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugFillWax()
+    {
+        var events = new List<BeekeeperEvent>();
+        State.Wax = Math.Max(State.Wax, WaxStorage);
+        if (!State.WaxRevealed)
+        {
+            State.WaxRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.FirstWax));
+        }
+        CheckReveals(events);
+        return events;
+    }
+
     // ------------------------------------------------------------------ reveals
 
     private void CheckReveals(List<BeekeeperEvent> events)
@@ -1632,11 +1889,14 @@ public sealed class BeekeeperEngine
             State.CombsRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.CombsAvailable));
         }
+        CheckWalls(events);
     }
 
-    /// <summary>Lets "the combs are full" be announced again once there is room again.</summary>
+    /// <summary>Lets "the combs are full" and "no more room for wax" be announced again once there
+    /// is room again (stage 7.5: both caps).</summary>
     private void RefreshStorageFlag()
     {
         if (!IsStorageFull) State.StorageFullAnnounced = false;
+        if (!IsWaxFull) State.WaxFullAnnounced = false;
     }
 }

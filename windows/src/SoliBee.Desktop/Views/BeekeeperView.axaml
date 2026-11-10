@@ -107,7 +107,7 @@
                         </TextBlock.RenderTransform>
                     </TextBlock>
                 </Grid>
-                <!-- THE HIVE (appears with the first bee) -->
+                <!-- THE HIVE (appears with the first bee, or since stage 7.5 the first whole wax) -->
                 <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
@@ -120,6 +120,8 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="WoodenHiveNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="WoodenHiveInfoText" Classes="bk-muted" />
+                                <!-- Stage 7.5: "Needs more wax storage" when the price is above the cap -->
+                                <TextBlock x:Name="WoodenHiveWallText" Classes="bk-muted" IsVisible="False" />
                             </StackPanel>
                             <Button x:Name="MoveHiveButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MoveHive_Click" />
@@ -164,8 +166,9 @@
                     </StackPanel>
                 </Border>
 
-                <!-- THE WORKBENCH: building combs (from the first 50 wax), then candles (from the
-                     2nd comb). Upgrades are in the Shop. -->
+                <!-- THE WORKBENCH: building combs (from the first 5 wax), Honey Supers and Wax Trays
+                     (stage 7.5, once the Shop is open), then candles (from the 3rd comb, the starter
+                     counted). Upgrades are in the Shop. -->
                 <Border x:Name="WorkbenchCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="WorkbenchTitleText" Classes="bk-title" />
@@ -173,9 +176,28 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="CombNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="CombsInfoText" Classes="bk-muted" />
+                                <!-- Stage 7.5: "Needs more wax storage" when the price is above the cap -->
+                                <TextBlock x:Name="CombWallText" Classes="bk-muted" IsVisible="False" />
                             </StackPanel>
                             <Button x:Name="BuildCombButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuildComb_Click" />
+                        </Grid>
+                        <!-- Stage 7.5 (spec 016): capacity upgrades, bought again and again for Beebits -->
+                        <Grid x:Name="HoneySuperRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="HoneySuperNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="HoneySuperInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="BuyHoneySuperButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyHoneySuper_Click" />
+                        </Grid>
+                        <Grid x:Name="WaxTrayRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="WaxTrayNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="WaxTrayInfoText" Classes="bk-muted" />
+                            </StackPanel>
+                            <Button x:Name="BuyWaxTrayButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyWaxTray_Click" />
                         </Grid>
                         <Grid x:Name="BeeswaxRow" ColumnDefinitions="*,Auto">
                             <StackPanel Spacing="2" VerticalAlignment="Center">

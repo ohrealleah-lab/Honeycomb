@@ -1074,7 +1074,7 @@ public partial class MainWindow : Window
         var vm = _beekeeperTracked;
         bool on = vm != null;
         BeekeeperBeesStatPanel.IsVisible    = on;
-        BeekeeperHoneyStatPanel.IsVisible   = on && vm!.HoneyRevealed;
+        BeekeeperHoneyStatPanel.IsVisible   = on && vm!.HoneyRevealed;   // honey starts with the first bee (stage 7.5)
         BeekeeperWaxStatPanel.IsVisible     = on && vm!.WaxRevealed;
         BeekeeperBeebitsStatPanel.IsVisible = on && vm!.BeebitsRevealed;
         if (!on) return;
@@ -1737,7 +1737,7 @@ public partial class MainWindow : Window
             case "Wax":     hive.DebugGrant(0m, 100m, 0m); break;
             case "Beebits": hive.DebugGrant(0m, 0m, 100m); break;
             case "Skip":    hive.DebugSkip(600m); break;
-            case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (2 combs)
+            case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (3 combs, the starter counted)
             case "Calm":    hive.DebugFillCalmMeter(); break;   // needs the Smoker
             case "Seed":    hive.DebugGiveSeed(); break;
             case "EverySeed": hive.DebugGiveEverySeed(); break;   // every seed not yet given (stage 7)
@@ -1753,6 +1753,10 @@ public partial class MainWindow : Window
             case "Honey":   hive.DebugGiveHoney(500m); break;
             case "Bribes":  hive.DebugBribesToAlmostEmissary(); break;   // one more bribe brings the emissary
             case "Emissary": hive.DebugBringEmissary(); break;
+            // Stage 7.5 (spec 016)
+            case "Combs5":  hive.DebugAddCombs(5); break;
+            case "FillWax": hive.DebugFillWax(); break;          // +wax may still go over the cap
+            case "Bees10k": hive.DebugGrant(10_000m, 0m, 0m); break;
         }
     }
 

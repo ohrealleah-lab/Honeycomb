@@ -23,8 +23,8 @@ public class BeekeeperSaveTests : IDisposable
     {
         Bees = 1234567.5m,
         Honey = 187.37m,
-        WaxProgress = 12.34m,
-        Wax = 61m,
+        // Cut in stage 7.5 (spec 016): WaxProgress = 12.34m,
+        Wax = 61.25m,
         Beebits = 99m,
         ToolLevel = 2,
         HasWaxCatcher = true,
@@ -34,6 +34,8 @@ public class BeekeeperSaveTests : IDisposable
         HoneyRevealed = true, BearRevealed = true, BeebitsRevealed = true,
         WaxRevealed = true, ShopRevealed = true, CombsRevealed = true,
         StorageFullAnnounced = true,
+        // Stage 7.5 (spec 016)
+        HoneySupers = 2, WaxTrays = 1, WaxFullAnnounced = true, FirstWallAnnounced = true, HasTradeAgreement = true,
         Log =
         {
             new BeekeeperLogEntry { Key = BeekeeperEvents.BearArrives, Text = "Baloo" },
@@ -52,8 +54,8 @@ public class BeekeeperSaveTests : IDisposable
         Assert.NotNull(loaded);
         Assert.Equal(1234567.5m, loaded!.Bees);
         Assert.Equal(187.37m, loaded.Honey);              // fractions survive
-        Assert.Equal(12.34m, loaded.WaxProgress);
-        Assert.Equal(61m, loaded.Wax);
+        // Cut in stage 7.5 (spec 016): Assert.Equal(12.34m, loaded.WaxProgress);
+        Assert.Equal(61.25m, loaded.Wax);                 // wax fractions survive too (stage 7.5)
         Assert.Equal(99m, loaded.Beebits);
         Assert.Equal(2, loaded.ToolLevel);
         Assert.True(loaded.HasWaxCatcher);
@@ -63,6 +65,9 @@ public class BeekeeperSaveTests : IDisposable
         Assert.True(loaded.HoneyRevealed && loaded.BearRevealed && loaded.BeebitsRevealed
                     && loaded.WaxRevealed && loaded.ShopRevealed && loaded.CombsRevealed);
         Assert.True(loaded.StorageFullAnnounced);
+        Assert.Equal(2, loaded.HoneySupers);
+        Assert.Equal(1, loaded.WaxTrays);
+        Assert.True(loaded.WaxFullAnnounced && loaded.FirstWallAnnounced && loaded.HasTradeAgreement);
         Assert.Equal(2, loaded.Log.Count);
         Assert.Equal(BeekeeperEvents.BearArrives, loaded.Log[0].Key);
         Assert.Equal("Baloo", loaded.Log[0].Text);
@@ -104,10 +109,32 @@ public class BeekeeperSaveTests : IDisposable
         Assert.True(File.Exists(path + ".unreadable"));
     }
 
+    // Stage 7.5 (spec 016, FR-714): a file older than version 8 goes the way of a damaged one.
+    [Theory]
+    [InlineData(1)]
+    [InlineData(4)]
+    [InlineData(6)]
+    [InlineData(7)]
+    public void OlderVersions_StartANewGame_AndAreMovedAside(int version)
+    {
+        var path = PathFor();
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(path, "{\"Version\": " + version + ", \"Bees\": 5000, \"Honey\": 120, \"Combs\": 3, \"Log\": []}");
+
+        Assert.Null(BeekeeperSaveService.Load(path, out bool keep));
+        Assert.False(keep);
+        Assert.False(File.Exists(path));
+        Assert.True(File.Exists(path + ".unreadable"));
+    }
+
     [Theory]
     [InlineData("{\"Bees\": -5}")]
     [InlineData("{\"Honey\": -1}")]
     [InlineData("{\"Combs\": -1}")]
+    [InlineData("{\"Combs\": 0}")]         // stage 7.5: the starter comb is always there
+    [InlineData("{\"HoneySupers\": -1}")]
+    [InlineData("{\"WaxTrays\": -1}")]
+    [InlineData("{\"Wax\": -0.5}")]
     [InlineData("{\"ToolLevel\": 9}")]
     [InlineData("{\"ToolLevel\": -1}")]
     public void NonsenseNumbers_AreRefused(string json)
@@ -165,8 +192,9 @@ public class BeekeeperSaveTests : IDisposable
     public void ReopeningTwoHoursLater_CreditsExactlyTwoHours()
     {
         var path = PathFor();
-        var cfg = new BeekeeperConfig { StartingStorage = 1_000_000m };
-        BeekeeperSaveService.Save(new BeekeeperState { Bees = 100m, BearName = "Bruno" }, path, Now);
+        var cfg = new BeekeeperConfig { StartingHoneyCap = 1_000_000m };
+        // Stage 7.5: 5 combs make 1 honey a second.
+        BeekeeperSaveService.Save(new BeekeeperState { HoneyRevealed = true, Combs = 5, BearName = "Bruno" }, path, Now);
 
         var loaded = BeekeeperSaveService.Load(path)!;
         var engine = new BeekeeperEngine(cfg, loaded);
@@ -181,7 +209,7 @@ public class BeekeeperSaveTests : IDisposable
     public void ClockSetBackwards_CreditsNothing()
     {
         var path = PathFor();
-        BeekeeperSaveService.Save(new BeekeeperState { Bees = 100m }, path, Now);
+        BeekeeperSaveService.Save(new BeekeeperState { HoneyRevealed = true, Combs = 5 }, path, Now);
 
         var loaded = BeekeeperSaveService.Load(path)!;
         var engine = new BeekeeperEngine(state: loaded);

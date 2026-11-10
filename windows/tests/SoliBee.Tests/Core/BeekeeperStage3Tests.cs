@@ -147,7 +147,7 @@ public class BeekeeperStage3Tests : IDisposable
     [Fact]
     public void APuff_CalmsTheBeesForTwoMinutes_AndDoublesHoney()
     {
-        var e = WithSmoker(s => { s.CalmMeter = 15; s.Honey = 0m; s.Combs = 5; });   // 100 bees: 1 honey/s; room for 1,200
+        var e = WithSmoker(s => { s.CalmMeter = 15; s.Honey = 0m; s.Combs = 5; s.HoneyRevealed = true; });   // 5 combs: 1 honey/s; room for 1,400
         var r = e.PuffSmoker();
         Assert.True(r.Done);
         Assert.Equal(0, e.State.CalmMeter);
@@ -176,23 +176,49 @@ public class BeekeeperStage3Tests : IDisposable
         Assert.True(e.CanPuff);
     }
 
-    [Fact]
-    public void CalmBees_MakeWaxTwiceAsFastToo()
-    {
-        var e = WithSmoker(s => { s.Bees = 5000m; s.CalmSecondsLeft = 10m; s.Honey = 0m; });   // 50 honey/s, 100 calm
-        e.Advance(1m);
-        Assert.Equal(2m, e.State.Wax);
-    }
+    // Cut in stage 7.5 (spec 016): calm doubled wax too, since wax followed honey.
+    // [Fact]
+    // public void CalmBees_MakeWaxTwiceAsFastToo()
+    // {
+    //     var e = WithSmoker(s => { s.Bees = 5000m; s.CalmSecondsLeft = 10m; s.Honey = 0m; });   // 50 honey/s, 100 calm
+    //     e.Advance(1m);
+    //     Assert.Equal(2m, e.State.Wax);
+    // }
 
     [Fact]
-    public void WaxPerSecond_FollowsHoney_TheCatcher_AndCalm()
+    public void Calm_DoublesHoney_AndLeavesWaxAlone()
     {
-        var e = WithSmoker(s => s.Bees = 1000m);   // 10 honey/s
-        Assert.Equal(0.2m, e.WaxPerSecondNow);
+        var calm = WithSmoker(s => { s.Bees = 1000m; s.CalmSecondsLeft = 10m; s.HoneyRevealed = true; s.Combs = 5; });
+        var plain = WithSmoker(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.Combs = 5; });
+        calm.Advance(10m);
+        plain.Advance(10m);
+        Assert.Equal(20m, calm.State.Honey);
+        Assert.Equal(10m, plain.State.Honey);
+        Assert.Equal(plain.State.Wax, calm.State.Wax);
+        Assert.Equal(1.05m, calm.State.Wax);
+    }
+
+    // Cut in stage 7.5 (spec 016): wax followed honey, calm counted.
+    // [Fact]
+    // public void WaxPerSecond_FollowsHoney_TheCatcher_AndCalm()
+    // {
+    //     var e = WithSmoker(s => s.Bees = 1000m);   // 10 honey/s
+    //     Assert.Equal(0.2m, e.WaxPerSecondNow);
+    //     e.State.HasWaxCatcher = true;
+    //     Assert.Equal(0.4m, e.WaxPerSecondNow);
+    //     e.State.CalmSecondsLeft = 60m;
+    //     Assert.Equal(0.8m, e.WaxPerSecondNow);
+    // }
+
+    [Fact]
+    public void WaxPerSecond_FollowsTheFreeBees_AndTheCatcher_ButNotCalm()
+    {
+        var e = WithSmoker(s => s.Bees = 1000m);
+        Assert.Equal(0.105m, e.WaxPerSecondNow);
         e.State.HasWaxCatcher = true;
-        Assert.Equal(0.4m, e.WaxPerSecondNow);
+        Assert.Equal(0.21m, e.WaxPerSecondNow);
         e.State.CalmSecondsLeft = 60m;
-        Assert.Equal(0.8m, e.WaxPerSecondNow);
+        Assert.Equal(0.21m, e.WaxPerSecondNow);
     }
 
     [Fact]
@@ -222,9 +248,11 @@ public class BeekeeperStage3Tests : IDisposable
         Assert.Equal(42m, back.CalmSecondsLeft);
 
         File.WriteAllText(path, "{\"Version\":2,\"Bees\":10,\"ToolLevel\":3,\"Upgrades\":[\"bigger_combs_1\"],\"Log\":[]}");
-        var old = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(0, old.CalmMeter);
-        Assert.Equal(0m, old.CalmSecondsLeft);
-        Assert.Equal(new[] { "bigger_combs_1" }, old.Upgrades);
+        Assert.Null(BeekeeperSaveService.Load(path));   // stage 7.5: an older save starts a new game
+        // Cut in stage 7.5 (spec 016): older saves loaded with the new fields at zero.
+        // var old = BeekeeperSaveService.Load(path)!;
+        // Assert.Equal(0, old.CalmMeter);
+        // Assert.Equal(0m, old.CalmSecondsLeft);
+        // Assert.Equal(new[] { "bigger_combs_1" }, old.Upgrades);
     }
 }

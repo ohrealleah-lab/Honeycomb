@@ -1512,7 +1512,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperShopTitle = "beekeeper_shop_title"
     /// Story log card title (all caps)
     case beekeeperLogTitle = "beekeeper_log_title"
-    /// Under the bear's buttons
+    /// Under the bear's buttons; %@ = honey in one bundle right now (10, or 8 under the trade agreement)
     case beekeeperSellHint = "beekeeper_sell_hint"
     /// Trading card, each buyer's line; %@ = buyer's name, %@ = number of trades
     case beekeeperBearTradesFmt = "beekeeper_bear_trades_fmt"
@@ -1544,7 +1544,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHoneyPerSecFmt = "beekeeper_honey_per_sec_fmt"
     /// Hive card, when honey storage is full
     case beekeeperCombsFull = "beekeeper_combs_full"
-    /// Combs card; %@ = honey storage each comb adds
+    /// Workbench comb row; %@ = honey a second it adds, %@ = honey room, %@ = wax room
     case beekeeperCombBlurbFmt = "beekeeper_comb_blurb_fmt"
     /// Story log
     case beekeeperLogNewGame = "beekeeper_log_new_game"
@@ -1574,9 +1574,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogWaxCatcher = "beekeeper_log_wax_catcher"
     /// Story log
     case beekeeperLogCombsAvailable = "beekeeper_log_combs_available"
-    /// Story log; %@ = honey storage added
+    /// Story log; %@ = bees that moved into the comb
     case beekeeperLogCombBuiltFmt = "beekeeper_log_comb_built_fmt"
-    /// Story log on reopening the app; %@ = honey made while away
+    /// Story log on reopening the app; %@ = honey the combs made while away
     case beekeeperLogWelcomeBackFmt = "beekeeper_log_welcome_back_fmt"
     /// Story log on reopening the app when no honey was made
     case beekeeperLogWelcomeBackNothing = "beekeeper_log_welcome_back_nothing"
@@ -1588,7 +1588,7 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperAwayTitle = "help_beekeeper_away_title"
     /// While You're Away RuleSection body
     case helpBeekeeperAway = "help_beekeeper_away"
-    /// Hive card row label (Bees group): how many honeybees
+    /// Hive card row label (Bees group): free bees, the ones not living in a comb
     case beekeeperHiveBees = "beekeeper_hive_bees"
     /// Hive card row label: honey stored / storage
     case beekeeperHiveHoney = "beekeeper_hive_honey"
@@ -1840,7 +1840,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperPantryMinutesFmt = "beekeeper_pantry_minutes_fmt"
     /// Trading card, small line under the bear
     case beekeeperAgreementLine = "beekeeper_agreement_line"
-    /// Hover on the trade agreement line; %@ = Beebits per second
+    /// [unused since stage 7.5 (spec 016): the agreement's rate hover is cut; kept so it can come back]
     case beekeeperBeebitsPerSecFmt = "beekeeper_beebits_per_sec_fmt"
     /// Story log
     case beekeeperLogQueenSettles = "beekeeper_log_queen_settles"
@@ -1852,7 +1852,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogTradeAgreementFmt = "beekeeper_log_trade_agreement_fmt"
     /// Story log on reopening the app; %@ = bees raised
     case beekeeperLogWelcomeBackQueenFmt = "beekeeper_log_welcome_back_queen_fmt"
-    /// Story log on reopening the app; %@ = bear name, then Beebits
+    /// [unused since stage 7.5 (spec 016): the bear no longer sells honey while you are away; kept so it can come back]
     case beekeeperLogWelcomeBackBearFmt = "beekeeper_log_welcome_back_bear_fmt"
     /// Story log on reopening the app
     case beekeeperLogWelcomeBackPantry = "beekeeper_log_welcome_back_pantry"
@@ -1890,7 +1890,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperWaspsRateFmt = "beekeeper_wasps_rate_fmt"
     /// Wasps button: one trade
     case beekeeperTradeOne = "beekeeper_trade_one"
-    /// Story log, once, loading a save from before stage 6
+    /// [unused since stage 7.5 (spec 016): saves older than version 8 start a new game; kept so it can come back]
     case beekeeperLogOldCountsSettle = "beekeeper_log_old_counts_settle"
     /// Story log: wildflowers sprout (stage 6)
     case beekeeperLogPlantWildflowersForaging = "beekeeper_log_plant_wildflowers_foraging"
@@ -2046,6 +2046,36 @@ public enum StringKey: String, CaseIterable {
     case beekeeperPantryMinute = "beekeeper_pantry_minute"
     /// Story log on reopening the app; exactly 1 bee raised
     case beekeeperLogWelcomeBackQueenOne = "beekeeper_log_welcome_back_queen_one"
-    /// Story log on reopening the app; %@ = bear name; exactly 1 Beebit
+    /// [unused since stage 7.5 (spec 016): the bear no longer sells honey while you are away; kept so it can come back]
     case beekeeperLogWelcomeBackBearOneFmt = "beekeeper_log_welcome_back_bear_one_fmt"
+    /// Hive card, when wax storage is full (stage 7.5)
+    case beekeeperWaxFull = "beekeeper_wax_full"
+    /// Price part; %@ = how many free bees (they move into the comb)
+    case beekeeperCostBeesFmt = "beekeeper_cost_bees_fmt"
+    /// Beside a price whose wax is more than the hive can hold; %@ = the wax cap
+    case beekeeperWallWaxFmt = "beekeeper_wall_wax_fmt"
+    /// Beside a price whose honey is more than the hive can hold; %@ = the honey cap
+    case beekeeperWallHoneyFmt = "beekeeper_wall_honey_fmt"
+    /// Hover on a button held back by the wax cap
+    case beekeeperWallWaxTip = "beekeeper_wall_wax_tip"
+    /// Hover on a button held back by the honey cap
+    case beekeeperWallHoneyTip = "beekeeper_wall_honey_tip"
+    /// The Workbench: a capacity upgrade (a real beekeeping word: a box stacked on the hive)
+    case beekeeperHoneySuper = "beekeeper_honey_super"
+    /// The Workbench; %@ = honey room it adds, %@ = how many owned
+    case beekeeperHoneySuperBlurbFmt = "beekeeper_honey_super_blurb_fmt"
+    /// The Workbench: a capacity upgrade
+    case beekeeperWaxTray = "beekeeper_wax_tray"
+    /// The Workbench; %@ = wax room it adds, %@ = how many owned
+    case beekeeperWaxTrayBlurbFmt = "beekeeper_wax_tray_blurb_fmt"
+    /// Button: buy one more capacity upgrade
+    case beekeeperAdd = "beekeeper_add"
+    /// Story log
+    case beekeeperLogWaxFull = "beekeeper_log_wax_full"
+    /// Story log, once: the first price that is more than the hive can hold
+    case beekeeperLogFirstWall = "beekeeper_log_first_wall"
+    /// Story log
+    case beekeeperLogHoneySuperBought = "beekeeper_log_honey_super_bought"
+    /// Story log
+    case beekeeperLogWaxTrayBought = "beekeeper_log_wax_tray_bought"
 }

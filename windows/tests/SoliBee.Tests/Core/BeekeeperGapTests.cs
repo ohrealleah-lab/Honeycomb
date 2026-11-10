@@ -15,11 +15,12 @@ public class BeekeeperGapTests
         public int Next(int maxExclusive) => 0;
     }
 
-    private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    private static readonly BeekeeperConfig BigCombs = new() { StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
     private static BeekeeperState Hive() => new()
     {
-        Bees = 1000m, HoneyRevealed = true, HasWoodenHive = true, QueenSettled = true, BearName = "B",
+        Bees = 1000m, HoneyRevealed = true, HasWoodenHive = true, QueenSettled = true, BearName = "B", Combs = 50,
         BeeBread = 5m, BeeBreadRevealed = true, WorkbenchRevealed = true,
         Plants = { BeekeeperPlants.Poplar }, SagePropolisSecondsLeft = 100m,
     };

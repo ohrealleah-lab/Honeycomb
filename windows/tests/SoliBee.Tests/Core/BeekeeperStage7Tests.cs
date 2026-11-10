@@ -24,7 +24,8 @@ public class BeekeeperStage7Tests : IDisposable
         public int Next(int maxExclusive) => 0;
     }
 
-    private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
+    private static readonly BeekeeperConfig BigCombs = new() { StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
         => new(config ?? BeekeeperConfig.Default, state, new FakeRandom());
@@ -35,8 +36,9 @@ public class BeekeeperStage7Tests : IDisposable
     {
         var s = new BeekeeperState
         {
+            // Stage 7.5 (spec 016): 50 combs in the wooden hive make 12.5 honey a second; the bees are free bees.
             Bees = 1000m, HoneyRevealed = true, GardenRevealed = true, HasWoodenHive = true, QueenSettled = true,
-            BeeBread = 5m, BeeBreadRevealed = true, WorkbenchRevealed = true,
+            BeeBread = 5m, BeeBreadRevealed = true, WorkbenchRevealed = true, Combs = 50,
         };
         s.Plants.AddRange(plants);
         return s;
@@ -89,7 +91,8 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void AnOldSavePastTheCounts_GetsTheSeedsOnLoad()
     {
-        var s = new BeekeeperState { Version = 6, HippieTrades = 40, WaspTrades = 12, EmissaryCome = true, SeedsGiven = 2, SeedsPlanted = 2 };
+        var s = new BeekeeperState { HippieTrades = 40, WaspTrades = 12, EmissaryCome = true };
+        // Cut in stage 7.5 (spec 016): Version = 6, SeedsGiven = 2, SeedsPlanted = 2 (older saves no longer load).
         s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
         var e = Make(s);
         var events = e.RevealOnLoad();
@@ -291,7 +294,8 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal((double)away.State.Pollen, (double)live.State.Pollen, Places);
         Assert.Equal((double)away.State.Propolis, (double)live.State.Propolis, Places);
         Assert.Equal((double)away.State.BeeBread, (double)live.State.BeeBread, Places);
-        Assert.Equal(away.State.Wax, live.State.Wax);
+        // Stage 7.5: wax is fractional now, so it compares like honey (to 6 places).
+        Assert.Equal((double)away.State.Wax, (double)live.State.Wax, 6);
         Assert.Equal(away.State.SagePropolisSecondsLeft, live.State.SagePropolisSecondsLeft);
         Assert.Equal(away.State.Plants, live.State.Plants);
         Assert.Equal(away.State.Beds.Count, live.State.Beds.Count);
@@ -369,35 +373,37 @@ public class BeekeeperStage7Tests : IDisposable
 
     // ============================================================ saving and old saves
 
-    [Fact]
-    public void AVersion6Save_BecomesNamedSeedsAndABed()
-    {
-        Directory.CreateDirectory(_dir);
-        var path = Path.Combine(_dir, "v6.json");
-        // wildflowers sprouted, the bramble is growing (200 s left), no seeds in hand
-        File.WriteAllText(path, "{\"Version\":6,\"Bees\":50,\"Seeds\":0,\"SeedsGiven\":2,\"SeedsPlanted\":2,\"GrowSecondsLeft\":200,"
-            + "\"Plants\":[\"wildflowers\"],\"HippieTrades\":12,\"GardenRevealed\":true,\"Log\":[]}");
-        var s = BeekeeperSaveService.Load(path)!;
-        var e = Make(s);
-        Assert.Equal(7, s.Version);
-        var bed = Assert.Single(s.Beds);
-        Assert.Equal(BeekeeperPlants.Bramble, bed.PlantId);
-        Assert.Equal(200m, bed.SecondsLeft);
-        Assert.Empty(s.SeedsInHand);
-        Assert.Contains(BeekeeperPlants.Bramble, s.SeedsGivenIds);
-        e.Advance(200m);
-        Assert.Contains(BeekeeperPlants.Bramble, e.State.Plants);
-    }
+    // Cut in stage 7.5 (spec 016): older saves start a new game (BeekeeperSaveTests).
+    // [Fact]
+    // public void AVersion6Save_BecomesNamedSeedsAndABed()
+    // {
+    //     Directory.CreateDirectory(_dir);
+    //     var path = Path.Combine(_dir, "v6.json");
+    //     // wildflowers sprouted, the bramble is growing (200 s left), no seeds in hand
+    //     File.WriteAllText(path, "{\"Version\":6,\"Bees\":50,\"Seeds\":0,\"SeedsGiven\":2,\"SeedsPlanted\":2,\"GrowSecondsLeft\":200,"
+    //         + "\"Plants\":[\"wildflowers\"],\"HippieTrades\":12,\"GardenRevealed\":true,\"Log\":[]}");
+    //     var s = BeekeeperSaveService.Load(path)!;
+    //     var e = Make(s);
+    //     Assert.Equal(7, s.Version);
+    //     var bed = Assert.Single(s.Beds);
+    //     Assert.Equal(BeekeeperPlants.Bramble, bed.PlantId);
+    //     Assert.Equal(200m, bed.SecondsLeft);
+    //     Assert.Empty(s.SeedsInHand);
+    //     Assert.Contains(BeekeeperPlants.Bramble, s.SeedsGivenIds);
+    //     e.Advance(200m);
+    //     Assert.Contains(BeekeeperPlants.Bramble, e.State.Plants);
+    // }
 
-    [Fact]
-    public void AVersion6Save_WithASeedInHand_KeepsItNamed()
-    {
-        var s = new BeekeeperState { Version = 6, SeedsGiven = 2, SeedsPlanted = 1, Seeds = 1 };
-        s.Plants.Add(BeekeeperPlants.Wildflowers);
-        Make(s);
-        Assert.Equal(new[] { BeekeeperPlants.Bramble }, s.SeedsInHand);
-        Assert.Empty(s.Beds);
-    }
+    // Cut in stage 7.5 (spec 016): older saves start a new game (BeekeeperSaveTests).
+    // [Fact]
+    // public void AVersion6Save_WithASeedInHand_KeepsItNamed()
+    // {
+    //     var s = new BeekeeperState { Version = 6, SeedsGiven = 2, SeedsPlanted = 1, Seeds = 1 };
+    //     s.Plants.Add(BeekeeperPlants.Wildflowers);
+    //     Make(s);
+    //     Assert.Equal(new[] { BeekeeperPlants.Bramble }, s.SeedsInHand);
+    //     Assert.Empty(s.Beds);
+    // }
 
     [Fact]
     public void Stage7Fields_SurviveASave()
@@ -413,7 +419,7 @@ public class BeekeeperStage7Tests : IDisposable
         };
         Assert.True(BeekeeperSaveService.Save(s, path, DateTime.UtcNow));
         var back = BeekeeperSaveService.Load(path)!;
-        Assert.Equal(7, back.Version);
+        Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
         Assert.Equal(s.SeedsInHand, back.SeedsInHand);
         Assert.Equal(s.SeedsGivenIds, back.SeedsGivenIds);
         Assert.Equal(1234.5m, Assert.Single(back.Beds).SecondsLeft);
@@ -436,7 +442,7 @@ public class BeekeeperStage7Tests : IDisposable
     {
         Directory.CreateDirectory(_dir);
         var path = Path.Combine(_dir, "bad.json");
-        File.WriteAllText(path, "{\"Version\":7," + field + "}");
+        File.WriteAllText(path, "{\"Version\":8," + field + "}");
         Assert.Null(BeekeeperSaveService.Load(path));
     }
 
