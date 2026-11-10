@@ -27,6 +27,11 @@ public class BeekeeperStage7Tests : IDisposable
     // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
     private static readonly BeekeeperConfig BigCombs = new() { StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
+    // The game starts with one bed (Leah, 2026-11-10); tests of several beds at once use this.
+    private static readonly BeekeeperConfig TwoBeds = new() { StartingBeds = 2 };
+    private static readonly BeekeeperConfig TwoBedsBigCombs = new()
+        { StartingBeds = 2, StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
         => new(config ?? BeekeeperConfig.Default, state, new FakeRandom());
 
@@ -55,8 +60,10 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal(3600m, p[BeekeeperPlants.Willow].GrowSeconds);
         Assert.Equal(6m * 3600m, p[BeekeeperPlants.Poplar].GrowSeconds);
         Assert.Equal(12m * 3600m, p[BeekeeperPlants.Clover].GrowSeconds);
-        Assert.Equal(20, p[BeekeeperPlants.Willow].SeedAtTrade);
-        Assert.Equal(35, p[BeekeeperPlants.Clover].SeedAtTrade);
+        Assert.Equal(5, p[BeekeeperPlants.Wildflowers].SeedAtTrade);
+        Assert.Equal(30, p[BeekeeperPlants.Bramble].SeedAtTrade);
+        Assert.Equal(60, p[BeekeeperPlants.Willow].SeedAtTrade);
+        Assert.Equal(100, p[BeekeeperPlants.Clover].SeedAtTrade);
         Assert.Equal(BeekeeperGivers.Wasps, p[BeekeeperPlants.Poplar].Giver);
         Assert.Equal(10, p[BeekeeperPlants.Poplar].SeedAtTrade);
     }
@@ -64,11 +71,11 @@ public class BeekeeperStage7Tests : IDisposable
     // ============================================================ seeds from two givers
 
     [Fact]
-    public void TheTwentiethHippieTrade_GivesAWillowSeed()
+    public void TheSixtiethHippieTrade_GivesAWillowSeed()
     {
         var e = Make(new BeekeeperState
         {
-            HippiesRevealed = true, HippieTrades = 19, BeeswaxCandles = 100m,
+            HippiesRevealed = true, HippieTrades = 59, BeeswaxCandles = 100m,
             SeedsGivenIds = { "wildflowers", "bramble" },
         });
         var r = e.TradeTenCandles();
@@ -91,7 +98,7 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void AnOldSavePastTheCounts_GetsTheSeedsOnLoad()
     {
-        var s = new BeekeeperState { HippieTrades = 40, WaspTrades = 12, EmissaryCome = true };
+        var s = new BeekeeperState { HippieTrades = 100, WaspTrades = 12, EmissaryCome = true };
         // Cut in stage 7.5 (spec 016): Version = 6, SeedsGiven = 2, SeedsPlanted = 2 (older saves no longer load).
         s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
         var e = Make(s);
@@ -106,13 +113,13 @@ public class BeekeeperStage7Tests : IDisposable
     // ============================================================ beds
 
     [Fact]
-    public void TwoSeedsGrowAtOnce_EachOnItsOwnTimer_AndAThirdBedAddsOne()
+    public void TwoSeedsGrowAtOnce_EachOnItsOwnTimer_WhenTwoBedsAreOwned()
     {
         var e = Make(new BeekeeperState
         {
             SeedsInHand = { "wildflowers", "willow", "bramble" }, GardenRevealed = true,
             Beebits = 5000m, Wax = 500m, Paper = 20m, PaperRevealed = true,
-        });
+        }, TwoBeds);
         Assert.True(e.PlantSeed("willow").Done);
         Assert.True(e.PlantSeed("wildflowers").Done);
         Assert.False(e.CanPlantSeed);
@@ -124,8 +131,24 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.True(e.CanPlantSeed);
 
         Assert.Equal(2, e.BedCount);
-        Assert.True(e.BuyUpgrade(BeekeeperUpgrades.ThirdBed).Done);
-        Assert.Equal(3, e.BedCount);
+        // Off the Shop (2026-11-10): extra beds come after a swarm, which is not built yet.
+        // Assert.True(e.BuyUpgrade(BeekeeperUpgrades.ThirdBed).Done);
+        // Assert.Equal(3, e.BedCount);
+    }
+
+    [Fact]
+    public void TheGameStartsWithOneBed_AndTheThirdBedIsNotInTheShop()
+    {
+        var e = Make();
+        Assert.Equal(1, e.BedCount);
+        Assert.DoesNotContain(BeekeeperConfig.Default.Upgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
+    }
+
+    [Fact]
+    public void ASaveThatAlreadyOwnsTheThirdBed_KeepsItsExtraBed()
+    {
+        var e = Make(new BeekeeperState { Upgrades = { BeekeeperUpgrades.ThirdBed } });
+        Assert.Equal(2, e.BedCount);
     }
 
     [Fact]
@@ -135,7 +158,7 @@ public class BeekeeperStage7Tests : IDisposable
         s.BeeBread = 0m;
         s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });
         s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Wildflowers, SecondsLeft = 120m });
-        var e = Make(s, BigCombs);
+        var e = Make(s, TwoBedsBigCombs);
         e.AdvanceAway(180m);
         // honey: 60 s at 12.5/s (wooden hive), 60 s at 12.5 × 1.25, 60 s the same
         Assert.Equal(12.5m * 60m + 15.625m * 120m, e.State.Honey);
@@ -307,9 +330,9 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void TwoBedsNursingResinCloverAndACandleBurningOut_SameLiveSecondsOrOneAwayStep()
     {
-        var live = Make(Busy(), BigCombs);
+        var live = Make(Busy(), TwoBedsBigCombs);
         for (int i = 0; i < 2000; i++) live.Advance(1m);   // sprouts at 400 s and 901 s, candle out at 1000 s, pantry runs out
-        var away = Make(Busy(), BigCombs);
+        var away = Make(Busy(), TwoBedsBigCombs);
         away.AdvanceAway(2000m);
         AssertSame(live, away);
         Assert.Contains(BeekeeperPlants.Willow, live.State.Plants);
@@ -321,10 +344,10 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void TheSameHolds_ForOddStepsAndTheBeeBoostLeftOut()
     {
-        var live = Make(Busy(), BigCombs);
+        var live = Make(Busy(), TwoBedsBigCombs);
         decimal[] steps = { 7m, 333m, 60m, 1m, 599m, 1000m };
         foreach (var st in steps) live.Advance(st);
-        var away = Make(Busy(), BigCombs);
+        var away = Make(Busy(), TwoBedsBigCombs);
         away.AdvanceAway(steps.Sum());
         AssertSame(live, away);
     }
@@ -341,12 +364,13 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Notebook);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
         e.State.GardenRevealed = true;
-        Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
+        // Third Bed is off the Shop (2026-11-10): Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
+        Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
 
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Notebook).Done);
         Assert.Equal(0m, e.State.Paper);
         Assert.Equal(9899m, e.State.Beebits);
-        Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.ThirdBed));   // 10 paper needed, none left
+        // Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.ThirdBed));   // 10 paper needed, none left
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Notebook);
 
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.PropolisSeal);
@@ -463,7 +487,7 @@ public class BeekeeperStage7Tests : IDisposable
                 new BeekeeperBed { PlantId = "poplar", SecondsLeft = 10m },
             },
         };
-        Make(s);
+        Make(s, TwoBeds);
         Assert.Equal(new[] { "willow", "poplar" }, s.SeedsInHand);   // the seed from the extra bed comes back
         Assert.Equal(new[] { "willow" }, s.SeedsGivenIds);
         Assert.Equal(2, s.Beds.Count);   // two beds owned; the unknown one went first
@@ -475,7 +499,7 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void TheDebugHelpers_GiveEverySeed_FinishEveryBed_AndPropolisAndPaper()
     {
-        var e = Make(new BeekeeperState());
+        var e = Make(new BeekeeperState(), TwoBeds);
         e.DebugGiveEverySeed();
         Assert.Equal(BeekeeperConfig.Default.Plants.Count, e.State.SeedsInHand.Count);
         Assert.True(e.PlantSeed(BeekeeperPlants.Willow).Done);
@@ -491,8 +515,8 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.True(e.PaperSeen && e.PropolisSeen);
 
         var h = Make(new BeekeeperState());
-        h.DebugHippieTradesTo19();
-        Assert.Equal(19, h.State.HippieTrades);
+        h.DebugHippieTradesTo59();
+        Assert.Equal(59, h.State.HippieTrades);
         h.TradeTenCandles();
         Assert.Contains(BeekeeperPlants.Willow, h.State.SeedsInHand);
     }

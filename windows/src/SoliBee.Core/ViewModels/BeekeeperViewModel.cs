@@ -631,10 +631,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
-    /// <summary>Debug builds only: the Hippie trades go to 19; one more brings the willow seed.</summary>
-    public void DebugHippieTradesTo19()
+    /// <summary>Debug builds only: the Hippie trades go to 59; one more brings the willow seed.</summary>
+    public void DebugHippieTradesTo59()
     {
-        LogEvents(Engine.DebugHippieTradesTo19());
+        LogEvents(Engine.DebugHippieTradesTo59());
         SaveNow();
         Refresh();
     }

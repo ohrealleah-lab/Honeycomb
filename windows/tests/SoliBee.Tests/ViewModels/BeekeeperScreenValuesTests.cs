@@ -81,8 +81,8 @@ public class BeekeeperScreenValuesTests
     public void BedRows_CoverTheOwnedBeds()
     {
         var vm = Make(new BeekeeperState { BearName = "B" });
+        Assert.Equal(1, vm.BedRowCount);
+        vm.State.Upgrades.Add(BeekeeperUpgrades.ThirdBed);   // only an old save owns this now
         Assert.Equal(2, vm.BedRowCount);
-        vm.State.Upgrades.Add(BeekeeperUpgrades.ThirdBed);
-        Assert.Equal(3, vm.BedRowCount);
     }
 }

@@ -22,11 +22,13 @@ public partial class HelpWindow : Window
     {
         InitializeComponent();
 
-        _language = SettingsService.LoadOptions().Language;
+        var options = SettingsService.LoadOptions();
+        _language = options.Language;
         RecomputeDynamicRules();
         DataContext = this;
 
         ApplyLocalization(_language);
+        ApplyBeekeeperVisibility(options.IsNoStressMode);
 
         if (startAtHoneycomb)
         {
@@ -39,6 +41,7 @@ public partial class HelpWindow : Window
         // would leave it stuck showing the old language until closed and reopened.
         WeakReferenceMessenger.Default.Register<OptionsChangedMessage>(this, (r, m) =>
         {
+            ApplyBeekeeperVisibility(m.Options.IsNoStressMode);
             if (m.Options.Language == _language) return;
             _language = m.Options.Language;
             ApplyLocalization(_language);
@@ -50,6 +53,15 @@ public partial class HelpWindow : Window
             DataContext = this;
         });
         Closed += (_, _) => WeakReferenceMessenger.Default.Unregister<OptionsChangedMessage>(this);
+    }
+
+    // Beekeeper is an idle game: you work it out by playing, so its guide only shows
+    // (Leah, 2026-11-10) when No Stress Mode is on. Hover tips in the game stay as they are.
+    private void ApplyBeekeeperVisibility(bool noStressMode)
+    {
+        IdxBeekeeper.IsVisible = noStressMode;
+        BeekeeperAnchor.IsVisible = noStressMode;
+        BeekeeperSection.IsVisible = noStressMode;
     }
 
     private void RecomputeDynamicRules()

@@ -28,12 +28,12 @@ public class BeekeeperStage7ViewModelTests
     public void ChoosingASeed_PlantsThatOne_AndTheBedsListWhatGrows()
     {
         var vm = Make(new BeekeeperState { SeedsInHand = { "wildflowers", "willow" }, GardenRevealed = true, BearName = "Bruno" });
-        Assert.Equal(2, vm.BedCount);
+        Assert.Equal(1, vm.BedCount);
         vm.PlantSeedCommand.Execute(BeekeeperPlants.Willow);
         var bed = Assert.Single(vm.GrowingBeds);
         Assert.Equal(BeekeeperPlants.Willow, bed.Plant.Id);
         Assert.Equal(3600m, bed.SecondsLeft);
-        Assert.Equal(1, vm.FreeBeds);
+        Assert.Equal(0, vm.FreeBeds);
         Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.SeedPlanted && e.Text == BeekeeperPlants.Willow);
 
         vm.PlantSeedCommand.Execute(BeekeeperPlants.Wildflowers);
@@ -105,7 +105,7 @@ public class BeekeeperStage7ViewModelTests
         vm.DebugGivePaper(20m);
         Assert.Equal(50m, vm.Propolis);
         Assert.Equal(20m, vm.Paper);
-        vm.DebugHippieTradesTo19();
-        Assert.Equal(19, vm.State.HippieTrades);
+        vm.DebugHippieTradesTo59();
+        Assert.Equal(59, vm.State.HippieTrades);
     }
 }

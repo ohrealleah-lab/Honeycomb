@@ -50,16 +50,16 @@ public class BeekeeperStage4Tests : IDisposable
     }
 
     [Fact]
-    public void TheTenthTrade_GivesASecondSeed_AndNoMoreComeAfter()
+    public void TheThirtiethTrade_GivesASecondSeed_AndNoMoreComeAfter()
     {
-        var e = WithHippies(8);
+        var e = WithHippies(28);
         e.State.SeedsGivenIds.Add(BeekeeperPlants.Wildflowers);   // the first seed was given earlier
-        e.TradeTenCandles();                       // 9th
+        e.TradeTenCandles();                       // 29th
         Assert.Empty(e.State.SeedsInHand);
-        e.TradeTenCandles();                       // 10th
+        e.TradeTenCandles();                       // 30th
         Assert.Equal(new[] { BeekeeperPlants.Bramble }, e.State.SeedsInHand);
 
-        for (int i = 0; i < 5; i++) e.TradeTenCandles();   // up to the 15th: the willow waits for the 20th
+        for (int i = 0; i < 5; i++) e.TradeTenCandles();   // up to the 35th: the willow waits for the 60th
         Assert.Single(e.State.SeedsInHand);
     }
 
@@ -114,13 +114,12 @@ public class BeekeeperStage4Tests : IDisposable
     {
         Assert.False(Make().PlantSeed().Done);
 
-        // Two beds (stage 7): two seeds grow at once, a third waits for a free bed.
+        // One bed (2026-11-10; two in stage 7): one seed grows at a time, the next waits for the bed.
         var e = Make(new BeekeeperState { SeedsInHand = { "wildflowers", "bramble", "willow" }, GardenRevealed = true });
-        Assert.True(e.PlantSeed().Done);
         Assert.True(e.PlantSeed().Done);
         Assert.False(e.CanPlantSeed);
         Assert.False(e.PlantSeed().Done);
-        Assert.Equal(new[] { "willow" }, e.State.SeedsInHand);
+        Assert.Equal(new[] { "bramble", "willow" }, e.State.SeedsInHand);
     }
 
     [Fact]

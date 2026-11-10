@@ -1728,10 +1728,10 @@ public sealed class BeekeeperEngine
         return events;
     }
 
-    /// <summary>Debug builds only: the Hippie trade count goes up to 19 (one short of the willow
+    /// <summary>Debug builds only: the Hippie trade count goes up to 59 (one short of the willow
     /// seed), the Hippies arrive if they hadn't and ten candles are put on the shelf for the trade.
     /// Seeds already due at that count are given.</summary>
-    public IReadOnlyList<BeekeeperEvent> DebugHippieTradesTo19()
+    public IReadOnlyList<BeekeeperEvent> DebugHippieTradesTo59()
     {
         var events = new List<BeekeeperEvent>();
         if (!State.HippiesRevealed)
@@ -1739,7 +1739,7 @@ public sealed class BeekeeperEngine
             State.HippiesRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.HippiesArrive));
         }
-        State.HippieTrades = Math.Max(State.HippieTrades, 19);
+        State.HippieTrades = Math.Max(State.HippieTrades, 59);
         if (State.BeeswaxCandles < Config.CandlesPerSage) State.BeeswaxCandles = Config.CandlesPerSage;
         GiveSeedsIfDue(events);
         return events;

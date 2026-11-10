@@ -216,8 +216,8 @@ public class BeekeeperHardeningTests : IDisposable
 
         var e = With(state);
 
-        Assert.Equal(plants.Take(2), e.State.Beds.Select(b => b.PlantId));
-        Assert.Equal(plants.Skip(2), e.State.SeedsInHand);
+        Assert.Equal(plants.Take(1), e.State.Beds.Select(b => b.PlantId));   // one bed is owned
+        Assert.Equal(plants.Skip(1), e.State.SeedsInHand);
     }
 
     [Fact]

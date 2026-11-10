@@ -256,7 +256,9 @@ public sealed class BeekeeperConfig
         new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum),
         // Stage 7 (spec 015): paper and propolis join the prices (all placeholders).
         new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 100m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.ThirdBed, 1_500m, 200m, 0m, BeekeeperUpgrades.NeedsGardenAndPaper, Paper: 10m),
+        // Off the Shop (Leah, 2026-11-10): extra beds become a technology bought after a swarm (stage 11, not built yet).
+        // A save that already owns the Third Bed keeps its extra bed.
+        // new BeekeeperUpgrade(BeekeeperUpgrades.ThirdBed, 1_500m, 200m, 0m, BeekeeperUpgrades.NeedsGardenAndPaper, Paper: 10m),
         new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 1_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m),
     };
 
@@ -284,14 +286,16 @@ public sealed class BeekeeperConfig
     {
         // Stage 6 (spec 014): foraging 3 pollen a minute (beats the queen's 2); guarding +25% honey.
         new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperSpecialties.Foraging, 3m, 10m * 60m),
-        new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
+        // Seed trades spaced from 5 to 100 (Leah, 2026-11-10; placeholders): 5, 30, 60, 100. One seed per plant, once.
+        // (Was 5, 10, 20, 35.)
+        new BeekeeperPlant(BeekeeperPlants.Bramble, 30, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
         // Stage 7 (spec 015), placeholders, each slower than the last:
         // the willow (1 hour): nursing, the queen lays 50% faster;
-        new BeekeeperPlant(BeekeeperPlants.Willow, 20, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
+        new BeekeeperPlant(BeekeeperPlants.Willow, 60, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
         // the poplar (6 hours; seed from the wasps' 10th trade): resin, 1 propolis a minute;
         new BeekeeperPlant(BeekeeperPlants.Poplar, 10, BeekeeperSpecialties.Resin, 1m, 6m * 3600m, BeekeeperGivers.Wasps),
         // clover (12 hours, overnight): 3 more pollen a minute.
-        new BeekeeperPlant(BeekeeperPlants.Clover, 35, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
+        new BeekeeperPlant(BeekeeperPlants.Clover, 100, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
         // Cut in stage 6 (spec 014): forager and guard bees a minute.
         // new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
         // new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
@@ -340,7 +344,7 @@ public sealed class BeekeeperConfig
     // ===== Stage 7 (spec 015): seeds, the poplar and propolis. All placeholders.
 
     /// <summary>Garden beds at the start: two seeds can grow at once. The Third Bed upgrade adds one.</summary>
-    public int StartingBeds { get; init; } = 2;
+    public int StartingBeds { get; init; } = 1;   // was 2 (Leah, 2026-11-10)
     public int ThirdBedBeds { get; init; } = 1;
     /// <summary>The Propolis Seal multiplies storage by this (+25%), on top of Bigger Combs
     /// (honey and, since stage 7.5, wax).</summary>

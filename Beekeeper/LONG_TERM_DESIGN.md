@@ -25,6 +25,7 @@ Written 2026-11-06 from Leah's decisions. Inspired by idle games like Kittens Ga
    - **No assigning bees.** Kittens Game can assign individual kittens because it has a small population; Beekeeper has no bee limit, so roles come from **kinds of bees**, each counted on the Hive card.
    - **Planting a seed is how new kinds of bees are discovered.** Each new kind unlocks a new resource or gives a buff.
    - **Seeds come from the Hippies**: after 5 trades they give a seed; different seeds come after further trades. No sage plants: sage stays the Hippies' trade.
+   - **Changed (Leah, 2026-11-10): one starting bed, and seed trades spread from 5 to 100.** The Hippies give wildflowers at 5, bramble at 30, willow at 60 and clover at 100 (placeholders); the wasps still give the poplar at 10. Each plant's seed is given once, to move the game forward. Extra beds leave the Shop and become a technology bought after a swarm (stage 11, not built). Saves that already own the Third Bed keep it.
    - **The Garden card** appears with the first seed: a "Plant seed?" button, which then reads "Something is growing!". About 10 minutes later the log says "Your seed has sprouted." and the Garden shows the plant and the kind of bee it attracts.
    - **Forager bees** (from a plant) bring back **pollen**. Pollen becomes **bee bread**, used with wax for hive upgrades.
    - **Guard bees are attracted by a plant, not bought** (design pivot): once you have them, raids never make bees fly off. The wasp can still take honey.
