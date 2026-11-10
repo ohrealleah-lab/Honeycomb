@@ -12,6 +12,8 @@ public struct SoliBeeTheme: Codable, Identifiable {
     public var faceArts: [CustomFaceArt]
     public var customCardColors: CustomCardColorGroup
     public var customBackgroundName: String?
+    /// 1 = solid table, 0 = fully clear (Mac/Windows; iOS ignores it).
+    public var tableOpacity: Double
 
     public init(
         id: UUID = UUID(),
@@ -23,7 +25,8 @@ public struct SoliBeeTheme: Codable, Identifiable {
         customFeltBlue: Double,
         faceArts: [CustomFaceArt],
         customCardColors: CustomCardColorGroup = CustomCardColorGroup(),
-        customBackgroundName: String? = nil
+        customBackgroundName: String? = nil,
+        tableOpacity: Double = 1.0
     ) {
         self.id = id
         self.name = name
@@ -35,11 +38,12 @@ public struct SoliBeeTheme: Codable, Identifiable {
         self.faceArts = faceArts
         self.customCardColors = customCardColors
         self.customBackgroundName = customBackgroundName
+        self.tableOpacity = tableOpacity
     }
 
     enum CodingKeys: String, CodingKey {
         case id, name, cardBackTheme, feltColor
-        case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors, customBackgroundName
+        case customFeltRed, customFeltGreen, customFeltBlue, faceArts, customCardColors, customBackgroundName, tableOpacity
     }
 
     public init(from decoder: Decoder) throws {
@@ -54,6 +58,7 @@ public struct SoliBeeTheme: Codable, Identifiable {
         faceArts       = try c.decodeIfPresent([CustomFaceArt].self, forKey: .faceArts) ?? []
         customCardColors = try c.decodeIfPresent(CustomCardColorGroup.self, forKey: .customCardColors) ?? CustomCardColorGroup()
         customBackgroundName = try c.decodeIfPresent(String.self, forKey: .customBackgroundName)
+        tableOpacity = min(1, max(0, try c.decodeIfPresent(Double.self, forKey: .tableOpacity) ?? 1.0))
     }
 }
 

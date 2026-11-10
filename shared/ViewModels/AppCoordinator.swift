@@ -101,6 +101,15 @@ public final class AppCoordinator {
             liveSaveActiveTheme()
         }
     }
+    // How see-through the table (felt color or wallpaper) is: 1 = solid, 0 = fully clear.
+    // Mac/Windows only — iOS can't show anything behind the app, so it never reads this.
+    // Part of a saved theme, so it live-saves like the other theme fields.
+    public var tableOpacity: Double {
+        didSet {
+            UserDefaults.standard.set(tableOpacity, forKey: "table_opacity")
+            liveSaveActiveTheme()
+        }
+    }
     public var cardBackTheme: String {
         didSet {
             UserDefaults.standard.set(cardBackTheme, forKey: "cardBackTheme")
@@ -483,11 +492,11 @@ public final class AppCoordinator {
         return Color(red: customFeltRed, green: customFeltGreen, blue: customFeltBlue)
     }
 
-    /// True when the table itself is see-through (Mac window goes clear). A background
-    /// image, if one is selected, wins over the felt choice — so this is only true when
-    /// no wallpaper is active.
+    /// True when any of the table is see-through (Mac window goes clear): the Transparent
+    /// felt (only when no wallpaper is active — a wallpaper wins over the felt choice) or
+    /// a Table Opacity below 100%.
     public var isTransparentTable: Bool {
-        feltColor == .transparent && customBackgroundName == nil
+        tableOpacity < 1 || (feltColor == .transparent && customBackgroundName == nil)
     }
 
     /// The Felt Vignette setting, ignored (not toggled) while the table is transparent.
@@ -549,6 +558,8 @@ public final class AppCoordinator {
 
         self.feltColor = FeltColorTheme(rawValue: UserDefaults.standard.string(forKey: "global_felt_color") ?? "") ?? .feltGreen
         self.cardBackTheme = UserDefaults.standard.string(forKey: "cardBackTheme") ?? "Solibee"
+        self.tableOpacity = UserDefaults.standard.object(forKey: "table_opacity") != nil
+            ? min(1, max(0, UserDefaults.standard.double(forKey: "table_opacity"))) : 1.0
         self.showFeltVignette = UserDefaults.standard.object(forKey: "showFeltVignette") != nil
             ? UserDefaults.standard.bool(forKey: "showFeltVignette") : true
         self.hideBee = UserDefaults.standard.object(forKey: "global_hide_bee") != nil
@@ -814,6 +825,7 @@ public final class AppCoordinator {
             customFeltBlue  = theme.customFeltBlue
         }
         customBackgroundName = theme.customBackgroundName
+        tableOpacity = theme.tableOpacity
 
         #if canImport(AppKit)
         if let name = customBackgroundName,
@@ -844,6 +856,7 @@ public final class AppCoordinator {
         feltColor: FeltColorTheme,
         cardBackTheme: String,
         showFeltVignette: Bool,
+        tableOpacity: Double = 1.0,
         customCardColors: CustomCardColorGroup,
         customBackgroundName: String?,
         customFeltRed: Double,
@@ -858,6 +871,7 @@ public final class AppCoordinator {
         self.feltColor = feltColor
         self.cardBackTheme = cardBackTheme
         self.showFeltVignette = showFeltVignette
+        self.tableOpacity = tableOpacity
         self.customCardColors = customCardColors
         self.customBackgroundName = customBackgroundName
         self.customFeltRed = customFeltRed
@@ -917,7 +931,8 @@ public final class AppCoordinator {
             customFeltBlue: customFeltBlue,
             faceArts: faceArts,
             customCardColors: customCardColors,
-            customBackgroundName: customBackgroundName
+            customBackgroundName: customBackgroundName,
+            tableOpacity: tableOpacity
         )
         ThemeManager.shared.updateTheme(updated)
     }

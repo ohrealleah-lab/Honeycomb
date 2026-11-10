@@ -101,6 +101,8 @@ public class GameOptions
     public double HoneycombWatermarkOffsetY  { get; set; } = -240.0;
 
     public bool IsVignetteEnabled { get; set; } = true;
+    // How see-through the table (felt or background image) is: 1 = solid, 0 = fully clear.
+    public double TableOpacity { get; set; } = 1.0;
     // Turns off timers (solitaire) and enables free play (VP/Blackjack — hides the
     // credit/bet board and betting controls; hands are played without wagering).
     public bool IsNoStressMode { get; set; } = false;

@@ -198,6 +198,8 @@ public static class SettingsService
 
                 if (GetValue("IsVignetteEnabled") is bool isVignette)
                     options.IsVignetteEnabled = isVignette;
+                if (GetValue("TableOpacity") is double tableOpacity)
+                    options.TableOpacity = Math.Clamp(tableOpacity, 0.0, 1.0);
                 if (GetValue("IsStatusBarVisible") is bool isStatusBar)
                     options.IsStatusBarVisible = isStatusBar;
 
@@ -333,6 +335,7 @@ public static class SettingsService
                 SetValue("HoneycombWatermarkOffsetY", options.HoneycombWatermarkOffsetY);
 
                 SetValue("IsVignetteEnabled", options.IsVignetteEnabled);
+                SetValue("TableOpacity", options.TableOpacity);
                 SetValue("IsStatusBarVisible", options.IsStatusBarVisible);
                 SetValue("HideHintButton", options.HideHintButton);
                 SetValue("IsAlwaysOnTop", options.IsAlwaysOnTop);

@@ -50,6 +50,7 @@ struct ThemesOptionsView: View {
     @Binding var feltColor: FeltColorTheme
     @Binding var cardBackTheme: String
     @Binding var showFeltVignette: Bool
+    @Binding var tableOpacity: Double
     @Binding var customSelectedColor: Color
     @Binding var customCardColors: CustomCardColorGroup
     @Binding var customBackgroundName: String?
@@ -60,6 +61,7 @@ struct ThemesOptionsView: View {
     let originalFeltColor: FeltColorTheme
     let originalCardBackTheme: String
     let originalShowFeltVignette: Bool
+    let originalTableOpacity: Double
     let originalCustomCardColors: CustomCardColorGroup
     let originalCustomBackgroundName: String?
     let originalActiveThemeId: UUID?
@@ -423,7 +425,7 @@ struct ThemesOptionsView: View {
 
             Divider()
 
-            BackgroundSelectorView(customBackgroundName: $customBackgroundName, feltColor: $feltColor, showFeltVignette: $showFeltVignette, editorMode: $backgroundEditorMode)
+            BackgroundSelectorView(customBackgroundName: $customBackgroundName, feltColor: $feltColor, showFeltVignette: $showFeltVignette, tableOpacity: $tableOpacity, editorMode: $backgroundEditorMode)
 
             if feltColor == .custom && customBackgroundName == nil {
                 HStack(spacing: 8) {
@@ -553,6 +555,7 @@ struct ThemesOptionsView: View {
             feltColor: originalFeltColor,
             cardBackTheme: originalCardBackTheme,
             showFeltVignette: originalShowFeltVignette,
+            tableOpacity: originalTableOpacity,
             customCardColors: originalCustomCardColors,
             customBackgroundName: originalCustomBackgroundName,
             customFeltRed: originalRed,

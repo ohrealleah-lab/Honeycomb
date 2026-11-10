@@ -2080,4 +2080,6 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogWaxTrayBought = "beekeeper_log_wax_tray_bought"
     /// Felt preset picker option; table is see-through to the desktop (Mac/Windows only)
     case feltTransparent = "felt_transparent"
+    /// Slider label under Background (Mac/Windows only): how see-through the table is
+    case tableOpacityLabel = "table_opacity_label"
 }

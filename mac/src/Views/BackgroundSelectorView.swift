@@ -46,6 +46,7 @@ public struct BackgroundSelectorView: View {
     @Binding var customBackgroundName: String?
     @Binding var feltColor: FeltColorTheme
     @Binding var showFeltVignette: Bool
+    @Binding var tableOpacity: Double
     @Binding var editorMode: BackgroundEditorMode?
 
     @Environment(AppCoordinator.self) private var coordinator: AppCoordinator
@@ -54,10 +55,11 @@ public struct BackgroundSelectorView: View {
     @State private var backgroundToDelete: String? = nil
     @State private var showSaveError = false
 
-    public init(customBackgroundName: Binding<String?>, feltColor: Binding<FeltColorTheme>, showFeltVignette: Binding<Bool>, editorMode: Binding<BackgroundEditorMode?>) {
+    public init(customBackgroundName: Binding<String?>, feltColor: Binding<FeltColorTheme>, showFeltVignette: Binding<Bool>, tableOpacity: Binding<Double>, editorMode: Binding<BackgroundEditorMode?>) {
         self._customBackgroundName = customBackgroundName
         self._feltColor = feltColor
         self._showFeltVignette = showFeltVignette
+        self._tableOpacity = tableOpacity
         self._editorMode = editorMode
     }
 
@@ -134,6 +136,20 @@ public struct BackgroundSelectorView: View {
 
                 Spacer()
             }
+
+            // How see-through the table is (felt color or wallpaper), 0–100%. The
+            // Transparent felt is already fully clear, so the slider has nothing to do there.
+            HStack(spacing: 10) {
+                Text(coordinator.L(.tableOpacityLabel))
+                    .font(.system(.body))
+                Slider(value: $tableOpacity, in: 0...1)
+                    .frame(width: 180)
+                Text("\(Int((tableOpacity * 100).rounded()))%")
+                    .font(.system(.body).monospacedDigit())
+                    .frame(width: 44, alignment: .trailing)
+                Spacer()
+            }
+            .disabled(feltColor == .transparent && customBackgroundName == nil)
         }
         .sheet(item: $editorMode) { mode in
             switch mode {

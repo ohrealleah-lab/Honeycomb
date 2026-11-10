@@ -260,7 +260,8 @@ struct ThemesSectionView: View {
             customFeltBlue: coordinator.customFeltBlue,
             faceArts: faceArts,
             customCardColors: coordinator.customCardColors,
-            customBackgroundName: coordinator.customBackgroundName
+            customBackgroundName: coordinator.customBackgroundName,
+            tableOpacity: coordinator.tableOpacity
         )
         manager.addTheme(theme)
         showingSaveRow = false

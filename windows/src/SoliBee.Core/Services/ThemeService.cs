@@ -375,6 +375,7 @@ public static class ThemeService
             ThemeCardShadow = options.ThemeCardShadow,
             ThemeHintHighlight = options.ThemeHintHighlight,
             ThemeToolbarButton = options.ThemeToolbarButton,
+            TableOpacity = options.TableOpacity,
         };
 
         foreach (var art in FaceCardArtService.GetAllArts())
@@ -422,6 +423,7 @@ public static class ThemeService
         options.ThemeCardShadow = theme.ThemeCardShadow;
         options.ThemeHintHighlight = theme.ThemeHintHighlight;
         options.ThemeToolbarButton = theme.ThemeToolbarButton;
+        options.TableOpacity = Math.Clamp(theme.TableOpacity, 0.0, 1.0);
         options.CustomFeltColorRevision++;
 
         // Restore face arts without deleting files on disk

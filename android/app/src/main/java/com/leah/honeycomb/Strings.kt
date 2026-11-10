@@ -1070,6 +1070,7 @@ object Strings {
         StringKey.BeekeeperLogHoneySuperBought to "You stack a honey super on top. More room for honey.",
         StringKey.BeekeeperLogWaxTrayBought to "You slide in another wax tray.",
         StringKey.FeltTransparent to "Transparent",
+        StringKey.TableOpacityLabel to "Table Opacity",
     )
 
     private val Spanish = mapOf(
@@ -2110,5 +2111,6 @@ object Strings {
         StringKey.BeekeeperLogHoneySuperBought to "Colocas un alza de miel encima. Más espacio para la miel.",
         StringKey.BeekeeperLogWaxTrayBought to "Metes otra bandeja de cera.",
         StringKey.FeltTransparent to "Transparente",
+        StringKey.TableOpacityLabel to "Opacidad de la Mesa",
     )
 }

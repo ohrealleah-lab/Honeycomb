@@ -50,6 +50,7 @@ struct OptionsSheetShell<Content: View>: View {
     @State private var originalFeltColor: FeltColorTheme
     @State private var originalCardBackTheme: String
     @State private var originalShowFeltVignette: Bool
+    @State private var originalTableOpacity: Double
     @State private var originalCustomCardColors: CustomCardColorGroup
     @State private var originalCustomBackgroundName: String?
     // Snapshotted so Cancel can undo liveSaveActiveTheme()'s immediate, unbuffered
@@ -111,6 +112,7 @@ struct OptionsSheetShell<Content: View>: View {
         _originalFeltColor = State(initialValue: coordinator.feltColor)
         _originalCardBackTheme = State(initialValue: coordinator.cardBackTheme)
         _originalShowFeltVignette = State(initialValue: coordinator.showFeltVignette)
+        _originalTableOpacity = State(initialValue: coordinator.tableOpacity)
         _originalCustomCardColors = State(initialValue: coordinator.customCardColors)
         _originalCustomBackgroundName = State(initialValue: coordinator.customBackgroundName)
         let activeId = ThemeManager.shared.activeThemeId
@@ -187,6 +189,7 @@ struct OptionsSheetShell<Content: View>: View {
                             feltColor: originalFeltColor,
                             cardBackTheme: originalCardBackTheme,
                             showFeltVignette: originalShowFeltVignette,
+                            tableOpacity: originalTableOpacity,
                             customCardColors: originalCustomCardColors,
                             customBackgroundName: originalCustomBackgroundName,
                             customFeltRed: originalRed,
@@ -270,6 +273,7 @@ struct OptionsSheetShell<Content: View>: View {
                     feltColor: $coordinator.feltColor,
                     cardBackTheme: $coordinator.cardBackTheme,
                     showFeltVignette: $coordinator.showFeltVignette,
+                    tableOpacity: $coordinator.tableOpacity,
                     customSelectedColor: $customSelectedColor,
                     customCardColors: $coordinator.customCardColors,
                     customBackgroundName: $coordinator.customBackgroundName,
@@ -279,6 +283,7 @@ struct OptionsSheetShell<Content: View>: View {
                     originalFeltColor: originalFeltColor,
                     originalCardBackTheme: originalCardBackTheme,
                     originalShowFeltVignette: originalShowFeltVignette,
+                    originalTableOpacity: originalTableOpacity,
                     originalCustomCardColors: originalCustomCardColors,
                     originalCustomBackgroundName: originalCustomBackgroundName,
                     originalActiveThemeId: originalActiveThemeId,

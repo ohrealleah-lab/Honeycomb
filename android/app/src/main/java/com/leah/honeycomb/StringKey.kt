@@ -1042,4 +1042,5 @@ enum class StringKey {
     BeekeeperLogHoneySuperBought,
     BeekeeperLogWaxTrayBought,
     FeltTransparent,
+    TableOpacityLabel,
 }

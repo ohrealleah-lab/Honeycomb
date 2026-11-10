@@ -307,7 +307,8 @@ public partial class PreferencesView : UserControl
         {
             CardColorPreviewImage.Source = bmp;
             CardColorPreviewImage.IsVisible = true;
-            CardColorPreviewBackdrop.Background = null;
+            CardColorPreviewImage.Opacity = Math.Clamp(options.TableOpacity, 0.0, 1.0);
+            CardColorPreviewBackdrop.Background = options.TableOpacity < 1.0 ? PreviewBackdropBrush(options) : null;
         }
         else
         {
@@ -320,11 +321,15 @@ public partial class PreferencesView : UserControl
             _cardColorPreviewRingBrush.Color = CardView._hintHighlightColor;
     }
 
-    // Preview-only backdrop: a grey checkerboard when the table is Transparent (so it
-    // reads as see-through), otherwise the felt color.
+    // Preview-only backdrop: a grey checkerboard whenever any of the table is see-through
+    // (Transparent felt, or Table Opacity below 100%) with the felt color laid over it at
+    // that opacity; otherwise just the felt color.
     private static IBrush PreviewBackdropBrush(GameOptions options)
     {
-        if (options.FeltColor == FeltColorTheme.Transparent)
+        double opacity = Math.Clamp(options.TableOpacity, 0.0, 1.0);
+        bool clearFelt = options.FeltColor == FeltColorTheme.Transparent && string.IsNullOrEmpty(options.BackgroundName);
+        bool hasImage = !string.IsNullOrEmpty(options.BackgroundName);
+        if (clearFelt || opacity < 1.0)
         {
             var light = new SolidColorBrush(Color.Parse("#FFE6E6E6"));
             var dark  = new SolidColorBrush(Color.Parse("#FFBDBDBD"));
@@ -332,6 +337,13 @@ public partial class PreferencesView : UserControl
             tile.Children.Add(new GeometryDrawing { Brush = light, Geometry = new RectangleGeometry(new Rect(0, 0, 20, 20)) });
             tile.Children.Add(new GeometryDrawing { Brush = dark,  Geometry = new RectangleGeometry(new Rect(0, 0, 10, 10)) });
             tile.Children.Add(new GeometryDrawing { Brush = dark,  Geometry = new RectangleGeometry(new Rect(10, 10, 10, 10)) });
+            // Felt color laid over the checkerboard at the Table Opacity (not when the
+            // wallpaper is what's fading — the image draws itself over this).
+            if (!clearFelt && !hasImage && Color.TryParse(FeltHexForOptions(options), out var tint))
+            {
+                var faded = Color.FromArgb((byte)Math.Round(tint.A * opacity), tint.R, tint.G, tint.B);
+                tile.Children.Add(new GeometryDrawing { Brush = new SolidColorBrush(faded), Geometry = new RectangleGeometry(new Rect(0, 0, 20, 20)) });
+            }
             return new DrawingBrush(tile)
             {
                 TileMode = TileMode.Tile,
@@ -448,6 +460,7 @@ public partial class PreferencesView : UserControl
         }
         DeleteCustomBackgroundButton.IsEnabled = !string.IsNullOrEmpty(options.BackgroundName);
         CustomColorPanel.IsVisible = string.IsNullOrEmpty(options.BackgroundName) && options.FeltColor == FeltColorTheme.Custom;
+        SyncTableOpacityUI(options);
         if (CustomColorPanel.IsVisible && Color.TryParse(options.CustomFeltColorHex, out var parsedColor))
             FeltColorPicker.Color = parsedColor;
         UpdateBackgroundPreview(options);
@@ -752,6 +765,7 @@ public partial class PreferencesView : UserControl
 
         CardDeckHeadingText.Text = Strings.Get(StringKey.CardDeckHeading, language);
         VignetteCheckBox.Content = Strings.Get(StringKey.FeltVignetteToggle, language);
+        TableOpacityLabelText.Text = Strings.Get(StringKey.TableOpacityLabel, language).TrimEnd(':');
         AddCustomCardBackButton.Content = Strings.Get(StringKey.Add, language);
         DeleteCustomCardBackButton.Content = Strings.Get(StringKey.Delete, language);
         AddCustomBackgroundButton.Content = Strings.Get(StringKey.Add, language);
@@ -1812,8 +1826,32 @@ public partial class PreferencesView : UserControl
         NotifySettingsChanged(options);
     }
 
+    // Slider position/label follow the options; disabled while the Transparent felt is
+    // showing (no wallpaper), since that's already fully clear.
+    private void SyncTableOpacityUI(GameOptions options)
+    {
+        bool wasInitializing = _initializing;
+        _initializing = true;
+        TableOpacitySlider.Value = Math.Round(Math.Clamp(options.TableOpacity, 0.0, 1.0) * 100);
+        TableOpacityValueText.Text = $"{(int)TableOpacitySlider.Value}%";
+        TableOpacitySlider.IsEnabled = !(options.FeltColor == FeltColorTheme.Transparent && string.IsNullOrEmpty(options.BackgroundName));
+        _initializing = wasInitializing;
+    }
+
+    private void TableOpacitySlider_ValueChanged(object? sender, Avalonia.Controls.Primitives.RangeBaseValueChangedEventArgs e)
+    {
+        if (_initializing) return;
+        if (DataContext is not GameOptions options) return;
+        options.TableOpacity = Math.Clamp(e.NewValue / 100.0, 0.0, 1.0);
+        TableOpacityValueText.Text = $"{(int)Math.Round(e.NewValue)}%";
+        RefreshDeckBackgroundPreview();
+        RefreshCardColorPreviewBackdrop();
+        NotifySettingsChanged(options);
+    }
+
     private void UpdateBackgroundPreview(GameOptions options)
     {
+        SyncTableOpacityUI(options);
         RefreshDeckBackgroundPreview();
     }
 
@@ -1848,7 +1886,8 @@ public partial class PreferencesView : UserControl
         {
             DeckBackgroundImage.Source = bmp;
             DeckBackgroundImage.IsVisible = true;
-            DeckBackgroundBackdrop.Background = null;
+            DeckBackgroundImage.Opacity = Math.Clamp(options.TableOpacity, 0.0, 1.0);
+            DeckBackgroundBackdrop.Background = options.TableOpacity < 1.0 ? PreviewBackdropBrush(options) : null;
         }
         else
         {

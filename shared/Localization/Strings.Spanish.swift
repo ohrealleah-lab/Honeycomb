@@ -1041,5 +1041,6 @@ enum StringsSpanish {
         .beekeeperLogHoneySuperBought: "Colocas un alza de miel encima. Más espacio para la miel.",
         .beekeeperLogWaxTrayBought: "Metes otra bandeja de cera.",
         .feltTransparent: "Transparente",
+        .tableOpacityLabel: "Opacidad de la Mesa",
     ]
 }

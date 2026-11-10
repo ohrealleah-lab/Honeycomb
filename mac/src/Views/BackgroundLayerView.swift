@@ -50,6 +50,7 @@ struct BackgroundLayerView: View {
                     coordinator.currentFeltColor
                 }
             }
+            .opacity(coordinator.tableOpacity)
             .id(loadTrigger)
             .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in
                 loadTrigger = UUID()

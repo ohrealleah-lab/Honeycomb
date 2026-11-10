@@ -1041,5 +1041,6 @@ enum StringsEnglish {
         .beekeeperLogHoneySuperBought: "You stack a honey super on top. More room for honey.",
         .beekeeperLogWaxTrayBought: "You slide in another wax tray.",
         .feltTransparent: "Transparent",
+        .tableOpacityLabel: "Table Opacity",
     ]
 }

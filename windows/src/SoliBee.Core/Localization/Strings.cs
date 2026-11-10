@@ -1057,6 +1057,7 @@ public static class Strings
         [StringKey.BeekeeperLogHoneySuperBought] = "You stack a honey super on top. More room for honey.",
         [StringKey.BeekeeperLogWaxTrayBought] = "You slide in another wax tray.",
         [StringKey.FeltTransparent] = "Transparent",
+        [StringKey.TableOpacityLabel] = "Table Opacity",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -2098,5 +2099,6 @@ public static class Strings
         [StringKey.BeekeeperLogHoneySuperBought] = "Colocas un alza de miel encima. Más espacio para la miel.",
         [StringKey.BeekeeperLogWaxTrayBought] = "Metes otra bandeja de cera.",
         [StringKey.FeltTransparent] = "Transparente",
+        [StringKey.TableOpacityLabel] = "Opacidad de la Mesa",
     };
 }

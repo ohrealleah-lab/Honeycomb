@@ -1046,4 +1046,5 @@ public enum StringKey
     BeekeeperLogHoneySuperBought,
     BeekeeperLogWaxTrayBought,
     FeltTransparent,
+    TableOpacityLabel,
 }

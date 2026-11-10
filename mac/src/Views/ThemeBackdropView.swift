@@ -20,19 +20,25 @@ struct ThemeBackdropView: View {
     @State private var loadTrigger: UUID = UUID()
 
     var body: some View {
+        // Preview-only: a checkerboard shows behind anything see-through so it reads as
+        // see-through; the table itself is drawn at the Table Opacity.
+        let isClearFelt = customBackgroundName == nil && coordinator.feltColor == .transparent
         ZStack {
-            if let name = customBackgroundName,
-               let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }),
-               let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
-                Image(nsImage: image)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else if coordinator.feltColor == .transparent {
-                // Preview-only: a clear table shows as a checkerboard so it reads as see-through.
+            if isClearFelt || coordinator.tableOpacity < 1 {
                 CheckerboardView()
-            } else {
-                coordinator.currentFeltColor
             }
+            ZStack {
+                if let name = customBackgroundName,
+                   let background = CustomBackgroundManager.shared.customBackgrounds.first(where: { $0.name == name }),
+                   let image = CustomBackgroundManager.shared.image(for: background.relativePath) {
+                    Image(nsImage: image)
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                } else if !isClearFelt {
+                    coordinator.currentFeltColor
+                }
+            }
+            .opacity(coordinator.tableOpacity)
         }
         .id(loadTrigger)
         .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomBackgroundLoaded"))) { _ in

@@ -321,7 +321,12 @@ public partial class MainWindow : Window
 
         try
         {
-            this.Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.Parse(primaryHex));
+            // Table Opacity fades the felt color (and the wallpaper, see ApplyBoardBackground)
+            // by scaling its alpha — a custom color's own alpha is kept and multiplied.
+            var feltParsed = Avalonia.Media.Color.Parse(primaryHex);
+            double tableOpacity = Math.Clamp(options.TableOpacity, 0.0, 1.0);
+            var feltFaded = Avalonia.Media.Color.FromArgb((byte)Math.Round(feltParsed.A * tableOpacity), feltParsed.R, feltParsed.G, feltParsed.B);
+            this.Background = new Avalonia.Media.SolidColorBrush(feltFaded);
 
             if (TopBarBorder != null)
                 TopBarBorder.Background = Avalonia.Media.Brushes.Transparent;
@@ -336,7 +341,7 @@ public partial class MainWindow : Window
             if (VignetteOverlay != null)
             {
                 // Ignored (not toggled) while the table is transparent.
-                VignetteOverlay.IsVisible = options.IsVignetteEnabled && feltColor != FeltColorTheme.Transparent;
+                VignetteOverlay.IsVisible = options.IsVignetteEnabled && feltColor != FeltColorTheme.Transparent && options.TableOpacity >= 1.0;
                 VignetteOverlay.ZIndex = -5;
                 UpdateVignetteSizeAndIntensity(options);
             }
@@ -410,6 +415,7 @@ public partial class MainWindow : Window
         {
             BoardBackgroundImage.Source = CardView.GetCachedBackgroundBitmap(path);
             BoardBackgroundImage.IsVisible = true;
+            BoardBackgroundImage.Opacity = Math.Clamp(options.TableOpacity, 0.0, 1.0);
             BoardBackgroundImage.ZIndex = -10;
             ApplyBoardBackgroundTransform(options);
         }

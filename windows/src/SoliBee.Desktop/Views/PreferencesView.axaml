@@ -247,6 +247,19 @@
                              disabled separator row between the two groups. -->
                         <ComboBox x:Name="BackgroundComboBox" Classes="pill" HorizontalAlignment="Stretch" SelectionChanged="BackgroundComboBox_SelectionChanged"/>
 
+                        <!-- How see-through the table is (felt color or background image).
+                             Mac/Windows only; the Transparent felt is already fully clear,
+                             so this is disabled there. -->
+                        <Grid ColumnDefinitions="Auto,*,Auto" Margin="0,2,0,0">
+                            <TextBlock x:Name="TableOpacityLabelText" Grid.Column="0" Text="Table Opacity" FontSize="11"
+                                       Foreground="#1A1A1A" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                            <Slider x:Name="TableOpacitySlider" Grid.Column="1" Minimum="0" Maximum="100" Value="100"
+                                    ValueChanged="TableOpacitySlider_ValueChanged"/>
+                            <TextBlock x:Name="TableOpacityValueText" Grid.Column="2" Text="100%" FontSize="11"
+                                       Foreground="#1A1A1A" VerticalAlignment="Center" Margin="8,0,0,0" MinWidth="32"
+                                       TextAlignment="Right"/>
+                        </Grid>
+
                         <!-- Custom felt color lives in a popover instead of an inline
                              expanding panel, so picking "Custom Color" doesn't push the
                              rest of the layout down. -->

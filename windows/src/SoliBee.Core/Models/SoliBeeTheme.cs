@@ -34,5 +34,7 @@ public class SoliBeeTheme
     public string? ThemeCardShadow { get; set; }
     public string? ThemeHintHighlight { get; set; }
     public string? ThemeToolbarButton { get; set; }
+    // 1 = solid table, 0 = fully clear (older saved themes have no value and stay solid).
+    public double TableOpacity { get; set; } = 1.0;
     public List<FaceArtSnapshot> FaceArts { get; set; } = new();
 }
