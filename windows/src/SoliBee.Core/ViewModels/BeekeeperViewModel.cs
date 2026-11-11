@@ -793,6 +793,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void PutOnGloves() => Apply(Engine.PutOnGloves());
     public void LeaveGloves() => Apply(Engine.LeaveGloves());
     public void RepairSmoker() => Apply(Engine.RepairSmoker());
+    /// <summary>The seed the "Plant it?" story card is about (a kind never planted), or null.</summary>
+    public string? StorySeed => Engine.StorySeed;
+    /// <summary>The "Plant it?" card's button (Bee, 2026-11-11).</summary>
+    public void PlantFromStory() => Apply(Engine.PlantFromStory());
 
     /// <summary>Debug builds only: shows a story card now (<see cref="BeekeeperStories"/> id).</summary>
     public void DebugShowStory(string id)

@@ -223,6 +223,9 @@ public sealed class BeekeeperEngine
         s.Plants.AddRange(s.Beds.Where(b => b is not null && Known(b.PlantId)).Select(b => b.PlantId));
         s.Beds.Clear();
         s.SeedsInHand = s.SeedsInHand.Where(Known).ToList();
+        // Bee, 2026-11-11: a seed of a kind already growing plants itself; only new kinds wait in hand.
+        s.Plants.AddRange(s.SeedsInHand.Where(id => s.Plants.Contains(id)));
+        s.SeedsInHand.RemoveAll(id => s.Plants.Contains(id));
         s.Wood = Math.Max(0m, s.Wood);
         if (s.Wood >= 1m) s.WoodRevealed = true;
         s.RareBeesMet = (s.RareBeesMet ?? new()).Where(id => Config.RareBees.Any(b => b.Id == id)).Distinct().ToList();
@@ -263,7 +266,8 @@ public sealed class BeekeeperEngine
         s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
 
         // Story cards: only known moments, nothing negative, and a card already answered never shows.
-        s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id)).Distinct().ToList();
+        // The seed card is never done (it comes back for each new kind), so it is never kept as done.
+        s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id) && id != BeekeeperStories.Seed).Distinct().ToList();
         s.StoryReturnIn = s.StoryReturnIn.Where(kv => BeekeeperStories.Order.Contains(kv.Key) && kv.Value > 0m)
             .ToDictionary(kv => kv.Key, kv => Math.Min(kv.Value, Config.GlovesReturnSeconds));
         s.BeesCaught = Math.Max(0, s.BeesCaught);
@@ -1725,8 +1729,19 @@ public sealed class BeekeeperEngine
         BeekeeperStories.Gloves => State.ToolLevel == 0 && !State.GlovesRefusedForGood
                                    && State.BeesCaught >= Config.GlovesOfferBees,
         BeekeeperStories.Smoker => !Owns(BeekeeperUpgrades.Smoker) && State.Bees >= Config.SmokerStoryBees,
+        BeekeeperStories.Seed => State.SeedsInHand.Count > 0,   // a kind never planted (Bee, 2026-11-11)
         _ => false,
     };
+
+    /// <summary>The seed the "Plant it?" card is about: the first in hand, or null.</summary>
+    public string? StorySeed => State.SeedsInHand.FirstOrDefault();
+
+    /// <summary>The "Plant it?" card's button: plants that seed (and any more of its kind in hand).</summary>
+    public ActionResult PlantFromStory()
+    {
+        if (State.StoryHere != BeekeeperStories.Seed || StorySeed is not { } id) return ActionResult.Refused;
+        return PlantSeed(id);   // clears the card; the next new kind, if any, brings it back
+    }
 
     /// <summary>Story time passes (play time only, like rep time). Counts down declined moments, then,
     /// if no card is showing, shows the first moment in order that is due and not done or waiting.
@@ -1746,6 +1761,8 @@ public sealed class BeekeeperEngine
             State.OuchSecondsLeft -= Math.Max(0m, seconds);
             if (State.OuchSecondsLeft <= 0m) { State.OuchSecondsLeft = 0m; FinishStory(BeekeeperStories.Ouch); }
         }
+        // The seed card leaves by itself once there is nothing left to plant.
+        if (State.StoryHere == BeekeeperStories.Seed && !StoryDue(BeekeeperStories.Seed)) State.StoryHere = null;
         if (State.StoryHere is not null) return events;
         foreach (var id in BeekeeperStories.Order)
         {
@@ -2130,10 +2147,17 @@ public sealed class BeekeeperEngine
         return plant.Id;
     }
 
+    /// <summary>Every seed that arrives comes through here. Bee, 2026-11-11: once a kind has been
+    /// planted, its seeds plant themselves (no effort); only a kind never planted waits in hand, and
+    /// the "Plant it?" story card asks for it. Planting changes no rate a stretch is running on:
+    /// gifts land at the end of a piece of <see cref="Work"/>, so live and away still agree.</summary>
     private void AddSeedsInHand(string plantId, int count)
     {
-        for (int i = 0; i < count; i++) State.SeedsInHand.Add(plantId);
-        if (count > 0) State.GardenRevealed = true;
+        if (count <= 0) return;
+        var target = State.Plants.Contains(plantId) ? State.Plants : State.SeedsInHand;
+        for (int i = 0; i < count; i++) target.Add(plantId);
+        State.GardenRevealed = true;
+        // Before (stage 8): for (int i = 0; i < count; i++) State.SeedsInHand.Add(plantId);
     }
 
     // ---- planting (stage 8: at once)
@@ -2156,6 +2180,10 @@ public sealed class BeekeeperEngine
         State.SeedsInHand.Remove(plantId);
         bool firstOfKind = !State.Plants.Contains(plantId);
         State.Plants.Add(plantId);
+        // Bee, 2026-11-11: the rest of this kind in hand plants itself with it.
+        int more = State.SeedsInHand.RemoveAll(id => id == plantId);
+        for (int i = 0; i < more; i++) State.Plants.Add(plantId);
+        if (State.StoryHere == BeekeeperStories.Seed) State.StoryHere = null;   // the card has been answered
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.SeedPlanted, 0m, plantId) };
         // The first of a kind brings its specialty: the Notebook and the Hive card show it.
         if (firstOfKind) events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, plantId));

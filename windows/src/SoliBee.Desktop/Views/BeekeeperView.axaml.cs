@@ -299,7 +299,10 @@ public partial class BeekeeperView : UserControl
         GardenCard.IsVisible = vm.GardenRevealed;
         GardenTitleText.Text = BeekeeperText.GardenTitle;
         // Cut in stage 8 (spec 017): UpdateBeds(vm);   // plants grow at once
-        UpdateSeeds(vm, lang);
+        // Cut (Bee, 2026-11-11): the seed rows with their Plant buttons. A new kind is planted from the
+        // story card ("Plant it?"), and seeds of a kind already growing plant themselves.
+        // UpdateSeeds(vm, lang);
+        SeedRows.IsVisible = false;
         UpdatePlants(vm, lang);
 
         // Wasps (never again once the emissary has come)
@@ -900,7 +903,7 @@ public partial class BeekeeperView : UserControl
     {
         string? id = vm.StoryHere;
         StoryCard.IsVisible = id is not null;
-        string sig = lang + "|" + id;
+        string sig = lang + "|" + id + "|" + (id == BeekeeperStories.Seed ? vm.StorySeed : null);   // a new seed redraws the card
         if (sig == _storySignature) return;
         _storySignature = sig;
         StoryButtons.Children.Clear();
@@ -928,6 +931,10 @@ public partial class BeekeeperView : UserControl
             case BeekeeperStories.Smoker:
                 StoryText.Text = BeekeeperText.StorySmoker;
                 StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryRepair, () => _vm?.RepairSmoker()));
+                break;
+            case BeekeeperStories.Seed:   // Bee, 2026-11-11: a seed of a kind never planted
+                StoryText.Text = BeekeeperText.StorySeed(vm.StorySeed ?? "");
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.GardenPlant, () => _vm?.PlantFromStory()));
                 break;
         }
     }

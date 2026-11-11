@@ -234,17 +234,74 @@ public class BeekeeperStage8Tests : IDisposable
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.SeedPlanted));
         Assert.True(Has(r.Events, BeekeeperEvents.PlantRevealed));
-        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.Plants);
         Assert.Empty(e.State.Beds);
-        Assert.Equal(2, e.SeedCount(BeekeeperPlants.Wildflowers));
-
-        var again = e.PlantSeed(BeekeeperPlants.Wildflowers);
-        Assert.False(Has(again.Events, BeekeeperEvents.PlantRevealed));
-        Assert.Equal(2, e.PlantCount(BeekeeperPlants.Wildflowers));
-        Assert.True(e.CanPlantSeed);
-        e.PlantSeed();
+        // Bee, 2026-11-11: the rest of that kind in hand plants itself with the first.
+        Assert.Equal(3, e.PlantCount(BeekeeperPlants.Wildflowers));
+        Assert.Equal(0, e.SeedCount(BeekeeperPlants.Wildflowers));
         Assert.False(e.CanPlantSeed);
         Assert.False(e.PlantSeed().Done);
+        // Before: one at a time (Plants = [wildflowers], 2 seeds left, each planted by hand).
+    }
+
+    [Fact]
+    public void OnceAKindGrows_ItsSeedsPlantThemselves_FromEveryGiver()
+    {
+        var rng = new Script { DefaultDouble = 0.1, DefaultInt = 0 };   // every roll a hit, the first choice
+        var s = Hippies(10, candles: 3m);
+        s.Plants.Add(BeekeeperPlants.Wildflowers);
+        var e = Make(s, rng);
+        e.TradeAllCandles();
+        Assert.Equal(4, e.PlantCount(BeekeeperPlants.Wildflowers));   // three seeds, all planted at once
+        Assert.Empty(e.State.SeedsInHand);
+
+        // A kind never planted waits in hand (and its story card asks for it).
+        var fresh = Make(Hippies(10), new Script { DefaultDouble = 0.1 });
+        fresh.TradeTenCandles();
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, fresh.State.SeedsInHand);
+        Assert.Empty(fresh.State.Plants);
+
+        // The debug seeds and the mason bee follow the same rule.
+        var debug = Make(new BeekeeperState { Plants = { BeekeeperPlants.Bramble } });
+        debug.DebugGiveSeedsOfEvery(2);
+        Assert.Equal(3, debug.PlantCount(BeekeeperPlants.Bramble));
+        Assert.Equal(0, debug.SeedCount(BeekeeperPlants.Bramble));
+        Assert.Equal(2, debug.SeedCount(BeekeeperPlants.Clover));
+    }
+
+    [Fact]
+    public void SeedsOfAGrowingKind_InAnOlderSave_PlantThemselvesOnLoad()
+    {
+        var e = Make(new BeekeeperState
+        {
+            Plants = { BeekeeperPlants.Bramble },
+            SeedsInHand = { BeekeeperPlants.Bramble, BeekeeperPlants.Clover, BeekeeperPlants.Bramble },
+        });
+        Assert.Equal(3, e.PlantCount(BeekeeperPlants.Bramble));
+        Assert.Equal(new[] { BeekeeperPlants.Clover }, e.State.SeedsInHand);
+    }
+
+    [Fact]
+    public void ASeedOfANewKind_BringsThePlantItStoryCard_EachTime()
+    {
+        var e = Make(new BeekeeperState { SeedsInHand = { BeekeeperPlants.Willow, BeekeeperPlants.Clover }, HoneyRevealed = true });
+        Assert.Contains(e.AdvanceStoryTime(1m), ev => ev.Key == BeekeeperEvents.StoryArrives && ev.Text == BeekeeperStories.Seed);
+        Assert.Equal(BeekeeperStories.Seed, e.StoryHere);
+        Assert.Equal(BeekeeperPlants.Willow, e.StorySeed);
+
+        var r = e.PlantFromStory();
+        Assert.True(r.Done);
+        Assert.True(Has(r.Events, BeekeeperEvents.CarpenterBee));   // planted like any other willow
+        Assert.Null(e.StoryHere);
+        Assert.DoesNotContain(BeekeeperStories.Seed, e.State.StoriesDone);   // it comes back for the next kind
+
+        e.AdvanceStoryTime(1m);
+        Assert.Equal(BeekeeperStories.Seed, e.StoryHere);
+        Assert.Equal(BeekeeperPlants.Clover, e.StorySeed);
+        e.PlantSeed(BeekeeperPlants.Clover);   // planted another way: the card goes
+        Assert.Null(e.StoryHere);
+        e.AdvanceStoryTime(1m);
+        Assert.Null(e.StoryHere);
+        Assert.False(e.PlantFromStory().Done);
     }
 
     [Fact]
@@ -273,8 +330,10 @@ public class BeekeeperStage8Tests : IDisposable
         };
         var e = Make(s);
         Assert.Empty(e.State.Beds);
-        Assert.Equal(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Willow }, e.State.Plants);
-        Assert.Equal(Many(BeekeeperPlants.Wildflowers, 2), e.State.SeedsInHand);   // many of a kind are kept; unknown dropped
+        // The unknown ones are dropped; wildflowers already grow, so their seeds plant themselves (Bee, 2026-11-11).
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Willow, BeekeeperPlants.Wildflowers, BeekeeperPlants.Wildflowers },
+            e.State.Plants);
+        Assert.Empty(e.State.SeedsInHand);
         var events = e.RevealOnLoad();
         Assert.True(Has(events, BeekeeperEvents.CarpenterBee));   // the willow that sprouted brings the carpenter bee
         Assert.True(e.State.CarpenterBeeCame);
@@ -736,7 +795,9 @@ public class BeekeeperStage8Tests : IDisposable
         Assert.Contains(r.WelcomeBack, ev => ev.Key == BeekeeperEvents.WelcomeBackWood && ev.Value == Math.Floor(1.06m * 120m));
         var hotel = Assert.Single(r.WelcomeBack, ev => ev.Key == BeekeeperEvents.WelcomeBackHotel);
         Assert.Equal(4m, hotel.Value);   // at 1,000 s, then every 30 minutes: 4 seeds in two hours
-        Assert.Equal(4, e.State.SeedsInHand.Count);
+        // Every kind already grows in this hive, so the seeds planted themselves (Bee, 2026-11-11).
+        Assert.Empty(e.State.SeedsInHand);
+        Assert.Equal(52 + 4, e.PlantCount(BeekeeperPlants.Wildflowers));   // the mason bee's first choice
     }
 
     // ============================================================ saving (FR-814)

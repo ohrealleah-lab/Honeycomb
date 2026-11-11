@@ -141,6 +141,8 @@ internal static class BeekeeperText
     public static string StoryOuch => T(StringKey.BeekeeperStoryOuch);
     public static string StoryGloves => T(StringKey.BeekeeperStoryGloves);
     public static string StorySmoker => T(StringKey.BeekeeperStorySmoker);
+    /// <summary>"A wildflower seed! Plant it in the garden?" (Bee, 2026-11-11).</summary>
+    public static string StorySeed(string plantId) => Fill(T(StringKey.BeekeeperStorySeedFmt), SeedName(plantId, Lang));
     public static string StoryYes => T(StringKey.Yes);
     public static string StoryNo => T(StringKey.BeekeeperStoryNo);
     public static string StoryRepair => T(StringKey.BeekeeperStoryRepair);

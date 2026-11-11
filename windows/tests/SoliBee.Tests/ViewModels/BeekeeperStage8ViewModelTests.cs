@@ -68,10 +68,10 @@ public class BeekeeperStage8ViewModelTests : IDisposable
     public void TheGardenRows_CountSeedsAndPlantsByKind_AndPlantingIsInstant()
     {
         var s = Garden((BeekeeperPlants.Wildflowers, 3));
-        s.SeedsInHand.AddRange(Enumerable.Repeat(BeekeeperPlants.Wildflowers, 12));
+        s.SeedsInHand.AddRange(Enumerable.Repeat(BeekeeperPlants.Clover, 12));
         s.SeedsInHand.Add(BeekeeperPlants.Bramble);
         var vm = Make(s);
-        Assert.Equal(new[] { (BeekeeperPlants.Wildflowers, 12), (BeekeeperPlants.Bramble, 1) },
+        Assert.Equal(new[] { (BeekeeperPlants.Bramble, 1), (BeekeeperPlants.Clover, 12) },
             vm.SeedRows.Select(r => (r.Plant.Id, r.Count)));
         Assert.Equal(new[] { (BeekeeperPlants.Wildflowers, 3) }, vm.PlantRows.Select(r => (r.Plant.Id, r.Count)));
 

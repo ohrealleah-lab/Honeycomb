@@ -153,7 +153,10 @@ public static class BeekeeperStories
     public const string Ouch = "ouch";
     public const string Gloves = "gloves";
     public const string Smoker = "smoker";
-    public static readonly string[] Order = { Ouch, Gloves, Smoker };
+    /// <summary>A seed of a kind never planted is in hand: "Plant it?" (Bee, 2026-11-11). Unlike the
+    /// others it comes back for every new kind, so it is never marked done.</summary>
+    public const string Seed = "seed";
+    public static readonly string[] Order = { Ouch, Gloves, Smoker, Seed };
 }
 
 /// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
