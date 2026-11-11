@@ -113,6 +113,7 @@ public static class BeekeeperEvents
 
     // Stage 8 (spec 017)
     public const string SeedsGivenBatch = "seeds_given_batch";   // Value = seeds the Hippies gave in one Trade All (2 or more)
+    // Cut from the log (Bee, 2026-11-11): no engine path raises it now; the key and its words stay so it can return.
     public const string SeedJoinsRoll = "seed_joins_roll";       // Text = plant id (the Hippies have a new kind of seed)
     public const string CarpenterBee = "carpenter_bee";          // the carpenter bee moves into the willow
     public const string MeadowBought = "meadow_bought";
@@ -2112,8 +2113,9 @@ public sealed class BeekeeperEngine
         {
             if (State.SeedsGivenIds.Contains(plant.Id) || !IsSeedUnlocked(plant)) continue;
             State.SeedsGivenIds.Add(plant.Id);
-            if (plant.Giver == BeekeeperGivers.Hippies)
-                events.Add(new BeekeeperEvent(BeekeeperEvents.SeedJoinsRoll, 0m, plant.Id));
+            // Cut (Bee, 2026-11-11): the "The Hippies have a new kind of seed" log line.
+            // if (plant.Giver == BeekeeperGivers.Hippies)
+            //     events.Add(new BeekeeperEvent(BeekeeperEvents.SeedJoinsRoll, 0m, plant.Id));
         }
     }
 
@@ -2387,7 +2389,7 @@ public sealed class BeekeeperEngine
     private void DebugUnlock(BeekeeperPlant plant, List<BeekeeperEvent> events)
     {
         State.SeedsGivenIds.Add(plant.Id);
-        events.Add(new BeekeeperEvent(BeekeeperEvents.SeedJoinsRoll, 0m, plant.Id));
+        // Cut (Bee, 2026-11-11): events.Add(new BeekeeperEvent(BeekeeperEvents.SeedJoinsRoll, 0m, plant.Id));
     }
 
     /// <summary>Debug builds only: <paramref name="count"/> seeds of every kind in hand.</summary>

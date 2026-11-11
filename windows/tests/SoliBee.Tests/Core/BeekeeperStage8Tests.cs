@@ -163,9 +163,10 @@ public class BeekeeperStage8Tests : IDisposable
         var e = Make(Hippies(199, candles: 5m), rng);
         e.State.SeedsGivenIds.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
         var r = e.TradeTenCandles();   // the 200th
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedJoinsRoll && ev.Text == BeekeeperPlants.Willow);
+        Assert.Contains(BeekeeperPlants.Willow, e.State.SeedsGivenIds);   // in the roll (no log line since Bee, 2026-11-11)
+        Assert.False(Has(r.Events, BeekeeperEvents.SeedJoinsRoll));
         Assert.Equal(new[] { BeekeeperPlants.Willow }, e.State.SeedsInHand);   // that trade already rolls with it
-        Assert.False(Has(e.TradeTenCandles().Events, BeekeeperEvents.SeedJoinsRoll));
+        Assert.Single(e.State.SeedsGivenIds, BeekeeperPlants.Willow);   // listed once
     }
 
     [Fact]
@@ -173,7 +174,8 @@ public class BeekeeperStage8Tests : IDisposable
     {
         var e = Make(Hippies(0));
         var r = e.TradeTenCandles();
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedJoinsRoll && ev.Text == BeekeeperPlants.Wildflowers);
+        Assert.Contains(BeekeeperPlants.Wildflowers, e.State.SeedsGivenIds);
+        Assert.False(Has(r.Events, BeekeeperEvents.SeedJoinsRoll));   // Bee, 2026-11-11: no log line
     }
 
     [Fact]
@@ -194,7 +196,8 @@ public class BeekeeperStage8Tests : IDisposable
     {
         var e = Make(new BeekeeperState { HippieTrades = 400, WaspTrades = 22, EmissaryCome = true });
         var events = e.RevealOnLoad();
-        Assert.Equal(4, events.Count(ev => ev.Key == BeekeeperEvents.SeedJoinsRoll));   // the Hippies' four; the poplar comes quietly
+        Assert.False(Has(events, BeekeeperEvents.SeedJoinsRoll));   // quietly (Bee, 2026-11-11: no log line)
+        Assert.Equal(5, e.State.SeedsGivenIds.Count);
         Assert.Empty(e.State.SeedsInHand);
         Assert.Equal(5, e.UnlockedSeeds.Count);
         Assert.Empty(e.RevealOnLoad().Where(ev => ev.Key == BeekeeperEvents.SeedJoinsRoll));
@@ -793,7 +796,8 @@ public class BeekeeperStage8Tests : IDisposable
     public void TheDebugHelpers_UnlockSeeds_GiveSeedsPlantsWood_AndCallTheBees()
     {
         var e = Make(new BeekeeperState { HoneyRevealed = true });
-        Assert.Contains(e.DebugUnlockNextSeed(), ev => ev.Key == BeekeeperEvents.SeedJoinsRoll && ev.Text == BeekeeperPlants.Wildflowers);
+        Assert.Empty(e.DebugUnlockNextSeed());   // quietly (Bee, 2026-11-11)
+        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.UnlockedSeeds.Select(p => p.Id));
         e.DebugUnlockEverySeed();
         Assert.Equal(BeekeeperConfig.Default.Plants.Count, e.UnlockedSeeds.Count);
         Assert.Empty(e.DebugUnlockNextSeed());

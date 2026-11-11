@@ -207,7 +207,8 @@ public class BeekeeperStage8ViewModelTests : IDisposable
     {
         var vm = Make(new BeekeeperState { BearName = "Bruno", HoneyRevealed = true, ShopRevealed = true });
         vm.DebugUnlockNextSeed();
-        Assert.True(Logged(vm, BeekeeperEvents.SeedJoinsRoll));
+        Assert.False(Logged(vm, BeekeeperEvents.SeedJoinsRoll));   // Bee, 2026-11-11: no log line
+        Assert.Contains(BeekeeperPlants.Wildflowers, vm.State.SeedsGivenIds);
         vm.DebugUnlockEverySeed();
         vm.DebugGiveTenOfEverySeed();
         Assert.Equal(BeekeeperConfig.Default.Plants.Count, vm.SeedRows.Count);
