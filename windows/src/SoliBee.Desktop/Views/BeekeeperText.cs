@@ -366,6 +366,7 @@ internal static class BeekeeperText
         BeekeeperHerbs.Trades => T(StringKey.BeekeeperHerbTrades),
         BeekeeperHerbs.Wanderers => T(StringKey.BeekeeperHerbWanderers),
         BeekeeperHerbs.LingeringSmoke => T(StringKey.BeekeeperHerbLingeringSmoke),
+        BeekeeperHerbs.QuickFingers => T(StringKey.BeekeeperHerbQuickFingers),
         _ => buff,
     };
 
@@ -767,6 +768,7 @@ internal static class BeekeeperText
                 BeekeeperHerbs.Trades => Fill(L(StringKey.BeekeeperLogHerbTradesFmt), N(e.Value)),
                 BeekeeperHerbs.Wanderers => L(StringKey.BeekeeperLogHerbWanderers),
                 BeekeeperHerbs.LingeringSmoke => Fill(L(StringKey.BeekeeperLogHerbLingeringSmokeFmt), N(e.Value)),
+                BeekeeperHerbs.QuickFingers => Fill(L(StringKey.BeekeeperLogHerbQuickFingersFmt), N(e.Value), N(e.Value2)),
                 BeekeeperHerbs.Dud => L(StringKey.BeekeeperLogHerbDud),
                 _ => "",
             },

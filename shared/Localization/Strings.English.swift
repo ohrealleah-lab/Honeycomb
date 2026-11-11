@@ -1165,5 +1165,7 @@ enum StringsEnglish {
         .helpBeekeeperMeadow: "The first willow you plant brings a carpenter bee. She brings back 1 wood a minute, even while the app is closed, and there's no limit to how much wood you can keep. Wood buys expansions in the Shop: Wooden Frames (new combs need half the wax), Candle Molds (two candles every time you make one), the Dipping Rack (every candle needs half the wax) and the Bee Hotel. Honey Supers at The Workbench cost wood too.\n\nRare bees move into the bee hotel. Every 30 minutes, even while you're away, one of them brings back a gift: a mason bee brings a seed, a leafcutter bee brings herbs, and a wool carder bee brings propolis.\n\nOnce you've planted a wildflower and some clover, the Hive card offers the meadow. With 50 wildflowers and 50 clover growing, your hive can spread into it. The plants stay and keep working, and the meadow works like one giant comb: 5 more honey a second, and room for 25,000 more honey and 250 more wax.\n\nThe Notebook's Bees tab lists every bee in your hive, what it does, and a little true fact about it.",
         .beekeeperLogTradeHippiesOneFmt: "You sell the Hippies 1 herbal candle for %@ Beebits.",
         .beekeeperStorySeedFmt: "A %@ seed! Plant it in the garden?",
+        .beekeeperHerbQuickFingers: "Quick Fingers",
+        .beekeeperLogHerbQuickFingersFmt: "Your fingers feel light and quick. Clicking is %@% as effective for %@ seconds.",
     ]
 }

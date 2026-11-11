@@ -18,7 +18,7 @@ public class BeekeeperHerbTests
         public int Next(int maxExclusive) => System.Math.Min(Roll, maxExclusive - 1);
     }
 
-    // Default weights: Busy Bees 0-3, Wax 4-7, Trades 8-11, Wanderers 12-15, Lingering Smoke 16-19, Dud 20.
+    // Default weights: Busy Bees 0-3, Wax 4-7, Trades 8-11, Wanderers 12-15, Lingering Smoke 16-19, Quick Fingers 20-21, Dud 22.
     private static int RollFor(string buff) => buff switch
     {
         BeekeeperHerbs.BusyBees => 0,
@@ -26,7 +26,8 @@ public class BeekeeperHerbTests
         BeekeeperHerbs.Trades => 8,
         BeekeeperHerbs.Wanderers => 12,
         BeekeeperHerbs.LingeringSmoke => 16,
-        _ => 20,
+        BeekeeperHerbs.QuickFingers => 20,
+        _ => 22,
     };
 
     private static BeekeeperEngine Make(int roll = 0, decimal candles = 1m, decimal bees = 100m, BeekeeperState? state = null)
@@ -291,6 +292,66 @@ public class BeekeeperHerbTests
         plain.State.Upgrades.Add(BeekeeperUpgrades.Smoker);
         plain.UseSmoker();
         Assert.Equal(plain.Config.SmokerBoostSeconds, plain.State.SmokerBoostSecondsLeft);
+    }
+
+    // ============================================================ Quick Fingers (Bee, 2026-11-11)
+
+    [Fact]
+    public void QuickFingers_MakesCatchBeeAndTheSmokerThreeTimesAsStrong()
+    {
+        var e = Lit(BeekeeperHerbs.QuickFingers);
+        e.State.Upgrades.Add(BeekeeperUpgrades.Smoker);
+        e.State.ToolLevel = 1;   // better tools never get stung
+        decimal perClick = e.BeesPerClick;
+        Assert.Equal(perClick * 3m, e.BeesPerCatch);
+        decimal before = e.State.Bees;
+        Assert.Equal(perClick * 3m, e.Catch().BeesGained);
+        Assert.Equal(before + perClick * 3m, e.State.Bees);
+
+        e.UseSmoker();
+        Assert.Equal(e.Config.SmokerBoostPercent * 3m, e.SmokerBoostPercentNow);
+        Assert.Equal(1m + e.Config.SmokerBoostPercent * 3m / 100m, e.SmokerBoostNow);
+        Assert.Equal(e.Config.SmokerBoostPercent, e.SmokerBoostPercent);   // the Shop keeps quoting the base
+    }
+
+    [Fact]
+    public void QuickFingers_BurnsThirtySeconds_ThenClicksAreNormalAgain()
+    {
+        var e = Lit(BeekeeperHerbs.QuickFingers);
+        e.State.ToolLevel = 1;
+        Assert.Equal(30m, e.State.HerbSecondsLeft);
+        e.Advance(29m);
+        Assert.Equal(e.BeesPerClick * 3m, e.BeesPerCatch);
+        e.Advance(1m);
+        Assert.False(e.IsHerbBurning);
+        Assert.Equal((decimal)e.BeesPerClick, e.BeesPerCatch);
+    }
+
+    [Fact]
+    public void QuickFingers_StrongerCandlesStretchItsBurn()
+    {
+        var e = Make(RollFor(BeekeeperHerbs.QuickFingers));
+        e.State.Upgrades.Add(BeekeeperUpgrades.StrongerCandles);
+        e.LightRepellent();
+        Assert.Equal(30m * e.Config.StrongerCandlesBonus, e.State.HerbSecondsLeft);
+    }
+
+    [Fact]
+    public void QuickFingers_IsRarerThanTheOtherBuffs()
+    {
+        var w = BeekeeperConfig.Default.HerbBuffWeights.ToDictionary(x => x.Buff, x => x.Weight);
+        Assert.Equal(2, w[BeekeeperHerbs.QuickFingers]);
+        Assert.True(w[BeekeeperHerbs.QuickFingers] < w[BeekeeperHerbs.BusyBees]);
+        Assert.True(w[BeekeeperHerbs.QuickFingers] > w[BeekeeperHerbs.Dud]);
+    }
+
+    [Fact]
+    public void ALoadedFile_KeepsAQuickFingersCandle()
+    {
+        var good = new BeekeeperState { HerbBuff = BeekeeperHerbs.QuickFingers, HerbSecondsLeft = 20m };
+        var g = new BeekeeperEngine(BeekeeperConfig.Default, good);
+        Assert.True(g.IsHerb(BeekeeperHerbs.QuickFingers));
+        Assert.Equal(20m, g.State.HerbSecondsLeft);
     }
 
     [Fact]

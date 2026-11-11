@@ -1181,6 +1181,8 @@ public static class Strings
         [StringKey.HelpBeekeeperMeadow] = "The first willow you plant brings a carpenter bee. She brings back 1 wood a minute, even while the app is closed, and there's no limit to how much wood you can keep. Wood buys expansions in the Shop: Wooden Frames (new combs need half the wax), Candle Molds (two candles every time you make one), the Dipping Rack (every candle needs half the wax) and the Bee Hotel. Honey Supers at The Workbench cost wood too.\n\nRare bees move into the bee hotel. Every 30 minutes, even while you're away, one of them brings back a gift: a mason bee brings a seed, a leafcutter bee brings herbs, and a wool carder bee brings propolis.\n\nOnce you've planted a wildflower and some clover, the Hive card offers the meadow. With 50 wildflowers and 50 clover growing, your hive can spread into it. The plants stay and keep working, and the meadow works like one giant comb: 5 more honey a second, and room for 25,000 more honey and 250 more wax.\n\nThe Notebook's Bees tab lists every bee in your hive, what it does, and a little true fact about it.",
         [StringKey.BeekeeperLogTradeHippiesOneFmt] = "You sell the Hippies 1 herbal candle for %@ Beebits.",
         [StringKey.BeekeeperStorySeedFmt] = "A %@ seed! Plant it in the garden?",
+        [StringKey.BeekeeperHerbQuickFingers] = "Quick Fingers",
+        [StringKey.BeekeeperLogHerbQuickFingersFmt] = "Your fingers feel light and quick. Clicking is %@% as effective for %@ seconds.",
     };
 
     private static readonly Dictionary<StringKey, string> Spanish = new()
@@ -2346,5 +2348,7 @@ public static class Strings
         [StringKey.HelpBeekeeperMeadow] = "El primer sauce que plantas trae una abeja carpintera. Trae 1 de madera por minuto, incluso con la aplicación cerrada, y no hay límite de madera. La madera compra ampliaciones en la tienda: cuadros de madera (los panales nuevos necesitan la mitad de cera), moldes para velas (dos velas cada vez que haces una), el bastidor para velas (cada vela necesita la mitad de cera) y el hotel de abejas. Las alzas de miel del banco de trabajo también cuestan madera.\n\nEn el hotel de abejas se instalan abejas raras. Cada 30 minutos, incluso mientras no estás, una de ellas trae un regalo: una abeja albañil trae una semilla, una abeja cortadora de hojas trae hierbas y una abeja cardadora trae propóleo.\n\nCuando hayas plantado flores silvestres y trébol, la tarjeta de la colmena te ofrece el prado. Con 50 flores silvestres y 50 tréboles creciendo, tu colmena puede extenderse por él. Las plantas se quedan y siguen trabajando, y el prado funciona como un panal gigante: 5 de miel más por segundo y espacio para 25 000 de miel y 250 de cera más.\n\nLa pestaña Abejas del cuaderno muestra cada abeja de tu colmena, lo que hace y un pequeño dato real sobre ella.",
         [StringKey.BeekeeperLogTradeHippiesOneFmt] = "Les vendes a los hippies 1 vela de hierbas por %@ Beebits.",
         [StringKey.BeekeeperStorySeedFmt] = "¡Una semilla de %@! ¿La plantas en el jardín?",
+        [StringKey.BeekeeperHerbQuickFingers] = "Dedos rápidos",
+        [StringKey.BeekeeperLogHerbQuickFingersFmt] = "Tus dedos se sienten ligeros y rápidos. Hacer clic es un %@% más eficaz durante %@ segundos.",
     };
 }

@@ -167,9 +167,10 @@ public static class BeekeeperHerbs
     public const string Trades = "trades";                  // more from the bear and the Hippies
     public const string Wanderers = "wanderers";            // stray bees fly in
     public const string LingeringSmoke = "lingering_smoke"; // smoker clicks last longer
+    public const string QuickFingers = "quick_fingers";     // Catch Bee and the Smoker are x3 for 30 s (Bee, 2026-11-11)
     public const string Dud = "dud";                        // nothing happens
 
-    public static readonly IReadOnlyList<string> All = new[] { BusyBees, Wax, Trades, Wanderers, LingeringSmoke, Dud };
+    public static readonly IReadOnlyList<string> All = new[] { BusyBees, Wax, Trades, Wanderers, LingeringSmoke, QuickFingers, Dud };
 }
 
 /// <summary>
@@ -533,6 +534,11 @@ public sealed class BeekeeperConfig
     public decimal HerbWanderersBeesPerMinute { get; init; } = 6m;
     /// <summary>Lingering Smoke: live seconds one smoker click lasts while it burns (instead of 1).</summary>
     public decimal HerbSmokerSeconds { get; init; } = 30m;
+    /// <summary>Quick Fingers (Bee, 2026-11-11): Catch Bee's bees and the Smoker's boost are this many
+    /// times as strong while it burns (300% effective = x3).</summary>
+    public decimal HerbClickMultiplier { get; init; } = 3m;
+    /// <summary>Quick Fingers burns only this long in live play (Stronger Candles stretches it too).</summary>
+    public decimal HerbClickBurnSeconds { get; init; } = 30m;
     /// <summary>How likely each roll is, as weights (the dud is rare).</summary>
     public IReadOnlyList<(string Buff, int Weight)> HerbBuffWeights { get; init; } = new[]
     {
@@ -541,6 +547,7 @@ public sealed class BeekeeperConfig
         (BeekeeperHerbs.Trades, 4),
         (BeekeeperHerbs.Wanderers, 4),
         (BeekeeperHerbs.LingeringSmoke, 4),
+        (BeekeeperHerbs.QuickFingers, 2),   // rarer than the rest (Bee, 2026-11-11)
         (BeekeeperHerbs.Dud, 1),
     };
 

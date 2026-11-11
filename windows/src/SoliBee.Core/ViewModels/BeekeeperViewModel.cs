@@ -465,7 +465,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // hidden until the bonus reaches 0.01% (below that it would read "+0%")
             if (FreeBeeHoneyBonusPercent >= 0.01m) boosts.Add(new("free_bees", FreeBeeHoneyBonusPercent));
             boosts.AddRange(PlantBoosts(BeekeeperBonusTargets.Honey));   // stage 8: wildflowers and bramble past the first
-            if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercent));
+            if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercentNow));
             if (Engine.IsHerb(BeekeeperHerbs.BusyBees)) boosts.Add(new(BeekeeperHerbs.BusyBees, (Config.HerbHoneyMultiplier - 1m) * 100m));
             if (Engine.IsBeeBoosted) boosts.Add(new("bee_boost", BeeBoostBonusPercent));
             if (Engine.IsSagePropolisBurning) boosts.Add(new("sage_propolis", SagePropolisBonusPercent));

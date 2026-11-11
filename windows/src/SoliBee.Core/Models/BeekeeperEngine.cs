@@ -385,7 +385,10 @@ public sealed class BeekeeperEngine
     /// <summary>Everything one successful click catches: exactly the tool's bees (Practice counted),
     /// so the Shop's "catches N bees" is true. The one place this is worked out, so the catch and the
     /// popup agree.</summary>
-    public decimal BeesPerCatch => BeesPerClick;
+    public decimal BeesPerCatch => BeesPerClick * HerbClickNow;
+
+    /// <summary>Quick Fingers: Catch Bee and the Smoker are this many times as strong while it burns, else 1.</summary>
+    public decimal HerbClickNow => IsHerb(BeekeeperHerbs.QuickFingers) ? Config.HerbClickMultiplier : 1m;
     // Cut (Bee, 2026-11-10; may return): each catch also brought in a slice of the hive (0.1%, rounded
     // down, capped at 10 x the tool's bees; spec 013, FR-405). The Shop said "2 bees" while gloves caught 3.
     // public decimal BeesPerCatch => BeesPerClick + Math.Min(Math.Floor(State.Bees * Config.CatchSliceShare), SliceCap);
@@ -695,9 +698,13 @@ public sealed class BeekeeperEngine
     /// will add their points here.</summary>
     public decimal SmokerBoostPercent => Config.SmokerBoostPercent;
 
+    /// <summary>The boost in percent right now: <see cref="SmokerBoostPercent"/>, x3 under Quick Fingers.
+    /// (The Shop keeps quoting the base.)</summary>
+    public decimal SmokerBoostPercentNow => SmokerBoostPercent * HerbClickNow;
+
     /// <summary>The smoker's honey factor right now: 1 + percent/100 while boosted, else 1.
     /// Multiplied with the other honey boosts.</summary>
-    public decimal SmokerBoostNow => IsSmokerBoosted ? 1m + SmokerBoostPercent / 100m : 1m;
+    public decimal SmokerBoostNow => IsSmokerBoosted ? 1m + SmokerBoostPercentNow / 100m : 1m;
 
     /// <summary>Live seconds one smoker click lasts: 1, or 30 under Lingering Smoke.</summary>
     public decimal SmokerClickSeconds =>
@@ -1439,6 +1446,12 @@ public sealed class BeekeeperEngine
     public decimal HerbalCandleBurnSeconds =>
         Config.HerbalCandleBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
 
+    /// <summary>Live seconds a candle burns once it rolled <paramref name="buff"/>: Quick Fingers is
+    /// short (30 s), the rest use the usual time; Stronger Candles stretches both.</summary>
+    public decimal HerbBurnSecondsFor(string buff) =>
+        (buff == BeekeeperHerbs.QuickFingers ? Config.HerbClickBurnSeconds : Config.HerbalCandleBurnSeconds)
+        * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
+
     /// <summary>One at a time: another can be lit once the last has burned out.</summary>
     public bool CanLightRepellent => State.RepellentCandles >= 1m && !IsHerbBurning;
 
@@ -1457,7 +1470,7 @@ public sealed class BeekeeperEngine
         else
         {
             State.HerbBuff = buff;
-            State.HerbSecondsLeft = HerbalCandleBurnSeconds;
+            State.HerbSecondsLeft = HerbBurnSecondsFor(buff);
         }
         // Value: the number the log line quotes (percent, or a Smoker click's seconds), kept with the line.
         decimal value = buff switch
@@ -1466,9 +1479,10 @@ public sealed class BeekeeperEngine
             BeekeeperHerbs.Wax => (Config.HerbWaxMultiplier - 1m) * 100m,
             BeekeeperHerbs.Trades => (Config.HerbTradeMultiplier - 1m) * 100m,
             BeekeeperHerbs.LingeringSmoke => Config.HerbSmokerSeconds,
+            BeekeeperHerbs.QuickFingers => Config.HerbClickMultiplier * 100m,   // 300 (percent of normal)
             _ => 0m,
         };
-        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.HerbLit, value, buff) });
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.HerbLit, value, buff, State.HerbSecondsLeft) });
     }
 
     private string RollHerbBuff()

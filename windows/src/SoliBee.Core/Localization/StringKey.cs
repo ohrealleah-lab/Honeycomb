@@ -1170,4 +1170,6 @@ public enum StringKey
     HelpBeekeeperMeadow,
     BeekeeperLogTradeHippiesOneFmt,
     BeekeeperStorySeedFmt,
+    BeekeeperHerbQuickFingers,
+    BeekeeperLogHerbQuickFingersFmt,
 }

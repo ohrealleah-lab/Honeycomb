@@ -2328,4 +2328,8 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogTradeHippiesOneFmt = "beekeeper_log_trade_hippies_one_fmt"
     /// Story card: a seed of a kind never planted; %@ = the plant's seed name (lower case)
     case beekeeperStorySeedFmt = "beekeeper_story_seed_fmt"
+    /// Bee Herb buff: Catch Bee and the Smoker are x3 for a short while
+    case beekeeperHerbQuickFingers = "beekeeper_herb_quick_fingers"
+    /// Story log, a herb rolled Quick Fingers; %@ = how strong clicks are in percent (300), %@ = seconds it burns
+    case beekeeperLogHerbQuickFingersFmt = "beekeeper_log_herb_quick_fingers_fmt"
 }
