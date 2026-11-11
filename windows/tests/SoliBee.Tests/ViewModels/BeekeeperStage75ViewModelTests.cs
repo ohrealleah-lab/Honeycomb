@@ -121,7 +121,7 @@ public class BeekeeperStage75ViewModelTests
     public void TheCombRow_ShowsBothPrices_AndWhatAOneCombGives()
     {
         var vm = Make();
-        Assert.Equal(20m, vm.CombBeeCost);
+        Assert.Equal(250m, vm.CombBeeCost);
         Assert.Equal(10m, vm.CombCost);
         Assert.Equal(0.2m, vm.HoneyPerComb);
         Assert.Equal(300m, vm.StoragePerComb);

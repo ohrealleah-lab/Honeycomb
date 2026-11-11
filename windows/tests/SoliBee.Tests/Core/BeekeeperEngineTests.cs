@@ -323,12 +323,13 @@ public class BeekeeperEngineTests
     // ============================================================ the bear
 
     [Fact]
-    public void SellAll_FortySevenHoney_GivesTwentyBeebitsAndKeepsSeven()
+    public void SellAll_FortySevenHoney_GivesFourHerbsAndKeepsSeven()
     {
         var e = Make(state: new BeekeeperState { Honey = 47m });
         var r = e.SellAll();
         Assert.True(r.Done);
-        Assert.Equal(20m, e.State.Beebits);   // 4 trades of 10 honey for 5 Beebits
+        Assert.Equal(4m, e.State.Herbs);      // 4 trades of 10 honey for 1 herb (Bee, 2026-11-11)
+        Assert.Equal(0m, e.State.Beebits);
         Assert.Equal(7m, e.State.Honey);
         Assert.Equal(1, e.State.Trades);
     }
@@ -342,14 +343,14 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void SellTen_GivesFiveBeebits_AndCountsOneTrade()
+    public void SellTen_GivesOneHerb_AndCountsOneTrade()
     {
         var e = Make(state: new BeekeeperState { Honey = 25m });
         Assert.True(e.SellTen().Done);
         Assert.Equal(15m, e.State.Honey);
-        Assert.Equal(5m, e.State.Beebits);
+        Assert.Equal(1m, e.State.Herbs);
         Assert.Equal(1, e.State.Trades);
-        Assert.True(e.State.BeebitsRevealed);
+        Assert.True(e.State.HerbsRevealed);
     }
 
     [Theory]
@@ -388,12 +389,18 @@ public class BeekeeperEngineTests
     // ============================================================ the shop
 
     [Fact]
-    public void Shop_AppearsAtFifteenBeebits_AndStays()
+    public void Shop_AppearsWithTheFirstBeebits_AndStays()
     {
+        // Bee, 2026-11-11: Beebits come from the Hippies (herbal candles), not the bear.
         var e = Make(state: new BeekeeperState { Honey = 150m });
-        e.SellAll();                          // 15 Beebits
+        e.SellAll();                          // herbs, no Beebits
+        Assert.False(e.State.ShopRevealed);
+        e.State.HippiesRevealed = true;
+        e.State.RepellentCandles = 1m;
+        e.TradeTenCandles();                  // 10 Beebits
         Assert.True(e.State.ShopRevealed);
-        e.BuyNextTool();                      // spend them
+        e.State.Beebits = 0m;                 // spent
+        e.Advance(1m);
         Assert.True(e.State.ShopRevealed);
     }
 
@@ -457,7 +464,7 @@ public class BeekeeperEngineTests
     public void CombPrices_CountCombsBought_NotTheStarter()
     {
         var wax = new[] { 10m, 12m, 15m, 19m, 24m, 30m, 38m };
-        var bees = new[] { 20m, 28m, 39m, 54m, 76m, 107m, 150m };
+        var bees = new[] { 250m, 350m, 490m, 686m, 960m, 1344m, 1882m };   // Bee, 2026-11-11: starts at 250 (was 20)
         var e = Make();
         for (int n = 0; n < wax.Length; n++)
         {
@@ -473,7 +480,7 @@ public class BeekeeperEngineTests
         var e = Make();
         Assert.Equal(1, e.State.Combs);
         Assert.Equal(0m, e.State.Bees);
-        Assert.Equal(20m, e.CombBeeCost);
+        Assert.Equal(250m, e.CombBeeCost);
         Assert.Equal(10m, e.CombCost);
         Assert.Equal(200m, e.HoneyStorage);
         Assert.Equal(20m, e.WaxStorage);
@@ -497,17 +504,17 @@ public class BeekeeperEngineTests
     [Fact]
     public void BuildingAComb_TakesBeesAndWax_AndGrowsBothCaps()
     {
-        var e = Make(state: new BeekeeperState { HoneyRevealed = true, Bees = 25m, Wax = 12m });
+        var e = Make(state: new BeekeeperState { HoneyRevealed = true, Bees = 255m, Wax = 12m });
         var r = e.BuildComb();
         Assert.True(r.Done);
-        Assert.Equal(5m, e.State.Bees);                   // the 20 bees moved in
+        Assert.Equal(5m, e.State.Bees);                   // the 250 bees moved in
         Assert.Equal(2m, e.State.Wax);
         Assert.Equal(2, e.State.Combs);
         Assert.Equal(500m, e.HoneyStorage);               // 200 + 300
         Assert.Equal(22m, e.WaxStorage);                  // 20 + 2
-        Assert.Equal(28m, e.CombBeeCost);
+        Assert.Equal(350m, e.CombBeeCost);
         Assert.Equal(12m, e.CombCost);
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.CombBuilt && ev.Value == 20m);
+        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.CombBuilt && ev.Value == 250m);
         Assert.Equal(0.4m, e.HoneyPerSecondNow);          // two combs
     }
 
@@ -541,7 +548,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void CombsPanel_AppearsAtFiveWax_AndStays()
     {
-        var e = Make(state: new BeekeeperState { Wax = 4.999m, Bees = 20m, WaxRevealed = true });
+        var e = Make(state: new BeekeeperState { Wax = 4.999m, Bees = 250m, WaxRevealed = true });
         Assert.False(e.State.CombsRevealed);
         var r = e.Advance(1m);                    // the drip and the bees take it past 5
         Assert.True(e.State.CombsRevealed);
@@ -640,9 +647,9 @@ public class BeekeeperEngineTests
     public void DebugGrant_AddsWhatItSays_AndRevealsTheCardsItUnlocks()
     {
         var e = Make();
-        var events = e.DebugGrant(100m, 100m, 100m);
+        var events = e.DebugGrant(250m, 100m, 100m);   // 250 bees: the first comb's price
 
-        Assert.Equal(100m, e.State.Bees);
+        Assert.Equal(250m, e.State.Bees);
         Assert.Equal(100m, e.State.Wax);          // +wax may go over the cap, like +honey
         Assert.Equal(100m, e.State.Beebits);
         Assert.True(e.State.HoneyRevealed && e.State.WaxRevealed && e.State.BeebitsRevealed);

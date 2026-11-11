@@ -1,13 +1,13 @@
-using System.Collections.Generic;
 using System.Linq;
 using SoliBee.Core.Models;
 using Xunit;
 
 namespace SoliBee.Tests.Core;
 
-/// <summary>Bee Herbs (Bee, 2026-11-10): bought in the Shop, lit one at a time, each rolls one buff
-/// (Busy Bees, Wax Makers, Good Deals, Wanderers, Lingering Smoke, or a rare dud) that burns in
-/// live play only.</summary>
+/// <summary>Herbs and herbal candles (Bee, 2026-11-11): the bear trades herbs for honey, herbs
+/// replace sage, the herbal candle (10 wax + 1 herb) is lit for one random buff (Busy Bees, Wax
+/// Makers, Good Deals, Wanderers, Lingering Smoke, or a rare dud) or sold to the Hippies for
+/// Beebits.</summary>
 public class BeekeeperHerbTests
 {
     /// <summary>Next() always returns <see cref="Roll"/> (clamped), so a test picks the buff.</summary>
@@ -29,16 +29,16 @@ public class BeekeeperHerbTests
         _ => 20,
     };
 
-    private static BeekeeperEngine Make(int roll = 0, decimal herbs = 1m, decimal bees = 100m)
+    private static BeekeeperEngine Make(int roll = 0, decimal candles = 1m, decimal bees = 100m, BeekeeperState? state = null)
     {
-        var state = new BeekeeperState
+        state ??= new BeekeeperState
         {
             BearName = "Bruno",
             ShopRevealed = true,
             HoneyRevealed = true,
+            WorkbenchRevealed = true,
             Bees = bees,
-            Beebits = 100m,
-            BeeHerbs = herbs,
+            RepellentCandles = candles,
         };
         return new BeekeeperEngine(BeekeeperConfig.Default, state, new FixedRoll { Roll = roll });
     }
@@ -46,25 +46,117 @@ public class BeekeeperHerbTests
     private static BeekeeperEngine Lit(string buff, decimal bees = 100m)
     {
         var e = Make(RollFor(buff), bees: bees);
-        Assert.True(e.LightBeeHerb().Done);
+        Assert.True(e.LightRepellent().Done);
         return e;
     }
 
+    // ============================================================ herbs from the bear
+
     [Fact]
-    public void Buying_NeedsTheShopAndBeebits_AndAddsOneHerb()
+    public void TheBear_TradesOneHerbForTenHoney_AndTheFirstHerbOpensTheHerbalCandle()
     {
-        var e = Make(herbs: 0m);
-        Assert.True(e.BuyBeeHerb().Done);
-        Assert.Equal(1m, e.State.BeeHerbs);
-        Assert.Equal(100m - e.Config.BeeHerbCost, e.State.Beebits);
+        var e = Make(candles: 0m);
+        e.State.Honey = 25m;
+        Assert.False(e.State.RepellentUnlocked);
 
-        e.State.Beebits = e.Config.BeeHerbCost - 1m;
-        Assert.False(e.CanBuyBeeHerb);
+        var r = e.SellTen();
+        Assert.True(r.Done);
+        Assert.Equal(15m, e.State.Honey);
+        Assert.Equal(1m, e.State.Herbs);
+        Assert.Equal(0m, e.State.Beebits);          // the bear no longer pays Beebits
+        Assert.True(e.State.HerbsRevealed);
+        Assert.True(e.State.RepellentUnlocked);
+        Assert.Contains(r.Events, x => x.Key == BeekeeperEvents.RepellentUnlocked);
+        Assert.Equal(1m, r.Events.Single(x => x.Key == BeekeeperEvents.Sale).Value);
 
-        e.State.Beebits = 1000m;
-        e.State.ShopRevealed = false;
-        Assert.False(e.CanBuyBeeHerb);
+        e.SellAll();
+        Assert.Equal(2m, e.State.Herbs);
+        Assert.Equal(5m, e.State.Honey);
     }
+
+    [Fact]
+    public void UnderTheAgreement_AnHerbCostsEightHoney()
+    {
+        var e = Make();
+        e.State.HasTradeAgreement = true;
+        Assert.Equal(8m, e.HoneyPerTradeNow);
+        Assert.Equal(1m, e.HerbsPerTradeNow);
+    }
+
+    [Fact]
+    public void AnOlderSave_GetsItsSageAsHerbs()
+    {
+        var old = new BeekeeperState { Sage = 7m, SageRevealed = true };
+        var e = new BeekeeperEngine(BeekeeperConfig.Default, old);
+        Assert.Equal(7m, e.State.Herbs);
+        Assert.Equal(0m, e.State.Sage);
+        Assert.True(e.State.HerbsRevealed);
+        Assert.True(e.State.RepellentUnlocked);
+    }
+
+    // ============================================================ the herbal candle
+
+    [Fact]
+    public void AnHerbalCandle_CostsTenWaxAndOneHerb()
+    {
+        var e = Make(candles: 0m);
+        e.State.RepellentUnlocked = true;
+        e.State.Wax = 20m;
+        e.State.Herbs = 1m;
+        Assert.True(e.CraftRepellent().Done);
+        Assert.Equal(10m, e.State.Wax);
+        Assert.Equal(0m, e.State.Herbs);
+        Assert.Equal(1m, e.State.RepellentCandles);
+        Assert.False(e.CanCraftRepellent);           // no herb left
+    }
+
+    [Fact]
+    public void TheHerbalCandle_NeverRetires_AfterTheEmissary()
+    {
+        var e = Make();
+        e.State.RepellentUnlocked = true;
+        e.State.EmissaryCome = true;
+        Assert.True(e.RepellentShown);
+        Assert.True(e.CanLightRepellent);
+    }
+
+    [Fact]
+    public void TheHippies_BuyHerbalCandlesForBeebits_AndTheFirstBeebitsOpenTheShop()
+    {
+        var e = Make(candles: 3m);
+        e.State.ShopRevealed = false;
+        e.State.HippiesRevealed = true;
+
+        var r = e.TradeTenCandles();
+        Assert.True(r.Done);
+        Assert.Equal(2m, e.State.RepellentCandles);
+        Assert.Equal(e.Config.HippieBeebitsPerCandle, e.State.Beebits);
+        Assert.Equal(1, e.State.HippieTrades);
+        Assert.True(e.State.BeebitsRevealed);
+        Assert.True(e.State.ShopRevealed);
+
+        e.TradeAllCandles();
+        Assert.Equal(0m, e.State.RepellentCandles);
+        Assert.Equal(3, e.State.HippieTrades);       // each candle is a trade
+        Assert.Equal(3m * e.Config.HippieBeebitsPerCandle, e.State.Beebits);
+    }
+
+    [Fact]
+    public void Prices_UseHerbsWhereTheyUsedSage()
+    {
+        var e = Make();
+        e.State.WorkbenchRevealed = true;
+        e.State.HasWaxCatcher = true;
+        var u = e.Config.Upgrades.First(x => x.Id == BeekeeperUpgrades.BetterWaxCatcher);
+        e.State.Beebits = u.Beebits;
+        e.State.Wax = u.Wax;
+        e.State.Bees = u.Bees;
+        e.State.Herbs = u.Herbs;
+        Assert.True(e.BuyUpgrade(u.Id).Done);
+        Assert.Equal(0m, e.State.Herbs);
+    }
+
+    // ============================================================ lighting: one buff each
 
     [Theory]
     [InlineData(BeekeeperHerbs.BusyBees)]
@@ -75,51 +167,61 @@ public class BeekeeperHerbTests
     public void Lighting_RollsOneBuff_ThatBurnsFiveMinutes(string buff)
     {
         var e = Make(RollFor(buff));
-        var r = e.LightBeeHerb();
+        var r = e.LightRepellent();
         Assert.True(r.Done);
-        Assert.Equal(0m, e.State.BeeHerbs);
+        Assert.Equal(0m, e.State.RepellentCandles);
         Assert.Equal(buff, e.State.HerbBuff);
-        Assert.Equal(e.Config.BeeHerbBurnSeconds, e.State.HerbSecondsLeft);
+        Assert.Equal(e.Config.HerbalCandleBurnSeconds, e.State.HerbSecondsLeft);
         Assert.True(e.IsHerb(buff));
         var lit = Assert.Single(r.Events);
         Assert.Equal(BeekeeperEvents.HerbLit, lit.Key);
         Assert.Equal(buff, lit.Text);
+        Assert.Equal(0m, e.State.RepellentSecondsLeft);   // no longer keeps wasps away
     }
 
     [Fact]
-    public void ADud_UsesTheHerb_AndNothingBurns()
+    public void StrongerCandles_MakeItBurnLonger()
+    {
+        var e = Make(RollFor(BeekeeperHerbs.BusyBees));
+        e.State.Upgrades.Add(BeekeeperUpgrades.StrongerCandles);
+        e.LightRepellent();
+        Assert.Equal(e.Config.HerbalCandleBurnSeconds * e.Config.StrongerCandlesBonus, e.State.HerbSecondsLeft);
+    }
+
+    [Fact]
+    public void ADud_UsesTheCandle_AndNothingBurns()
     {
         var e = Make(RollFor(BeekeeperHerbs.Dud));
-        var r = e.LightBeeHerb();
+        var r = e.LightRepellent();
         Assert.True(r.Done);
-        Assert.Equal(0m, e.State.BeeHerbs);
+        Assert.Equal(0m, e.State.RepellentCandles);
         Assert.False(e.IsHerbBurning);
         Assert.Equal(BeekeeperHerbs.Dud, r.Events.Single().Text);
     }
 
     [Fact]
-    public void OneHerbAtATime_AndItBurnsOutAfterItsTime()
+    public void OneAtATime_AndItBurnsOutAfterItsTime()
     {
-        var e = Make(RollFor(BeekeeperHerbs.BusyBees), herbs: 2m);
-        Assert.True(e.LightBeeHerb().Done);
-        Assert.False(e.CanLightBeeHerb);
+        var e = Make(RollFor(BeekeeperHerbs.BusyBees), candles: 2m);
+        Assert.True(e.LightRepellent().Done);
+        Assert.False(e.CanLightRepellent);
 
-        var mid = e.Advance(e.Config.BeeHerbBurnSeconds - 1m);
+        var mid = e.Advance(e.Config.HerbalCandleBurnSeconds - 1m);
         Assert.DoesNotContain(mid.Events, x => x.Key == BeekeeperEvents.HerbOut);
         var end = e.Advance(2m);
         var outEvent = Assert.Single(end.Events, x => x.Key == BeekeeperEvents.HerbOut);
         Assert.Equal(BeekeeperHerbs.BusyBees, outEvent.Text);
         Assert.False(e.IsHerbBurning);
         Assert.Null(e.State.HerbBuff);
-        Assert.True(e.CanLightBeeHerb);
+        Assert.True(e.CanLightRepellent);
     }
 
     [Fact]
-    public void TimeAway_DoesNotBurnTheHerb()
+    public void TimeAway_DoesNotBurnIt()
     {
         var e = Lit(BeekeeperHerbs.BusyBees);
         e.AdvanceAway(3600m);
-        Assert.Equal(e.Config.BeeHerbBurnSeconds, e.State.HerbSecondsLeft);
+        Assert.Equal(e.Config.HerbalCandleBurnSeconds, e.State.HerbSecondsLeft);
     }
 
     [Fact]
@@ -135,7 +237,7 @@ public class BeekeeperHerbTests
     }
 
     [Fact]
-    public void WaxMakers_RaisesTheWaxRate_LiveOnly()
+    public void WaxMakers_RaisesTheWaxRate()
     {
         var plain = Make();
         var e = Lit(BeekeeperHerbs.Wax);
@@ -149,20 +251,18 @@ public class BeekeeperHerbTests
     [Fact]
     public void GoodDeals_PaysMoreForEachTrade_InWholeAmounts()
     {
-        var e = Lit(BeekeeperHerbs.Trades);
-        Assert.Equal(8m, e.BeebitsPerTradeNow);    // 5 × 1.5 = 7.5, rounded up
-        Assert.Equal(2m, e.SagePerTradeNow);       // 1 × 1.5 = 1.5, rounded up
+        var e = Make(RollFor(BeekeeperHerbs.Trades), candles: 3m);
+        Assert.True(e.LightRepellent().Done);
+        Assert.Equal(2m, e.HerbsPerTradeNow);        // 1 × 1.5, rounded up
+        Assert.Equal(15m, e.BeebitsPerCandleNow);    // 10 × 1.5
 
         e.State.Honey = 10m;
-        decimal before = e.State.Beebits;
         Assert.True(e.SellTen().Done);
-        Assert.Equal(before + 8m, e.State.Beebits);
+        Assert.Equal(2m, e.State.Herbs);
 
         e.State.HippiesRevealed = true;
-        e.State.BeeswaxCandles = 20m;
         Assert.True(e.TradeAllCandles().Done);
-        Assert.Equal(4m, e.State.Sage);            // two trades, 2 sage each
-        Assert.Equal(2, e.State.HippieTrades);
+        Assert.Equal(30m, e.State.Beebits);          // two candles, 15 each
     }
 
     [Fact]
@@ -172,11 +272,11 @@ public class BeekeeperHerbTests
         e.Advance(60m);
         Assert.Equal(100m + e.Config.HerbWanderersBeesPerMinute, e.State.Bees);
 
-        e.Advance(e.Config.BeeHerbBurnSeconds);    // burns out part-way; no more strays after
+        e.Advance(e.Config.HerbalCandleBurnSeconds);   // burns out part-way; no more strays after
         decimal after = e.State.Bees;
         e.Advance(60m);
         Assert.Equal(after, e.State.Bees);
-        Assert.Equal(100m + e.Config.HerbWanderersBeesPerMinute * e.Config.BeeHerbBurnSeconds / 60m, after);
+        Assert.Equal(100m + e.Config.HerbWanderersBeesPerMinute * e.Config.HerbalCandleBurnSeconds / 60m, after);
     }
 
     [Fact]

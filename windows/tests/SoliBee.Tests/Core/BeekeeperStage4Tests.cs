@@ -31,7 +31,7 @@ public class BeekeeperStage4Tests : IDisposable
 
     // Hippies who have already traded `trades` times, with candles for one more trade.
     private static BeekeeperEngine WithHippies(long trades)
-        => Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = trades, BeeswaxCandles = 100m });
+        => Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = trades, RepellentCandles = 100m });   // herbal candles
 
     // ============================================================ seeds from the Hippies
 
@@ -76,18 +76,19 @@ public class BeekeeperStage4Tests : IDisposable
     public void TradeAll_CountsEveryBundleAsATrade()
     {
         var e = WithHippies(4);
-        e.State.BeeswaxCandles = 100m;
+        e.State.RepellentCandles = 10m;
         e.TradeAllCandles();
         Assert.Equal(14, e.State.HippieTrades);
         Assert.Single(e.State.SeedsInHand);
     }
 
     [Fact]
-    public void Sage_IsUnchanged_ThereAreNoSagePlants()
+    public void AHippieTrade_PaysBeebits_AndNoHerbs()
     {
         var e = WithHippies(0);
         e.TradeTenCandles();
-        Assert.Equal(1m, e.State.Sage);
+        Assert.Equal(10m, e.State.Beebits);
+        Assert.Equal(0m, e.State.Herbs);
     }
 
     // ============================================================ planting and growing
@@ -430,7 +431,7 @@ public class BeekeeperStage4Tests : IDisposable
     //     var path = Path.Combine(_dir, "v3.json");
     //     File.WriteAllText(path,
     //         "{\"Version\":3,\"Bees\":120,\"Honey\":33,\"Wax\":80,\"Beebits\":9,\"Combs\":3,\"HippieTrades\":6,"
-    //         + "\"Sage\":2,\"Upgrades\":[\"smoker\"],\"HoneyRevealed\":true,\"CalmMeter\":4,"
+    //         + "\"Herbs\":2,\"Upgrades\":[\"smoker\"],\"HoneyRevealed\":true,\"CalmMeter\":4,"
     //         + "\"Log\":[{\"Key\":\"first_bee\",\"Value\":0,\"Value2\":0}]}");
     //
     //     var s = BeekeeperSaveService.Load(path)!;

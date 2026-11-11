@@ -12,7 +12,8 @@ public sealed record BeekeeperTool(string Id, decimal Cost, int BeesPerClick);
 /// or another upgrade's id. What it does is looked up by id in the engine.
 /// </summary>
 /// <remarks>Since stage 7 (spec 015) a price can also be paper and propolis; both default to 0, so older entries are unchanged.</remarks>
-public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Sage, string Needs,
+// Bee, 2026-11-11: herbs replaced sage in every price (was decimal Sage).
+public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Herbs, string Needs,
     decimal Paper = 0m, decimal Propolis = 0m, decimal Bees = 0m);   // Bees: free bees spent (default 0, like Paper)
 
 /// <summary>A plant a seed grows into. <see cref="SeedAtTrade"/> is the Hippie trade that gives its seed;
@@ -97,7 +98,7 @@ public static class BeekeeperUpgrades
     public const string NeedsNothing = "";
 }
 
-/// <summary>The buffs a lit Bee Herb can roll (one per herb).</summary>
+/// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
 public static class BeekeeperHerbs
 {
     public const string BusyBees = "busy_bees";             // more honey
@@ -150,7 +151,7 @@ public sealed class BeekeeperConfig
     public decimal WaxCapPerComb { get; init; } = 2m;
 
     // --- Comb prices: floor(base × growth^n), n = combs bought (the starter doesn't count).
-    public decimal CombBaseBeeCost { get; init; } = 20m;
+    public decimal CombBaseBeeCost { get; init; } = 250m;   // Bee, 2026-11-11: was 20
     public decimal CombBeeCostGrowth { get; init; } = 1.4m;
     public decimal CombBaseWaxCost { get; init; } = 10m;
     public decimal CombCostGrowth { get; init; } = 1.25m;
@@ -195,14 +196,17 @@ public sealed class BeekeeperConfig
     public decimal WaxCatcherCost { get; init; } = 150m;
 
     // --- Trading -------------------------------------------------------------
-    // Bee, 2026-11-10 (placeholders): 10 honey for 5 Beebits, so two trades buy the Smoker.
-    // Was 10 honey for 1 Beebit, or 8 honey for 1 under the agreement.
+    // Bee, 2026-11-11 (placeholders): the bear trades herbs for honey, 1 herb a trade; Beebits now
+    // come from the Hippies, who buy herbal candles.
     /// <summary>Honey in one bear trade.</summary>
     public decimal HoneyPerTrade { get; init; } = 10m;
-    /// <summary>Beebits the bear pays for one trade.</summary>
-    public decimal BeebitsPerTrade { get; init; } = 5m;
-    /// <summary>Stage 7.5 (spec 016): Beebits for one trade under the bear's trade agreement (a better rate).</summary>
-    public decimal BetterBeebitsPerTrade { get; init; } = 6m;
+    /// <summary>Honey in one bear trade under the trade agreement (a better rate).</summary>
+    public decimal BetterHoneyPerTrade { get; init; } = 8m;
+    /// <summary>Herbs the bear gives for one trade.</summary>
+    public decimal HerbsPerTrade { get; init; } = 1m;
+    // Cut (Bee, 2026-11-11): the bear paid Beebits (10 honey for 5, 6 under the agreement).
+    // public decimal BeebitsPerTrade { get; init; } = 5m;
+    // public decimal BetterBeebitsPerTrade { get; init; } = 6m;
     public IReadOnlyList<string> BearNames { get; init; } = new[]
     {
         "Barnaby", "Billy", "Berenstein", "Bruno", "Baloo", "Buster", "Bartholomew",
@@ -232,18 +236,22 @@ public sealed class BeekeeperConfig
     /// <summary>The Workbench opens with this many combs, the starter counted (stage 7.5, spec 016:
     /// was 2 built; now 3 counting the starter, so it opens at the same point).</summary>
     public int WorkbenchCombs { get; init; } = 3;
-    /// <summary>Wax for a beeswax candle (Leah).</summary>
-    public decimal BeeswaxCandleWax { get; init; } = 10m;
-    public decimal RepellentCandleWax { get; init; } = 10m;
-    public decimal RepellentCandleSage { get; init; } = 1m;
-    /// <summary>How long a repellent candle keeps wasps away, in seconds of wasp time (Leah: 15 min).</summary>
-    public decimal RepellentBurnSeconds { get; init; } = 15m * 60m;
+    // Bee, 2026-11-11: the sage repellent candle became the herbal candle (10 wax + 1 herb). Lit, it
+    // rolls one buff (see Herbal candles below); the Hippies buy it for Beebits. It no longer keeps wasps away.
+    public decimal HerbalCandleWax { get; init; } = 10m;
+    public decimal HerbalCandleHerbs { get; init; } = 1m;
+    // Cut (Bee, 2026-11-11): the repellent candle (10 wax + 1 sage) kept wasps away for 15 minutes.
+    // public decimal RepellentCandleWax { get; init; } = 10m;
+    // public decimal RepellentCandleSage { get; init; } = 1m;
+    // public decimal RepellentBurnSeconds { get; init; } = 15m * 60m;
 
     // --- The Hippies ---------------------------------------------------------
     /// <summary>They arrive once this many candles of any kind have been crafted (Leah).</summary>
     public long HippiesRevealCandles { get; init; } = 5;
-    /// <summary>Beeswax candles per sage (Leah: 1 sage per 10 candles).</summary>
-    public decimal CandlesPerSage { get; init; } = 10m;
+    /// <summary>Beebits the Hippies pay for one herbal candle (one trade; placeholder).</summary>
+    public decimal HippieBeebitsPerCandle { get; init; } = 10m;
+    // Cut (Bee, 2026-11-11): the Hippies gave 1 sage for 10 beeswax candles.
+    // public decimal CandlesPerSage { get; init; } = 10m;
 
     // --- Wasps ---------------------------------------------------------------
     /// <summary>Wasp time between wasps: random between these (Leah: 4 to 8 minutes).</summary>
@@ -390,18 +398,19 @@ public sealed class BeekeeperConfig
 
     // --- The sage-propolis candle (wax, sage and propolis): burns while the app is closed too.
     public decimal SagePropolisCandleWax { get; init; } = 20m;
-    public decimal SagePropolisCandleSage { get; init; } = 1m;
+    public decimal SagePropolisCandleHerbs { get; init; } = 1m;   // Bee, 2026-11-11: was 1 sage
     public decimal SagePropolisCandlePropolis { get; init; } = 5m;
     /// <summary>Honey while a sage-propolis candle burns (+10%).</summary>
     public decimal SagePropolisHoneyMultiplier { get; init; } = 1.1m;
     public decimal SagePropolisBurnSeconds { get; init; } = 4m * 3600m;
     public decimal SagePropolisCapSeconds { get; init; } = 24m * 3600m;
 
-    // --- Bee Herbs (Bee, 2026-11-10; all placeholders). Bought in the Shop, again and again.
-    // Lighting one rolls one buff, which burns in live play only (like the bee-boost candle).
-    // One herb burns at a time.
-    public decimal BeeHerbCost { get; init; } = 25m;
-    public decimal BeeHerbBurnSeconds { get; init; } = 5m * 60m;
+    // --- Herbal candles (Bee, 2026-11-11; all placeholders). Lighting one rolls one buff, which
+    // burns in live play only (like the bee-boost candle). One burns at a time; Stronger Candles
+    // makes it burn longer.
+    public decimal HerbalCandleBurnSeconds { get; init; } = 5m * 60m;
+    // Cut (Bee, 2026-11-11): Bee Herbs were sold in the Shop and lit themselves.
+    // public decimal BeeHerbCost { get; init; } = 25m;
     /// <summary>Busy Bees: honey while it burns (+25%).</summary>
     public decimal HerbHoneyMultiplier { get; init; } = 1.25m;
     /// <summary>Wax while it burns (+25%).</summary>

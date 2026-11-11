@@ -26,7 +26,7 @@ public static class BeekeeperEvents
     public const string StorageFull = "storage_full";
     public const string FirstWax = "first_wax";
     public const string BearArrives = "bear_arrives";      // Text = bear name
-    public const string Sale = "sale";                     // Value = Beebits earned, Value2 = honey given, Text = bear name
+    public const string Sale = "sale";                     // Value = herbs got (Beebits before 2026-11-11), Value2 = honey given, Text = bear name
     public const string ShopOpened = "shop_opened";
     public const string ToolBought = "tool_bought";        // Value = new tool level, Text = tool id
     public const string WaxCatcherBought = "wax_catcher_bought";
@@ -38,10 +38,9 @@ public static class BeekeeperEvents
 
     // Stage 2
     public const string WorkbenchOpened = "workbench_opened";
-    public const string FirstBeeswaxCandle = "first_beeswax_candle";
     public const string HippiesArrive = "hippies_arrive";
-    public const string CandlesTraded = "candles_traded";    // Value = sage received, Value2 = candles given
-    public const string RepellentUnlocked = "repellent_unlocked";
+    public const string CandlesTraded = "candles_traded";    // Value = Beebits received (sage before 2026-11-11), Value2 = herbal candles given
+    public const string RepellentUnlocked = "repellent_unlocked";   // the herbal candle's recipe opens (first herb)
     public const string UpgradeBought = "upgrade_bought";    // Text = upgrade id
     public const string WaspArrives = "wasp_arrives";
     public const string ShoeHit = "shoe_hit";
@@ -67,7 +66,7 @@ public static class BeekeeperEvents
     public const string FirstPollen = "first_pollen";
     public const string BeeBreadMade = "bee_bread_made";       // first time only
     public const string WoodenHive = "wooden_hive";
-    public const string Crafted = "crafted";                   // a batch of more than one: Value = how many, Text = beeswax | repellent | bee_bread
+    public const string Crafted = "crafted";                   // a batch of more than one: Value = how many, Text = repellent | bee_bread | bee_boost | sage_propolis
 
     // Stage 5
     public const string QueenSettles = "queen_settles";
@@ -213,8 +212,12 @@ public sealed class BeekeeperEngine
 
         foreach (var bed in s.Beds)
             bed.SecondsLeft = Math.Min(bed.SecondsLeft, Config.Plants.First(p => p.Id == bed.PlantId).GrowSeconds);
-        s.BeeHerbs = Math.Max(0m, s.BeeHerbs);
-        s.HerbSecondsLeft = Math.Clamp(s.HerbSecondsLeft, 0m, Config.BeeHerbBurnSeconds);
+        // Bee, 2026-11-11: herbs replaced sage; an older save's sage becomes herbs, one for one.
+        if (s.Sage > 0m) { s.Herbs += s.Sage; s.Sage = 0m; }
+        if (s.SageRevealed) { s.HerbsRevealed = true; s.SageRevealed = false; }
+        if (s.Herbs > 0m) s.RepellentUnlocked = true;   // herbs in hand open the herbal candle
+        s.Herbs = Math.Max(0m, s.Herbs);
+        s.HerbSecondsLeft = Math.Clamp(s.HerbSecondsLeft, 0m, Config.HerbalCandleBurnSeconds * Config.StrongerCandlesBonus);
         if (s.HerbSecondsLeft <= 0m || s.HerbBuff is null || s.HerbBuff == BeekeeperHerbs.Dud || !BeekeeperHerbs.All.Contains(s.HerbBuff))
         {
             s.HerbBuff = null;
@@ -407,20 +410,19 @@ public sealed class BeekeeperEngine
     public BeekeeperTool? NextTool =>
         State.ToolLevel < Config.Tools.Count ? Config.Tools[State.ToolLevel] : null;
 
-    /// <summary>Honey in one bear trade. Everything about selling reads this and
-    /// <see cref="BeebitsPerTradeNow"/>.</summary>
-    public decimal HoneyPerTradeNow => Config.HoneyPerTrade;
+    /// <summary>Honey in one bear trade: 10, or 8 under the trade agreement. Everything about
+    /// selling reads this and <see cref="HerbsPerTradeNow"/>.</summary>
+    public decimal HoneyPerTradeNow => State.HasTradeAgreement ? Config.BetterHoneyPerTrade : Config.HoneyPerTrade;
 
-    /// <summary>Beebits one bear trade pays right now: 5, or 6 under the trade agreement
-    /// (stage 7.5, spec 016, FR-711).</summary>
-    public decimal BeebitsPerTradeNow =>
-        WithTradeHerb(State.HasTradeAgreement ? Config.BetterBeebitsPerTrade : Config.BeebitsPerTrade);
+    /// <summary>Herbs one bear trade gives right now: 1, more under Good Deals (Bee, 2026-11-11:
+    /// the bear paid Beebits before).</summary>
+    public decimal HerbsPerTradeNow => WithTradeHerb(Config.HerbsPerTrade);
 
-    /// <summary>Sage one Hippie trade (10 candles) gives right now: 1, more under a trades herb.</summary>
-    public decimal SagePerTradeNow => WithTradeHerb(1m);
+    /// <summary>Beebits the Hippies pay for one herbal candle right now, more under Good Deals.</summary>
+    public decimal BeebitsPerCandleNow => WithTradeHerb(Config.HippieBeebitsPerCandle);
 
-    /// <summary>A trade's pay under a Good Deals herb, rounded up to a whole amount (Beebits and
-    /// sage stay whole); unchanged otherwise.</summary>
+    /// <summary>A trade's pay under a Good Deals herb, rounded up to a whole amount (herbs and
+    /// Beebits stay whole); unchanged otherwise.</summary>
     private decimal WithTradeHerb(decimal pay) => HerbTradeNow == 1m ? pay : Math.Ceiling(pay * HerbTradeNow);
 
     public bool CanSell => State.Honey >= HoneyPerTradeNow;
@@ -964,7 +966,7 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the bear
 
-    /// <summary>Sell exactly one bundle (10 honey for 5 Beebits; 6 under the agreement).</summary>
+    /// <summary>Trade exactly one bundle (10 honey for 1 herb; 8 honey under the agreement).</summary>
     public ActionResult SellTen() => Sell(all: false);
 
     /// <summary>Sell as many whole bundles as possible; the remainder stays. Counts as one trade.</summary>
@@ -978,15 +980,23 @@ public sealed class BeekeeperEngine
 
         decimal bundle = HoneyPerTradeNow;
         decimal bundles = all ? Math.Floor(State.Honey / bundle) : 1m;
-        decimal paid = bundles * BeebitsPerTradeNow;
+        decimal paid = bundles * HerbsPerTradeNow;
         State.Honey -= bundles * bundle;
-        State.Beebits += paid;
+        State.Herbs += paid;
         State.Trades++;
-        State.BeebitsRevealed = true;
+        State.HerbsRevealed = true;
+        // Before (Bee, 2026-11-11): the bear paid Beebits.
+        // decimal paid = bundles * BeebitsPerTradeNow; State.Beebits += paid; State.BeebitsRevealed = true;
         RefreshStorageFlag();
 
-        // Value: Beebits paid; Value2: honey given.
+        // Value: herbs paid; Value2: honey given.
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, paid, State.BearName, bundles * bundle) };
+        if (!State.RepellentUnlocked)
+        {
+            // The first herb opens the herbal candle's recipe (it was the sage repellent candle's).
+            State.RepellentUnlocked = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
+        }
         OfferAgreementIfDue(events);
         CheckReveals(events);
         return new ActionResult(true, paid, events);
@@ -1088,41 +1098,26 @@ public sealed class BeekeeperEngine
         events.Add(new BeekeeperEvent(BeekeeperEvents.WorkbenchOpened));
     }
 
-    /// <summary>Whether a batch of <paramref name="count"/> can be paid for in full.</summary>
-    public bool CanCraftBeeswaxTimes(int count) =>
-        count >= 1 && State.WorkbenchRevealed && State.Wax >= Config.BeeswaxCandleWax * count;
+    // Cut (Bee, 2026-11-11): repellent candles retired once the emissary had come (spec 014).
+    // Herbal candles never retire: they are a buff and a trade good, not a wasp defence.
+    // public bool RepellentRetired => State.EmissaryCome;
 
-    public bool CanCraftBeeswax => CanCraftBeeswaxTimes(1);
-
-    /// <summary>Repellent candles retire once the emissary has come (spec 014): the recipe,
-    /// the light button and the Hive row are hidden; any left stay in the save, unseen.</summary>
-    public bool RepellentRetired => State.EmissaryCome;
-
+    /// <summary>The herbal candle (10 wax + 1 herb; the old repellent candle's recipe and names).
+    /// Whether a batch of <paramref name="count"/> can be paid for in full.</summary>
     public bool CanCraftRepellentTimes(int count) =>
-        count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked && !RepellentRetired
-        && State.Wax >= Config.RepellentCandleWax * count && State.Sage >= Config.RepellentCandleSage * count;
+        count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked
+        && State.Wax >= Config.HerbalCandleWax * count && State.Herbs >= Config.HerbalCandleHerbs * count;
 
     public bool CanCraftRepellent => CanCraftRepellentTimes(1);
 
-    /// <summary>Crafting is instant (Leah).</summary>
-    /// <summary>Makes <paramref name="count"/> candles at once: exactly count times the cost, or nothing.</summary>
-    public ActionResult CraftBeeswax(int count = 1)
-    {
-        if (!CanCraftBeeswaxTimes(count)) return ActionResult.Refused;
-        State.Wax -= Config.BeeswaxCandleWax * count;
-        State.BeeswaxCandles += count;
-        var events = new List<BeekeeperEvent>();
-        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "beeswax"));
-        if (State.CandlesCrafted == 0) events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBeeswaxCandle));
-        CountCandleCrafted(events, count);
-        return new ActionResult(true, count, events);
-    }
-
+    /// <summary>Crafting is instant (Leah). Makes <paramref name="count"/> candles at once: exactly
+    /// count times the cost, or nothing. (The beeswax candle, which the herbal candle replaced, is
+    /// gone: Bee, 2026-11-11.)</summary>
     public ActionResult CraftRepellent(int count = 1)
     {
         if (!CanCraftRepellentTimes(count)) return ActionResult.Refused;
-        State.Wax -= Config.RepellentCandleWax * count;
-        State.Sage -= Config.RepellentCandleSage * count;
+        State.Wax -= Config.HerbalCandleWax * count;
+        State.Herbs -= Config.HerbalCandleHerbs * count;
         State.RepellentCandles += count;
         State.RepellentCrafted = true;
         var events = new List<BeekeeperEvent>();
@@ -1144,7 +1139,7 @@ public sealed class BeekeeperEngine
 
     public bool CanCraftSagePropolisTimes(int count) =>
         count >= 1 && PropolisCandlesShown
-        && State.Wax >= Config.SagePropolisCandleWax * count && State.Sage >= Config.SagePropolisCandleSage * count
+        && State.Wax >= Config.SagePropolisCandleWax * count && State.Herbs >= Config.SagePropolisCandleHerbs * count
         && State.Propolis >= Config.SagePropolisCandlePropolis * count;
 
     public bool CanCraftSagePropolis => CanCraftSagePropolisTimes(1);
@@ -1165,7 +1160,7 @@ public sealed class BeekeeperEngine
     {
         if (!CanCraftSagePropolisTimes(count)) return ActionResult.Refused;
         State.Wax -= Config.SagePropolisCandleWax * count;
-        State.Sage -= Config.SagePropolisCandleSage * count;
+        State.Herbs -= Config.SagePropolisCandleHerbs * count;
         State.Propolis -= Config.SagePropolisCandlePropolis * count;
         State.SagePropolisCandles += count;
         var events = new List<BeekeeperEvent>();
@@ -1213,44 +1208,44 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the Hippies
 
-    public bool CanTradeCandles => State.HippiesRevealed && State.BeeswaxCandles >= Config.CandlesPerSage;
+    /// <summary>The Hippies buy herbal candles for Beebits (Bee, 2026-11-11: they took beeswax
+    /// candles for sage before).</summary>
+    public bool CanTradeCandles => State.HippiesRevealed && State.RepellentCandles >= 1m;
 
-    /// <summary>10 beeswax candles for 1 sage.</summary>
+    /// <summary>One herbal candle for Beebits. (Name kept from when a trade was 10 beeswax candles.)</summary>
     public ActionResult TradeTenCandles() => TradeCandles(all: false);
 
-    /// <summary>As many bundles of 10 as possible; the rest are kept.</summary>
+    /// <summary>Every herbal candle on the shelf; each counts as a trade.</summary>
     public ActionResult TradeAllCandles() => TradeCandles(all: true);
 
     private ActionResult TradeCandles(bool all)
     {
         if (!CanTradeCandles) return ActionResult.Refused;
-        decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
-        State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
-        decimal sage = bundles * SagePerTradeNow;
-        State.Sage += sage;
-        // Before Bee Herbs: State.Sage += bundles;
-        State.HippieTrades += (long)bundles;   // each bundle of 10 candles is a trade
-        // Before: State.HippieTrades++;
-        State.SageRevealed = true;
+        decimal candles = all ? Math.Floor(State.RepellentCandles) : 1m;
+        State.RepellentCandles -= candles;
+        decimal paid = candles * BeebitsPerCandleNow;
+        State.Beebits += paid;
+        State.HippieTrades += (long)candles;   // each candle is a trade
+        State.BeebitsRevealed = true;
+        // Before (Bee, 2026-11-11): 10 beeswax candles for 1 sage, and the first sage opened the
+        // repellent candle.
+        // decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
+        // State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
+        // State.Sage += bundles * SagePerTradeNow; State.SageRevealed = true;
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, sage, null, bundles * Config.CandlesPerSage) };
-        if (!State.RepellentUnlocked)
-        {
-            // The sage repellent candle comes once there is sage to make it with (placeholder rule).
-            State.RepellentUnlocked = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
-        }
+        // Value: Beebits paid; Value2: candles given.
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, paid, null, candles) };
         GiveSeedsIfDue(events);
-        CheckWalls(events);   // the repellent candle brings Stronger Candles, which may be a wall
-        return new ActionResult(true, bundles, events);
+        CheckReveals(events);   // the first Beebits open the Shop
+        return new ActionResult(true, candles, events);
     }
 
-    // ------------------------------------------------------------------ Bee Herbs (in the Shop)
+    // ------------------------------------------------------------------ herbal candles (lit)
 
-    /// <summary>A herb is burning (a dud never burns).</summary>
+    /// <summary>An herbal candle is burning (a dud never burns).</summary>
     public bool IsHerbBurning => State.HerbSecondsLeft > 0m && State.HerbBuff is not null;
 
-    /// <summary>The lit herb rolled <paramref name="buff"/> and still burns.</summary>
+    /// <summary>The lit herbal candle rolled <paramref name="buff"/> and still burns.</summary>
     public bool IsHerb(string buff) => IsHerbBurning && State.HerbBuff == buff;
 
     /// <summary>The wax factor of the moment: more under a wax herb, else 1.</summary>
@@ -1259,25 +1254,19 @@ public sealed class BeekeeperEngine
     /// <summary>The trade factor of the moment: more under a trades herb, else 1.</summary>
     public decimal HerbTradeNow => IsHerb(BeekeeperHerbs.Trades) ? Config.HerbTradeMultiplier : 1m;
 
-    public bool CanBuyBeeHerb => State.ShopRevealed && State.Beebits >= Config.BeeHerbCost;
+    /// <summary>Live seconds one herbal candle burns: longer with Stronger Candles.</summary>
+    public decimal HerbalCandleBurnSeconds =>
+        Config.HerbalCandleBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
 
-    public ActionResult BuyBeeHerb()
+    /// <summary>One at a time: another can be lit once the last has burned out.</summary>
+    public bool CanLightRepellent => State.RepellentCandles >= 1m && !IsHerbBurning;
+
+    /// <summary>Lights an herbal candle: it rolls one buff (by the config's weights) that burns in
+    /// live play. A dud is used up with nothing burning.</summary>
+    public ActionResult LightRepellent()
     {
-        if (!CanBuyBeeHerb) return ActionResult.Refused;
-        State.Beebits -= Config.BeeHerbCost;
-        State.BeeHerbs++;
-        return new ActionResult(true, Config.BeeHerbCost, Array.Empty<BeekeeperEvent>());
-    }
-
-    /// <summary>One herb at a time: another can be lit once the last has burned out.</summary>
-    public bool CanLightBeeHerb => State.BeeHerbs >= 1m && !IsHerbBurning;
-
-    /// <summary>Lights a herb: it rolls one buff (by the config's weights) that burns in live play.
-    /// A dud is used up with nothing burning.</summary>
-    public ActionResult LightBeeHerb()
-    {
-        if (!CanLightBeeHerb) return ActionResult.Refused;
-        State.BeeHerbs--;
+        if (!CanLightRepellent) return ActionResult.Refused;
+        State.RepellentCandles--;
         string buff = RollHerbBuff();
         if (buff == BeekeeperHerbs.Dud)
         {
@@ -1287,7 +1276,7 @@ public sealed class BeekeeperEngine
         else
         {
             State.HerbBuff = buff;
-            State.HerbSecondsLeft = Config.BeeHerbBurnSeconds;
+            State.HerbSecondsLeft = HerbalCandleBurnSeconds;
         }
         // Value: the number the log line quotes (percent, or a Smoker click's seconds), kept with the line.
         decimal value = buff switch
@@ -1330,7 +1319,7 @@ public sealed class BeekeeperEngine
     {
         BeekeeperUpgrades.NeedsWorkbench => State.WorkbenchRevealed,
         BeekeeperUpgrades.NeedsWaxCatcher => State.WorkbenchRevealed && State.HasWaxCatcher,
-        // Stronger Candles leaves the Shop with the repellent candle (spec 014), unless bought.
+        // Stronger Candles comes with the herbal candle (it makes it burn longer).
         BeekeeperUpgrades.NeedsRepellent => RepellentShown,
         BeekeeperUpgrades.NeedsVacuum => State.ToolLevel >= VacuumLevel,
         // Stage 7 (spec 015)
@@ -1358,12 +1347,11 @@ public sealed class BeekeeperEngine
     /// <summary>The Paper row: the first paper (a wasp trade, or any paper held).</summary>
     public bool PaperShown => PaperSeen;
 
-    /// <summary>The Beeswax candles row: the first candle of any kind has been crafted.</summary>
-    public bool BeeswaxCandlesShown => State.CandlesCrafted > 0;
-
     /// <summary>The repellent candle (recipe, light button, Hive row) is shown: unlocked, and
     /// not yet retired by the emissary.</summary>
-    public bool RepellentShown => State.RepellentUnlocked && !RepellentRetired;
+    /// <summary>The herbal candle's recipe and light button (at The Workbench): unlocked by the first
+    /// herb. It never retires now (was: && !RepellentRetired).</summary>
+    public bool RepellentShown => State.RepellentUnlocked && State.WorkbenchRevealed;
 
     /// <summary>The Repellent candles Hive row: shown once the first one is made, while the candle is shown.</summary>
     public bool RepellentCandlesRowShown =>
@@ -1398,7 +1386,7 @@ public sealed class BeekeeperEngine
     public bool CanBuyUpgrade(string id) =>
         Config.Upgrades.FirstOrDefault(u => u.Id == id) is { } u
         && !Owns(id) && IsUnlocked(u)
-        && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Sage >= u.Sage
+        && State.Beebits >= u.Beebits && State.Wax >= u.Wax && State.Herbs >= u.Herbs
         && State.Paper >= u.Paper && State.Propolis >= u.Propolis && State.Bees >= u.Bees;
 
     /// <summary>Takes every part of the cost at once, or nothing.</summary>
@@ -1408,7 +1396,7 @@ public sealed class BeekeeperEngine
         var u = Config.Upgrades.First(x => x.Id == id);
         State.Beebits -= u.Beebits;
         State.Wax -= u.Wax;
-        State.Sage -= u.Sage;
+        State.Herbs -= u.Herbs;
         State.Paper -= u.Paper;
         State.Propolis -= u.Propolis;
         State.Bees -= u.Bees;
@@ -1427,8 +1415,9 @@ public sealed class BeekeeperEngine
     public bool EmissaryCome => State.EmissaryCome;
 
     /// <summary>Wasp time that one repellent candle buys (longer with Stronger Candles).</summary>
-    public decimal RepellentBurnSeconds =>
-        Config.RepellentBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
+    // Cut (Bee, 2026-11-11), with the repellent candle:
+    // public decimal RepellentBurnSeconds =>
+    //     Config.RepellentBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
 
     /// <summary>
     /// "Wasp time" passed: only while Beekeeper is on screen and the player is active (the view
@@ -1610,19 +1599,18 @@ public sealed class BeekeeperEngine
         events.Add(new BeekeeperEvent(BeekeeperEvents.Emissary));
     }
 
-    public bool CanLightRepellent => State.RepellentCandles >= 1m && !RepellentRetired;
-
-    /// <summary>Uses one candle: no wasps while it burns, and an approaching wasp leaves at once.
-    /// Lighting another adds its time.</summary>
-    public ActionResult LightRepellent()
-    {
-        if (!CanLightRepellent) return ActionResult.Refused;
-        State.RepellentCandles--;
-        State.RepellentSecondsLeft += RepellentBurnSeconds;
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandleLit) };
-        if (WaspApproaching) EndWasp();
-        return new ActionResult(true, 1m, events);
-    }
+    // Cut (Bee, 2026-11-11): the repellent candle kept wasps away; the herbal candle took its place
+    // and rolls a buff instead (LightRepellent, with the herbal candles above).
+    // public bool CanLightRepellent => State.RepellentCandles >= 1m && !RepellentRetired;
+    // public ActionResult LightRepellent()
+    // {
+    //     if (!CanLightRepellent) return ActionResult.Refused;
+    //     State.RepellentCandles--;
+    //     State.RepellentSecondsLeft += RepellentBurnSeconds;
+    //     var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandleLit) };
+    //     if (WaspApproaching) EndWasp();
+    //     return new ActionResult(true, 1m, events);
+    // }
 
     /// <summary>A raid takes 3 minutes' worth of honey and nothing else (spec 014: never bees).</summary>
     private BeekeeperEvent Raid(string key)
@@ -1944,7 +1932,7 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.HippiesArrive));
         }
         State.HippieTrades = Math.Max(State.HippieTrades, 199);
-        if (State.BeeswaxCandles < Config.CandlesPerSage) State.BeeswaxCandles = Config.CandlesPerSage;
+        if (State.RepellentCandles < 1m) State.RepellentCandles = 1m;   // an herbal candle for the trade
         GiveSeedsIfDue(events);
         return events;
     }

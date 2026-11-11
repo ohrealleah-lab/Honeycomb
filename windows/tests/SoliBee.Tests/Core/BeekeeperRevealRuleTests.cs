@@ -49,23 +49,16 @@ public class BeekeeperRevealRuleTests
     }
 
     [Fact]
-    public void RepellentRow_NeedsAFirstCandle_AndRetiresWithTheEmissary()
+    public void HerbalCandleRow_NeedsAFirstCandle_AndStaysAfterTheEmissary()
     {
-        var unlocked = Make(Base().With(s => s.RepellentUnlocked = true));
+        var unlocked = Make(Base().With(s => { s.RepellentUnlocked = true; s.WorkbenchRevealed = true; }));
         Assert.True(unlocked.RepellentShown);
         Assert.False(unlocked.RepellentCandlesRowShown);   // unlocked is not crafted
         unlocked.State.RepellentCrafted = true;
         Assert.True(unlocked.RepellentCandlesRowShown);
-        unlocked.State.EmissaryCome = true;
-        Assert.False(unlocked.RepellentShown);
-        Assert.False(unlocked.RepellentCandlesRowShown);
-    }
-
-    [Fact]
-    public void BeeswaxRow_FollowsTheFirstCandleCrafted()
-    {
-        Assert.False(Make(Base()).BeeswaxCandlesShown);
-        Assert.True(Make(Base().With(s => s.CandlesCrafted = 1)).BeeswaxCandlesShown);
+        unlocked.State.EmissaryCome = true;                // herbal candles never retire (Bee, 2026-11-11)
+        Assert.True(unlocked.RepellentShown);
+        Assert.True(unlocked.RepellentCandlesRowShown);
     }
 
     [Fact]

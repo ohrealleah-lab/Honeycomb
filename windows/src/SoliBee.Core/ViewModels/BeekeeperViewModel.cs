@@ -12,7 +12,7 @@ namespace SoliBee.Core.ViewModels;
 
 /// <summary>
 /// One buyer on the shared Trading card (the Bear, the Hippies, later others). Give and Get
-/// are resource names ("honey", "beebits", "beeswax_candles", "sage") the view turns into
+/// are resource names ("honey", "beebits", "herbal_candles", "herbs") the view turns into
 /// words: "10 honey = 1 Beebit". The view model holds no words.
 /// </summary>
 /// <remarks>A buyer with <see cref="TradeTimes"/> (the wasps) offers one trade plus x10 and x100
@@ -29,13 +29,27 @@ public sealed record BeekeeperTradeOffer(
 /// (one of <see cref="BeekeeperHiveRows"/>) tells the view which label and wording to use, and
 /// the numbers fill it in. <see cref="Rate"/> is the per-second rate shown on hover (null: no
 /// hover); <see cref="Rate2"/> a second hover number where a row needs one (the pantry's time,
-/// the free bees' honey bonus in percent).
+/// the free bees' honey bonus in percent). Every row that grows on its own lists everything that
+/// feeds it (Bee, 2026-11-11): <see cref="Sources"/>, each source's amount a second, then
+/// <see cref="Boosts"/>, each multiplier that is on with its extra percent.
 /// <see cref="SecondsToFull"/> is set only on a row with a cap (Build it with
 /// <see cref="BeekeeperViewModel.CappedRow"/>): 0 = full, null = no time to show. Every capped
 /// row's hover shows it under the rate, so a new capped row gets it by using that helper.
 /// </summary>
 public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0m, decimal Value2 = 0m,
-    decimal? Rate = null, decimal Rate2 = 0m, decimal? SecondsToFull = null);
+    decimal? Rate = null, decimal Rate2 = 0m, decimal? SecondsToFull = null,
+    IReadOnlyList<BeekeeperBoost>? Boosts = null, IReadOnlyList<BeekeeperSource>? Sources = null);
+
+/// <summary>Something that adds to a growing stat, for a hover: <see cref="Id"/> is "combs",
+/// "wax_drip", "free_bees", "queen", "foraging", "resin" or a <see cref="BeekeeperHerbs"/> id;
+/// <see cref="PerSecond"/> its amount a second (before boosts); <see cref="Count"/> how many combs
+/// or bees it comes from, where the line says so.</summary>
+public sealed record BeekeeperSource(string Id, decimal PerSecond, decimal Count = 0m);
+
+/// <summary>A boost that is on right now, for a hover: <see cref="Id"/> is "smoker", "bee_boost",
+/// "sage_propolis", "free_bees", "wax_catcher", "wooden_hive", "guarding", "nursing" or a
+/// <see cref="BeekeeperHerbs"/> id; <see cref="Percent"/> its extra (100 = +100%).</summary>
+public sealed record BeekeeperBoost(string Id, decimal Percent);
 
 /// <summary>A small heading and its rows. The heading only shows while one of its rows does.</summary>
 public sealed record BeekeeperHiveGroup(string Id, IReadOnlyList<BeekeeperHiveRow> Rows)
@@ -66,10 +80,9 @@ public static class BeekeeperHiveRows
     public const string Seeds = "seeds";
     public const string Pollen = "pollen";                // Rate = pollen/s while foraging
     public const string BeeBread = "bee_bread";           // Rate = bee bread eaten/s, Rate2 = pantry seconds
-    public const string BeeswaxCandles = "beeswax_candles";
     public const string RepellentCandles = "repellent_candles";
     public const string Beebits = "beebits";
-    public const string Sage = "sage";
+    public const string Herbs = "herbs";   // was "sage" (Bee, 2026-11-11: herbs replaced sage)
     public const string Paper = "paper";
     // Stage 7 (spec 015)
     public const string Nursing = "nursing";              // full-width line; Value = extra laying percent
@@ -231,8 +244,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal WoodenHiveBonusPercent => (Config.WoodenHiveHoneyMultiplier - 1m) * 100m;
     public decimal BeeBoostBonusPercent => (Config.BeeBoostHoneyMultiplier - 1m) * 100m;
     public decimal SagePropolisBonusPercent => (Config.SagePropolisHoneyMultiplier - 1m) * 100m;
-    /// <summary>Wasp time one repellent candle buys right now (Stronger Candles counted).</summary>
-    public decimal RepellentBurnSeconds => Engine.RepellentBurnSeconds;
+    /// <summary>Live seconds one herbal candle burns right now (Stronger Candles counted).</summary>
+    public decimal HerbalCandleBurnSeconds => Engine.HerbalCandleBurnSeconds;
     /// <summary>Bees a click would catch with <paramref name="tool"/>, Practice counted.</summary>
     public int BeesPerClickWith(BeekeeperTool tool) => Engine.BeesPerClickWith(tool);
     /// <summary>Garden bed rows to draw: every bed owned (a save may hold more growing than owned).</summary>
@@ -249,16 +262,14 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CombsRevealed => State.CombsRevealed;
 
     // Stage 2
-    public decimal BeeswaxCandles => State.BeeswaxCandles;
     public decimal RepellentCandles => State.RepellentCandles;
     public long CandlesCrafted => State.CandlesCrafted;
-    public decimal Sage => State.Sage;
+    public decimal Herbs => State.Herbs;
     public bool WorkbenchRevealed => State.WorkbenchRevealed;
     public bool HippiesRevealed => State.HippiesRevealed;
-    public bool SageRevealed => State.SageRevealed;
+    public bool HerbsRevealed => State.HerbsRevealed;
     public bool RepellentUnlocked => State.RepellentUnlocked;
-    /// <summary>The repellent candle is shown (recipe, light button, Hive row): unlocked, and
-    /// not yet retired by the emissary (spec 014).</summary>
+    /// <summary>The herbal candle is shown (recipe, light button): the first herb has come.</summary>
     public bool RepellentShown => Engine.RepellentShown;
     public bool WaspApproaching => Engine.WaspApproaching;
     public decimal WaspSecondsLeft => State.WaspCountdown;
@@ -268,7 +279,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanBuyUpgrade(string id) => Engine.CanBuyUpgrade(id);
     /// <summary>The percent a Shop upgrade's blurb quotes, or null when its blurb has no number.</summary>
     public decimal? UpgradeBonusPercent(string id) => Engine.UpgradeBonusPercent(id);
-    public bool CanCraftBeeswax => Engine.CanCraftBeeswax;
     public bool CanCraftRepellent => Engine.CanCraftRepellent;
     public bool CanTradeCandles => Engine.CanTradeCandles;
     public bool CanThrowShoe => Engine.WaspApproaching;
@@ -287,14 +297,15 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         get
         {
             var offers = new List<BeekeeperTradeOffer>();
-            // The bear's trade of the moment: 10 honey for 5 Beebits, or 6 under the agreement.
+            // The bear's trade of the moment: 10 honey for 1 herb, or 8 honey under the agreement.
             // Reps' trades appear only once the player has engaged them.
             if (State.BearRevealed && Engine.RepEngaged("bear"))
                 offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
-                    Engine.HoneyPerTradeNow, "honey", Engine.BeebitsPerTradeNow, "beebits", CanSell, SellTen, SellAll));
+                    Engine.HoneyPerTradeNow, "honey", Engine.HerbsPerTradeNow, "herbs", CanSell, SellTen, SellAll));
+            // The Hippies buy herbal candles for Beebits (Bee, 2026-11-11: was 10 beeswax candles for 1 sage).
             if (State.HippiesRevealed && Engine.RepEngaged("hippies"))
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
-                    Config.CandlesPerSage, "beeswax_candles", Engine.SagePerTradeNow, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
+                    1m, "herbal_candles", Engine.BeebitsPerCandleNow, "beebits", CanTradeCandles, TradeTenCandles, TradeAllCandles));
             // Stage 6: the wasps, once their emissary has come. One paper a click, or x10 / x100.
             if (State.EmissaryCome)
                 offers.Add(new BeekeeperTradeOffer("wasps", null, State.WaspTrades,
@@ -361,6 +372,74 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>What the free bees add to the comb honey right now, as a percent ("0.4"); capped by the config.</summary>
     public decimal FreeBeeHoneyBonusPercent => (Engine.FreeBeeHoneyFactor - 1m) * 100m;
 
+    /// <summary>Where the honey comes from: the combs (before any boost).</summary>
+    public IReadOnlyList<BeekeeperSource> HoneySourcesNow =>
+        Engine.HiveStarted
+            ? new[] { new BeekeeperSource("combs", State.Combs * Config.HoneyPerCombPerSecond, State.Combs) }
+            : Array.Empty<BeekeeperSource>();
+
+    /// <summary>Where the wax comes from: the drip, and the free bees (before any boost).</summary>
+    public IReadOnlyList<BeekeeperSource> WaxSourcesNow
+    {
+        get
+        {
+            var sources = new List<BeekeeperSource> { new("wax_drip", Config.WaxBasePerSecond) };
+            if (State.Bees > 0m) sources.Add(new("free_bees", State.Bees * Config.WaxPerFreeBeePerSecond, Math.Floor(State.Bees)));
+            return sources;
+        }
+    }
+
+    /// <summary>Where new bees come from on their own: the queen (while she lays) and Wanderers.</summary>
+    public IReadOnlyList<BeekeeperSource> BeeSourcesNow
+    {
+        get
+        {
+            var sources = new List<BeekeeperSource>();
+            if (Engine.IsQueenLaying) sources.Add(new("queen", Engine.QueenBeesPerSecondNow));
+            if (Engine.IsHerb(BeekeeperHerbs.Wanderers))
+                sources.Add(new(BeekeeperHerbs.Wanderers, Config.HerbWanderersBeesPerMinute / 60m));
+            return sources;
+        }
+    }
+
+    /// <summary>Boosts on the bees: nursing speeds the queen (already in her rate).</summary>
+    public IReadOnlyList<BeekeeperBoost> BeeBoostsNow =>
+        Engine.IsQueenLaying && Engine.NursingMultiplier > 1m
+            ? new[] { new BeekeeperBoost("nursing", (Engine.NursingMultiplier - 1m) * 100m) }
+            : Array.Empty<BeekeeperBoost>();
+
+    /// <summary>The honey boosts on right now: the lasting ones (the wooden hive, guarding, the free
+    /// bees' bonus) and the passing ones (the Smoker, Busy Bees, the two propolis candles), for the
+    /// honey hover. Each is already in the rate; this says where it comes from.</summary>
+    public IReadOnlyList<BeekeeperBoost> HoneyBoostsNow
+    {
+        get
+        {
+            var boosts = new List<BeekeeperBoost>();
+            if (State.HasWoodenHive) boosts.Add(new("wooden_hive", WoodenHiveBonusPercent));
+            if (Engine.GuardingMultiplier > 1m) boosts.Add(new("guarding", (Engine.GuardingMultiplier - 1m) * 100m));
+            // hidden until the bonus reaches 0.01% (below that it would read "+0%")
+            if (FreeBeeHoneyBonusPercent >= 0.01m) boosts.Add(new("free_bees", FreeBeeHoneyBonusPercent));
+            if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercent));
+            if (Engine.IsHerb(BeekeeperHerbs.BusyBees)) boosts.Add(new(BeekeeperHerbs.BusyBees, (Config.HerbHoneyMultiplier - 1m) * 100m));
+            if (Engine.IsBeeBoosted) boosts.Add(new("bee_boost", BeeBoostBonusPercent));
+            if (Engine.IsSagePropolisBurning) boosts.Add(new("sage_propolis", SagePropolisBonusPercent));
+            return boosts;
+        }
+    }
+
+    /// <summary>The wax boosts on right now (the Wax-Catchers, Wax Makers), for the wax hover.</summary>
+    public IReadOnlyList<BeekeeperBoost> WaxBoostsNow
+    {
+        get
+        {
+            var boosts = new List<BeekeeperBoost>();
+            if (Engine.WaxMultiplier > 1m) boosts.Add(new("wax_catcher", (Engine.WaxMultiplier - 1m) * 100m));
+            if (Engine.IsHerb(BeekeeperHerbs.Wax)) boosts.Add(new(BeekeeperHerbs.Wax, (Config.HerbWaxMultiplier - 1m) * 100m));
+            return boosts;
+        }
+    }
+
     public decimal QueenBeesPerSecond => Engine.QueenBeesPerSecondNow;
     /// <summary>Bee bread a second the brood eats right now (0 while she rests).</summary>
     public decimal BeeBreadPerSecond => Engine.BeeBreadPerSecondNow;
@@ -369,7 +448,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasTradeAgreement => State.HasTradeAgreement;
     /// <summary>Honey in one bundle right now (10, or 8 under the agreement).</summary>
     public decimal HoneyPerTradeNow => Engine.HoneyPerTradeNow;
-    public decimal BeebitsPerTradeNow => Engine.BeebitsPerTradeNow;
+    public decimal HerbsPerTradeNow => Engine.HerbsPerTradeNow;
     // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.
     // /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
     // public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
@@ -428,7 +507,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             {
                 // Stage 7.5: free bees (they can be 0 in a running game).
                 new(BeekeeperHiveRows.Honeybees, true, State.Bees,
-                    Rate: Engine.HasQueen ? Engine.QueenBeesPerSecondNow : null),
+                    Rate: Engine.HasQueen || BeeSourcesNow.Count > 0 ? BeeSourcesNow.Sum(x => x.PerSecond) : null,
+                    Sources: BeeSourcesNow, Boosts: BeeBoostsNow),
                 new(BeekeeperHiveRows.Queen, Engine.HasQueen, Engine.IsQueenLaying ? 1m : 0m),
             };
             foreach (var id in specialties)
@@ -453,8 +533,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 {
                     // Stage 7.5 (spec 016): honey from the first bee; wax with its cap, rounded down.
                     CappedRow(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow)
-                        with { Rate2 = FreeBeeHoneyBonusPercent },
-                    CappedRow(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), State.Wax, Engine.WaxStorage, Engine.WaxPerSecondNow),
+                        with { Rate2 = FreeBeeHoneyBonusPercent, Boosts = HoneyBoostsNow, Sources = HoneySourcesNow },
+                    CappedRow(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), State.Wax, Engine.WaxStorage, Engine.WaxPerSecondNow)
+                        with { Boosts = WaxBoostsNow, Sources = WaxSourcesNow },
                     new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
                     // Cut (may return): the red "full" lines. A capped number is colored instead (the view reads SecondsToFull == 0).
                     // new(BeekeeperHiveRows.CombsFull, StorageIsFull && Engine.HiveStarted),
@@ -468,15 +549,16 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 {
                     new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),
                     new(BeekeeperHiveRows.Pollen, Engine.PollenShown, Math.Floor(State.Pollen),
-                        Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null),
+                        Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null,
+                        Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.PollenPerSecondNow) } : null),
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
                     new(BeekeeperHiveRows.Propolis, Engine.PropolisShown,
-                        Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null),
+                        Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null,
+                        Sources: Engine.ResinPropolisPerMinute > 0m ? new[] { new BeekeeperSource("resin", Engine.PropolisPerSecondNow) } : null),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.BeeswaxCandles, Engine.BeeswaxCandlesShown, State.BeeswaxCandles),
                     new(BeekeeperHiveRows.RepellentCandles, Engine.RepellentCandlesRowShown, State.RepellentCandles),
                     new(BeekeeperHiveRows.BeeBoostCandles, Engine.BeeBoostCandlesShown, State.BeeBoostCandles),
                     new(BeekeeperHiveRows.SagePropolisCandles, Engine.SagePropolisCandlesShown, State.SagePropolisCandles),
@@ -486,7 +568,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupTradeGoods, new BeekeeperHiveRow[]
                 {
                     new(BeekeeperHiveRows.Beebits, State.BeebitsRevealed, State.Beebits),
-                    new(BeekeeperHiveRows.Sage, State.SageRevealed, State.Sage),
+                    new(BeekeeperHiveRows.Herbs, State.HerbsRevealed, State.Herbs),
                     new(BeekeeperHiveRows.Paper, Engine.PaperShown, State.Paper),
                 }),
             };
@@ -561,8 +643,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanBuyWaxTray))]
     public void BuyWaxTray() => Apply(Engine.BuyWaxTray());
 
-    [RelayCommand(CanExecute = nameof(CanCraftBeeswax))]
-    public void CraftBeeswax() => Apply(Engine.CraftBeeswax());
 
     [RelayCommand(CanExecute = nameof(CanCraftRepellent))]
     public void CraftRepellent() => Apply(Engine.CraftRepellent());
@@ -592,10 +672,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void UseSmoker() => Apply(Engine.UseSmoker());
 
     // Batches (x10, x100): the screen only offers a size when the whole batch can be paid for.
-    public bool CanCraftBeeswaxTimes(int n) => Engine.CanCraftBeeswaxTimes(n);
     public bool CanCraftRepellentTimes(int n) => Engine.CanCraftRepellentTimes(n);
     public bool CanMakeBeeBreadTimes(int n) => Engine.CanMakeBeeBreadTimes(n);
-    public void CraftBeeswaxTimes(int n) => Apply(Engine.CraftBeeswax(n));
     public void CraftRepellentTimes(int n) => Apply(Engine.CraftRepellent(n));
     public void MakeBeeBreadTimes(int n) => Apply(Engine.MakeBeeBread(n));
 
@@ -615,19 +693,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanLightSagePropolis))]
     public void LightSagePropolis() => Apply(Engine.LightSagePropolis());
 
-    // Bee Herbs: bought in the Shop, lit one at a time; each rolls one buff.
-    public decimal BeeHerbs => State.BeeHerbs;
-    /// <summary>The buff the lit herb rolled, or null when none burns.</summary>
+    // Herbal candles (lit with LightRepellent): each rolls one buff; one burns at a time.
+    /// <summary>The buff the lit herbal candle rolled, or null when none burns.</summary>
     public string? HerbBuff => Engine.IsHerbBurning ? State.HerbBuff : null;
     public decimal HerbSecondsLeft => State.HerbSecondsLeft;
-    public bool CanBuyBeeHerb => Engine.CanBuyBeeHerb;
-    public bool CanLightBeeHerb => Engine.CanLightBeeHerb;
-
-    [RelayCommand(CanExecute = nameof(CanBuyBeeHerb))]
-    public void BuyBeeHerb() => Apply(Engine.BuyBeeHerb());
-
-    [RelayCommand(CanExecute = nameof(CanLightBeeHerb))]
-    public void LightBeeHerb() => Apply(Engine.LightBeeHerb());
 
     [RelayCommand(CanExecute = nameof(CanMakeBeeBread))]
     public void MakeBeeBread() => Apply(Engine.MakeBeeBread());
@@ -936,7 +1005,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         BuildCombCommand.NotifyCanExecuteChanged();
         BuyHoneySuperCommand.NotifyCanExecuteChanged();
         BuyWaxTrayCommand.NotifyCanExecuteChanged();
-        CraftBeeswaxCommand.NotifyCanExecuteChanged();
         CraftRepellentCommand.NotifyCanExecuteChanged();
         TradeTenCandlesCommand.NotifyCanExecuteChanged();
         TradeAllCandlesCommand.NotifyCanExecuteChanged();
@@ -950,8 +1018,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         CraftSagePropolisCommand.NotifyCanExecuteChanged();
         LightBeeBoostCommand.NotifyCanExecuteChanged();
         LightSagePropolisCommand.NotifyCanExecuteChanged();
-        BuyBeeHerbCommand.NotifyCanExecuteChanged();
-        LightBeeHerbCommand.NotifyCanExecuteChanged();
         MakeBeeBreadCommand.NotifyCanExecuteChanged();
         MoveToWoodenHiveCommand.NotifyCanExecuteChanged();
     }

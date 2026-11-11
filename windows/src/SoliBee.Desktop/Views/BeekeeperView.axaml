@@ -157,7 +157,8 @@
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="ShopTitleText" Classes="bk-title" />
                         <StackPanel x:Name="ShopRows" Spacing="8" />
-                        <!-- Bee Herbs: bought again and again, lit one at a time; each rolls one buff -->
+                        <!-- Cut (Bee, 2026-11-11): the Bee Herbs row. Herbs come from the bear now, and the
+                             herbal candle at The Workbench is what gets lit.
                         <Grid x:Name="BeeHerbRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="BeeHerbNameText" Classes="bk-body" FontWeight="SemiBold" />
@@ -169,6 +170,7 @@
                             <Button x:Name="BuyBeeHerbButton" Grid.Column="1" Classes="bk-button" MinWidth="110"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyBeeHerb_Click" />
                         </Grid>
+                        -->
                     </StackPanel>
                 </Border>
 
@@ -205,20 +207,6 @@
                             <Button x:Name="BuyWaxTrayButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyWaxTray_Click" />
                         </Grid>
-                        <Grid x:Name="BeeswaxRow" ColumnDefinitions="*,Auto">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="BeeswaxNameText" Classes="bk-body" FontWeight="SemiBold" />
-                                <TextBlock x:Name="BeeswaxInfoText" Classes="bk-muted" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Button x:Name="Beeswax100Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:100"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="Beeswax10Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:10"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="CraftBeeswaxButton" Classes="bk-button" MinWidth="90"
-                                        HorizontalContentAlignment="Center" Click="CraftBeeswax_Click" />
-                            </StackPanel>
-                        </Grid>
                         <Grid x:Name="BeeBreadRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="BeeBreadNameText" Classes="bk-body" FontWeight="SemiBold" />
@@ -237,6 +225,8 @@
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="RepellentNameText" Classes="bk-body" FontWeight="SemiBold" />
                                 <TextBlock x:Name="RepellentInfoText" Classes="bk-muted" />
+                                <!-- The herbal candle that burns now: its buff and time left -->
+                                <TextBlock x:Name="HerbBurningText" Classes="bk-muted" IsVisible="False" />
                                 <Button x:Name="LightRepellentButton" Classes="bk-button" MinWidth="90" Margin="0,4,0,0"
                                         HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
                             </StackPanel>

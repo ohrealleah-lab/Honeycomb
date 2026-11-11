@@ -93,11 +93,11 @@ public class BeekeeperStage6ViewModelTests : IDisposable
             Ids(BeekeeperHiveRows.GroupGarden));
         Assert.Equal(new[]
         {
-            BeekeeperHiveRows.BeeswaxCandles, BeekeeperHiveRows.RepellentCandles,
+            BeekeeperHiveRows.RepellentCandles,
             BeekeeperHiveRows.BeeBoostCandles, BeekeeperHiveRows.SagePropolisCandles,
             BeekeeperHiveRows.BeeBoostBurning, BeekeeperHiveRows.SagePropolisBurning,
         }, Ids(BeekeeperHiveRows.GroupCrafts));
-        Assert.Equal(new[] { BeekeeperHiveRows.Beebits, BeekeeperHiveRows.Sage, BeekeeperHiveRows.Paper }, Ids(BeekeeperHiveRows.GroupTradeGoods));
+        Assert.Equal(new[] { BeekeeperHiveRows.Beebits, BeekeeperHiveRows.Herbs, BeekeeperHiveRows.Paper }, Ids(BeekeeperHiveRows.GroupTradeGoods));
     }
 
     [Fact]
@@ -240,20 +240,17 @@ public class BeekeeperStage6ViewModelTests : IDisposable
     }
 
     [Fact]
-    public void AfterTheEmissary_RepellentCandlesAreHidden()
+    public void AfterTheEmissary_HerbalCandlesStay()
     {
+        // Bee, 2026-11-11: the repellent candle became the herbal candle, which never retires.
         var s = Workshop();
         s.RepellentUnlocked = true;
         s.RepellentCandles = 2m;
-        s.RepellentSecondsLeft = 100m;
         var vm = Make(new Clock(), s);
-        Assert.True(vm.RepellentShown);
-        Assert.True(Row(vm, BeekeeperHiveRows.RepellentCandles)!.Visible);
-
         vm.DebugBringEmissary();
-        Assert.False(vm.RepellentShown);
-        Assert.False(vm.CanLightRepellent);
-        Assert.False(Row(vm, BeekeeperHiveRows.RepellentCandles)!.Visible);
+        Assert.True(vm.RepellentShown);
+        Assert.True(vm.CanLightRepellent);
+        Assert.True(Row(vm, BeekeeperHiveRows.RepellentCandles)!.Visible);
         Assert.Equal(2m, vm.RepellentCandles);
     }
 
@@ -286,5 +283,53 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         decimal before = vm.Honey;
         vm.DebugGiveHoney(500m);
         Assert.Equal(before + 500m, vm.Honey);
+    }
+
+    [Fact]
+    public void TheHoneyAndWaxHovers_ListTheBoostsThatAreOn()
+    {
+        // Bee, 2026-11-11: the Smoker (and the other boosts) show in the hover while they are on.
+        var s = Workshop();
+        s.Upgrades.Add(BeekeeperUpgrades.Smoker);
+        s.HerbBuff = BeekeeperHerbs.Wax;
+        s.HerbSecondsLeft = 60m;
+        var vm = Make(new Clock(), s);
+        Assert.Empty(Row(vm, BeekeeperHiveRows.Honey)!.Boosts!);
+
+        vm.UseSmokerCommand.Execute(null);
+        var smoker = Assert.Single(Row(vm, BeekeeperHiveRows.Honey)!.Boosts!);
+        Assert.Equal("smoker", smoker.Id);
+        Assert.Equal(100m, smoker.Percent);
+
+        var wax = Assert.Single(Row(vm, BeekeeperHiveRows.Wax)!.Boosts!);
+        Assert.Equal(BeekeeperHerbs.Wax, wax.Id);
+        Assert.Equal(25m, wax.Percent);
+    }
+
+    [Fact]
+    public void GrowingStats_ListEverySource_AndEveryBoost()
+    {
+        // Bee, 2026-11-11: every stat that grows on its own lists everything that feeds it.
+        var s = Workshop();
+        s.Bees = 250m;
+        s.Combs = 3;
+        s.HasWaxCatcher = true;
+        var vm = Make(new Clock(), s);
+
+        var wax = Row(vm, BeekeeperHiveRows.Wax)!;
+        Assert.Equal(new[] { "wax_drip", "free_bees" }, wax.Sources!.Select(x => x.Id));
+        Assert.Equal(0.005m, wax.Sources![0].PerSecond);
+        Assert.Equal(0.025m, wax.Sources![1].PerSecond);
+        Assert.Equal(250m, wax.Sources![1].Count);
+        var catcher = Assert.Single(wax.Boosts!);
+        Assert.Equal("wax_catcher", catcher.Id);
+        Assert.Equal(100m, catcher.Percent);
+        Assert.Equal(wax.Rate, (0.005m + 0.025m) * 2m);   // the rate is the sources times the boosts
+
+        var honey = Row(vm, BeekeeperHiveRows.Honey)!;
+        var combs = Assert.Single(honey.Sources!);
+        Assert.Equal("combs", combs.Id);
+        Assert.Equal(3m, combs.Count);
+        Assert.Equal(0.6m, combs.PerSecond);
     }
 }

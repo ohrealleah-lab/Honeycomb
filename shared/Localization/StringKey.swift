@@ -1512,7 +1512,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperShopTitle = "beekeeper_shop_title"
     /// Story log card title (all caps)
     case beekeeperLogTitle = "beekeeper_log_title"
-    /// Bear trade rate; %@ = honey, %@ = Beebits
+    /// Under the bear's buttons; %@ = honey in one trade (10, or 8 under the agreement), %@ = herbs
     case beekeeperSellHint = "beekeeper_sell_hint"
     /// Trading card, each buyer's line; %@ = buyer's name, %@ = number of trades
     case beekeeperBearTradesFmt = "beekeeper_bear_trades_fmt"
@@ -1598,21 +1598,21 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHiveWax = "beekeeper_hive_wax"
     /// Hive card row label; Beebits is the game's made-up money, kept as-is
     case beekeeperHiveBeebits = "beekeeper_hive_beebits"
-    /// Hive card row label
+    /// [unused since 2026-11-11: the beeswax candle was replaced by the herbal candle] Hive card row label
     case beekeeperHiveBeeswaxCandles = "beekeeper_hive_beeswax_candles"
     /// Hive card row label
     case beekeeperHiveRepellentCandles = "beekeeper_hive_repellent_candles"
-    /// Hive card row label
+    /// Hive card row label: herbs (from the bear)
     case beekeeperHiveSage = "beekeeper_hive_sage"
     /// Card title (all caps)
     case beekeeperWorkbenchTitle = "beekeeper_workbench_title"
-    /// Workbench item name
+    /// [unused since 2026-11-11: the beeswax candle was replaced by the herbal candle] Workbench item name
     case beekeeperBeeswaxCandle = "beekeeper_beeswax_candle"
-    /// Workbench item description
+    /// [unused since 2026-11-11: the beeswax candle was replaced by the herbal candle] Workbench item description
     case beekeeperBeeswaxBlurb = "beekeeper_beeswax_blurb"
-    /// Workbench item name
+    /// The Workbench: 10 wax + 1 herb
     case beekeeperRepellentCandle = "beekeeper_repellent_candle"
-    /// Workbench item description; %@ = burn time, e.g. 15:00
+    /// The Workbench, after the herbal candle's price; %@ = how long it burns
     case beekeeperRepellentBlurbFmt = "beekeeper_repellent_blurb_fmt"
     /// Workbench button: craft one
     case beekeeperMake = "beekeeper_make"
@@ -1620,9 +1620,9 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLight = "beekeeper_light"
     /// Price part; %@ = amount
     case beekeeperCostWaxFmt = "beekeeper_cost_wax_fmt"
-    /// Price part; %@ = amount
+    /// Price part; %@ = how many herbs (more than 1)
     case beekeeperCostSageFmt = "beekeeper_cost_sage_fmt"
-    /// Under the Hippies' buttons
+    /// Under the Hippies' buttons; %@ = Beebits they pay for one herbal candle
     case beekeeperHippiesRate = "beekeeper_hippies_rate"
     /// Hippies button
     case beekeeperTradeTen = "beekeeper_trade_ten"
@@ -1660,13 +1660,13 @@ public enum StringKey: String, CaseIterable {
     case beekeeperUpgradeStrongerCandlesBlurb = "beekeeper_upgrade_stronger_candles_blurb"
     /// Story log
     case beekeeperLogWorkbenchOpened = "beekeeper_log_workbench_opened"
-    /// Story log
+    /// [unused since 2026-11-11: the beeswax candle was replaced by the herbal candle] Story log
     case beekeeperLogFirstBeeswaxCandle = "beekeeper_log_first_beeswax_candle"
     /// Story log
     case beekeeperLogHippiesArrive = "beekeeper_log_hippies_arrive"
     /// Story log; %@ = sage received
     case beekeeperLogCandlesTradedFmt = "beekeeper_log_candles_traded_fmt"
-    /// Story log
+    /// Story log, the first herb from the bear opens the herbal candle
     case beekeeperLogRepellentUnlocked = "beekeeper_log_repellent_unlocked"
     /// Story log; %@ = upgrade name
     case beekeeperLogUpgradeBoughtFmt = "beekeeper_log_upgrade_bought_fmt"
@@ -1800,13 +1800,13 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperGardenTitle = "help_beekeeper_garden_title"
     /// The Garden RuleSection body
     case helpBeekeeperGarden = "help_beekeeper_garden"
-    /// Story log; %@ = bear's name, honey given, Beebits got
+    /// Story log; %@ = bear name, %@ = honey given, %@ = herbs got
     case beekeeperLogTradeBearFmt = "beekeeper_log_trade_bear_fmt"
-    /// Story log; as above, exactly 1 Beebit
+    /// Story log; %@ = bear name, %@ = honey given
     case beekeeperLogTradeBearOneFmt = "beekeeper_log_trade_bear_one_fmt"
-    /// Story log; %@ = candles given, sage got
+    /// Story log; %@ = herbal candles given, %@ = Beebits got
     case beekeeperLogTradeHippiesFmt = "beekeeper_log_trade_hippies_fmt"
-    /// Story log; %@ = how many
+    /// [unused since 2026-11-11: the beeswax candle was replaced by the herbal candle] Story log; %@ = how many
     case beekeeperLogCraftedBeeswaxFmt = "beekeeper_log_crafted_beeswax_fmt"
     /// Story log; %@ = how many
     case beekeeperLogCraftedRepellentFmt = "beekeeper_log_crafted_repellent_fmt"
@@ -2104,11 +2104,11 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogRepLeftFmt = "beekeeper_log_rep_left_fmt"
     /// Story log; first wasp visit, Engage
     case beekeeperLogWaspEngaged = "beekeeper_log_wasp_engaged"
-    /// Shop: Bee Herbs, bought again and again; lighting one rolls one buff
+    /// [unused since 2026-11-11 (herbal candles): the Shop's Bee Herbs row; kept so it can come back] Shop: Bee Herbs, bought again and again; lighting one rolls one buff
     case beekeeperBeeHerbs = "beekeeper_bee_herbs"
-    /// Shop, under Bee Herbs; %@ = how many you have, %@ = how long one burns ("5 minutes")
+    /// [unused since 2026-11-11 (herbal candles): the Shop's Bee Herbs row; kept so it can come back] Shop, under Bee Herbs; %@ = how many you have, %@ = how long one burns ("5 minutes")
     case beekeeperBeeHerbsBlurbFmt = "beekeeper_bee_herbs_blurb_fmt"
-    /// Shop button: light one Bee Herb
+    /// [unused since 2026-11-11 (herbal candles): lighting a Bee Herb; kept so it can come back] Shop button: light one Bee Herb
     case beekeeperLightBeeHerb = "beekeeper_light_bee_herb"
     /// Shop, under Bee Herbs while one burns; %@ = the buff's name, %@ = time left
     case beekeeperHerbBurningFmt = "beekeeper_herb_burning_fmt"
@@ -2136,4 +2136,42 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogHerbDud = "beekeeper_log_herb_dud"
     /// Story log, a lit herb has burned out
     case beekeeperLogHerbOut = "beekeeper_log_herb_out"
+    /// Price part when it is exactly 1 herb
+    case beekeeperCostHerbOne = "beekeeper_cost_herb_one"
+    /// Honey hover while the Smoker is on; %@ = extra honey in percent
+    case beekeeperBoostSmokerFmt = "beekeeper_boost_smoker_fmt"
+    /// Honey or wax hover while an herbal candle's buff burns; %@ = percent, %@ = the buff's name
+    case beekeeperBoostHerbFmt = "beekeeper_boost_herb_fmt"
+    /// Honey hover while a bee-boost candle burns; %@ = extra honey in percent
+    case beekeeperBoostBeeBoostFmt = "beekeeper_boost_bee_boost_fmt"
+    /// Honey hover while a herb-propolis candle burns; %@ = extra honey in percent
+    case beekeeperBoostHerbPropolisFmt = "beekeeper_boost_herb_propolis_fmt"
+    /// Under the bear's buttons when a trade gives exactly 1 herb; %@ = honey in one trade
+    case beekeeperSellHintOneFmt = "beekeeper_sell_hint_one_fmt"
+    /// Wax hover: the drip that gathers with no bees; %@ = per second
+    case beekeeperSourceOnItsOwnFmt = "beekeeper_source_on_its_own_fmt"
+    /// Wax hover; %@ = per second, %@ = how many free bees
+    case beekeeperSourceFreeBeesFmt = "beekeeper_source_free_bees_fmt"
+    /// Wax hover with exactly 1 free bee; %@ = per second
+    case beekeeperSourceFreeBeeOneFmt = "beekeeper_source_free_bee_one_fmt"
+    /// Honey hover; %@ = per second before boosts, %@ = how many combs
+    case beekeeperSourceCombsFmt = "beekeeper_source_combs_fmt"
+    /// Honey hover with exactly 1 comb; %@ = per second before boosts
+    case beekeeperSourceCombOneFmt = "beekeeper_source_comb_one_fmt"
+    /// Bees hover; %@ = bees per second the queen raises
+    case beekeeperSourceQueenFmt = "beekeeper_source_queen_fmt"
+    /// Bees hover while an herbal candle's buff brings bees; %@ = per second, %@ = the buff's name
+    case beekeeperSourceHerbFmt = "beekeeper_source_herb_fmt"
+    /// Pollen hover; %@ = pollen per second
+    case beekeeperSourceForagingFmt = "beekeeper_source_foraging_fmt"
+    /// Propolis hover; %@ = propolis per second
+    case beekeeperSourceResinFmt = "beekeeper_source_resin_fmt"
+    /// Wax hover with a Wax-Catcher; %@ = extra wax in percent
+    case beekeeperBoostWaxCatcherFmt = "beekeeper_boost_wax_catcher_fmt"
+    /// Honey hover in the wooden hive; %@ = extra honey in percent
+    case beekeeperBoostWoodenHiveFmt = "beekeeper_boost_wooden_hive_fmt"
+    /// Honey hover with guarding; %@ = extra honey in percent
+    case beekeeperBoostGuardingFmt = "beekeeper_boost_guarding_fmt"
+    /// Bees hover with nursing; %@ = how much faster the queen lays, in percent
+    case beekeeperBoostNursingFmt = "beekeeper_boost_nursing_fmt"
 }

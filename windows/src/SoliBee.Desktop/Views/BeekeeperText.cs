@@ -86,8 +86,6 @@ internal static class BeekeeperText
     // ---- stage 2: The Workbench, Hippies, wasps, upgrades
 
     public static string WorkbenchTitle => T(StringKey.BeekeeperWorkbenchTitle);
-    public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
-    public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
     public static string RepellentCandle => T(StringKey.BeekeeperRepellentCandle);
     public static string RepellentBlurb(string time) => Fill(T(StringKey.BeekeeperRepellentBlurbFmt), time);
     public static string Make => T(StringKey.BeekeeperMake);
@@ -122,8 +120,9 @@ internal static class BeekeeperText
         string g = NumberFormatter.Format(give, Lang);
         return id switch
         {
-            "bear" => Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),
-            "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), g),
+            "bear" => get == 1m ? Fill(T(StringKey.BeekeeperSellHintOneFmt), g)   // "10 honey = 1 herb"
+                : Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),
+            "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), NumberFormatter.Format(get, Lang)),   // 1 herbal candle = N Beebits
             "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), g),
             _ => "",
         };
@@ -145,7 +144,7 @@ internal static class BeekeeperText
 
     /// <summary>A price that may mix resources: "300 beebits · 100 wax · 2 sage". Since stage 7.5 a
     /// price can include free bees, shown first ("20 bees · 10 wax").</summary>
-    public static string Price(string? beebits, string? wax, string? sage,
+    public static string Price(string? beebits, string? wax, string? herbs,
                                string? pollen = null, string? honey = null, string? beeBread = null,
                                string? paper = null, string? propolis = null, string? bees = null)
     {
@@ -153,7 +152,7 @@ internal static class BeekeeperText
         if (bees != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeesFmt), bees));
         if (beebits != null) parts.Add(beebits + " " + BeebitsLabel.ToLowerInvariant());
         if (wax != null) parts.Add(Fill(T(StringKey.BeekeeperCostWaxFmt), wax));
-        if (sage != null) parts.Add(Fill(T(StringKey.BeekeeperCostSageFmt), sage));
+        if (herbs != null) parts.Add(herbs == "1" ? T(StringKey.BeekeeperCostHerbOne) : Fill(T(StringKey.BeekeeperCostSageFmt), herbs));
         if (pollen != null) parts.Add(Fill(T(StringKey.BeekeeperCostPollenFmt), pollen));
         if (honey != null) parts.Add(Fill(T(StringKey.BeekeeperCostHoneyFmt), honey));
         if (beeBread != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeeBreadFmt), beeBread));
@@ -239,10 +238,11 @@ internal static class BeekeeperText
     public static string LightSagePropolis => T(StringKey.BeekeeperLightSagePropolis);
     public static string NotebookTitle => T(StringKey.BeekeeperNotebookTitle);
 
-    // ---- Bee Herbs (in the Shop)
-    public static string BeeHerbs => T(StringKey.BeekeeperBeeHerbs);
-    public static string BeeHerbsBlurb(string owned, string time) => Fill(T(StringKey.BeekeeperBeeHerbsBlurbFmt), owned, time);
-    public static string LightBeeHerb => T(StringKey.BeekeeperLightBeeHerb);
+    // ---- herbal candles (lit for one buff)
+    // Cut (Bee, 2026-11-11): the Shop's Bee Herbs row.
+    // public static string BeeHerbs => T(StringKey.BeekeeperBeeHerbs);
+    // public static string BeeHerbsBlurb(string owned, string time) => Fill(T(StringKey.BeekeeperBeeHerbsBlurbFmt), owned, time);
+    // public static string LightBeeHerb => T(StringKey.BeekeeperLightBeeHerb);
     public static string HerbBurning(string buff, string time) => Fill(T(StringKey.BeekeeperHerbBurningFmt), HerbName(buff), time);
     public static string HerbName(string buff) => buff switch
     {
@@ -328,10 +328,9 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Seeds => T(StringKey.BeekeeperHiveSeeds),
             BeekeeperHiveRows.Pollen => T(StringKey.BeekeeperHivePollen),
             BeekeeperHiveRows.BeeBread => T(StringKey.BeekeeperHiveBeeBread),
-            BeekeeperHiveRows.BeeswaxCandles => T(StringKey.BeekeeperHiveBeeswaxCandles),
             BeekeeperHiveRows.RepellentCandles => T(StringKey.BeekeeperHiveRepellentCandles),
             BeekeeperHiveRows.Beebits => T(StringKey.BeekeeperHiveBeebits),
-            BeekeeperHiveRows.Sage => T(StringKey.BeekeeperHiveSage),
+            BeekeeperHiveRows.Herbs => T(StringKey.BeekeeperHiveSage),   // "Herbs" (key kept from sage)
             BeekeeperHiveRows.Paper => T(StringKey.BeekeeperHivePaper),
             _ => r.Id,
         };
@@ -351,6 +350,58 @@ internal static class BeekeeperText
         };
     }
 
+    /// <summary>One line per boost that is on ("+100% from the Smoker"), each starting a new line.</summary>
+    private static string BoostLines(System.Collections.Generic.IReadOnlyList<BeekeeperBoost>? boosts)
+    {
+        if (boosts is null || boosts.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var b in boosts)
+        {
+            string pct = NumberFormatter.Format(b.Percent, Lang, 2);
+            sb.Append('\n').Append(b.Id switch
+            {
+                "smoker" => Fill(T(StringKey.BeekeeperBoostSmokerFmt), pct),
+                "free_bees" => Fill(T(StringKey.BeekeeperHoneyFreeBeeBonusFmt), pct),
+                "wax_catcher" => Fill(T(StringKey.BeekeeperBoostWaxCatcherFmt), pct),
+                "wooden_hive" => Fill(T(StringKey.BeekeeperBoostWoodenHiveFmt), pct),
+                "guarding" => Fill(T(StringKey.BeekeeperBoostGuardingFmt), pct),
+                "nursing" => Fill(T(StringKey.BeekeeperBoostNursingFmt), pct),
+                "bee_boost" => Fill(T(StringKey.BeekeeperBoostBeeBoostFmt), pct),
+                "sage_propolis" => Fill(T(StringKey.BeekeeperBoostHerbPropolisFmt), pct),
+                _ => Fill(T(StringKey.BeekeeperBoostHerbFmt), pct, HerbName(b.Id)),
+            });
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>One line per source ("+0.025 / sec from 250 free bees"), each starting a new line.</summary>
+    private static string SourceLines(System.Collections.Generic.IReadOnlyList<BeekeeperSource>? sources)
+    {
+        if (sources is null || sources.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        foreach (var s in sources)
+        {
+            string rate = NumberFormatter.Format(s.PerSecond, Lang, 4);
+            string count = NumberFormatter.Format(s.Count, Lang);
+            sb.Append('\n').Append(s.Id switch
+            {
+                "wax_drip" => Fill(T(StringKey.BeekeeperSourceOnItsOwnFmt), rate),
+                "free_bees" => s.Count == 1m ? Fill(T(StringKey.BeekeeperSourceFreeBeeOneFmt), rate)
+                    : Fill(T(StringKey.BeekeeperSourceFreeBeesFmt), rate, count),
+                "combs" => s.Count == 1m ? Fill(T(StringKey.BeekeeperSourceCombOneFmt), rate)
+                    : Fill(T(StringKey.BeekeeperSourceCombsFmt), rate, count),
+                "queen" => Fill(T(StringKey.BeekeeperSourceQueenFmt), rate),
+                "foraging" => Fill(T(StringKey.BeekeeperSourceForagingFmt), rate),
+                "resin" => Fill(T(StringKey.BeekeeperSourceResinFmt), rate),
+                _ => Fill(T(StringKey.BeekeeperSourceHerbFmt), rate, HerbName(s.Id)),
+            });
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>Everything that feeds a growing stat: its sources, then its boosts.</summary>
+    private static string Parts(BeekeeperHiveRow r) => SourceLines(r.Sources) + BoostLines(r.Boosts);
+
     /// <summary>The hover text for a row with a rate, or null for none.</summary>
     public static string? HiveRowTip(BeekeeperHiveRow r)
     {
@@ -358,13 +409,13 @@ internal static class BeekeeperText
         string N(decimal v, int d) => NumberFormatter.Format(v, Lang, d);
         string? tip = r.Id switch
         {
-            BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)),
-            BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2))
-                                       // hidden until the bonus reaches 0.01% (below that it would read "+0%")
-                                       + (r.Rate2 >= 0.01m ? "\n" + Fill(T(StringKey.BeekeeperHoneyFreeBeeBonusFmt), N(r.Rate2, 2)) : ""),
-            BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)),
-            BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)),
-            BeekeeperHiveRows.Propolis => Fill(T(StringKey.BeekeeperPropolisPerSecFmt), N(rate, 3)),
+            // Every stat that grows on its own lists all that feeds it (Bee, 2026-11-11). The free
+            // bees' honey bonus is now one of the honey boosts (it was read from Rate2 here).
+            BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)) + Parts(r),
+            BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)) + Parts(r),
+            BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)) + Parts(r),
+            BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)) + Parts(r),
+            BeekeeperHiveRows.Propolis => Fill(T(StringKey.BeekeeperPropolisPerSecFmt), N(rate, 3)) + Parts(r),
             BeekeeperHiveRows.BeeBread => BeeBreadPerSecond(N(rate, 4))
                                           + (r.Rate2 > 0m ? "\n" + PantryLasts(r.Rate2) : ""),
             _ => null,
@@ -492,7 +543,6 @@ internal static class BeekeeperText
             BeekeeperEvents.WelcomeBack => Fill(L(StringKey.BeekeeperLogWelcomeBackFmt), N(e.Value)),
             BeekeeperEvents.WelcomeBackNothing => L(StringKey.BeekeeperLogWelcomeBackNothing),
             BeekeeperEvents.WorkbenchOpened => L(StringKey.BeekeeperLogWorkbenchOpened),
-            BeekeeperEvents.FirstBeeswaxCandle => L(StringKey.BeekeeperLogFirstBeeswaxCandle),
             BeekeeperEvents.HippiesArrive => L(StringKey.BeekeeperLogHippiesArrive),
             BeekeeperEvents.CandlesTraded => e.Value2 <= 0m
                 ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
@@ -588,7 +638,6 @@ internal static class BeekeeperText
             BeekeeperEvents.HerbOut => L(StringKey.BeekeeperLogHerbOut),
             BeekeeperEvents.Crafted => e.Text switch
             {
-                "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
                 "repellent" => Fill(L(StringKey.BeekeeperLogCraftedRepellentFmt), N(e.Value)),
                 "bee_bread" => Fill(L(StringKey.BeekeeperLogCraftedBeeBreadFmt), N(e.Value)),
                 "bee_boost" => Fill(L(StringKey.BeekeeperLogCraftedBeeBoostFmt), N(e.Value)),

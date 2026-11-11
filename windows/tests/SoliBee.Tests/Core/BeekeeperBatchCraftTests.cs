@@ -9,42 +9,45 @@ public class BeekeeperBatchCraftTests
 {
     private static BeekeeperEngine Make(BeekeeperState state) => new(BeekeeperConfig.Default, state);
 
+    // Bee, 2026-11-11: the beeswax candle is gone; these batches use the herbal candle (10 wax + 1 herb).
+    private static BeekeeperState Herbal(decimal wax, decimal herbs) =>
+        new() { WorkbenchRevealed = true, RepellentUnlocked = true, Wax = wax, Herbs = herbs };
+
     [Fact]
-    public void ABatchOfCandles_TakesTenTimesTheWax_AndGivesTenCandles()
+    public void ABatchOfCandles_TakesTenTimesTheCost_AndGivesTenCandles()
     {
-        var e = Make(new BeekeeperState { WorkbenchRevealed = true, Wax = 105m });
-        Assert.True(e.CanCraftBeeswaxTimes(10));
-        Assert.False(e.CanCraftBeeswaxTimes(100));
-        var r = e.CraftBeeswax(10);
+        var e = Make(Herbal(105m, 10m));
+        Assert.True(e.CanCraftRepellentTimes(10));
+        Assert.False(e.CanCraftRepellentTimes(100));
+        var r = e.CraftRepellent(10);
         Assert.True(r.Done);
         Assert.Equal(5m, e.State.Wax);
-        Assert.Equal(10m, e.State.BeeswaxCandles);
+        Assert.Equal(10m, e.State.RepellentCandles);
         Assert.Equal(10, e.State.CandlesCrafted);
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.Crafted && ev.Value == 10m && ev.Text == "beeswax");
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.FirstBeeswaxCandle);
+        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.Crafted && ev.Value == 10m && ev.Text == "repellent");
     }
 
     [Fact]
     public void ABatchTooBig_IsRefused_AndChangesNothing()
     {
-        var e = Make(new BeekeeperState { WorkbenchRevealed = true, Wax = 99m });
-        Assert.False(e.CraftBeeswax(10).Done);
+        var e = Make(Herbal(99m, 10m));
+        Assert.False(e.CraftRepellent(10).Done);
         Assert.Equal(99m, e.State.Wax);
-        Assert.Equal(0m, e.State.BeeswaxCandles);
+        Assert.Equal(0m, e.State.RepellentCandles);
     }
 
     [Fact]
     public void ASingleCraft_StillHasNoBatchLine()
     {
-        var e = Make(new BeekeeperState { WorkbenchRevealed = true, Wax = 50m });
-        Assert.DoesNotContain(e.CraftBeeswax().Events, ev => ev.Key == BeekeeperEvents.Crafted);
+        var e = Make(Herbal(50m, 5m));
+        Assert.DoesNotContain(e.CraftRepellent().Events, ev => ev.Key == BeekeeperEvents.Crafted);
     }
 
     [Fact]
     public void ABatchOfCandles_CountsTowardTheHippies()
     {
-        var e = Make(new BeekeeperState { WorkbenchRevealed = true, Wax = 100m });
-        var r = e.CraftBeeswax(10);
+        var e = Make(Herbal(100m, 10m));
+        var r = e.CraftRepellent(10);
         Assert.True(e.State.HippiesRevealed);
         Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.HippiesArrive);
     }
@@ -52,13 +55,13 @@ public class BeekeeperBatchCraftTests
     [Fact]
     public void RepellentBatches_NeedWaxAndSageForTheWholeBatch()
     {
-        var e = Make(new BeekeeperState { WorkbenchRevealed = true, RepellentUnlocked = true, Wax = 100m, Sage = 9m });
+        var e = Make(new BeekeeperState { WorkbenchRevealed = true, RepellentUnlocked = true, Wax = 100m, Herbs = 9m });
         Assert.False(e.CanCraftRepellentTimes(10));      // 9 sage is one short
-        e.State.Sage = 10m;
+        e.State.Herbs = 10m;
         Assert.True(e.CanCraftRepellentTimes(10));
         Assert.True(e.CraftRepellent(10).Done);
         Assert.Equal(0m, e.State.Wax);
-        Assert.Equal(0m, e.State.Sage);
+        Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(10m, e.State.RepellentCandles);
     }
 

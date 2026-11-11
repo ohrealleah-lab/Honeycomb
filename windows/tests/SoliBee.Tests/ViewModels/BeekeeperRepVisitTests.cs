@@ -29,7 +29,7 @@ public class BeekeeperRepVisitTests
     private static BeekeeperState Hive() => new()
     {
         Bees = 1000m, Honey = 500m, Combs = 2, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
-        BearRevealed = true, HippiesRevealed = true, BeeswaxCandles = 10m,
+        BearRevealed = true, HippiesRevealed = true, RepellentCandles = 1m,
     };
 
     [Fact]

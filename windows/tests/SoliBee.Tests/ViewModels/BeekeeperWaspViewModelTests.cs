@@ -165,9 +165,10 @@ public class BeekeeperWaspViewModelTests
         Assert.True(h.Logged(BeekeeperEvents.Bribe));
         Assert.Equal(1000m, h.Vm.Bees);
 
-        h.Vm.LightRepellentCommand.Execute(null);
-        Assert.True(h.Vm.RepellentSecondsLeft > 0m);
-        h.Play(600);
-        Assert.False(h.Vm.WaspApproaching);   // the candle keeps them off
+        // Cut (Bee, 2026-11-11): herbal candles no longer keep wasps away.
+        // h.Vm.LightRepellentCommand.Execute(null);
+        // Assert.True(h.Vm.RepellentSecondsLeft > 0m);
+        // h.Play(600);
+        // Assert.False(h.Vm.WaspApproaching);   // the candle keeps them off
     }
 }

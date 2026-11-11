@@ -184,21 +184,6 @@ public partial class BeekeeperView : UserControl
         ShopTitleText.Text = BeekeeperText.ShopTitle;
         if (ShopCard.IsVisible) UpdateShop(vm, lang);
 
-        // Bee Herbs: in the Shop once it opens (bought for Beebits, lit one at a time).
-        BeeHerbRow.IsVisible = vm.ShopRevealed;
-        if (BeeHerbRow.IsVisible)
-        {
-            BeeHerbNameText.Text = BeekeeperText.BeeHerbs;
-            BeeHerbInfoText.Text = BeekeeperText.BeeHerbsBlurb(N(vm.BeeHerbs), BeekeeperText.Roughly(vm.Config.BeeHerbBurnSeconds));
-            BeeHerbBurningText.IsVisible = vm.HerbBuff is not null;
-            if (vm.HerbBuff is { } buff)
-                BeeHerbBurningText.Text = BeekeeperText.HerbBurning(buff, BeekeeperText.Clock(vm.HerbSecondsLeft));
-            BuyBeeHerbButton.Content = BeekeeperText.Price(N(vm.Config.BeeHerbCost), null, null);
-            BuyBeeHerbButton.IsEnabled = vm.CanBuyBeeHerb;
-            LightBeeHerbButton.Content = BeekeeperText.LightBeeHerb;
-            LightBeeHerbButton.IsVisible = vm.BeeHerbs >= 1m || vm.HerbBuff is not null;
-            LightBeeHerbButton.IsEnabled = vm.CanLightBeeHerb;
-        }
 
         // Combs: how many is on the Hive card; building one is The Workbench's first row (Leah).
 
@@ -227,13 +212,6 @@ public partial class BeekeeperView : UserControl
             + " · " + BeekeeperText.WaxTrayBlurb(N(vm.WaxTrayCapacity, 1), N(vm.WaxTrays));
         BuyWaxTrayButton.Content = BeekeeperText.Add;
         BuyWaxTrayButton.IsEnabled = vm.CanBuyWaxTray;
-        BeeswaxRow.IsVisible = vm.WorkbenchRevealed;
-        BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
-        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeswaxCandleWax), null) + " · " + BeekeeperText.BeeswaxBlurb;
-        CraftBeeswaxButton.Content = BeekeeperText.Make;
-        CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
-        ShowBatch(Beeswax10Button, 10, vm.CanCraftBeeswaxTimes(10));
-        ShowBatch(Beeswax100Button, 100, vm.CanCraftBeeswaxTimes(100));
         BeeBreadRow.IsVisible = vm.PollenRevealed;
         BeeBreadNameText.Text = BeekeeperText.BeeBread;
         BeeBreadInfoText.Text = BeekeeperText.Price(null, null, null, pollen: N(vm.Config.BeeBreadPollen), honey: N(vm.Config.BeeBreadHoney))
@@ -242,16 +220,20 @@ public partial class BeekeeperView : UserControl
         MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
         ShowBatch(BeeBread10Button, 10, vm.CanMakeBeeBreadTimes(10));
         ShowBatch(BeeBread100Button, 100, vm.CanMakeBeeBreadTimes(100));
-        // Repellent candles retire once the wasps' emissary has come (spec 014).
+        // The herbal candle (was the sage repellent candle): opens with the first herb from the bear.
         RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
-        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.RepellentCandleWax), N(vm.Config.RepellentCandleSage))
-            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Clock(vm.RepellentBurnSeconds));
+        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.HerbalCandleWax), N(vm.Config.HerbalCandleHerbs))
+            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Roughly(vm.HerbalCandleBurnSeconds));
+        HerbBurningText.IsVisible = vm.HerbBuff is not null;
+        if (vm.HerbBuff is { } buff)
+            HerbBurningText.Text = BeekeeperText.HerbBurning(buff, BeekeeperText.Clock(vm.HerbSecondsLeft));
         CraftRepellentButton.Content = BeekeeperText.Make;
         CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
         ShowBatch(Repellent10Button, 10, vm.CanCraftRepellentTimes(10));
         ShowBatch(Repellent100Button, 100, vm.CanCraftRepellentTimes(100));
         LightRepellentButton.Content = BeekeeperText.Light;
+        LightRepellentButton.IsVisible = vm.RepellentCandles >= 1m || vm.HerbBuff is not null;
         LightRepellentButton.IsEnabled = vm.CanLightRepellent;
 
         // The propolis candles (stage 7): once the poplar has sprouted
@@ -267,7 +249,7 @@ public partial class BeekeeperView : UserControl
         LightBeeBoostButton.IsEnabled = vm.CanLightBeeBoost;
         SagePropolisRow.IsVisible = vm.PropolisCandlesShown;
         SagePropolisNameText.Text = BeekeeperText.SagePropolisCandle;
-        SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.Config.SagePropolisCandleWax), N(vm.Config.SagePropolisCandleSage),
+        SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.Config.SagePropolisCandleWax), N(vm.Config.SagePropolisCandleHerbs),
                 propolis: N(vm.Config.SagePropolisCandlePropolis))
             + " · " + BeekeeperText.SagePropolisBlurb(N(vm.SagePropolisBonusPercent), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
         CraftSagePropolisButton.Content = BeekeeperText.Make;
@@ -354,7 +336,6 @@ public partial class BeekeeperView : UserControl
         int n = int.Parse(parts[1]);
         switch (parts[0])
         {
-            case "Beeswax": _vm.CraftBeeswaxTimes(n); break;
             case "BeeBread": _vm.MakeBeeBreadTimes(n); break;
             case "Repellent": _vm.CraftRepellentTimes(n); break;
             case "BeeBoost": _vm.CraftBeeBoostTimes(n); break;
@@ -570,7 +551,7 @@ public partial class BeekeeperView : UserControl
                 string id = u.Id;
                 ShopRows.Children.Add(MakeShopRow(
                     BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id)), false,
-                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Sage), paper: Part(u.Paper), propolis: Part(u.Propolis), bees: Part(u.Bees)),
+                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Herbs), paper: Part(u.Paper), propolis: Part(u.Propolis), bees: Part(u.Bees)),
                     "upgrade:" + id, _ => vm.BuyUpgrade(id), withWall: true));
             }
         }
@@ -666,8 +647,10 @@ public partial class BeekeeperView : UserControl
             // Stage 7.5: the bear's bundle changes with the trade agreement (10, then 8), so the rate
             // line and the "Trade 10" button are rewritten every tick rather than only on a rebuild.
             if (_tradeRates.TryGetValue(o.Id, out var rateText)) rateText.Text = BeekeeperText.TradeRate(o.Id, o.GiveAmount, o.GetAmount);
-            // The bear sells a bundle of honey ("Trade 10", then 8); every other buyer's button is one trade, so "Trade 1".
-            if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.Id == "bear" ? o.GiveAmount : 1m);
+            // Every buyer's button is one trade, so "Trade 1" (Bee, 2026-11-11: the bear's read "Trade 10",
+            // the honey in his bundle, which looked like ten trades).
+            // Before: if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.Id == "bear" ? o.GiveAmount : 1m);
+            if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(1m);
             if (r.All != null) r.All.IsEnabled = o.CanTrade;
             if (r.Ten != null) r.Ten.IsVisible = o.CanTradeTimes?.Invoke(10) == true;
             if (r.Hundred != null) r.Hundred.IsVisible = o.CanTradeTimes?.Invoke(100) == true;
@@ -749,7 +732,6 @@ public partial class BeekeeperView : UserControl
     private void BuildComb_Click(object? sender, RoutedEventArgs e) => _vm?.BuildCombCommand.Execute(null);
     private void BuyHoneySuper_Click(object? sender, RoutedEventArgs e) => _vm?.BuyHoneySuperCommand.Execute(null);
     private void BuyWaxTray_Click(object? sender, RoutedEventArgs e) => _vm?.BuyWaxTrayCommand.Execute(null);
-    private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
     private void CraftRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.CraftRepellentCommand.Execute(null);
     private void LightRepellent_Click(object? sender, RoutedEventArgs e) => _vm?.LightRepellentCommand.Execute(null);
     private void ThrowShoe_Click(object? sender, RoutedEventArgs e) => _vm?.ThrowShoeCommand.Execute(null);
@@ -786,8 +768,6 @@ public partial class BeekeeperView : UserControl
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
     private void CraftBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeBoostCommand.Execute(null);
     private void LightBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeBoostCommand.Execute(null);
-    private void BuyBeeHerb_Click(object? sender, RoutedEventArgs e) => _vm?.BuyBeeHerbCommand.Execute(null);
-    private void LightBeeHerb_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeHerbCommand.Execute(null);
     private void CraftSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.CraftSagePropolisCommand.Execute(null);
     private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
     private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);

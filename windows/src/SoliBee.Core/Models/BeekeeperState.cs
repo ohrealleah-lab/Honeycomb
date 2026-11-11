@@ -73,22 +73,28 @@ public sealed class BeekeeperState
     public bool StorageFullAnnounced { get; set; }
 
     // ----- Stage 2: The Workbench, candles, Hippies, wasps (version 2)
-    public decimal BeeswaxCandles { get; set; }
+    /// <summary>Herbal candles (10 wax + 1 herb). Saved under the old name: they were repellent candles.</summary>
     public decimal RepellentCandles { get; set; }
     /// <summary>Every candle ever crafted, of any kind (brings the Hippies).</summary>
     public long CandlesCrafted { get; set; }
+    /// <summary>Cut (Bee, 2026-11-11): herbs replaced sage. Read from older saves only; the engine
+    /// moves it into <see cref="Herbs"/> on load.</summary>
     public decimal Sage { get; set; }
     public long HippieTrades { get; set; }
     public List<string> Upgrades { get; set; } = new();
 
     public bool WorkbenchRevealed { get; set; }
     public bool HippiesRevealed { get; set; }
+    /// <summary>Cut (Bee, 2026-11-11): older saves only; becomes <see cref="HerbsRevealed"/> on load.</summary>
     public bool SageRevealed { get; set; }
+    /// <summary>The herbal candle's recipe is open (the first herb from the bear). Saved under its
+    /// old name: it was the sage repellent candle.</summary>
     public bool RepellentUnlocked { get; set; }
-    /// <summary>True once the first repellent candle is made (brings its Hive row, spec 010).</summary>
+    /// <summary>True once the first herbal candle is made (brings its Hive row). Old name kept for saves.</summary>
     public bool RepellentCrafted { get; set; }
 
-    /// <summary>Wasp time left on burning repellent candles (0 = none burning).</summary>
+    /// <summary>Wasp time left on burning repellent candles (0 = none burning). Herbal candles no
+    /// longer keep wasps away; an older save's burning candle just burns out.</summary>
     public decimal RepellentSecondsLeft { get; set; }
     /// <summary>Wasp time until the next wasp; 0 means "not rolled yet".</summary>
     public decimal NextWaspInSeconds { get; set; }
@@ -194,12 +200,14 @@ public sealed class BeekeeperState
     /// <summary>Wasps that have shown up in all; the first visit offers Engage, later ones Bribe.</summary>
     public long WaspVisits { get; set; }
 
-    // ----- Bee Herbs (older saves load with none)
-    /// <summary>Bee Herbs bought and not yet lit.</summary>
-    public decimal BeeHerbs { get; set; }
-    /// <summary>The buff the lit herb rolled (a <see cref="BeekeeperHerbs"/> id), or null when none burns.</summary>
+    // ----- Herbs (Bee, 2026-11-11; older saves load with their sage as herbs)
+    /// <summary>Herbs from the bear (1 a trade). They go into herbal candles and prices, as sage did.</summary>
+    public decimal Herbs { get; set; }
+    /// <summary>True once herbs have been seen (sticky): shows the Herbs row.</summary>
+    public bool HerbsRevealed { get; set; }
+    /// <summary>The buff the lit herbal candle rolled (a <see cref="BeekeeperHerbs"/> id), or null when none burns.</summary>
     public string? HerbBuff { get; set; }
-    /// <summary>Live seconds the lit herb has left; 0 = none burning. Waits while the app is closed.</summary>
+    /// <summary>Live seconds the lit herbal candle has left; 0 = none burning. Waits while the app is closed.</summary>
     public decimal HerbSecondsLeft { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:

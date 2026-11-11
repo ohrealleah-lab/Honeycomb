@@ -97,16 +97,16 @@ public class BeekeeperQueenViewModelTests : IDisposable
         vm.DebugBearTradesToAlmostAgreement();
         Assert.Equal(39, vm.Trades);          // the agreement comes at 40 (pacing review 2026-11-10; was 25, and 100 before stage 7.5)
         Assert.False(vm.HasTradeAgreement);
-        Assert.Equal(5m, vm.TradeOffers.Single(o => o.Id == "bear").GetAmount);
-        vm.SellTen();                         // paid at the old rate
+        Assert.Equal(10m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);
+        vm.SellTen();                         // at the old rate
         Assert.Equal(40m, vm.Honey);
-        Assert.Equal(5m, vm.Beebits);
+        Assert.Equal(1m, vm.Herbs);
         Assert.True(vm.HasTradeAgreement);
         Assert.True(Logged(vm, BeekeeperEvents.TradeAgreement));
-        Assert.Equal(6m, vm.TradeOffers.Single(o => o.Id == "bear").GetAmount);   // every button shows the new rate
+        Assert.Equal(8m, vm.TradeOffers.Single(o => o.Id == "bear").GiveAmount);   // every button shows the new rate
         vm.SellTen();
-        Assert.Equal(30m, vm.Honey);
-        Assert.Equal(11m, vm.Beebits);
+        Assert.Equal(32m, vm.Honey);
+        Assert.Equal(2m, vm.Herbs);
     }
 
     // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.

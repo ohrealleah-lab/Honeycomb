@@ -337,13 +337,14 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal("Bruno", offer.Text);
         Assert.True(e.State.HasTradeAgreement);
         Assert.Equal(40, e.State.Trades);   // Sell All counts as one
-        Assert.Equal(50m, e.State.Beebits); // the sale that reached it: 10 honey for 5 Beebits
+        Assert.Equal(10m, e.State.Herbs);   // the sale that reached it: 10 honey an herb
         Assert.Equal(0m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
         Assert.Equal(100m, sale.Value2);
         e.State.Honey = 10m;
         Assert.False(Has(e.SellTen().Events, BeekeeperEvents.TradeAgreement));
-        Assert.Equal(56m, e.State.Beebits); // from now on 10 honey for 6 Beebits
+        Assert.Equal(11m, e.State.Herbs);   // from now on 8 honey an herb
+        Assert.Equal(2m, e.State.Honey);
     }
 
     // Cut in stage 7.5 (spec 016): the agreement came at 100 trades.
@@ -364,22 +365,23 @@ public class BeekeeperStage5Tests : IDisposable
     }
 
     [Fact]
-    public void WithTheAgreement_EachTradePays6Beebits_AndTheLeftoverStays()
+    public void WithTheAgreement_AnHerbCosts8Honey_AndTheLeftoverStays()
     {
+        // Bee, 2026-11-11: the bear trades herbs (1 a trade); the agreement makes a trade 8 honey.
         var e = Make(new BeekeeperState { Honey = 47m, HasTradeAgreement = true, BearName = "Bruno" });
-        Assert.Equal(10m, e.HoneyPerTradeNow);
-        Assert.Equal(6m, e.BeebitsPerTradeNow);
+        Assert.Equal(8m, e.HoneyPerTradeNow);
+        Assert.Equal(1m, e.HerbsPerTradeNow);
         var r = e.SellAll();
-        Assert.Equal(24m, e.State.Beebits);
+        Assert.Equal(5m, e.State.Herbs);
         Assert.Equal(7m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
-        Assert.Equal(24m, sale.Value);
+        Assert.Equal(5m, sale.Value);
         Assert.Equal(40m, sale.Value2);
 
         var none = Make(new BeekeeperState { Honey = 9m });
         Assert.False(none.CanSell);
-        Assert.Equal(5m, none.BeebitsPerTradeNow);
-        Assert.False(Make(new BeekeeperState { Honey = 9.9m, HasTradeAgreement = true }).CanSell);
+        Assert.Equal(10m, none.HoneyPerTradeNow);
+        Assert.False(Make(new BeekeeperState { Honey = 7.9m, HasTradeAgreement = true }).CanSell);
     }
 
     [Fact]

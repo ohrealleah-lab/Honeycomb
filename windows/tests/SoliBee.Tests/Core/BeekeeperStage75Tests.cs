@@ -58,7 +58,7 @@ public class BeekeeperStage75Tests
     [Fact]
     public void WithZeroFreeBees_AStartedHiveStillMakesHoney()
     {
-        var e = Make(new BeekeeperState { HoneyRevealed = true, Bees = 20m, Wax = 10m });
+        var e = Make(new BeekeeperState { HoneyRevealed = true, Bees = 250m, Wax = 10m });
         Assert.True(e.BuildComb().Done);
         Assert.Equal(0m, e.State.Bees);            // every free bee moved in
         Assert.True(e.HiveStarted);
@@ -299,7 +299,7 @@ public class BeekeeperStage75Tests
     [Fact]
     public void DebugWaxOverTheCap_CanStillPayPastAWall()
     {
-        var e = Make(new BeekeeperState { Combs = 8, CombsRevealed = true, Bees = 1000m });
+        var e = Make(new BeekeeperState { Combs = 8, CombsRevealed = true, Bees = 10_000m });
         e.DebugGrant(0m, 100m, 0m);
         Assert.Equal(100m, e.State.Wax);
         Assert.True(e.CombIsWall);

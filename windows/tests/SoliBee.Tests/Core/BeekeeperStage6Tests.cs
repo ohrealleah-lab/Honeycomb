@@ -458,30 +458,19 @@ public class BeekeeperStage6Tests : IDisposable
     // ============================================================ repellent candles retire (User Story 8)
 
     [Fact]
-    public void TheEmissary_RetiresRepellentCandles_KeepingTheStock()
+    public void TheEmissary_LeavesHerbalCandlesAlone()
     {
+        // Bee, 2026-11-11: the repellent candle became the herbal candle, which never retires.
         var s = Workshop();
         s.Wax = 500m;
-        s.Sage = 10m;
+        s.Herbs = 10m;
         s.RepellentUnlocked = true;
         s.RepellentCandles = 3m;
-        s.BeeswaxCandles = 0m;
         var e = Make(s);
+        e.DebugBringEmissary();
         Assert.True(e.CanCraftRepellent);
         Assert.True(e.CanLightRepellent);
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.StrongerCandles);
-
-        e.DebugBringEmissary();
-        Assert.True(e.RepellentRetired);
-        Assert.False(e.CanCraftRepellent);
-        Assert.False(e.CraftRepellent().Done);
-        Assert.False(e.CanLightRepellent);
-        Assert.False(e.LightRepellent().Done);
-        Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.StrongerCandles);
-        Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.StrongerCandles));
-        Assert.Equal(3m, e.State.RepellentCandles);   // still in the save, nothing refunded
-
-        Assert.True(e.CanCraftBeeswax);               // beeswax candles carry on
     }
 
     [Fact]

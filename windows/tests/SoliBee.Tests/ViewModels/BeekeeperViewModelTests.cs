@@ -191,10 +191,15 @@ public class BeekeeperViewModelTests : IDisposable
     public void Selling_BuyingAndBuilding_GoThroughTheEngineAndTheLog()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 25m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 255m, BearName = "Bruno" });
 
         vm.SellAllCommand.Execute(null);
-        Assert.Equal(75m, vm.Beebits);                   // 15 trades of 10 honey for 5 Beebits
+        Assert.Equal(15m, vm.Herbs);                     // 15 trades of 10 honey for 1 herb
+        Assert.False(vm.ShopRevealed);                   // Beebits come from the Hippies
+        vm.State.HippiesRevealed = true;
+        vm.State.RepellentCandles = 8m;
+        vm.TradeAllCandlesCommand.Execute(null);
+        Assert.Equal(80m, vm.Beebits);                   // 8 herbal candles, 10 Beebits each
         Assert.True(vm.ShopRevealed);
         Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
 
@@ -206,7 +211,7 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.Equal(2, vm.Combs);                       // the starter and one bought (stage 7.5)
         Assert.Equal(500m, vm.HoneyStorage);
         Assert.Equal(22m, vm.WaxStorage);
-        Assert.Equal(5m, vm.Bees);                       // 20 bees moved in
+        Assert.Equal(5m, vm.Bees);                       // 250 bees moved in
         Assert.True(Logged(vm, BeekeeperEvents.CombBuilt));
     }
 
@@ -246,7 +251,7 @@ public class BeekeeperViewModelTests : IDisposable
     [Fact]
     public void NewGame_StillAsks_WithZeroFreeBees_OnceTheFirstBeeWasCaught()
     {
-        var vm = Make(new Clock(), new BeekeeperState { HoneyRevealed = true, Bees = 20m, Wax = 10m, BearName = "Bruno" });
+        var vm = Make(new Clock(), new BeekeeperState { HoneyRevealed = true, Bees = 250m, Wax = 10m, BearName = "Bruno" });
         vm.BuildCombCommand.Execute(null);
         Assert.Equal(0m, vm.Bees);
         Assert.True(vm.NewGameNeedsConfirmation);
@@ -337,17 +342,17 @@ public class BeekeeperViewModelTests : IDisposable
         vm.State.BearRevealed = true;
         vm.State.Honey = 25m;
         vm.State.HippiesRevealed = true;
-        vm.State.BeeswaxCandles = 10m;
+        vm.State.RepellentCandles = 1m;     // an herbal candle
         var offers = vm.TradeOffers;
         Assert.Equal(new[] { "bear", "hippies" }, offers.Select(o => o.Id));
         Assert.Equal("Bruno", offers[0].Name);
         Assert.True(offers.All(o => o.CanTrade));
 
-        offers[0].TradeAll();               // 25 honey -> 10 Beebits, 5 kept
-        Assert.Equal(10m, vm.Beebits);
+        offers[0].TradeAll();               // 25 honey -> 2 herbs, 5 kept
+        Assert.Equal(2m, vm.Herbs);
         Assert.Equal(5m, vm.Honey);
-        offers[1].TradeOne();               // 10 candles -> 1 sage
-        Assert.Equal(1m, vm.Sage);
+        offers[1].TradeOne();               // 1 herbal candle -> 10 Beebits
+        Assert.Equal(10m, vm.Beebits);
         Assert.False(vm.TradeOffers[1].CanTrade);
         Assert.Equal(1, vm.TradeOffers[0].Trades);
     }

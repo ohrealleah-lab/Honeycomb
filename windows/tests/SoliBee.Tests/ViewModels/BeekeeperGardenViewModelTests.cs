@@ -41,7 +41,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     [Fact]
     public void TheFifthHippieTrade_LogsTheSeed_AndTheGardenAppears()
     {
-        var vm = Make(new Clock(), new BeekeeperState { HippiesRevealed = true, HippieTrades = 4, BeeswaxCandles = 10m, BearName = "Bruno" });
+        var vm = Make(new Clock(), new BeekeeperState { HippiesRevealed = true, HippieTrades = 4, RepellentCandles = 1m, BearName = "Bruno" });
         Assert.False(vm.GardenRevealed);
         vm.State.RepsMet.AddRange(new[] { "bear", "hippies" }); vm.State.RepsEngaged.AddRange(new[] { "bear", "hippies" });   // reps engaged: trades open
         vm.TradeOffers.First(o => o.Id == "hippies").TradeOne();

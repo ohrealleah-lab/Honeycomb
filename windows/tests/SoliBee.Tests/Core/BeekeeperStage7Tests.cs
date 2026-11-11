@@ -75,7 +75,7 @@ public class BeekeeperStage7Tests : IDisposable
     {
         var e = Make(new BeekeeperState
         {
-            HippiesRevealed = true, HippieTrades = 199, BeeswaxCandles = 100m,
+            HippiesRevealed = true, HippieTrades = 199, RepellentCandles = 100m,
             SeedsGivenIds = { "wildflowers", "bramble" },
         });
         var r = e.TradeTenCandles();
@@ -206,19 +206,19 @@ public class BeekeeperStage7Tests : IDisposable
     public void TheCandleRecipes_NeedThePoplar_AndTheirIngredients()
     {
         var s = Hive();
-        s.Wax = 100m; s.Propolis = 20m; s.Sage = 5m;
+        s.Wax = 100m; s.Propolis = 20m; s.Herbs = 5m;
         var e = Make(s);
         Assert.False(e.CanCraftBeeBoost);   // no poplar yet
 
         s = Hive(BeekeeperPlants.Poplar);
-        s.Wax = 100m; s.Propolis = 20m; s.Sage = 5m;
+        s.Wax = 100m; s.Propolis = 20m; s.Herbs = 5m;
         e = Make(s);
         Assert.True(e.CraftBeeBoost().Done);
         Assert.Equal(80m, e.State.Wax);
         Assert.Equal(18m, e.State.Propolis);
         Assert.True(e.CraftSagePropolis().Done);
         Assert.Equal(60m, e.State.Wax);
-        Assert.Equal(4m, e.State.Sage);
+        Assert.Equal(4m, e.State.Herbs);
         Assert.Equal(13m, e.State.Propolis);
         Assert.Equal(2, e.State.CandlesCrafted);
         Assert.False(e.CraftSagePropolis(100).Done);

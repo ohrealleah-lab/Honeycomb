@@ -60,7 +60,6 @@ public class BeekeeperStage2Tests : IDisposable
         var e = Make(new BeekeeperState { Combs = 1, Wax = 1000m, Bees = 1000m });
         Assert.False(Has(e.BuildComb().Events, BeekeeperEvents.WorkbenchOpened));   // the 2nd
         Assert.False(e.State.WorkbenchRevealed);
-        Assert.False(e.CanCraftBeeswax);
         var r = e.BuildComb();                                                        // the 3rd
         Assert.True(e.State.WorkbenchRevealed);
         Assert.True(Has(r.Events, BeekeeperEvents.WorkbenchOpened));
@@ -81,25 +80,11 @@ public class BeekeeperStage2Tests : IDisposable
     }
 
     [Fact]
-    public void BeeswaxCandle_CostsTenWax_AndIsInstant()
-    {
-        var e = Make(Workshop(s => s.Wax = 25m));
-        var first = e.CraftBeeswax();
-        Assert.True(first.Done);
-        Assert.Equal(15m, e.State.Wax);
-        Assert.Equal(1m, e.State.BeeswaxCandles);
-        Assert.True(Has(first.Events, BeekeeperEvents.FirstBeeswaxCandle));
-        Assert.False(Has(e.CraftBeeswax().Events, BeekeeperEvents.FirstBeeswaxCandle));
-        Assert.False(e.CraftBeeswax().Done);   // 5 wax left
-        Assert.Equal(5m, e.State.Wax);
-        Assert.Equal(2m, e.State.BeeswaxCandles);
-    }
-
-    [Fact]
     public void NoWorkbench_NoCrafting()
     {
-        var e = Make(new BeekeeperState { Combs = 1, Wax = 100m });
-        Assert.False(e.CraftBeeswax().Done);
+        var e = Make(new BeekeeperState { Combs = 1, Wax = 100m, RepellentUnlocked = true });
+        e.State.Herbs = 5m;
+        Assert.False(e.CraftRepellent().Done);
         Assert.Equal(100m, e.State.Wax);
     }
 
@@ -108,48 +93,49 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void TheHippies_ArriveAfterFiveCandles()
     {
-        var e = Make(Workshop(s => s.Wax = 100m));
-        for (int i = 0; i < 4; i++) Assert.False(Has(e.CraftBeeswax().Events, BeekeeperEvents.HippiesArrive));
+        var e = Make(Workshop(s => { s.Wax = 100m; s.Herbs = 10m; s.RepellentUnlocked = true; }));   // herbal candles
+        for (int i = 0; i < 4; i++) Assert.False(Has(e.CraftRepellent().Events, BeekeeperEvents.HippiesArrive));
         Assert.False(e.State.HippiesRevealed);
-        Assert.True(Has(e.CraftBeeswax().Events, BeekeeperEvents.HippiesArrive));
+        Assert.True(Has(e.CraftRepellent().Events, BeekeeperEvents.HippiesArrive));
         Assert.True(e.State.HippiesRevealed);
-        Assert.False(Has(e.CraftBeeswax().Events, BeekeeperEvents.HippiesArrive));
+        Assert.False(Has(e.CraftRepellent().Events, BeekeeperEvents.HippiesArrive));
     }
 
     [Fact]
-    public void TradeTen_GivesOneSage_AndUnlocksTheRepellentCandle()
+    public void TradeOne_SellsOneHerbalCandle_ForBeebits()
     {
-        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.BeeswaxCandles = 12m; }));
+        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.RepellentCandles = 1m; }));
         var r = e.TradeTenCandles();
         Assert.True(r.Done);
-        Assert.Equal(2m, e.State.BeeswaxCandles);
-        Assert.Equal(1m, e.State.Sage);
-        Assert.True(e.State.SageRevealed);
-        Assert.True(e.State.RepellentUnlocked);
-        Assert.True(Has(r.Events, BeekeeperEvents.RepellentUnlocked));
-        Assert.False(e.TradeTenCandles().Done);   // only 2 left
+        Assert.Equal(0m, e.State.RepellentCandles);
+        Assert.Equal(10m, e.State.Beebits);
+        Assert.True(e.State.BeebitsRevealed);
+        Assert.Equal(10m, r.Events.Single(x => x.Key == BeekeeperEvents.CandlesTraded).Value);
+        Assert.False(e.TradeTenCandles().Done);   // none left
     }
 
     [Fact]
-    public void TradeAll_TradesWholeBundles_AndKeepsTheRest()
+    public void TradeAll_SellsEveryHerbalCandle()
     {
-        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.BeeswaxCandles = 27m; }));
+        // Bee, 2026-11-11: the Hippies buy herbal candles for Beebits.
+        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.RepellentCandles = 3m; }));
         Assert.True(e.TradeAllCandles().Done);
-        Assert.Equal(2m, e.State.Sage);
-        Assert.Equal(7m, e.State.BeeswaxCandles);
-        Assert.Equal(2, e.State.HippieTrades);   // each bundle counts as a trade
+        Assert.Equal(30m, e.State.Beebits);
+        Assert.Equal(0m, e.State.RepellentCandles);
+        Assert.Equal(3, e.State.HippieTrades);   // each candle counts as a trade
     }
 
     [Fact]
     public void RepellentCandle_NeedsUnlocking_AndCostsWaxAndSage()
     {
-        var locked = Make(Workshop(s => { s.Wax = 50m; s.Sage = 5m; }));
+        var locked = Make(Workshop(s => { s.Wax = 50m; }));
+        locked.State.Herbs = 5m;                 // herbs in a loaded save would open it; here it stays shut
         Assert.False(locked.CraftRepellent().Done);
 
-        var e = Make(Workshop(s => { s.Wax = 50m; s.Sage = 1m; s.RepellentUnlocked = true; }));
+        var e = Make(Workshop(s => { s.Wax = 50m; s.Herbs = 1m; s.RepellentUnlocked = true; }));
         Assert.True(e.CraftRepellent().Done);
         Assert.Equal(40m, e.State.Wax);
-        Assert.Equal(0m, e.State.Sage);
+        Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(1m, e.State.RepellentCandles);
         Assert.False(e.CraftRepellent().Done);   // no sage left
     }
@@ -176,7 +162,7 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void BuyingAnUpgrade_TakesEveryPartOfTheCost_AndItLeavesTheShop()
     {
-        var e = Make(Workshop(s => { s.Beebits = 1000m; s.Wax = 300m; s.Sage = 2m; s.WaxTrays = 100; s.Bees = 500m; }));
+        var e = Make(Workshop(s => { s.Beebits = 1000m; s.Wax = 300m; s.Herbs = 2m; s.WaxTrays = 100; s.Bees = 500m; }));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.BiggerCombs1).Done);
         Assert.Equal(300m, e.State.Bees);   // and 200 free bees
         Assert.Equal(200m, e.State.Beebits);   // Bigger Combs I: 800 Beebits + 60 wax
@@ -190,11 +176,11 @@ public class BeekeeperStage2Tests : IDisposable
     public void AnUpgradeYouCannotFullyAfford_TakesNothing()
     {
         // Enough Beebits and sage for Even Bigger Combs, but not enough wax.
-        var e = Make(Workshop(s => { s.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1); s.Beebits = 5000m; s.Wax = 10m; s.Sage = 5m; }));
+        var e = Make(Workshop(s => { s.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1); s.Beebits = 5000m; s.Wax = 10m; s.Herbs = 5m; }));
         Assert.False(e.BuyUpgrade(BeekeeperUpgrades.BiggerCombs2).Done);
         Assert.Equal(5000m, e.State.Beebits);
         Assert.Equal(10m, e.State.Wax);
-        Assert.Equal(5m, e.State.Sage);
+        Assert.Equal(5m, e.State.Herbs);
     }
 
     // Cut in stage 7.5 (spec 016): Bigger Combs grew honey storage only.
@@ -241,16 +227,6 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.Equal(3.15m, e.State.Wax);
     }
 
-    [Fact]
-    public void StrongerCandles_BurnHalfAsLongAgain()
-    {
-        var e = Make(Workshop(s => { s.RepellentCandles = 2m; }));
-        Assert.Equal(900m, e.RepellentBurnSeconds);
-        e.State.Upgrades.Add(BeekeeperUpgrades.StrongerCandles);
-        e.LightRepellent();
-        Assert.Equal(1350m, e.State.RepellentSecondsLeft);
-    }
-
     // ============================================================ wasps
 
     [Fact]
@@ -276,7 +252,7 @@ public class BeekeeperStage2Tests : IDisposable
     public void NoResponseForAMinute_TheWaspRaids()
     {
         // Stage 7.5: 50 combs make 10 honey a second.
-        var e = Make(Workshop(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.Combs = 50; s.Honey = 500m; s.Wax = 40m; s.Sage = 3m; s.BeeswaxCandles = 4m; }), 0.0);
+        var e = Make(Workshop(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.Combs = 50; s.Honey = 500m; s.Wax = 40m; s.Herbs = 3m; s.RepellentCandles = 4m; }), 0.0);
         e.AdvanceWaspTime(240m);
         Assert.Empty(e.AdvanceWaspCountdown(59m));
         var raid = e.AdvanceWaspCountdown(1m).Single();
@@ -286,8 +262,8 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.Equal(0m, e.State.Honey);
         Assert.Equal(1000m, e.State.Bees);
         Assert.Equal(40m, e.State.Wax);            // never wax,
-        Assert.Equal(3m, e.State.Sage);            // sage
-        Assert.Equal(4m, e.State.BeeswaxCandles);  // or candles
+        Assert.Equal(3m, e.State.Herbs);            // sage
+        Assert.Equal(4m, e.State.RepellentCandles); // or candles
         Assert.False(e.WaspApproaching);
     }
 
@@ -350,28 +326,30 @@ public class BeekeeperStage2Tests : IDisposable
         Assert.True(none.WaspApproaching);
     }
 
-    [Fact]
-    public void LightingACandle_SendsAnApproachingWaspAway_AndKeepsWaspsOffWhileItBurns()
-    {
-        var e = Make(Workshop(s => { s.RepellentCandles = 1m; s.Bees = 1000m; }), 0.0, 0.0);
-        e.AdvanceWaspTime(240m);
-        Assert.True(e.LightRepellent().Done);
-        Assert.False(e.WaspApproaching);
-        Assert.Equal(0m, e.State.RepellentCandles);
+// Cut (Bee, 2026-11-11): herbal candles no longer keep wasps away. Kept in case it returns.
+    // [Fact]
+    // public void LightingACandle_SendsAnApproachingWaspAway_AndKeepsWaspsOffWhileItBurns()
+    // {
+    //     var e = Make(Workshop(s => { s.RepellentCandles = 1m; s.Bees = 1000m; }), 0.0, 0.0);
+    //     e.AdvanceWaspTime(240m);
+    //     Assert.True(e.LightRepellent().Done);
+    //     Assert.False(e.WaspApproaching);
+    //     Assert.Equal(0m, e.State.RepellentCandles);
+    //
+    //     Assert.Empty(e.AdvanceWaspTime(899m));
+    //     Assert.True(Has(e.AdvanceWaspTime(1m), BeekeeperEvents.CandleOut));
+    //     Assert.True(Has(e.AdvanceWaspTime(240m), BeekeeperEvents.WaspArrives));   // wasps again afterwards
+    // }
 
-        Assert.Empty(e.AdvanceWaspTime(899m));
-        Assert.True(Has(e.AdvanceWaspTime(1m), BeekeeperEvents.CandleOut));
-        Assert.True(Has(e.AdvanceWaspTime(240m), BeekeeperEvents.WaspArrives));   // wasps again afterwards
-    }
-
-    [Fact]
-    public void LightingASecondCandle_AddsItsTime()
-    {
-        var e = Make(Workshop(s => s.RepellentCandles = 2m));
-        e.LightRepellent();
-        e.LightRepellent();
-        Assert.Equal(1800m, e.State.RepellentSecondsLeft);
-    }
+// Cut (Bee, 2026-11-11): herbal candles no longer keep wasps away. Kept in case it returns.
+    // [Fact]
+    // public void LightingASecondCandle_AddsItsTime()
+    // {
+    //     var e = Make(Workshop(s => s.RepellentCandles = 2m));
+    //     e.LightRepellent();
+    //     e.LightRepellent();
+    //     Assert.Equal(1800m, e.State.RepellentSecondsLeft);
+    // }
 
     [Fact]
     public void AWaspThatLeaves_TakesNothing()
@@ -412,7 +390,7 @@ public class BeekeeperStage2Tests : IDisposable
     //     Assert.Equal(120m, loaded!.Bees);
     //     Assert.Equal(45.5m, loaded.Honey);
     //     Assert.Equal("Baloo", loaded.BearName);
-    //     Assert.Equal(0m, loaded.Sage);
+    //     Assert.Equal(0m, loaded.Herbs);
     //     Assert.Empty(loaded.Upgrades);
     //
     //     var e = new BeekeeperEngine(BeekeeperConfig.Default, loaded);
@@ -426,8 +404,8 @@ public class BeekeeperStage2Tests : IDisposable
         string path = Path.Combine(_dir, "beekeeper.json");
         var s = Workshop(x =>
         {
-            x.BeeswaxCandles = 7m; x.RepellentCandles = 2m; x.CandlesCrafted = 19; x.Sage = 3m; x.HippieTrades = 4;
-            x.HippiesRevealed = true; x.SageRevealed = true; x.RepellentUnlocked = true;
+            x.RepellentCandles = 2m; x.CandlesCrafted = 19; x.Herbs = 3m; x.HippieTrades = 4;
+            x.HippiesRevealed = true; x.HerbsRevealed = true; x.RepellentUnlocked = true;
             x.Upgrades.Add(BeekeeperUpgrades.BiggerCombs1);
             x.RepellentSecondsLeft = 321m; x.NextWaspInSeconds = 123m; x.WaspCountdown = 30m;
             x.Log.Add(new BeekeeperLogEntry { Key = BeekeeperEvents.WaspRaid, Value = 50m, Value2 = 12m });
@@ -436,12 +414,11 @@ public class BeekeeperStage2Tests : IDisposable
 
         var back = BeekeeperSaveService.Load(path)!;
         Assert.Equal(BeekeeperSaveService.CurrentVersion, back.Version);
-        Assert.Equal(7m, back.BeeswaxCandles);
         Assert.Equal(2m, back.RepellentCandles);
         Assert.Equal(19, back.CandlesCrafted);
-        Assert.Equal(3m, back.Sage);
+        Assert.Equal(3m, back.Herbs);
         Assert.Equal(4, back.HippieTrades);
-        Assert.True(back.WorkbenchRevealed && back.HippiesRevealed && back.SageRevealed && back.RepellentUnlocked);
+        Assert.True(back.WorkbenchRevealed && back.HippiesRevealed && back.HerbsRevealed && back.RepellentUnlocked);
         Assert.Equal(new[] { BeekeeperUpgrades.BiggerCombs1 }, back.Upgrades);
         Assert.Equal(321m, back.RepellentSecondsLeft);
         Assert.Equal(123m, back.NextWaspInSeconds);
