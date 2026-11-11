@@ -2324,4 +2324,6 @@ public enum StringKey: String, CaseIterable {
     case helpBeekeeperMeadowTitle = "help_beekeeper_meadow_title"
     /// Help body
     case helpBeekeeperMeadow = "help_beekeeper_meadow"
+    /// Story log, one herbal candle; %@ = Beebits got
+    case beekeeperLogTradeHippiesOneFmt = "beekeeper_log_trade_hippies_one_fmt"
 }

@@ -1164,4 +1164,5 @@ enum class StringKey {
     BeekeeperBeeFactWoolCarder1,
     HelpBeekeeperMeadowTitle,
     HelpBeekeeperMeadow,
+    BeekeeperLogTradeHippiesOneFmt,
 }

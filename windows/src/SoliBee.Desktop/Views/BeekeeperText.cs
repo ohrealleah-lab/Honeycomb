@@ -671,6 +671,7 @@ internal static class BeekeeperText
             BeekeeperEvents.HippiesArrive => L(StringKey.BeekeeperLogHippiesArrive),
             BeekeeperEvents.CandlesTraded => e.Value2 <= 0m
                 ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
+                : e.Value2 == 1m ? Fill(L(StringKey.BeekeeperLogTradeHippiesOneFmt), N(e.Value))   // "1 herbal candle"
                 : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value2), N(e.Value)),
             BeekeeperEvents.RepellentUnlocked => L(StringKey.BeekeeperLogRepellentUnlocked),
             BeekeeperEvents.UpgradeBought => e.Text switch
