@@ -138,19 +138,20 @@ public class BeekeeperStage6Tests : IDisposable
         Assert.Equal(1250m, e.State.Honey);
     }
 
-    [Fact]
-    public void Guarding_CountsOnlyFromTheMomentTheBrambleSprouts()
-    {
-        var s = Garden(BeekeeperPlants.Wildflowers);
-        s.HoneyRevealed = true;
-        s.Combs = 50;   // stage 7.5: 10 honey a second from the combs (was 1,000 bees)
-        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });   // the bramble is growing
-        var e = Make(s, BigCombs);
-        e.AdvanceAway(120m);
-        // 60 s at 10 honey/s, then 60 s at 12.5 honey/s
-        Assert.Equal(1350m, e.State.Honey);
-        Assert.Equal(6m, e.State.Pollen);   // foraging the whole time
-    }
+    // Cut in stage 8 (spec 017): plants grow at once, so a bed sprouts on load instead of part-way (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void Guarding_CountsOnlyFromTheMomentTheBrambleSprouts()
+    // {
+    //     var s = Garden(BeekeeperPlants.Wildflowers);
+    //     s.HoneyRevealed = true;
+    //     s.Combs = 50;   // stage 7.5: 10 honey a second from the combs (was 1,000 bees)
+    //     s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });   // the bramble is growing
+    //     var e = Make(s, BigCombs);
+    //     e.AdvanceAway(120m);
+    //     // 60 s at 10 honey/s, then 60 s at 12.5 honey/s
+    //     Assert.Equal(1350m, e.State.Honey);
+    //     Assert.Equal(6m, e.State.Pollen);   // foraging the whole time
+    // }
 
     // ============================================================ live and away agree (FR-504)
 
@@ -184,24 +185,25 @@ public class BeekeeperStage6Tests : IDisposable
         Assert.True(live.State.Pollen > 0m && live.State.Honey > 0m);
     }
 
-    [Fact]
-    public void TheBrambleSproutingPartWay_SameLiveOrAway()
-    {
-        BeekeeperState Start()
-        {
-            var s = Busy();
-            s.Plants.Remove(BeekeeperPlants.Bramble);
-            s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 400m });   // the bramble sprouts part-way
-            return s;
-        }
-        var live = Make(Start(), BigCombs);
-        for (int i = 0; i < 1200; i++) live.Advance(1m);
-        var away = Make(Start(), BigCombs);
-        away.AdvanceAway(1200m);
-        AssertSame(live, away);
-        Assert.Equal(away.State.Plants, live.State.Plants);
-        Assert.Contains(BeekeeperPlants.Bramble, live.State.Plants);
-    }
+    // Cut in stage 8 (spec 017): plants grow at once, so a bed sprouts on load instead of part-way (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TheBrambleSproutingPartWay_SameLiveOrAway()
+    // {
+    //     BeekeeperState Start()
+    //     {
+    //         var s = Busy();
+    //         s.Plants.Remove(BeekeeperPlants.Bramble);
+    //         s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 400m });   // the bramble sprouts part-way
+    //         return s;
+    //     }
+    //     var live = Make(Start(), BigCombs);
+    //     for (int i = 0; i < 1200; i++) live.Advance(1m);
+    //     var away = Make(Start(), BigCombs);
+    //     away.AdvanceAway(1200m);
+    //     AssertSame(live, away);
+    //     Assert.Equal(away.State.Plants, live.State.Plants);
+    //     Assert.Contains(BeekeeperPlants.Bramble, live.State.Plants);
+    // }
 
     // ============================================================ old saves (User Story 3)
 

@@ -24,22 +24,23 @@ public class BeekeeperStage7ViewModelTests
     private static BeekeeperHiveRow Row(BeekeeperViewModel vm, string id) =>
         vm.HiveGroups.SelectMany(g => g.Rows).First(r => r.Id == id);
 
-    [Fact]
-    public void ChoosingASeed_PlantsThatOne_AndTheBedsListWhatGrows()
-    {
-        var vm = Make(new BeekeeperState { SeedsInHand = { "wildflowers", "willow" }, GardenRevealed = true, BearName = "Bruno" });
-        Assert.Equal(1, vm.BedCount);
-        vm.PlantSeedCommand.Execute(BeekeeperPlants.Willow);
-        var bed = Assert.Single(vm.GrowingBeds);
-        Assert.Equal(BeekeeperPlants.Willow, bed.Plant.Id);
-        Assert.Equal(3600m, bed.SecondsLeft);
-        Assert.Equal(0, vm.FreeBeds);
-        Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.SeedPlanted && e.Text == BeekeeperPlants.Willow);
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8ViewModelTests).
+    // [Fact]
+    // public void ChoosingASeed_PlantsThatOne_AndTheBedsListWhatGrows()
+    // {
+    //     var vm = Make(new BeekeeperState { SeedsInHand = { "wildflowers", "willow" }, GardenRevealed = true, BearName = "Bruno" });
+    //     Assert.Equal(1, vm.BedCount);
+    //     vm.PlantSeedCommand.Execute(BeekeeperPlants.Willow);
+    //     var bed = Assert.Single(vm.GrowingBeds);
+    //     Assert.Equal(BeekeeperPlants.Willow, bed.Plant.Id);
+    //     Assert.Equal(3600m, bed.SecondsLeft);
+    //     Assert.Equal(0, vm.FreeBeds);
+    //     Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.SeedPlanted && e.Text == BeekeeperPlants.Willow);
 
-        vm.PlantSeedCommand.Execute(BeekeeperPlants.Wildflowers);
-        Assert.False(vm.CanPlantSeed);
-        Assert.False(vm.CanPlantSeedOf(BeekeeperPlants.Wildflowers));
-    }
+    //     vm.PlantSeedCommand.Execute(BeekeeperPlants.Wildflowers);
+    //     Assert.False(vm.CanPlantSeed);
+    //     Assert.False(vm.CanPlantSeedOf(BeekeeperPlants.Wildflowers));
+    // }
 
     [Fact]
     public void TheNotebook_AppearsWhenBought_WithANotePerThingTheHiveHas()
@@ -95,17 +96,18 @@ public class BeekeeperStage7ViewModelTests
         Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.BeeBoostLit);
     }
 
-    [Fact]
-    public void TheDebugCommands_WorkThroughTheViewModel()
-    {
-        var vm = Make(new BeekeeperState { BearName = "Bruno" });
-        vm.DebugGiveEverySeed();
-        Assert.Equal(BeekeeperConfig.Default.Plants.Count, vm.Seeds);
-        vm.DebugGivePropolis(50m);
-        vm.DebugGivePaper(20m);
-        Assert.Equal(50m, vm.Propolis);
-        Assert.Equal(20m, vm.Paper);
-        vm.DebugHippieTradesTo199();
-        Assert.Equal(199, vm.State.HippieTrades);
-    }
+    // Cut in stage 8 (spec 017): the seed debug commands unlock seeds now (see BeekeeperStage8ViewModelTests).
+    // [Fact]
+    // public void TheDebugCommands_WorkThroughTheViewModel()
+    // {
+    //     var vm = Make(new BeekeeperState { BearName = "Bruno" });
+    //     vm.DebugGiveEverySeed();
+    //     Assert.Equal(BeekeeperConfig.Default.Plants.Count, vm.Seeds);
+    //     vm.DebugGivePropolis(50m);
+    //     vm.DebugGivePaper(20m);
+    //     Assert.Equal(50m, vm.Propolis);
+    //     Assert.Equal(20m, vm.Paper);
+    //     vm.DebugHippieTradesTo199();
+    //     Assert.Equal(199, vm.State.HippieTrades);
+    // }
 }

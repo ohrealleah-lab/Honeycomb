@@ -41,15 +41,23 @@ public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0
     IReadOnlyList<BeekeeperBoost>? Boosts = null, IReadOnlyList<BeekeeperSource>? Sources = null);
 
 /// <summary>Something that adds to a growing stat, for a hover: <see cref="Id"/> is "combs",
-/// "wax_drip", "free_bees", "queen", "foraging", "resin" or a <see cref="BeekeeperHerbs"/> id;
-/// <see cref="PerSecond"/> its amount a second (before boosts); <see cref="Count"/> how many combs
-/// or bees it comes from, where the line says so.</summary>
+/// "wax_drip", "free_bees", "queen", "foraging", "resin", "meadow", "carpenter_bee" (stage 8) or a
+/// <see cref="BeekeeperHerbs"/> id; <see cref="PerSecond"/> its amount a second (before boosts);
+/// <see cref="Count"/> how many combs or bees it comes from, where the line says so.</summary>
 public sealed record BeekeeperSource(string Id, decimal PerSecond, decimal Count = 0m);
 
 /// <summary>A boost that is on right now, for a hover: <see cref="Id"/> is "smoker", "bee_boost",
-/// "sage_propolis", "free_bees", "wax_catcher", "wooden_hive", "guarding", "nursing" or a
+/// "sage_propolis", "free_bees", "wax_catcher", "wooden_hive", "guarding", "nursing", "plant"
+/// (stage 8: <see cref="Plant"/>'s bonus from <see cref="Count"/> plants after the first) or a
 /// <see cref="BeekeeperHerbs"/> id; <see cref="Percent"/> its extra (100 = +100%).</summary>
-public sealed record BeekeeperBoost(string Id, decimal Percent);
+public sealed record BeekeeperBoost(string Id, decimal Percent, string? Plant = null, decimal Count = 0m);
+
+/// <summary>Bee ids on the Bees tab (stage 8, FR-813): <see cref="BeekeeperBees"/> ids.</summary>
+public static class BeekeeperBeeTab
+{
+    /// <summary>The plant bonus boost's id in <see cref="BeekeeperBoost"/>.</summary>
+    public const string PlantBoost = "plant";
+}
 
 /// <summary>A small heading and its rows. The heading only shows while one of its rows does.</summary>
 public sealed record BeekeeperHiveGroup(string Id, IReadOnlyList<BeekeeperHiveRow> Rows)
@@ -92,13 +100,19 @@ public static class BeekeeperHiveRows
     public const string SagePropolisCandles = "sage_propolis_candles";
     public const string BeeBoostBurning = "bee_boost_burning";         // full-width line; Value = seconds left
     public const string SagePropolisBurning = "sage_propolis_burning"; // full-width line; Value = seconds left
+    // Stage 8 (spec 017)
+    public const string Wood = "wood";                    // Value = wood (rounded down); Rate = wood/s from the carpenter bee
     // Cut in stage 6 (spec 014): counts of forager and guard bees.
     // public const string Foragers = "foragers";
     // public const string Guards = "guards";
 }
 
-/// <summary>One growing bed on the Garden card: which plant and how long it has left.</summary>
+/// <summary>One growing bed on the Garden card: which plant and how long it has left.
+/// Unused since stage 8 (spec 017): plants grow at once. Kept for the comment-out rule.</summary>
 public sealed record BeekeeperBedView(BeekeeperPlant Plant, decimal SecondsLeft);
+
+/// <summary>One row of the Garden card (stage 8): a plant kind and how many (seeds in hand, or plants growing).</summary>
+public sealed record BeekeeperGardenRow(BeekeeperPlant Plant, int Count);
 
 /// <summary>Notes in the Beekeeper's Notebook (spec 015, FR-608): one per thing the hive has.
 /// A specialty's note uses the specialty's own id.</summary>
@@ -248,8 +262,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal HerbalCandleBurnSeconds => Engine.HerbalCandleBurnSeconds;
     /// <summary>Bees a click would catch with <paramref name="tool"/>, Practice counted.</summary>
     public int BeesPerClickWith(BeekeeperTool tool) => Engine.BeesPerClickWith(tool);
-    /// <summary>Garden bed rows to draw: every bed owned (a save may hold more growing than owned).</summary>
-    public int BedRowCount => Math.Max(BedCount, State.Beds.Count);
+    // Cut in stage 8 (spec 017): no beds.
+    // /// <summary>Garden bed rows to draw: every bed owned (a save may hold more growing than owned).</summary>
+    // public int BedRowCount => Math.Max(BedCount, State.Beds.Count);
 
     public bool HoneyRevealed => State.HoneyRevealed;
     /// <summary>The Hive card: the first bee, or the first whole wax from the drip (stage 7.5: wax
@@ -330,20 +345,32 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public int Seeds => State.SeedsInHand.Count;
     /// <summary>The seeds in hand, as plants, each with its own Plant button.</summary>
     public IReadOnlyList<BeekeeperPlant> SeedsInHand => Engine.SeedsInHand;
-    public bool IsGrowing => Engine.IsGrowing;
     // Cut in stage 7 (spec 015): one growing plant, kept a surprise. Seeds are named now.
     // public BeekeeperPlant? GrowingPlant => Engine.GrowingPlant;
-    /// <summary>How many garden beds there are (two, three with the Third Bed).</summary>
-    public int BedCount => Engine.BedCount;
-    public int FreeBeds => Engine.FreeBeds;
-    /// <summary>The beds with a seed growing, soonest to sprout first.</summary>
-    public IReadOnlyList<BeekeeperBedView> GrowingBeds => State.Beds
-        .Select(b => new { Bed = b, Plant = Engine.PlantById(b.PlantId) })
-        .Where(x => x.Plant is not null)
-        .OrderBy(x => x.Bed.SecondsLeft)
-        .Select(x => new BeekeeperBedView(x.Plant!, x.Bed.SecondsLeft))
-        .ToList();
+    // Cut in stage 8 (spec 017, FR-803): plants grow at once, so there are no beds to show.
+    // public bool IsGrowing => Engine.IsGrowing;
+    // /// <summary>How many garden beds there are (two, three with the Third Bed).</summary>
+    // public int BedCount => Engine.BedCount;
+    // public int FreeBeds => Engine.FreeBeds;
+    // /// <summary>The beds with a seed growing, soonest to sprout first.</summary>
+    // public IReadOnlyList<BeekeeperBedView> GrowingBeds => State.Beds
+    //     .Select(b => new { Bed = b, Plant = Engine.PlantById(b.PlantId) })
+    //     .Where(x => x.Plant is not null)
+    //     .OrderBy(x => x.Bed.SecondsLeft)
+    //     .Select(x => new BeekeeperBedView(x.Plant!, x.Bed.SecondsLeft))
+    //     .ToList();
     public IReadOnlyList<BeekeeperPlant> SproutedPlants => Engine.SproutedPlants;
+
+    /// <summary>The Garden card's seed rows (stage 8): one per kind in hand, with the count, in
+    /// config order. Its Plant button plants one.</summary>
+    public IReadOnlyList<BeekeeperGardenRow> SeedRows =>
+        Config.Plants.Select(p => new BeekeeperGardenRow(p, Engine.SeedCount(p.Id)))
+            .Where(r => r.Count > 0).ToList();
+
+    /// <summary>The Garden card's plant rows (stage 8): one per kind growing, with how many.</summary>
+    public IReadOnlyList<BeekeeperGardenRow> PlantRows =>
+        Config.Plants.Select(p => new BeekeeperGardenRow(p, Engine.PlantCount(p.Id)))
+            .Where(r => r.Count > 0).ToList();
     // Cut in stage 6 (spec 014): counts of forager and guard bees (now specialties).
     // public decimal ForagerBees => State.ForagerBees;
     // public decimal GuardBees => State.GuardBees;
@@ -372,11 +399,28 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>What the free bees add to the comb honey right now, as a percent ("0.4"); capped by the config.</summary>
     public decimal FreeBeeHoneyBonusPercent => (Engine.FreeBeeHoneyFactor - 1m) * 100m;
 
-    /// <summary>Where the honey comes from: the combs (before any boost).</summary>
-    public IReadOnlyList<BeekeeperSource> HoneySourcesNow =>
-        Engine.HiveStarted
-            ? new[] { new BeekeeperSource("combs", State.Combs * Config.HoneyPerCombPerSecond, State.Combs) }
-            : Array.Empty<BeekeeperSource>();
+    /// <summary>Where the honey comes from: the combs and (stage 8) the meadow, before any boost.</summary>
+    public IReadOnlyList<BeekeeperSource> HoneySourcesNow
+    {
+        get
+        {
+            if (!Engine.HiveStarted) return Array.Empty<BeekeeperSource>();
+            var sources = new List<BeekeeperSource> { new("combs", State.Combs * Config.HoneyPerCombPerSecond, State.Combs) };
+            if (State.HasMeadow) sources.Add(new("meadow", Engine.MeadowHoneyPerSecond));
+            return sources;
+        }
+    }
+    // Cut in stage 8 (spec 017): combs only.
+    // public IReadOnlyList<BeekeeperSource> HoneySourcesNow =>
+    //     Engine.HiveStarted
+    //         ? new[] { new BeekeeperSource("combs", State.Combs * Config.HoneyPerCombPerSecond, State.Combs) }
+    //         : Array.Empty<BeekeeperSource>();
+
+    /// <summary>Stage 8 (FR-805): each plant kind adding to <paramref name="target"/> right now, as a
+    /// hover boost ("Wildflowers ×49: +49%").</summary>
+    public IReadOnlyList<BeekeeperBoost> PlantBoosts(string target) =>
+        Engine.PlantBonusSources(target)
+            .Select(x => new BeekeeperBoost(BeekeeperBeeTab.PlantBoost, x.Share * 100m, x.Plant.Id, x.Extra)).ToList();
 
     /// <summary>Where the wax comes from: the drip, and the free bees (before any boost).</summary>
     public IReadOnlyList<BeekeeperSource> WaxSourcesNow
@@ -420,6 +464,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             if (Engine.GuardingMultiplier > 1m) boosts.Add(new("guarding", (Engine.GuardingMultiplier - 1m) * 100m));
             // hidden until the bonus reaches 0.01% (below that it would read "+0%")
             if (FreeBeeHoneyBonusPercent >= 0.01m) boosts.Add(new("free_bees", FreeBeeHoneyBonusPercent));
+            boosts.AddRange(PlantBoosts(BeekeeperBonusTargets.Honey));   // stage 8: wildflowers and bramble past the first
             if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercent));
             if (Engine.IsHerb(BeekeeperHerbs.BusyBees)) boosts.Add(new(BeekeeperHerbs.BusyBees, (Config.HerbHoneyMultiplier - 1m) * 100m));
             if (Engine.IsBeeBoosted) boosts.Add(new("bee_boost", BeeBoostBonusPercent));
@@ -434,7 +479,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         get
         {
             var boosts = new List<BeekeeperBoost>();
-            if (Engine.WaxMultiplier > 1m) boosts.Add(new("wax_catcher", (Engine.WaxMultiplier - 1m) * 100m));
+            // Stage 8: the Wax-Catchers alone (WaxMultiplier now holds the clover's bonus too).
+            if (Engine.WaxCatcherFactor > 1m) boosts.Add(new("wax_catcher", (Engine.WaxCatcherFactor - 1m) * 100m));
+            // Cut in stage 8: if (Engine.WaxMultiplier > 1m) boosts.Add(new("wax_catcher", (Engine.WaxMultiplier - 1m) * 100m));
+            boosts.AddRange(PlantBoosts(BeekeeperBonusTargets.Wax));   // stage 8: clover past the first
             if (Engine.IsHerb(BeekeeperHerbs.Wax)) boosts.Add(new(BeekeeperHerbs.Wax, (Config.HerbWaxMultiplier - 1m) * 100m));
             return boosts;
         }
@@ -497,6 +545,63 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool CanTradePaperTimes(int n) => Engine.CanTradePaperTimes(n);
     public void TradePaperTimes(int n) => Apply(Engine.TradeForPaper(n));
 
+    // Stage 8 (spec 017): wood, the wood upgrades, the bee hotel, the meadow and the Bees tab
+    public decimal Wood => State.Wood;
+    /// <summary>The Wood row and the Bees tab's carpenter bee: the first willow has been planted.</summary>
+    public bool HasCarpenterBee => Engine.HasCarpenterBee;
+    /// <summary>Wood a second right now (the willows' bonus included).</summary>
+    public decimal WoodPerSecond => Engine.WoodPerSecondNow;
+    /// <summary>The Honey Super row: it costs wood, so it waits for the first wood.</summary>
+    public bool HoneySuperShown => Engine.HoneySuperShown;
+    /// <summary>Each candle's wax price now (halved by the Dipping Rack, rounded down).</summary>
+    public decimal HerbalCandleWaxNow => Engine.HerbalCandleWaxNow;
+    public decimal BeeBoostCandleWaxNow => Engine.BeeBoostCandleWaxNow;
+    public decimal SagePropolisCandleWaxNow => Engine.SagePropolisCandleWaxNow;
+    /// <summary>Candles one craft makes (2 with the Candle Molds).</summary>
+    public int CandlesPerCraft => Engine.CandlesPerCraft;
+    /// <summary>A candle row's wax price is above the wax cap (it follows the Dipping Rack).</summary>
+    public bool CandleIsWall(decimal waxNow) => Engine.IsWaxWall(waxNow);
+    public bool HasBeeHotel => Engine.HasBeeHotel;
+    /// <summary>Seconds until the bee hotel's next gift (0 without the hotel).</summary>
+    public decimal HotelSecondsToNext => Engine.HasBeeHotel ? State.HotelSecondsToNext : 0m;
+
+    /// <summary>The meadow: offered on the Hive card once one wildflower and one clover are planted.</summary>
+    public bool MeadowOffered => Engine.MeadowOffered;
+    public bool CanBuyMeadow => Engine.CanBuyMeadow;
+    public bool HasMeadow => State.HasMeadow;
+    public int MeadowWildflowersHave => Engine.PlantCount(BeekeeperPlants.Wildflowers);
+    public int MeadowCloverHave => Engine.PlantCount(BeekeeperPlants.Clover);
+    public int MeadowWildflowersNeed => Config.MeadowWildflowers;
+    public int MeadowCloverNeed => Config.MeadowClover;
+    /// <summary>What the meadow gives, for its blurb: honey a second (before boosts) and the room it adds.</summary>
+    public decimal MeadowHoneyPerSecond => Config.MeadowHoneyPerSecond;
+    public decimal MeadowHoneyRoom => Config.MeadowHoneyCap * Engine.StorageMultiplier;
+    public decimal MeadowWaxRoom => Config.MeadowWaxCap * Engine.StorageMultiplier;
+
+    /// <summary>How many of a plant kind are growing (the Garden card).</summary>
+    public int PlantCount(string plantId) => Engine.PlantCount(plantId);
+    /// <summary>One plant kind's bonus right now, in percent (each one after the first: +1%).</summary>
+    public decimal PlantBonusPercent(BeekeeperPlant plant) => Engine.PlantBonusShare(plant) * 100m;
+
+    /// <summary>The Bees tab (FR-813): every bee the hive has, in the order they came: the honeybees
+    /// (from the first bee caught), the queen (once settled), the carpenter bee, then each rare bee
+    /// after its first gift. The view adds what each does and a fact.</summary>
+    public IReadOnlyList<string> BeesMet
+    {
+        get
+        {
+            var bees = new List<string>();
+            if (Engine.HiveStarted) bees.Add(BeekeeperBees.Honey);
+            if (Engine.HasQueen) bees.Add(BeekeeperBees.Queen);
+            if (Engine.HasCarpenterBee) bees.Add(BeekeeperBees.Carpenter);
+            bees.AddRange(State.RareBeesMet);
+            return bees;
+        }
+    }
+
+    [RelayCommand(CanExecute = nameof(CanBuyMeadow))]
+    public void BuyMeadow() => Apply(Engine.BuyMeadow());
+
     /// <summary>The Hive card, in groups (spec 014, FR-505): Bees, The hive, Garden, Crafts, Trade goods.</summary>
     public IReadOnlyList<BeekeeperHiveGroup> HiveGroups
     {
@@ -553,9 +658,17 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                         Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.PollenPerSecondNow) } : null),
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
+                    // Stage 8: the resin's own rate as the source, the poplars past the first as a boost.
                     new(BeekeeperHiveRows.Propolis, Engine.PropolisShown,
                         Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null,
-                        Sources: Engine.ResinPropolisPerMinute > 0m ? new[] { new BeekeeperSource("resin", Engine.PropolisPerSecondNow) } : null),
+                        Sources: Engine.ResinPropolisPerMinute > 0m ? new[] { new BeekeeperSource("resin", Engine.ResinPropolisPerMinute / 60m) } : null,
+                        Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis)),
+                    // Cut in stage 8: Sources: ... new BeekeeperSource("resin", Engine.PropolisPerSecondNow) ...
+                    // Stage 8 (spec 017): wood from the carpenter bee, with the willows' bonus. No cap.
+                    new(BeekeeperHiveRows.Wood, Engine.WoodShown, Math.Floor(State.Wood),
+                        Rate: Engine.HasCarpenterBee ? Engine.WoodPerSecondNow : null,
+                        Sources: Engine.HasCarpenterBee ? new[] { new BeekeeperSource("carpenter_bee", Config.WoodPerMinute / 60m) } : null,
+                        Boosts: PlantBoosts(BeekeeperBonusTargets.Wood)),
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
@@ -702,7 +815,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void CraftRepellentTimes(int n) => Apply(Engine.CraftRepellent(n));
     public void MakeBeeBreadTimes(int n) => Apply(Engine.MakeBeeBread(n));
 
-    /// <summary>Plants a seed in a free bed: the named one, or the first in hand when null.</summary>
+    /// <summary>Plants one seed (stage 8: it grows at once): the named kind, or the first in hand when null.</summary>
     [RelayCommand(CanExecute = nameof(CanPlantSeed))]
     public void PlantSeed(string? plantId) => Apply(Engine.PlantSeed(plantId));
 
@@ -729,18 +842,35 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanMoveToWoodenHive))]
     public void MoveToWoodenHive() => Apply(Engine.MoveToWoodenHive());
 
-    /// <summary>Debug builds only: the Hippies hand over the next seed.</summary>
-    public void DebugGiveSeed()
-    {
-        LogEvents(Engine.DebugGiveSeed());
-        SaveNow();
-        Refresh();
-    }
+    // Cut in stage 8 (spec 017, FR-817): "Give seed" and "Give every seed" (seeds given once each).
+    // public void DebugGiveSeed() { LogEvents(Engine.DebugGiveSeed()); SaveNow(); Refresh(); }
+    // public void DebugGiveEverySeed() { LogEvents(Engine.DebugGiveEverySeed()); SaveNow(); Refresh(); }
 
-    /// <summary>Debug builds only: every seed not yet given is handed over.</summary>
-    public void DebugGiveEverySeed()
+    /// <summary>Debug builds only: the next seed joins its roll.</summary>
+    public void DebugUnlockNextSeed() => DebugDo(Engine.DebugUnlockNextSeed());
+
+    /// <summary>Debug builds only: every seed joins its roll.</summary>
+    public void DebugUnlockEverySeed() => DebugDo(Engine.DebugUnlockEverySeed());
+
+    /// <summary>Debug builds only: +10 of every seed in hand.</summary>
+    public void DebugGiveTenOfEverySeed() => DebugDo(Engine.DebugGiveSeedsOfEvery(10));
+
+    /// <summary>Debug builds only: the meadow's price straight into the garden (+50 wildflowers and +50 clover).</summary>
+    public void DebugPlantMeadowPrice() => DebugDo(Engine.DebugPlant(BeekeeperPlants.Wildflowers, Config.MeadowWildflowers)
+        .Concat(Engine.DebugPlant(BeekeeperPlants.Clover, Config.MeadowClover)).ToList());
+
+    /// <summary>Debug builds only: hands out wood.</summary>
+    public void DebugGiveWood(decimal wood) => DebugDo(Engine.DebugGiveWood(wood));
+
+    /// <summary>Debug builds only: the carpenter bee comes now.</summary>
+    public void DebugSummonCarpenterBee() => DebugDo(Engine.DebugSummonCarpenterBee());
+
+    /// <summary>Debug builds only: a bee hotel gift now (once the hotel is bought).</summary>
+    public void DebugHotelGift() => DebugDo(Engine.DebugHotelGift());
+
+    private void DebugDo(IReadOnlyList<BeekeeperEvent> events)
     {
-        LogEvents(Engine.DebugGiveEverySeed());
+        LogEvents(events);
         SaveNow();
         Refresh();
     }
@@ -769,13 +899,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         Refresh();
     }
 
-    /// <summary>Debug builds only: every growing seed sprouts now.</summary>
-    public void DebugFinishGrowing()
-    {
-        LogEvents(Engine.DebugFinishGrowing());
-        SaveNow();
-        Refresh();
-    }
+    // Cut in stage 8 (spec 017): plants grow at once.
+    // /// <summary>Debug builds only: every growing seed sprouts now.</summary>
+    // public void DebugFinishGrowing() { LogEvents(Engine.DebugFinishGrowing()); SaveNow(); Refresh(); }
 
     /// <summary>Debug builds only: hands out pollen.</summary>
     public void DebugGivePollen(decimal pollen)
@@ -1048,6 +1174,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         LightSagePropolisCommand.NotifyCanExecuteChanged();
         MakeBeeBreadCommand.NotifyCanExecuteChanged();
         MoveToWoodenHiveCommand.NotifyCanExecuteChanged();
+        BuyMeadowCommand.NotifyCanExecuteChanged();
     }
 
     public void Dispose()

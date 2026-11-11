@@ -116,7 +116,8 @@ public sealed class BeekeeperState
     // public int SeedsPlanted { get; set; }
     // /// <summary>Obsolete (stage 7): seconds until the growing seed sprouted; 0 = nothing growing.</summary>
     // public decimal GrowSecondsLeft { get; set; }
-    /// <summary>Plant ids that have sprouted, in order.</summary>
+    /// <summary>Plant ids that have sprouted, in order. Since stage 8 an id can be here many times
+    /// (count it with BeekeeperEngine.PlantCount).</summary>
     public List<string> Plants { get; set; } = new();
     // Cut in stage 7.5 (spec 016): older files no longer load.
     // /// <summary>Obsolete since stage 6 (spec 014): plants give specialties instead. Still read so
@@ -158,12 +159,15 @@ public sealed class BeekeeperState
     // public bool OldCountsAnnounced { get; set; }
 
     // ----- Stage 7: more seeds, the poplar and propolis (version 7)
-    /// <summary>Seeds in hand, by plant id, not yet planted.</summary>
+    /// <summary>Seeds in hand, by plant id, not yet planted. Since stage 8 an id can be here many times.</summary>
     public List<string> SeedsInHand { get; set; } = new();
-    /// <summary>Plant ids whose seed has been given, so each is given once.</summary>
+    /// <summary>Since stage 8 (spec 017, FR-802): plant ids whose seed has joined its giver's roll (each
+    /// said once in the log). A seed is in the roll when it is listed here or its giver has traded
+    /// enough, so an older save's list (seeds given once each) never blocks a roll.
+    /// Before stage 8: plant ids whose seed had been given, so each was given once.</summary>
     public List<string> SeedsGivenIds { get; set; } = new();
-    /// <summary>The garden beds that are growing a seed (a free bed is simply not listed).
-    /// Never more than the beds owned.</summary>
+    /// <summary>Cut in stage 8 (spec 017, FR-803): plants grow at once. Read from older saves only;
+    /// the engine sprouts every bed on load and empties the list.</summary>
     public List<BeekeeperBed> Beds { get; set; } = new();
     public decimal Propolis { get; set; }
     /// <summary>True once propolis has been seen (sticky): shows the Propolis Seal in the Shop.</summary>
@@ -226,6 +230,20 @@ public sealed class BeekeeperState
     public string? HerbBuff { get; set; }
     /// <summary>Live seconds the lit herbal candle has left; 0 = none burning. Waits while the app is closed.</summary>
     public decimal HerbSecondsLeft { get; set; }
+
+    // ----- Stage 8 (spec 017): seeds, wood and the meadow (older saves load with these empty, FR-814)
+    /// <summary>Wood the carpenter bee has brought (fractional; shown rounded down). No cap.</summary>
+    public decimal Wood { get; set; }
+    /// <summary>True once wood has been seen (sticky): brings the wood upgrades and the Honey Super.</summary>
+    public bool WoodRevealed { get; set; }
+    /// <summary>True once the carpenter bee has come (the first willow planted). Sticky.</summary>
+    public bool CarpenterBeeCame { get; set; }
+    /// <summary>Seconds of time (live or away) until the bee hotel's next gift; counts only once the hotel is owned.</summary>
+    public decimal HotelSecondsToNext { get; set; }
+    /// <summary>Rare bees that have brought a gift, in the order they first came (the Bees tab).</summary>
+    public List<string> RareBeesMet { get; set; } = new();
+    /// <summary>True once the meadow has been bought (it works like one giant comb).</summary>
+    public bool HasMeadow { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

@@ -98,9 +98,15 @@
                                         <MenuItem Header="Call a wasp" Click="DebugBeekeeper_Click" Tag="Wasp" />
                                         <MenuItem Header="Show the gloves card" Click="DebugBeekeeper_Click" Tag="StoryGloves" />
                                         <MenuItem Header="Show the Smoker card" Click="DebugBeekeeper_Click" Tag="StorySmoker" />
-                                        <MenuItem Header="Give a seed" Click="DebugBeekeeper_Click" Tag="Seed" />
-                                        <MenuItem Header="Give every seed" Click="DebugBeekeeper_Click" Tag="EverySeed" />
-                                        <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />
+                                        <!-- Stage 8 (spec 017): seeds join a roll; plants grow at once. Was: Give a seed, Give every seed, Finish growing. -->
+                                        <MenuItem Header="Unlock the next seed" Click="DebugBeekeeper_Click" Tag="Seed" />
+                                        <MenuItem Header="Unlock every seed" Click="DebugBeekeeper_Click" Tag="EverySeed" />
+                                        <!-- <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" /> -->
+                                        <MenuItem Header="+10 of every seed" Click="DebugBeekeeper_Click" Tag="TenSeeds" />
+                                        <MenuItem Header="+50 wildflowers and +50 clover planted" Click="DebugBeekeeper_Click" Tag="MeadowPlants" />
+                                        <MenuItem Header="+100 wood" Click="DebugBeekeeper_Click" Tag="Wood" />
+                                        <MenuItem Header="Summon the carpenter bee" Click="DebugBeekeeper_Click" Tag="Carpenter" />
+                                        <MenuItem Header="Bee hotel gift now" Click="DebugBeekeeper_Click" Tag="HotelGift" />
                                         <MenuItem Header="+50 propolis" Click="DebugBeekeeper_Click" Tag="Propolis" />
                                         <MenuItem Header="+20 paper" Click="DebugBeekeeper_Click" Tag="Paper" />
                                         <MenuItem Header="Hippie trades to 199" Click="DebugBeekeeper_Click" Tag="Hippies199" />

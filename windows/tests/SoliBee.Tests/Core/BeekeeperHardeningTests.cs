@@ -174,54 +174,76 @@ public class BeekeeperHardeningTests : IDisposable
 
     // ------------------------------------------------------------------ odd lists and timers
 
+    // Cut in stage 8 (spec 017): plants may repeat, and beds sprout on load (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void ADuplicatedPlant_CountsOnce()
+    // {
+    //     var e = With(new BeekeeperState
+    //     {
+    //         Plants = Enumerable.Repeat(BeekeeperPlants.Bramble, 400).ToList(),
+    //         Bees = 1000m, HoneyRevealed = true,
+    //     });
+
+    //     Assert.Single(e.State.Plants);
+    //     Assert.Equal(e.Config.Plants.Single(p => p.Id == BeekeeperPlants.Bramble).Strength, e.GuardingMultiplier);
+    //     e.AdvanceAway(3600m);
+    // }
+
+    // Cut in stage 8 (spec 017): plants may repeat, and beds sprout on load (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void APlantLivesInOnePlaceOnly()
+    // {
+    //     var e = With(new BeekeeperState
+    //     {
+    //         Plants = { BeekeeperPlants.Wildflowers },
+    //         Beds =
+    //         {
+    //             new BeekeeperBed { PlantId = BeekeeperPlants.Wildflowers, SecondsLeft = 5m },
+    //             new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 5m },
+    //             new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 9m },
+    //         },
+    //         SeedsInHand = { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble },
+    //     });
+
+    //     Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(e.State.Beds).PlantId);
+    //     Assert.Empty(e.State.SeedsInHand);
+    // }
+
+    // Cut in stage 8 (spec 017): plants may repeat, and beds sprout on load (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void SeedsFromExtraBeds_GoBackInHand()
+    // {
+    //     var plants = BeekeeperConfig.Default.Plants.Take(5).Select(p => p.Id).ToList();
+    //     var state = new BeekeeperState { SeedsGivenIds = plants.ToList() };
+    //     state.Beds.AddRange(plants.Select(id => new BeekeeperBed { PlantId = id, SecondsLeft = 5m }));
+
+    //     var e = With(state);
+
+    //     Assert.Equal(plants.Take(1), e.State.Beds.Select(b => b.PlantId));   // one bed is owned
+    //     Assert.Equal(plants.Skip(1), e.State.SeedsInHand);
+    // }
+
+    // Cut in stage 8 (spec 017): plants may repeat, and beds sprout on load (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TimersLongerThanPossible_AreCutToTheirLimit()
+    // {
+    //     var config = BeekeeperConfig.Default;
+    //     var plant = config.Plants[0];
+
+    //     var e = With(new BeekeeperState
+    //     {
+    //         SmokerBoostSecondsLeft = 1e27m, BeeBoostSecondsLeft = 1e27m, SagePropolisSecondsLeft = 1e27m,
+    //         Beds = { new BeekeeperBed { PlantId = plant.Id, SecondsLeft = 1e27m } },
+    //     });
+
+    //     Assert.Equal(config.SmokerBoostSeconds, e.State.SmokerBoostSecondsLeft);
+    //     Assert.Equal(config.BeeBoostCapSeconds, e.State.BeeBoostSecondsLeft);
+    //     Assert.Equal(config.SagePropolisCapSeconds, e.State.SagePropolisSecondsLeft);
+    //     Assert.Equal(plant.GrowSeconds, Assert.Single(e.State.Beds).SecondsLeft);
+    // }
+
     [Fact]
-    public void ADuplicatedPlant_CountsOnce()
-    {
-        var e = With(new BeekeeperState
-        {
-            Plants = Enumerable.Repeat(BeekeeperPlants.Bramble, 400).ToList(),
-            Bees = 1000m, HoneyRevealed = true,
-        });
-
-        Assert.Single(e.State.Plants);
-        Assert.Equal(e.Config.Plants.Single(p => p.Id == BeekeeperPlants.Bramble).Strength, e.GuardingMultiplier);
-        e.AdvanceAway(3600m);
-    }
-
-    [Fact]
-    public void APlantLivesInOnePlaceOnly()
-    {
-        var e = With(new BeekeeperState
-        {
-            Plants = { BeekeeperPlants.Wildflowers },
-            Beds =
-            {
-                new BeekeeperBed { PlantId = BeekeeperPlants.Wildflowers, SecondsLeft = 5m },
-                new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 5m },
-                new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 9m },
-            },
-            SeedsInHand = { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble },
-        });
-
-        Assert.Equal(BeekeeperPlants.Bramble, Assert.Single(e.State.Beds).PlantId);
-        Assert.Empty(e.State.SeedsInHand);
-    }
-
-    [Fact]
-    public void SeedsFromExtraBeds_GoBackInHand()
-    {
-        var plants = BeekeeperConfig.Default.Plants.Take(5).Select(p => p.Id).ToList();
-        var state = new BeekeeperState { SeedsGivenIds = plants.ToList() };
-        state.Beds.AddRange(plants.Select(id => new BeekeeperBed { PlantId = id, SecondsLeft = 5m }));
-
-        var e = With(state);
-
-        Assert.Equal(plants.Take(1), e.State.Beds.Select(b => b.PlantId));   // one bed is owned
-        Assert.Equal(plants.Skip(1), e.State.SeedsInHand);
-    }
-
-    [Fact]
-    public void TimersLongerThanPossible_AreCutToTheirLimit()
+    public void TimersLongerThanPossible_AreCutToTheirLimit_AndABedSproutsOnLoad()
     {
         var config = BeekeeperConfig.Default;
         var plant = config.Plants[0];
@@ -229,12 +251,29 @@ public class BeekeeperHardeningTests : IDisposable
         var e = With(new BeekeeperState
         {
             SmokerBoostSecondsLeft = 1e27m, BeeBoostSecondsLeft = 1e27m, SagePropolisSecondsLeft = 1e27m,
+            HotelSecondsToNext = 1e27m, Upgrades = { BeekeeperUpgrades.BeeHotel },
             Beds = { new BeekeeperBed { PlantId = plant.Id, SecondsLeft = 1e27m } },
         });
 
         Assert.Equal(config.SmokerBoostSeconds, e.State.SmokerBoostSecondsLeft);
         Assert.Equal(config.BeeBoostCapSeconds, e.State.BeeBoostSecondsLeft);
         Assert.Equal(config.SagePropolisCapSeconds, e.State.SagePropolisSecondsLeft);
-        Assert.Equal(plant.GrowSeconds, Assert.Single(e.State.Beds).SecondsLeft);
+        Assert.Equal(config.HotelGiftSeconds, e.State.HotelSecondsToNext);
+        Assert.Empty(e.State.Beds);
+        Assert.Equal(new[] { plant.Id }, e.State.Plants);
+    }
+
+    [Fact]
+    public void ManyOfOnePlant_StayMany_ButTheSpecialtyCountsOnce()
+    {
+        var e = With(new BeekeeperState
+        {
+            Plants = Enumerable.Repeat(BeekeeperPlants.Bramble, 400).ToList(),
+            Bees = 1000m, HoneyRevealed = true,
+        });
+
+        Assert.Equal(400, e.State.Plants.Count);
+        Assert.Equal(e.Config.Plants.Single(p => p.Id == BeekeeperPlants.Bramble).Strength, e.GuardingMultiplier);
+        e.AdvanceAway(3600m);
     }
 }

@@ -2190,4 +2190,138 @@ public enum StringKey: String, CaseIterable {
     case beekeeperStoryOuch = "beekeeper_story_ouch"
     /// Story card button: read the card
     case beekeeperStoryOk = "beekeeper_story_ok"
+    /// Card title (all caps); after buying the meadow
+    case beekeeperHiveTitleMeadow = "beekeeper_hive_title_meadow"
+    /// Hive card row label (Garden group)
+    case beekeeperHiveWood = "beekeeper_hive_wood"
+    /// Hover on Wood; %@ = wood per second
+    case beekeeperWoodPerSecFmt = "beekeeper_wood_per_sec_fmt"
+    /// Wood hover; %@ = wood per second
+    case beekeeperSourceCarpenterBeeFmt = "beekeeper_source_carpenter_bee_fmt"
+    /// Honey hover; %@ = honey per second
+    case beekeeperSourceMeadowFmt = "beekeeper_source_meadow_fmt"
+    /// Growth hover; %@ = plant name, %@ = plants after the first, %@ = extra percent
+    case beekeeperBoostPlantFmt = "beekeeper_boost_plant_fmt"
+    /// Price part; %@ = amount
+    case beekeeperCostWoodFmt = "beekeeper_cost_wood_fmt"
+    /// Garden card: seeds of one kind in hand; %@ = the plant's seed name (lower case), %@ = how many
+    case beekeeperGardenSeedsFmt = "beekeeper_garden_seeds_fmt"
+    /// Garden card; %@ = percent each, %@ = what it adds to (lower case), %@ = percent now
+    case beekeeperPlantBonusFmt = "beekeeper_plant_bonus_fmt"
+    /// What a plant's bonus adds to (lower case)
+    case beekeeperBonusHoney = "beekeeper_bonus_honey"
+    /// What a plant's bonus adds to (lower case)
+    case beekeeperBonusWax = "beekeeper_bonus_wax"
+    /// What a plant's bonus adds to (lower case)
+    case beekeeperBonusWood = "beekeeper_bonus_wood"
+    /// What a plant's bonus adds to (lower case)
+    case beekeeperBonusPropolis = "beekeeper_bonus_propolis"
+    /// The Workbench, after a candle's price; %@ = candles one craft makes
+    case beekeeperMakesFmt = "beekeeper_makes_fmt"
+    /// Shop upgrade name
+    case beekeeperUpgradeWoodenFrames = "beekeeper_upgrade_wooden_frames"
+    /// Shop upgrade description; %@ = percent less
+    case beekeeperUpgradeWoodenFramesBlurb = "beekeeper_upgrade_wooden_frames_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeCandleMolds = "beekeeper_upgrade_candle_molds"
+    /// Shop upgrade description; %@ = candles one craft makes
+    case beekeeperUpgradeCandleMoldsBlurb = "beekeeper_upgrade_candle_molds_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeDippingRack = "beekeeper_upgrade_dipping_rack"
+    /// Shop upgrade description; %@ = percent less
+    case beekeeperUpgradeDippingRackBlurb = "beekeeper_upgrade_dipping_rack_blurb"
+    /// Shop upgrade name
+    case beekeeperUpgradeBeeHotel = "beekeeper_upgrade_bee_hotel"
+    /// Shop upgrade description; %@ = rough time between gifts
+    case beekeeperUpgradeBeeHotelBlurb = "beekeeper_upgrade_bee_hotel_blurb"
+    /// Story log
+    case beekeeperLogWoodenFramesBought = "beekeeper_log_wooden_frames_bought"
+    /// Story log
+    case beekeeperLogCandleMoldsBought = "beekeeper_log_candle_molds_bought"
+    /// Story log
+    case beekeeperLogDippingRackBought = "beekeeper_log_dipping_rack_bought"
+    /// Story log
+    case beekeeperLogBeeHotelBought = "beekeeper_log_bee_hotel_bought"
+    /// Story log; %@ = how many seeds
+    case beekeeperLogSeedsGivenBatchFmt = "beekeeper_log_seeds_given_batch_fmt"
+    /// Story log; %@ = the plant's seed name (lower case)
+    case beekeeperLogSeedJoinsRollFmt = "beekeeper_log_seed_joins_roll_fmt"
+    /// Story log
+    case beekeeperLogCarpenterBee = "beekeeper_log_carpenter_bee"
+    /// Story log
+    case beekeeperLogMeadow = "beekeeper_log_meadow"
+    /// Story log; %@ = bee name (lower case), %@ = the gift
+    case beekeeperLogRareBeeArrivesFmt = "beekeeper_log_rare_bee_arrives_fmt"
+    /// Story log; %@ = bee name (lower case), %@ = the gift
+    case beekeeperLogHotelGiftFmt = "beekeeper_log_hotel_gift_fmt"
+    /// Story log on reopening the app; %@ = the gifts
+    case beekeeperLogWelcomeBackHotelFmt = "beekeeper_log_welcome_back_hotel_fmt"
+    /// Story log on reopening the app; %@ = wood
+    case beekeeperLogWelcomeBackWoodFmt = "beekeeper_log_welcome_back_wood_fmt"
+    /// A gift; %@ = the plant's seed name (lower case)
+    case beekeeperGiftSeedOneFmt = "beekeeper_gift_seed_one_fmt"
+    /// A gift: one seed
+    case beekeeperGiftSeedOne = "beekeeper_gift_seed_one"
+    /// A gift; %@ = how many seeds
+    case beekeeperGiftSeedsFmt = "beekeeper_gift_seeds_fmt"
+    /// A gift: one herb
+    case beekeeperGiftHerbOne = "beekeeper_gift_herb_one"
+    /// A gift; %@ = how many herbs
+    case beekeeperGiftHerbsFmt = "beekeeper_gift_herbs_fmt"
+    /// A gift; %@ = how much propolis
+    case beekeeperGiftPropolisFmt = "beekeeper_gift_propolis_fmt"
+    /// Joins the last two things in a list (spaces kept)
+    case beekeeperListAnd = "beekeeper_list_and"
+    /// Hive card: the meadow offer
+    case beekeeperMeadowName = "beekeeper_meadow_name"
+    /// Hive card: the meadow's price; %@ = wildflowers growing, %@ = needed, %@ = clover growing, %@ = needed
+    case beekeeperMeadowNeedFmt = "beekeeper_meadow_need_fmt"
+    /// Hive card; %@ = honey a second, %@ = honey room, %@ = wax room
+    case beekeeperMeadowBlurbFmt = "beekeeper_meadow_blurb_fmt"
+    /// Hive card button: buy the meadow
+    case beekeeperMeadowButton = "beekeeper_meadow_button"
+    /// Notebook tab: notes on the specialties
+    case beekeeperTabNotes = "beekeeper_tab_notes"
+    /// Notebook tab: every bee in the hive
+    case beekeeperTabBees = "beekeeper_tab_bees"
+    /// A bee, lower case
+    case beekeeperBeeNameHoneybees = "beekeeper_bee_name_honeybees"
+    /// A bee, lower case
+    case beekeeperBeeNameQueen = "beekeeper_bee_name_queen"
+    /// A bee, lower case
+    case beekeeperBeeNameCarpenter = "beekeeper_bee_name_carpenter"
+    /// A bee, lower case
+    case beekeeperBeeNameMason = "beekeeper_bee_name_mason"
+    /// A bee, lower case
+    case beekeeperBeeNameLeafcutter = "beekeeper_bee_name_leafcutter"
+    /// A bee, lower case
+    case beekeeperBeeNameWoolCarder = "beekeeper_bee_name_wool_carder"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesHoneybees = "beekeeper_bee_does_honeybees"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesQueen = "beekeeper_bee_does_queen"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesCarpenter = "beekeeper_bee_does_carpenter"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesMason = "beekeeper_bee_does_mason"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesLeafcutter = "beekeeper_bee_does_leafcutter"
+    /// Bees tab: what it does in the game
+    case beekeeperBeeDoesWoolCarder = "beekeeper_bee_does_wool_carder"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactHoneybees1 = "beekeeper_bee_fact_honeybees_1"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactQueen1 = "beekeeper_bee_fact_queen_1"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactCarpenter1 = "beekeeper_bee_fact_carpenter_1"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactMason1 = "beekeeper_bee_fact_mason_1"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactLeafcutter1 = "beekeeper_bee_fact_leafcutter_1"
+    /// Bees tab: a short true fact
+    case beekeeperBeeFactWoolCarder1 = "beekeeper_bee_fact_wool_carder_1"
+    /// Help heading
+    case helpBeekeeperMeadowTitle = "help_beekeeper_meadow_title"
+    /// Help body
+    case helpBeekeeperMeadow = "help_beekeeper_meadow"
 }

@@ -13,8 +13,9 @@ public sealed record BeekeeperTool(string Id, decimal Cost, int BeesPerClick);
 /// </summary>
 /// <remarks>Since stage 7 (spec 015) a price can also be paper and propolis; both default to 0, so older entries are unchanged.</remarks>
 // Bee, 2026-11-11: herbs replaced sage in every price (was decimal Sage).
+// Stage 8 (spec 017, FR-807): Wood joins the price (default 0, like Paper).
 public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, decimal Herbs, string Needs,
-    decimal Paper = 0m, decimal Propolis = 0m, decimal Bees = 0m);   // Bees: free bees spent (default 0, like Paper)
+    decimal Paper = 0m, decimal Propolis = 0m, decimal Bees = 0m, decimal Wood = 0m);   // Bees: free bees spent (default 0, like Paper)
 
 /// <summary>A plant a seed grows into. <see cref="SeedAtTrade"/> is the Hippie trade that gives its seed;
 /// <see cref="Specialty"/> is the job it gives the hive (<see cref="BeekeeperSpecialties"/>) and
@@ -24,8 +25,16 @@ public sealed record BeekeeperUpgrade(string Id, decimal Beebits, decimal Wax, d
 /// seed (<see cref="Giver"/>: the Hippies or the wasps, at <see cref="SeedAtTrade"/> of their trades)
 /// and how long it takes to sprout. <see cref="Strength"/>: pollen a minute (foraging), a honey
 /// multiplier (guarding), a laying multiplier (nursing) or propolis a minute (resin).</summary>
+/// <remarks>Stage 8 (spec 017): <see cref="SeedAtTrade"/> keeps its name and now means "joins the
+/// giver's seed roll at this trade" (FR-802). Plants grow at once, so there is no grow time (FR-803).
+/// The first plant of a kind gives the specialty; each one after it adds <see cref="BonusPerExtra"/>
+/// (added up, never multiplied) to <see cref="BonusTarget"/>'s rate (a <see cref="BeekeeperBonusTargets"/>
+/// id; FR-805).</remarks>
 public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Specialty, decimal Strength,
-    decimal GrowSeconds = 600m, string Giver = BeekeeperGivers.Hippies);
+    string Giver = BeekeeperGivers.Hippies, string BonusTarget = BeekeeperBonusTargets.Honey, decimal BonusPerExtra = 0m);
+// Cut in stage 8 (spec 017): every plant had a grow time in a bed.
+// public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Specialty, decimal Strength,
+//     decimal GrowSeconds = 600m, string Giver = BeekeeperGivers.Hippies);
 // Cut in stage 6 (spec 014): plants attracted counts of bees.
 // public sealed record BeekeeperPlant(string Id, long SeedAtTrade, string Bee, decimal BeesPerMinute);
 
@@ -39,6 +48,28 @@ public static class BeekeeperPlants
     public const string Clover = "clover";
 }
 
+/// <summary>What each plant after the first of its kind adds a tiny bonus to (spec 017, FR-805).</summary>
+public static class BeekeeperBonusTargets
+{
+    public const string Honey = "honey";
+    public const string Wax = "wax";
+    public const string Wood = "wood";
+    public const string Propolis = "propolis";
+}
+
+/// <summary>A rare bee that lives in the bee hotel (spec 017, FR-811): what it brings back
+/// (<see cref="Gift"/>, a <see cref="BeekeeperGifts"/> id) and how much.</summary>
+public sealed record BeekeeperRareBee(string Id, string Gift, decimal Amount);
+
+/// <summary>What a rare bee can bring back from the bee hotel.</summary>
+public static class BeekeeperGifts
+{
+    /// <summary>Seeds of kinds that have joined a roll.</summary>
+    public const string Seed = "seed";
+    public const string Herbs = "herbs";
+    public const string Propolis = "propolis";
+}
+
 /// <summary>Who hands out a plant's seed (spec 015).</summary>
 public static class BeekeeperGivers
 {
@@ -50,6 +81,13 @@ public static class BeekeeperGivers
 public static class BeekeeperBees
 {
     public const string Honey = "honeybees";
+    // Stage 8 (spec 017): the Bees tab lists these, plus the rare bees below.
+    public const string Queen = "queen";
+    public const string Carpenter = "carpenter_bee";
+    // The bee hotel's rare bees (FR-811).
+    public const string Mason = "mason_bee";
+    public const string Leafcutter = "leafcutter_bee";
+    public const string WoolCarder = "wool_carder_bee";
     // Cut in stage 6 (spec 014): plants give specialties, not counts of bees.
     // public const string Forager = "forager";
     // public const string Guard = "guard";
@@ -85,6 +123,13 @@ public static class BeekeeperUpgrades
     public const string Notebook = "notebook";
     public const string ThirdBed = "third_bed";
     public const string PropolisSeal = "propolis_seal";
+
+    // Stage 8 (spec 017): bought with wood, once the carpenter bee has brought some.
+    public const string WoodenFrames = "wooden_frames";
+    public const string CandleMolds = "candle_molds";
+    public const string DippingRack = "dipping_rack";
+    public const string BeeHotel = "bee_hotel";
+    public const string NeedsWood = "wood_revealed";
 
     public const string NeedsPaper = "paper_revealed";
     public const string NeedsGardenAndPaper = "garden_and_paper";
@@ -169,9 +214,11 @@ public sealed class BeekeeperConfig
     public decimal CombBaseWaxCost { get; init; } = 5m;   // Bee, 2026-11-11: was 10
     public decimal CombCostGrowth { get; init; } = 1.25m;
 
-    // --- Capacity upgrades: bought again and again, for Beebits only, at The Workbench.
+    // --- Capacity upgrades: bought again and again at The Workbench. Since stage 8 the Honey
+    // Super costs wood (FR-807a); the Wax Tray stays on Beebits.
     public decimal HoneySuperCapacity { get; init; } = 1_000m;
-    public decimal HoneySuperBaseCost { get; init; } = 75m;
+    // Cut in stage 8 (spec 017): public decimal HoneySuperBaseCost { get; init; } = 75m;   // Beebits
+    public decimal HoneySuperBaseCost { get; init; } = 10m;   // wood
     public decimal HoneySuperCostGrowth { get; init; } = 1.5m;
     public decimal WaxTrayCapacity { get; init; } = 10m;       // pacing review 2026-11-10: was 8
     public decimal WaxTrayBaseCost { get; init; } = 100m;
@@ -340,6 +387,11 @@ public sealed class BeekeeperConfig
         // A save that already owns the Third Bed keeps its extra bed.
         // new BeekeeperUpgrade(BeekeeperUpgrades.ThirdBed, 1_500m, 200m, 0m, BeekeeperUpgrades.NeedsGardenAndPaper, Paper: 10m),
         new BeekeeperUpgrade(BeekeeperUpgrades.PropolisSeal, 4_000m, 150m, 0m, BeekeeperUpgrades.NeedsPropolis, Propolis: 30m, Bees: 2_000m),
+        // Stage 8 (spec 017): wood buys expansions, each once (placeholders).
+        new BeekeeperUpgrade(BeekeeperUpgrades.WoodenFrames, 0m, 0m, 0m, BeekeeperUpgrades.NeedsWood, Wood: 50m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.CandleMolds, 0m, 0m, 0m, BeekeeperUpgrades.NeedsWood, Wood: 30m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.DippingRack, 0m, 0m, 0m, BeekeeperUpgrades.NeedsWood, Wood: 40m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BeeHotel, 0m, 0m, 0m, BeekeeperUpgrades.NeedsWood, Wood: 100m),
     };
 
     // --- Stage 3: catching and the Smoker (spec 011) -------------------------
@@ -360,19 +412,34 @@ public sealed class BeekeeperConfig
     /// with (wildflowers, then bramble, must stay first).</summary>
     public IReadOnlyList<BeekeeperPlant> Plants { get; init; } = new[]
     {
+        // Stage 8 (spec 017; placeholders): the trade is when the seed joins its giver's roll (was:
+        // when it was given, once). Grow times are cut: plants grow at once. Each plant after the
+        // first of its kind adds +1% to its bonus target.
         // Stage 6 (spec 014): foraging 3 pollen a minute (beats the queen's 2); guarding +25% honey.
-        new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperSpecialties.Foraging, 3m, 10m * 60m),
+        // Wildflowers join from the first Hippie trade (was given at trade 5).
+        new BeekeeperPlant(BeekeeperPlants.Wildflowers, 1, BeekeeperSpecialties.Foraging, 3m,
+            BonusTarget: BeekeeperBonusTargets.Honey, BonusPerExtra: 0.01m),
         // Seed trades (pacing review 2026-11-10, Bee approved; placeholders): 5, 40, 200, 400, so the willow
-        // comes after the queen and clover by about day 5. One seed per plant, once.
+        // comes after the queen and clover by about day 5.
         // (Was 5, 30, 60, 100 earlier on 2026-11-10; before that 5, 10, 20, 35.)
-        new BeekeeperPlant(BeekeeperPlants.Bramble, 40, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
-        // Stage 7 (spec 015), placeholders, each slower than the last:
-        // the willow (1 hour): nursing, the queen lays 50% faster;
-        new BeekeeperPlant(BeekeeperPlants.Willow, 200, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
-        // the poplar (6 hours; seed from the wasps' 20th trade, was 10th): resin, 1 propolis a minute;
-        new BeekeeperPlant(BeekeeperPlants.Poplar, 20, BeekeeperSpecialties.Resin, 1m, 6m * 3600m, BeekeeperGivers.Wasps),
-        // clover (12 hours, overnight): 3 more pollen a minute.
-        new BeekeeperPlant(BeekeeperPlants.Clover, 400, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
+        new BeekeeperPlant(BeekeeperPlants.Bramble, 40, BeekeeperSpecialties.Guarding, 1.25m,
+            BonusTarget: BeekeeperBonusTargets.Honey, BonusPerExtra: 0.01m),
+        // Stage 7 (spec 015), placeholders:
+        // the willow: nursing, the queen lays 50% faster (stage 8: the first brings the carpenter bee);
+        new BeekeeperPlant(BeekeeperPlants.Willow, 200, BeekeeperSpecialties.Nursing, 1.5m,
+            BonusTarget: BeekeeperBonusTargets.Wood, BonusPerExtra: 0.01m),
+        // the poplar (in the wasps' roll from their 20th trade, was given at the 10th): resin, 1 propolis a minute;
+        new BeekeeperPlant(BeekeeperPlants.Poplar, 20, BeekeeperSpecialties.Resin, 1m, BeekeeperGivers.Wasps,
+            BonusTarget: BeekeeperBonusTargets.Propolis, BonusPerExtra: 0.01m),
+        // clover: 3 more pollen a minute.
+        new BeekeeperPlant(BeekeeperPlants.Clover, 400, BeekeeperSpecialties.Foraging, 3m,
+            BonusTarget: BeekeeperBonusTargets.Wax, BonusPerExtra: 0.01m),
+        // Cut in stage 8 (spec 017): grow times, and wildflowers given once at trade 5.
+        // new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperSpecialties.Foraging, 3m, 10m * 60m),
+        // new BeekeeperPlant(BeekeeperPlants.Bramble, 40, BeekeeperSpecialties.Guarding, 1.25m, 10m * 60m),
+        // new BeekeeperPlant(BeekeeperPlants.Willow, 200, BeekeeperSpecialties.Nursing, 1.5m, 60m * 60m),
+        // new BeekeeperPlant(BeekeeperPlants.Poplar, 20, BeekeeperSpecialties.Resin, 1m, 6m * 3600m, BeekeeperGivers.Wasps),
+        // new BeekeeperPlant(BeekeeperPlants.Clover, 400, BeekeeperSpecialties.Foraging, 3m, 12m * 3600m),
         // Cut in stage 6 (spec 014): forager and guard bees a minute.
         // new BeekeeperPlant(BeekeeperPlants.Wildflowers, 5, BeekeeperBees.Forager, 1m),
         // new BeekeeperPlant(BeekeeperPlants.Bramble, 10, BeekeeperBees.Guard, 1m),
@@ -419,9 +486,10 @@ public sealed class BeekeeperConfig
 
     // ===== Stage 7 (spec 015): seeds, the poplar and propolis. All placeholders.
 
-    /// <summary>Garden beds at the start: two seeds can grow at once. The Third Bed upgrade adds one.</summary>
-    public int StartingBeds { get; init; } = 1;   // was 2 (Leah, 2026-11-10)
-    public int ThirdBedBeds { get; init; } = 1;
+    // Cut in stage 8 (spec 017, FR-803): plants grow at once, so there are no garden beds.
+    // /// <summary>Garden beds at the start: two seeds can grow at once. The Third Bed upgrade adds one.</summary>
+    // public int StartingBeds { get; init; } = 1;   // was 2 (Leah, 2026-11-10)
+    // public int ThirdBedBeds { get; init; } = 1;
     /// <summary>The Propolis Seal multiplies storage by this (+25%), on top of Bigger Combs
     /// (honey and, since stage 7.5, wax).</summary>
     public decimal PropolisSealStorageMultiplier { get; init; } = 1.25m;
@@ -469,6 +537,51 @@ public sealed class BeekeeperConfig
         (BeekeeperHerbs.LingeringSmoke, 4),
         (BeekeeperHerbs.Dud, 1),
     };
+
+    // ===== Stage 8 (spec 017): seeds, wood and the meadow. All placeholders (Bee, 2026-11-11).
+
+    // --- The seed rolls (FR-802)
+    /// <summary>Chance each Hippie trade (one herbal candle) also gives a seed (20%).</summary>
+    public double HippieSeedChance { get; init; } = 0.2;
+    /// <summary>Chance each wasp trade (a batch counts as one) also gives a seed (20%).</summary>
+    public double WaspSeedChance { get; init; } = 0.2;
+
+    // --- The carpenter bee and wood (FR-806)
+    /// <summary>The plant whose first planting brings the carpenter bee.</summary>
+    public string CarpenterBeePlant { get; init; } = BeekeeperPlants.Willow;
+    /// <summary>Wood the carpenter bee brings a minute (before the willows' bonus). No cap.</summary>
+    public decimal WoodPerMinute { get; init; } = 1m;
+
+    // --- The wood upgrades (FR-808 to FR-810)
+    /// <summary>Wooden Frames: a new comb's wax price × this, rounded down (combs only).</summary>
+    public decimal FramesWaxMultiplier { get; init; } = 0.5m;
+    /// <summary>Candle Molds: candles one craft makes, for one price.</summary>
+    public int CandlesPerCraftWithMolds { get; init; } = 2;
+    /// <summary>Dipping Rack: every candle's wax × this, rounded down.</summary>
+    public decimal RackWaxMultiplier { get; init; } = 0.5m;
+
+    // --- The bee hotel (FR-811)
+    /// <summary>Seconds between gifts, live or away (30 minutes). Later upgrades will shorten it.</summary>
+    public decimal HotelGiftSeconds { get; init; } = 30m * 60m;
+    /// <summary>Herbs the mason bee brings instead when no seed has joined a roll yet.</summary>
+    public decimal MasonFallbackHerbs { get; init; } = 2m;
+    /// <summary>The rare bees; which one comes is picked at random, each equally likely.</summary>
+    public IReadOnlyList<BeekeeperRareBee> RareBees { get; init; } = new[]
+    {
+        new BeekeeperRareBee(BeekeeperBees.Mason, BeekeeperGifts.Seed, 1m),
+        new BeekeeperRareBee(BeekeeperBees.Leafcutter, BeekeeperGifts.Herbs, 2m),
+        new BeekeeperRareBee(BeekeeperBees.WoolCarder, BeekeeperGifts.Propolis, 5m),
+    };
+
+    // --- The meadow (FR-812): bought with plants (counted, not spent); works like one giant comb.
+    public int MeadowWildflowers { get; init; } = 50;
+    public int MeadowClover { get; init; } = 50;
+    /// <summary>Honey a second (25 combs' worth), before the honey boosts.</summary>
+    public decimal MeadowHoneyPerSecond { get; init; } = 5m;
+    /// <summary>Honey room it adds, before the Technologies.</summary>
+    public decimal MeadowHoneyCap { get; init; } = 25_000m;
+    /// <summary>Wax room it adds, before the Technologies.</summary>
+    public decimal MeadowWaxCap { get; init; } = 250m;
 
     public static BeekeeperConfig Default { get; } = new();
 }

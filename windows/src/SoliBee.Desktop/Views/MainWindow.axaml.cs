@@ -1748,9 +1748,17 @@ public partial class MainWindow : Window
             case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (3 combs, the starter counted)
             case "StoryGloves": hive.DebugShowStory(BeekeeperStories.Gloves); break;   // story cards
             case "StorySmoker": hive.DebugShowStory(BeekeeperStories.Smoker); break;
-            case "Seed":    hive.DebugGiveSeed(); break;
-            case "EverySeed": hive.DebugGiveEverySeed(); break;   // every seed not yet given (stage 7)
-            case "Grow":    hive.DebugFinishGrowing(); break;   // finishes every bed
+            // Stage 8 (spec 017): was Give a seed, Give every seed and Finish growing.
+            // case "Seed":    hive.DebugGiveSeed(); break;
+            // case "EverySeed": hive.DebugGiveEverySeed(); break;   // every seed not yet given (stage 7)
+            // case "Grow":    hive.DebugFinishGrowing(); break;   // finishes every bed
+            case "Seed":    hive.DebugUnlockNextSeed(); break;    // the next seed joins its roll
+            case "EverySeed": hive.DebugUnlockEverySeed(); break;
+            case "TenSeeds": hive.DebugGiveTenOfEverySeed(); break;
+            case "MeadowPlants": hive.DebugPlantMeadowPrice(); break;   // the meadow's price, planted
+            case "Wood":    hive.DebugGiveWood(100m); break;
+            case "Carpenter": hive.DebugSummonCarpenterBee(); break;
+            case "HotelGift": hive.DebugHotelGift(); break;      // needs the Bee Hotel
             case "Propolis": hive.DebugGivePropolis(50m); break;
             case "Paper":   hive.DebugGivePaper(20m); break;
             case "Hippies199": hive.DebugHippieTradesTo199(); break;   // one more Hippie trade brings the willow seed

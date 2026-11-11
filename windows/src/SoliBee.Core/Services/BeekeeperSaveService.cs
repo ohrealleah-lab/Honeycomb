@@ -131,6 +131,7 @@ public static class BeekeeperSaveService
             s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown,
             s.Pollen, s.BeeBread, s.Paper,
             s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles, s.HerbSecondsLeft,
+            s.Wood, s.HotelSecondsToNext,   // stage 8
         };
         return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
             && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m
@@ -160,7 +161,10 @@ public static class BeekeeperSaveService
             && s.StoryReturnIn.All(kv => kv.Key is not null && BeekeeperStories.Order.Contains(kv.Key) && kv.Value >= 0m)
             && (s.StoryHere is null || BeekeeperStories.Order.Contains(s.StoryHere))
             && s.BeesCaught >= 0 && s.OuchSecondsLeft >= 0m
-            && s.GlovesDeclines >= 0 && s.GlovesDeclines <= BeekeeperConfig.Default.GlovesMaxDeclines;
+            && s.GlovesDeclines >= 0 && s.GlovesDeclines <= BeekeeperConfig.Default.GlovesMaxDeclines
+            // Stage 8 (spec 017, FR-814): new fields load as empty or zero; never negative.
+            // (An older file has none of them, so no version bump.)
+            && s.Wood >= 0m && s.HotelSecondsToNext >= 0m && s.RareBeesMet is not null;
     }
 
     // Every damaged file keeps its own backup: .unreadable, then .unreadable2, .unreadable3…

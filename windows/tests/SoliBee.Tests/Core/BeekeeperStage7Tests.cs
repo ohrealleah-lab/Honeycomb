@@ -27,10 +27,11 @@ public class BeekeeperStage7Tests : IDisposable
     // Cut in stage 7.5 (spec 016): private static readonly BeekeeperConfig BigCombs = new() { StartingStorage = 100_000_000m };
     private static readonly BeekeeperConfig BigCombs = new() { StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
-    // The game starts with one bed (Leah, 2026-11-10); tests of several beds at once use this.
-    private static readonly BeekeeperConfig TwoBeds = new() { StartingBeds = 2 };
-    private static readonly BeekeeperConfig TwoBedsBigCombs = new()
-        { StartingBeds = 2, StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
+    // Cut in stage 8 (spec 017): no beds.
+    // // The game starts with one bed (Leah, 2026-11-10); tests of several beds at once use this.
+    // private static readonly BeekeeperConfig TwoBeds = new() { StartingBeds = 2 };
+    // private static readonly BeekeeperConfig TwoBedsBigCombs = new()
+    //     { StartingBeds = 2, StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
         => new(config ?? BeekeeperConfig.Default, state, new FakeRandom());
@@ -51,119 +52,127 @@ public class BeekeeperStage7Tests : IDisposable
 
     // ============================================================ plant data
 
-    [Fact]
-    public void PlantsAreData_WithGiversTradeCountsAndGrowTimes()
-    {
-        var p = BeekeeperConfig.Default.Plants.ToDictionary(x => x.Id);
-        Assert.Equal(600m, p[BeekeeperPlants.Wildflowers].GrowSeconds);
-        Assert.Equal(600m, p[BeekeeperPlants.Bramble].GrowSeconds);
-        Assert.Equal(3600m, p[BeekeeperPlants.Willow].GrowSeconds);
-        Assert.Equal(6m * 3600m, p[BeekeeperPlants.Poplar].GrowSeconds);
-        Assert.Equal(12m * 3600m, p[BeekeeperPlants.Clover].GrowSeconds);
-        Assert.Equal(5, p[BeekeeperPlants.Wildflowers].SeedAtTrade);
-        Assert.Equal(40, p[BeekeeperPlants.Bramble].SeedAtTrade);
-        Assert.Equal(200, p[BeekeeperPlants.Willow].SeedAtTrade);
-        Assert.Equal(400, p[BeekeeperPlants.Clover].SeedAtTrade);
-        Assert.Equal(BeekeeperGivers.Wasps, p[BeekeeperPlants.Poplar].Giver);
-        Assert.Equal(20, p[BeekeeperPlants.Poplar].SeedAtTrade);
-    }
+    // Cut in stage 8 (spec 017): plants have no grow time, and wildflowers join the roll at trade 1 (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void PlantsAreData_WithGiversTradeCountsAndGrowTimes()
+    // {
+    //     var p = BeekeeperConfig.Default.Plants.ToDictionary(x => x.Id);
+    //     Assert.Equal(600m, p[BeekeeperPlants.Wildflowers].GrowSeconds);
+    //     Assert.Equal(600m, p[BeekeeperPlants.Bramble].GrowSeconds);
+    //     Assert.Equal(3600m, p[BeekeeperPlants.Willow].GrowSeconds);
+    //     Assert.Equal(6m * 3600m, p[BeekeeperPlants.Poplar].GrowSeconds);
+    //     Assert.Equal(12m * 3600m, p[BeekeeperPlants.Clover].GrowSeconds);
+    //     Assert.Equal(5, p[BeekeeperPlants.Wildflowers].SeedAtTrade);
+    //     Assert.Equal(40, p[BeekeeperPlants.Bramble].SeedAtTrade);
+    //     Assert.Equal(200, p[BeekeeperPlants.Willow].SeedAtTrade);
+    //     Assert.Equal(400, p[BeekeeperPlants.Clover].SeedAtTrade);
+    //     Assert.Equal(BeekeeperGivers.Wasps, p[BeekeeperPlants.Poplar].Giver);
+    //     Assert.Equal(20, p[BeekeeperPlants.Poplar].SeedAtTrade);
+    // }
 
     // ============================================================ seeds from two givers
 
-    [Fact]
-    public void The200thHippieTrade_GivesAWillowSeed()
-    {
-        var e = Make(new BeekeeperState
-        {
-            HippiesRevealed = true, HippieTrades = 199, RepellentCandles = 100m,
-            SeedsGivenIds = { "wildflowers", "bramble" },
-        });
-        var r = e.TradeTenCandles();
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedGiven && ev.Text == BeekeeperPlants.Willow);
-        Assert.Equal(new[] { BeekeeperPlants.Willow }, e.State.SeedsInHand);
-        e.TradeTenCandles();
-        Assert.Single(e.State.SeedsInHand);   // each plant is given once
-    }
+    // Cut in stage 8 (spec 017): seeds are rolled on every trade, not given once on a set trade (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void The200thHippieTrade_GivesAWillowSeed()
+    // {
+    //     var e = Make(new BeekeeperState
+    //     {
+    //         HippiesRevealed = true, HippieTrades = 199, RepellentCandles = 100m,
+    //         SeedsGivenIds = { "wildflowers", "bramble" },
+    //     });
+    //     var r = e.TradeTenCandles();
+    //     Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedGiven && ev.Text == BeekeeperPlants.Willow);
+    //     Assert.Equal(new[] { BeekeeperPlants.Willow }, e.State.SeedsInHand);
+    //     e.TradeTenCandles();
+    //     Assert.Single(e.State.SeedsInHand);   // each plant is given once
+    // }
 
-    [Fact]
-    public void TheWasps_GiveThePoplarSeed_OnTheirTwentiethTrade()
-    {
-        var e = Make(new BeekeeperState { EmissaryCome = true, WaspTrades = 19, Honey = 1000m, HoneyRevealed = true });
-        var r = e.TradeForPaper();
-        Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.WaspSeedGiven && ev.Text == BeekeeperPlants.Poplar);
-        Assert.Equal(new[] { BeekeeperPlants.Poplar }, e.State.SeedsInHand);
-        Assert.True(e.State.GardenRevealed);
-    }
+    // Cut in stage 8 (spec 017): seeds are rolled on every trade, not given once on a set trade (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TheWasps_GiveThePoplarSeed_OnTheirTwentiethTrade()
+    // {
+    //     var e = Make(new BeekeeperState { EmissaryCome = true, WaspTrades = 19, Honey = 1000m, HoneyRevealed = true });
+    //     var r = e.TradeForPaper();
+    //     Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.WaspSeedGiven && ev.Text == BeekeeperPlants.Poplar);
+    //     Assert.Equal(new[] { BeekeeperPlants.Poplar }, e.State.SeedsInHand);
+    //     Assert.True(e.State.GardenRevealed);
+    // }
 
-    [Fact]
-    public void AnOldSavePastTheCounts_GetsTheSeedsOnLoad()
-    {
-        var s = new BeekeeperState { HippieTrades = 400, WaspTrades = 22, EmissaryCome = true };
-        // Cut in stage 7.5 (spec 016): Version = 6, SeedsGiven = 2, SeedsPlanted = 2 (older saves no longer load).
-        s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
-        var e = Make(s);
-        var events = e.RevealOnLoad();
-        Assert.Equal(3, events.Count(ev => ev.Key is BeekeeperEvents.SeedGiven or BeekeeperEvents.WaspSeedGiven));
-        Assert.Equal(
-            new[] { BeekeeperPlants.Willow, BeekeeperPlants.Poplar, BeekeeperPlants.Clover }.OrderBy(x => x),
-            e.State.SeedsInHand.OrderBy(x => x));
-        Assert.Empty(e.RevealOnLoad().Where(ev => ev.Key is BeekeeperEvents.SeedGiven or BeekeeperEvents.WaspSeedGiven));
-    }
+    // Cut in stage 8 (spec 017): seeds are rolled on every trade, not given once on a set trade (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void AnOldSavePastTheCounts_GetsTheSeedsOnLoad()
+    // {
+    //     var s = new BeekeeperState { HippieTrades = 400, WaspTrades = 22, EmissaryCome = true };
+    //     // Cut in stage 7.5 (spec 016): Version = 6, SeedsGiven = 2, SeedsPlanted = 2 (older saves no longer load).
+    //     s.Plants.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
+    //     var e = Make(s);
+    //     var events = e.RevealOnLoad();
+    //     Assert.Equal(3, events.Count(ev => ev.Key is BeekeeperEvents.SeedGiven or BeekeeperEvents.WaspSeedGiven));
+    //     Assert.Equal(
+    //         new[] { BeekeeperPlants.Willow, BeekeeperPlants.Poplar, BeekeeperPlants.Clover }.OrderBy(x => x),
+    //         e.State.SeedsInHand.OrderBy(x => x));
+    //     Assert.Empty(e.RevealOnLoad().Where(ev => ev.Key is BeekeeperEvents.SeedGiven or BeekeeperEvents.WaspSeedGiven));
+    // }
 
     // ============================================================ beds
 
-    [Fact]
-    public void TwoSeedsGrowAtOnce_EachOnItsOwnTimer_WhenTwoBedsAreOwned()
-    {
-        var e = Make(new BeekeeperState
-        {
-            SeedsInHand = { "wildflowers", "willow", "bramble" }, GardenRevealed = true,
-            Beebits = 5000m, Wax = 500m, Paper = 20m, PaperRevealed = true,
-        }, TwoBeds);
-        Assert.True(e.PlantSeed("willow").Done);
-        Assert.True(e.PlantSeed("wildflowers").Done);
-        Assert.False(e.CanPlantSeed);
-        Assert.Equal(0, e.FreeBeds);
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TwoSeedsGrowAtOnce_EachOnItsOwnTimer_WhenTwoBedsAreOwned()
+    // {
+    //     var e = Make(new BeekeeperState
+    //     {
+    //         SeedsInHand = { "wildflowers", "willow", "bramble" }, GardenRevealed = true,
+    //         Beebits = 5000m, Wax = 500m, Paper = 20m, PaperRevealed = true,
+    //     }, TwoBeds);
+    //     Assert.True(e.PlantSeed("willow").Done);
+    //     Assert.True(e.PlantSeed("wildflowers").Done);
+    //     Assert.False(e.CanPlantSeed);
+    //     Assert.Equal(0, e.FreeBeds);
 
-        e.Advance(600m);   // wildflowers (10 min) sprouts; the willow has 50 minutes left
-        Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.Plants);
-        Assert.Equal(3000m, Assert.Single(e.State.Beds).SecondsLeft);
-        Assert.True(e.CanPlantSeed);
+    //     e.Advance(600m);   // wildflowers (10 min) sprouts; the willow has 50 minutes left
+    //     Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.Plants);
+    //     Assert.Equal(3000m, Assert.Single(e.State.Beds).SecondsLeft);
+    //     Assert.True(e.CanPlantSeed);
 
-        Assert.Equal(2, e.BedCount);
-        // Off the Shop (2026-11-10): extra beds come after a swarm, which is not built yet.
-        // Assert.True(e.BuyUpgrade(BeekeeperUpgrades.ThirdBed).Done);
-        // Assert.Equal(3, e.BedCount);
-    }
+    //     Assert.Equal(2, e.BedCount);
+    //     // Off the Shop (2026-11-10): extra beds come after a swarm, which is not built yet.
+    //     // Assert.True(e.BuyUpgrade(BeekeeperUpgrades.ThirdBed).Done);
+    //     // Assert.Equal(3, e.BedCount);
+    // }
 
-    [Fact]
-    public void TheGameStartsWithOneBed_AndTheThirdBedIsNotInTheShop()
-    {
-        var e = Make();
-        Assert.Equal(1, e.BedCount);
-        Assert.DoesNotContain(BeekeeperConfig.Default.Upgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TheGameStartsWithOneBed_AndTheThirdBedIsNotInTheShop()
+    // {
+    //     var e = Make();
+    //     Assert.Equal(1, e.BedCount);
+    //     Assert.DoesNotContain(BeekeeperConfig.Default.Upgrades, u => u.Id == BeekeeperUpgrades.ThirdBed);
+    // }
 
-    [Fact]
-    public void ASaveThatAlreadyOwnsTheThirdBed_KeepsItsExtraBed()
-    {
-        var e = Make(new BeekeeperState { Upgrades = { BeekeeperUpgrades.ThirdBed } });
-        Assert.Equal(2, e.BedCount);
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void ASaveThatAlreadyOwnsTheThirdBed_KeepsItsExtraBed()
+    // {
+    //     var e = Make(new BeekeeperState { Upgrades = { BeekeeperUpgrades.ThirdBed } });
+    //     Assert.Equal(2, e.BedCount);
+    // }
 
-    [Fact]
-    public void ASeedSprouting_CountsItsSpecialtyOnlyFromThatMoment_EvenWithSeveralBeds()
-    {
-        var s = Hive();
-        s.BeeBread = 0m;
-        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });
-        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Wildflowers, SecondsLeft = 120m });
-        var e = Make(s, TwoBedsBigCombs);
-        e.AdvanceAway(180m);
-        // honey: 60 s at 12.5/s (wooden hive), 60 s at 12.5 × 1.25, 60 s the same
-        Assert.Equal(12.5m * 60m + 15.625m * 120m, e.State.Honey);
-        Assert.Equal(3m * 60m / 60m, e.State.Pollen);   // foraging only for the last 60 s: 3 a minute
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void ASeedSprouting_CountsItsSpecialtyOnlyFromThatMoment_EvenWithSeveralBeds()
+    // {
+    //     var s = Hive();
+    //     s.BeeBread = 0m;
+    //     s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Bramble, SecondsLeft = 60m });
+    //     s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Wildflowers, SecondsLeft = 120m });
+    //     var e = Make(s, TwoBedsBigCombs);
+    //     e.AdvanceAway(180m);
+    //     // honey: 60 s at 12.5/s (wooden hive), 60 s at 12.5 × 1.25, 60 s the same
+    //     Assert.Equal(12.5m * 60m + 15.625m * 120m, e.State.Honey);
+    //     Assert.Equal(3m * 60m / 60m, e.State.Pollen);   // foraging only for the last 60 s: 3 a minute
+    // }
 
     // ============================================================ nursing, resin, clover
 
@@ -300,14 +309,15 @@ public class BeekeeperStage7Tests : IDisposable
 
     // ============================================================ live and away agree (FR-606)
 
-    private static BeekeeperState Busy()
-    {
-        var s = Hive(BeekeeperPlants.Wildflowers, BeekeeperPlants.Poplar);
-        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Willow, SecondsLeft = 400m });
-        s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Clover, SecondsLeft = 901m });
-        s.SagePropolisSecondsLeft = 1000m;
-        return s;
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // private static BeekeeperState Busy()
+    // {
+    //     var s = Hive(BeekeeperPlants.Wildflowers, BeekeeperPlants.Poplar);
+    //     s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Willow, SecondsLeft = 400m });
+    //     s.Beds.Add(new BeekeeperBed { PlantId = BeekeeperPlants.Clover, SecondsLeft = 901m });
+    //     s.SagePropolisSecondsLeft = 1000m;
+    //     return s;
+    // }
 
     private static void AssertSame(BeekeeperEngine live, BeekeeperEngine away)
     {
@@ -327,30 +337,32 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Equal(away.State.Beds.Count, live.State.Beds.Count);
     }
 
-    [Fact]
-    public void TwoBedsNursingResinCloverAndACandleBurningOut_SameLiveSecondsOrOneAwayStep()
-    {
-        var live = Make(Busy(), TwoBedsBigCombs);
-        for (int i = 0; i < 2000; i++) live.Advance(1m);   // sprouts at 400 s and 901 s, candle out at 1000 s, pantry runs out
-        var away = Make(Busy(), TwoBedsBigCombs);
-        away.AdvanceAway(2000m);
-        AssertSame(live, away);
-        Assert.Contains(BeekeeperPlants.Willow, live.State.Plants);
-        Assert.Contains(BeekeeperPlants.Clover, live.State.Plants);
-        Assert.Empty(live.State.Beds);
-        Assert.True(live.State.Propolis > 0m && live.State.Pollen > 0m);
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TwoBedsNursingResinCloverAndACandleBurningOut_SameLiveSecondsOrOneAwayStep()
+    // {
+    //     var live = Make(Busy(), TwoBedsBigCombs);
+    //     for (int i = 0; i < 2000; i++) live.Advance(1m);   // sprouts at 400 s and 901 s, candle out at 1000 s, pantry runs out
+    //     var away = Make(Busy(), TwoBedsBigCombs);
+    //     away.AdvanceAway(2000m);
+    //     AssertSame(live, away);
+    //     Assert.Contains(BeekeeperPlants.Willow, live.State.Plants);
+    //     Assert.Contains(BeekeeperPlants.Clover, live.State.Plants);
+    //     Assert.Empty(live.State.Beds);
+    //     Assert.True(live.State.Propolis > 0m && live.State.Pollen > 0m);
+    // }
 
-    [Fact]
-    public void TheSameHolds_ForOddStepsAndTheBeeBoostLeftOut()
-    {
-        var live = Make(Busy(), TwoBedsBigCombs);
-        decimal[] steps = { 7m, 333m, 60m, 1m, 599m, 1000m };
-        foreach (var st in steps) live.Advance(st);
-        var away = Make(Busy(), TwoBedsBigCombs);
-        away.AdvanceAway(steps.Sum());
-        AssertSame(live, away);
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TheSameHolds_ForOddStepsAndTheBeeBoostLeftOut()
+    // {
+    //     var live = Make(Busy(), TwoBedsBigCombs);
+    //     decimal[] steps = { 7m, 333m, 60m, 1m, 599m, 1000m };
+    //     foreach (var st in steps) live.Advance(st);
+    //     var away = Make(Busy(), TwoBedsBigCombs);
+    //     away.AdvanceAway(steps.Sum());
+    //     AssertSame(live, away);
+    // }
 
     // ============================================================ upgrades
 
@@ -474,51 +486,53 @@ public class BeekeeperStage7Tests : IDisposable
         Assert.Null(BeekeeperSaveService.Load(path));
     }
 
-    [Fact]
-    public void UnknownPlantIds_AreDropped_AndTooManyBedsAreTrimmed()
-    {
-        var s = new BeekeeperState
-        {
-            SeedsInHand = { "willow", "dandelion" }, SeedsGivenIds = { "dandelion", "willow" },
-            Beds =
-            {
-                new BeekeeperBed { PlantId = "bramble", SecondsLeft = 10m },
-                new BeekeeperBed { PlantId = "nonsense", SecondsLeft = 10m },
-                new BeekeeperBed { PlantId = "clover", SecondsLeft = 10m },
-                new BeekeeperBed { PlantId = "poplar", SecondsLeft = 10m },
-            },
-        };
-        Make(s, TwoBeds);
-        Assert.Equal(new[] { "willow", "poplar" }, s.SeedsInHand);   // the seed from the extra bed comes back
-        Assert.Equal(new[] { "willow" }, s.SeedsGivenIds);
-        Assert.Equal(2, s.Beds.Count);   // two beds owned; the unknown one went first
-        Assert.DoesNotContain(s.Beds, b => b.PlantId == "nonsense");
-    }
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void UnknownPlantIds_AreDropped_AndTooManyBedsAreTrimmed()
+    // {
+    //     var s = new BeekeeperState
+    //     {
+    //         SeedsInHand = { "willow", "dandelion" }, SeedsGivenIds = { "dandelion", "willow" },
+    //         Beds =
+    //         {
+    //             new BeekeeperBed { PlantId = "bramble", SecondsLeft = 10m },
+    //             new BeekeeperBed { PlantId = "nonsense", SecondsLeft = 10m },
+    //             new BeekeeperBed { PlantId = "clover", SecondsLeft = 10m },
+    //             new BeekeeperBed { PlantId = "poplar", SecondsLeft = 10m },
+    //         },
+    //     };
+    //     Make(s, TwoBeds);
+    //     Assert.Equal(new[] { "willow", "poplar" }, s.SeedsInHand);   // the seed from the extra bed comes back
+    //     Assert.Equal(new[] { "willow" }, s.SeedsGivenIds);
+    //     Assert.Equal(2, s.Beds.Count);   // two beds owned; the unknown one went first
+    //     Assert.DoesNotContain(s.Beds, b => b.PlantId == "nonsense");
+    // }
 
     // ============================================================ debug helpers
 
-    [Fact]
-    public void TheDebugHelpers_GiveEverySeed_FinishEveryBed_AndPropolisAndPaper()
-    {
-        var e = Make(new BeekeeperState(), TwoBeds);
-        e.DebugGiveEverySeed();
-        Assert.Equal(BeekeeperConfig.Default.Plants.Count, e.State.SeedsInHand.Count);
-        Assert.True(e.PlantSeed(BeekeeperPlants.Willow).Done);
-        Assert.True(e.PlantSeed(BeekeeperPlants.Poplar).Done);
-        e.DebugFinishGrowing();
-        Assert.Empty(e.State.Beds);
-        Assert.Equal(2, e.State.Plants.Count);
+    // Cut in stage 8 (spec 017): plants grow at once; no beds (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void TheDebugHelpers_GiveEverySeed_FinishEveryBed_AndPropolisAndPaper()
+    // {
+    //     var e = Make(new BeekeeperState(), TwoBeds);
+    //     e.DebugGiveEverySeed();
+    //     Assert.Equal(BeekeeperConfig.Default.Plants.Count, e.State.SeedsInHand.Count);
+    //     Assert.True(e.PlantSeed(BeekeeperPlants.Willow).Done);
+    //     Assert.True(e.PlantSeed(BeekeeperPlants.Poplar).Done);
+    //     e.DebugFinishGrowing();
+    //     Assert.Empty(e.State.Beds);
+    //     Assert.Equal(2, e.State.Plants.Count);
 
-        e.DebugGivePropolis(50m);
-        e.DebugGivePaper(20m);
-        Assert.Equal(50m, e.State.Propolis);
-        Assert.Equal(20m, e.State.Paper);
-        Assert.True(e.PaperSeen && e.PropolisSeen);
+    //     e.DebugGivePropolis(50m);
+    //     e.DebugGivePaper(20m);
+    //     Assert.Equal(50m, e.State.Propolis);
+    //     Assert.Equal(20m, e.State.Paper);
+    //     Assert.True(e.PaperSeen && e.PropolisSeen);
 
-        var h = Make(new BeekeeperState());
-        h.DebugHippieTradesTo199();
-        Assert.Equal(199, h.State.HippieTrades);
-        h.TradeTenCandles();
-        Assert.Contains(BeekeeperPlants.Willow, h.State.SeedsInHand);
-    }
+    //     var h = Make(new BeekeeperState());
+    //     h.DebugHippieTradesTo199();
+    //     Assert.Equal(199, h.State.HippieTrades);
+    //     h.TradeTenCandles();
+    //     Assert.Contains(BeekeeperPlants.Willow, h.State.SeedsInHand);
+    // }
 }

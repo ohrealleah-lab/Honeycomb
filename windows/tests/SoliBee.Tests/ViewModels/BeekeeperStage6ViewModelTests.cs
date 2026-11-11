@@ -89,7 +89,8 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Queen }, Ids(BeekeeperHiveRows.GroupBees));
         Assert.Equal(new[] { BeekeeperHiveRows.Honey, BeekeeperHiveRows.Wax, BeekeeperHiveRows.Combs },   // the red full lines are cut; a capped number is colored
             Ids(BeekeeperHiveRows.GroupHive));
-        Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread, BeekeeperHiveRows.Propolis },
+        // Stage 8 (spec 017): the Wood row joins the Garden group, after propolis.
+        Assert.Equal(new[] { BeekeeperHiveRows.Seeds, BeekeeperHiveRows.Pollen, BeekeeperHiveRows.BeeBread, BeekeeperHiveRows.Propolis, BeekeeperHiveRows.Wood },
             Ids(BeekeeperHiveRows.GroupGarden));
         Assert.Equal(new[]
         {

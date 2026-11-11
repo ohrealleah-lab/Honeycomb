@@ -1,3 +1,4 @@
+using System.Linq;
 using SoliBee.Core.Localization;
 using SoliBee.Core.Models;
 using SoliBee.Core.Services;
@@ -33,8 +34,9 @@ internal static class BeekeeperText
     public static string HoneyLabel => T(StringKey.BeekeeperHoneyLabel);
     public static string WaxLabel => T(StringKey.BeekeeperWaxLabel);
     public static string BeebitsLabel => T(StringKey.BeekeeperBeebitsLabel);
-    public static string HiveTitle(bool wooden) =>
-        T(wooden ? StringKey.BeekeeperHiveTitleWooden : StringKey.BeekeeperHiveTitleSkep);
+    // Stage 8 (spec 017): after the meadow, "A HIVE IN THE MEADOW".
+    public static string HiveTitle(bool wooden, bool meadow = false) =>
+        T(meadow ? StringKey.BeekeeperHiveTitleMeadow : wooden ? StringKey.BeekeeperHiveTitleWooden : StringKey.BeekeeperHiveTitleSkep);
     public static string Comb => T(StringKey.BeekeeperComb);
     public static string Build => T(StringKey.BeekeeperBuild);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
@@ -154,7 +156,7 @@ internal static class BeekeeperText
     /// price can include free bees, shown first ("20 bees · 10 wax").</summary>
     public static string Price(string? beebits, string? wax, string? herbs,
                                string? pollen = null, string? honey = null, string? beeBread = null,
-                               string? paper = null, string? propolis = null, string? bees = null)
+                               string? paper = null, string? propolis = null, string? bees = null, string? wood = null)
     {
         var parts = new System.Collections.Generic.List<string>();
         if (bees != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeesFmt), bees));
@@ -166,6 +168,7 @@ internal static class BeekeeperText
         if (beeBread != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeeBreadFmt), beeBread));
         if (paper != null) parts.Add(Fill(T(StringKey.BeekeeperCostPaperFmt), paper));
         if (propolis != null) parts.Add(Fill(T(StringKey.BeekeeperCostPropolisFmt), propolis));
+        if (wood != null) parts.Add(Fill(T(StringKey.BeekeeperCostWoodFmt), wood));   // stage 8
         return string.Join(" · ", parts);
     }
 
@@ -195,9 +198,17 @@ internal static class BeekeeperText
             BeekeeperUpgrades.Notebook => T(StringKey.BeekeeperUpgradeNotebookBlurb),
             BeekeeperUpgrades.ThirdBed => T(StringKey.BeekeeperUpgradeThirdBedBlurb),
             BeekeeperUpgrades.PropolisSeal => Fill(T(StringKey.BeekeeperUpgradePropolisSealBlurb), P()),
+            // Stage 8 (spec 017): the percent is how much less wax; the molds' number is candles a craft.
+            BeekeeperUpgrades.WoodenFrames => Fill(T(StringKey.BeekeeperUpgradeWoodenFramesBlurb), P()),
+            BeekeeperUpgrades.CandleMolds => Fill(T(StringKey.BeekeeperUpgradeCandleMoldsBlurb), P()),
+            BeekeeperUpgrades.DippingRack => Fill(T(StringKey.BeekeeperUpgradeDippingRackBlurb), P()),
             _ => "",
         };
     }
+
+    /// <summary>The Bee Hotel's blurb (stage 8): "Rare bees move in, and one brings back a gift every 30 min".</summary>
+    public static string HotelBlurb(decimal giftSeconds) =>
+        Fill(T(StringKey.BeekeeperUpgradeBeeHotelBlurb), ShortTime(giftSeconds));
 
     // ---- stage 4: the Garden, bees, bee bread, the wooden hive
     // Cut in stage 6 (spec 014): the forager and guard rows.
@@ -214,10 +225,104 @@ internal static class BeekeeperText
     public static string GardenEmptyBed => T(StringKey.BeekeeperGardenEmptyBed);
     public static string BedGrowing(BeekeeperPlant p, decimal secondsLeft) =>
         Fill(T(StringKey.BeekeeperGardenBedGrowingFmt), PlantName(p.Id), Roughly(secondsLeft));
+    /// <summary>"Wildflower seeds ×12": seeds of one kind in hand (stage 8).</summary>
+    public static string SeedsLine(string plantId, int count) =>
+        CapFirst(Fill(T(StringKey.BeekeeperGardenSeedsFmt), SeedName(plantId, Lang), NumberFormatter.Format(count, Lang)));
+
+    /// <summary>"Each one after the first: +1% honey (now +22%)" (stage 8).</summary>
+    public static string PlantBonusLine(BeekeeperPlant p, decimal nowPercent) =>
+        Fill(T(StringKey.BeekeeperPlantBonusFmt), NumberFormatter.Format(p.BonusPerExtra * 100m, Lang, 2),
+            BonusTargetName(p.BonusTarget), NumberFormatter.Format(nowPercent, Lang, 2));
+
+    public static string BonusTargetName(string target) => target switch
+    {
+        BeekeeperBonusTargets.Honey => T(StringKey.BeekeeperBonusHoney),
+        BeekeeperBonusTargets.Wax => T(StringKey.BeekeeperBonusWax),
+        BeekeeperBonusTargets.Wood => T(StringKey.BeekeeperBonusWood),
+        BeekeeperBonusTargets.Propolis => T(StringKey.BeekeeperBonusPropolis),
+        _ => target,
+    };
+
+    // ---- stage 8: candles per craft, the meadow, the Notebook's tabs, the bees
+    /// <summary>"makes 2", after a candle's price once the Candle Molds are owned.</summary>
+    public static string Makes(int n) => Fill(T(StringKey.BeekeeperMakesFmt), n.ToString());
+    public static string MeadowName => T(StringKey.BeekeeperMeadowName);
+    public static string MeadowButton => T(StringKey.BeekeeperMeadowButton);
+    public static string MeadowNeed(string wildHave, string wildNeed, string cloverHave, string cloverNeed) =>
+        Fill(T(StringKey.BeekeeperMeadowNeedFmt), wildHave, wildNeed, cloverHave, cloverNeed);
+    public static string MeadowBlurb(string honeyPerSecond, string honeyRoom, string waxRoom) =>
+        Fill(T(StringKey.BeekeeperMeadowBlurbFmt), honeyPerSecond, honeyRoom, waxRoom);
+    public static string TabNotes => T(StringKey.BeekeeperTabNotes);
+    public static string TabBees => T(StringKey.BeekeeperTabBees);
+
+    /// <summary>A bee's name in a sentence, lower case ("mason bee"); the Bees tab capitalizes it.</summary>
+    private static string BeeNameIn(string id, AppLanguage lang) => Strings.Get(id switch
+    {
+        BeekeeperBees.Honey => StringKey.BeekeeperBeeNameHoneybees,
+        BeekeeperBees.Queen => StringKey.BeekeeperBeeNameQueen,
+        BeekeeperBees.Carpenter => StringKey.BeekeeperBeeNameCarpenter,
+        BeekeeperBees.Mason => StringKey.BeekeeperBeeNameMason,
+        BeekeeperBees.Leafcutter => StringKey.BeekeeperBeeNameLeafcutter,
+        _ => StringKey.BeekeeperBeeNameWoolCarder,
+    }, lang);
+
+    public static string BeeTitle(string id) => CapFirst(BeeNameIn(id, Lang));
+
+    public static string BeeDoes(string id) => T(id switch
+    {
+        BeekeeperBees.Honey => StringKey.BeekeeperBeeDoesHoneybees,
+        BeekeeperBees.Queen => StringKey.BeekeeperBeeDoesQueen,
+        BeekeeperBees.Carpenter => StringKey.BeekeeperBeeDoesCarpenter,
+        BeekeeperBees.Mason => StringKey.BeekeeperBeeDoesMason,
+        BeekeeperBees.Leafcutter => StringKey.BeekeeperBeeDoesLeafcutter,
+        _ => StringKey.BeekeeperBeeDoesWoolCarder,
+    });
+
+    /// <summary>Every fact a bee has (one each for now; Bee adds more later as new keys here).
+    /// The Bees tab picks one at random each time it opens.</summary>
+    public static System.Collections.Generic.IReadOnlyList<string> BeeFacts(string id) => (id switch
+    {
+        BeekeeperBees.Honey => new[] { StringKey.BeekeeperBeeFactHoneybees1 },
+        BeekeeperBees.Queen => new[] { StringKey.BeekeeperBeeFactQueen1 },
+        BeekeeperBees.Carpenter => new[] { StringKey.BeekeeperBeeFactCarpenter1 },
+        BeekeeperBees.Mason => new[] { StringKey.BeekeeperBeeFactMason1 },
+        BeekeeperBees.Leafcutter => new[] { StringKey.BeekeeperBeeFactLeafcutter1 },
+        _ => new[] { StringKey.BeekeeperBeeFactWoolCarder1 },
+    }).Select(T).ToList();
+
+    /// <summary>A hotel gift in words: "a clover seed", "2 herbs", "5 propolis".</summary>
+    private static string GiftIn(string? text, decimal amount, AppLanguage lang)
+    {
+        var g = BeekeeperEngine.ParseGiftText(text);
+        string N(decimal v) => NumberFormatter.Format(v, lang);
+        return g.Gift switch
+        {
+            BeekeeperGifts.Seed => amount == 1m && g.Plant is { } p
+                ? Fill(Strings.Get(StringKey.BeekeeperGiftSeedOneFmt, lang), SeedName(p, lang))
+                : Fill(Strings.Get(StringKey.BeekeeperGiftSeedsFmt, lang), N(amount)),
+            BeekeeperGifts.Herbs => amount == 1m ? Strings.Get(StringKey.BeekeeperGiftHerbOne, lang)
+                : Fill(Strings.Get(StringKey.BeekeeperGiftHerbsFmt, lang), N(amount)),
+            _ => Fill(Strings.Get(StringKey.BeekeeperGiftPropolisFmt, lang), N(amount)),
+        };
+    }
+
+    /// <summary>The welcome-back gifts: "3 seeds, 4 herbs and 10 propolis" (only the kinds that came).</summary>
+    private static string GiftsIn(decimal seeds, decimal herbs, decimal propolis, AppLanguage lang)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, lang);
+        var parts = new System.Collections.Generic.List<string>();
+        if (seeds > 0m) parts.Add(seeds == 1m ? Strings.Get(StringKey.BeekeeperGiftSeedOne, lang) : Fill(Strings.Get(StringKey.BeekeeperGiftSeedsFmt, lang), N(seeds)));
+        if (herbs > 0m) parts.Add(herbs == 1m ? Strings.Get(StringKey.BeekeeperGiftHerbOne, lang) : Fill(Strings.Get(StringKey.BeekeeperGiftHerbsFmt, lang), N(herbs)));
+        if (propolis > 0m) parts.Add(Fill(Strings.Get(StringKey.BeekeeperGiftPropolisFmt, lang), N(propolis)));
+        if (parts.Count <= 1) return string.Concat(parts);
+        return string.Join(", ", parts.Take(parts.Count - 1)) + Strings.Get(StringKey.BeekeeperListAnd, lang) + parts[^1];
+    }
+
     /// <summary>"Willow seed": a seed in hand.</summary>
     public static string SeedLine(string plantId) => CapFirst(Fill(T(StringKey.BeekeeperGardenSeedFmt), SeedName(plantId, Lang)));
-    /// <summary>The Plant button's hover: "Takes about 6 hours to grow."</summary>
-    public static string TakesToGrow(decimal seconds) => Fill(T(StringKey.BeekeeperGardenTakesFmt), Roughly(seconds));
+    // Cut in stage 8 (spec 017): plants grow at once.
+    // /// <summary>The Plant button's hover: "Takes about 6 hours to grow."</summary>
+    // public static string TakesToGrow(decimal seconds) => Fill(T(StringKey.BeekeeperGardenTakesFmt), Roughly(seconds));
 
     private static string CapFirst(string s) => s.Length == 0 ? s : char.ToUpperInvariant(s[0]) + s.Substring(1);
 
@@ -340,6 +445,7 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Beebits => T(StringKey.BeekeeperHiveBeebits),
             BeekeeperHiveRows.Herbs => T(StringKey.BeekeeperHiveSage),   // "Herbs" (key kept from sage)
             BeekeeperHiveRows.Paper => T(StringKey.BeekeeperHivePaper),
+            BeekeeperHiveRows.Wood => T(StringKey.BeekeeperHiveWood),   // stage 8
             _ => r.Id,
         };
     }
@@ -376,6 +482,9 @@ internal static class BeekeeperText
                 "nursing" => Fill(T(StringKey.BeekeeperBoostNursingFmt), pct),
                 "bee_boost" => Fill(T(StringKey.BeekeeperBoostBeeBoostFmt), pct),
                 "sage_propolis" => Fill(T(StringKey.BeekeeperBoostHerbPropolisFmt), pct),
+                // Stage 8: "Wildflowers ×49: +49%"
+                BeekeeperBeeTab.PlantBoost => Fill(T(StringKey.BeekeeperBoostPlantFmt), PlantName(b.Plant ?? ""),
+                    NumberFormatter.Format(b.Count, Lang), pct),
                 _ => Fill(T(StringKey.BeekeeperBoostHerbFmt), pct, HerbName(b.Id)),
             });
         }
@@ -401,6 +510,8 @@ internal static class BeekeeperText
                 "queen" => Fill(T(StringKey.BeekeeperSourceQueenFmt), rate),
                 "foraging" => Fill(T(StringKey.BeekeeperSourceForagingFmt), rate),
                 "resin" => Fill(T(StringKey.BeekeeperSourceResinFmt), rate),
+                "carpenter_bee" => Fill(T(StringKey.BeekeeperSourceCarpenterBeeFmt), rate),   // stage 8
+                "meadow" => Fill(T(StringKey.BeekeeperSourceMeadowFmt), rate),
                 _ => Fill(T(StringKey.BeekeeperSourceHerbFmt), rate, HerbName(s.Id)),
             });
         }
@@ -424,6 +535,7 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)) + Parts(r),
             BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)) + Parts(r),
             BeekeeperHiveRows.Propolis => Fill(T(StringKey.BeekeeperPropolisPerSecFmt), N(rate, 3)) + Parts(r),
+            BeekeeperHiveRows.Wood => Fill(T(StringKey.BeekeeperWoodPerSecFmt), N(rate, 3)) + Parts(r),   // stage 8
             BeekeeperHiveRows.BeeBread => BeeBreadPerSecond(N(rate, 4))
                                           + (r.Rate2 > 0m ? "\n" + PantryLasts(r.Rate2) : ""),
             _ => null,
@@ -515,6 +627,11 @@ internal static class BeekeeperText
         BeekeeperUpgrades.Notebook => Strings.Get(StringKey.BeekeeperUpgradeNotebook, lang),
         BeekeeperUpgrades.ThirdBed => Strings.Get(StringKey.BeekeeperUpgradeThirdBed, lang),
         BeekeeperUpgrades.PropolisSeal => Strings.Get(StringKey.BeekeeperUpgradePropolisSeal, lang),
+        // Stage 8 (spec 017)
+        BeekeeperUpgrades.WoodenFrames => Strings.Get(StringKey.BeekeeperUpgradeWoodenFrames, lang),
+        BeekeeperUpgrades.CandleMolds => Strings.Get(StringKey.BeekeeperUpgradeCandleMolds, lang),
+        BeekeeperUpgrades.DippingRack => Strings.Get(StringKey.BeekeeperUpgradeDippingRack, lang),
+        BeekeeperUpgrades.BeeHotel => Strings.Get(StringKey.BeekeeperUpgradeBeeHotel, lang),
         _ => id,
     };
 
@@ -561,6 +678,10 @@ internal static class BeekeeperText
                 BeekeeperUpgrades.Notebook => L(StringKey.BeekeeperLogNotebookBought),
                 BeekeeperUpgrades.ThirdBed => L(StringKey.BeekeeperLogThirdBedBought),
                 BeekeeperUpgrades.PropolisSeal => L(StringKey.BeekeeperLogPropolisSealBought),
+                BeekeeperUpgrades.WoodenFrames => L(StringKey.BeekeeperLogWoodenFramesBought),
+                BeekeeperUpgrades.CandleMolds => L(StringKey.BeekeeperLogCandleMoldsBought),
+                BeekeeperUpgrades.DippingRack => L(StringKey.BeekeeperLogDippingRackBought),
+                BeekeeperUpgrades.BeeHotel => L(StringKey.BeekeeperLogBeeHotelBought),
                 _ => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
             },
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
@@ -647,6 +768,19 @@ internal static class BeekeeperText
                 _ => "",
             },
             BeekeeperEvents.HerbOut => L(StringKey.BeekeeperLogHerbOut),
+            // Stage 8 (spec 017)
+            BeekeeperEvents.SeedsGivenBatch => Fill(L(StringKey.BeekeeperLogSeedsGivenBatchFmt), N(e.Value)),
+            BeekeeperEvents.SeedJoinsRoll => Fill(L(StringKey.BeekeeperLogSeedJoinsRollFmt), SeedName(e.Text ?? "", lang)),
+            BeekeeperEvents.CarpenterBee => L(StringKey.BeekeeperLogCarpenterBee),
+            BeekeeperEvents.MeadowBought => L(StringKey.BeekeeperLogMeadow),
+            BeekeeperEvents.RareBeeArrives => Fill(L(StringKey.BeekeeperLogRareBeeArrivesFmt),
+                BeeNameIn(BeekeeperEngine.ParseGiftText(e.Text).Bee, lang), GiftIn(e.Text, e.Value, lang)),
+            BeekeeperEvents.HotelGift => Fill(L(StringKey.BeekeeperLogHotelGiftFmt),
+                BeeNameIn(BeekeeperEngine.ParseGiftText(e.Text).Bee, lang), GiftIn(e.Text, e.Value, lang)),
+            BeekeeperEvents.WelcomeBackWood => Fill(L(StringKey.BeekeeperLogWelcomeBackWoodFmt), N(e.Value)),
+            // Value = seeds, Value2 = herbs, Text = propolis (an invariant number).
+            BeekeeperEvents.WelcomeBackHotel => Fill(L(StringKey.BeekeeperLogWelcomeBackHotelFmt), GiftsIn(e.Value, e.Value2,
+                decimal.TryParse(e.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var pr) ? pr : 0m, lang)),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "repellent" => Fill(L(StringKey.BeekeeperLogCraftedRepellentFmt), N(e.Value)),

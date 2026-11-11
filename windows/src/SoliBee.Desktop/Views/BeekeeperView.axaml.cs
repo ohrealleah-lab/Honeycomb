@@ -167,7 +167,7 @@ public partial class BeekeeperView : UserControl
 
         // Hive: the title, the groups of rows (built from the view model), the move-hive row.
         HiveCard.IsVisible = vm.HiveCardShown;   // stage 7.5: the drip's first wax can come before any bee
-        HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive);
+        HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive, vm.HasMeadow);
         UpdateHive(vm, lang);
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
@@ -176,6 +176,17 @@ public partial class BeekeeperView : UserControl
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
         ShowWall(WoodenHiveWallText, MoveHiveButton, vm.WoodenHiveIsWall, N(vm.WaxStorage));
+        // Stage 8: the meadow, offered once a wildflower and a clover grow; 50 of each buy it (counted, not spent).
+        MeadowRow.IsVisible = vm.MeadowOffered;
+        if (vm.MeadowOffered)
+        {
+            MeadowNameText.Text = BeekeeperText.MeadowName;
+            MeadowNeedText.Text = BeekeeperText.MeadowNeed(N(vm.MeadowWildflowersHave), N(vm.MeadowWildflowersNeed),
+                N(vm.MeadowCloverHave), N(vm.MeadowCloverNeed));
+            MeadowInfoText.Text = BeekeeperText.MeadowBlurb(N(vm.MeadowHoneyPerSecond, 2), N(vm.MeadowHoneyRoom), N(vm.MeadowWaxRoom));
+            BuyMeadowButton.Content = BeekeeperText.MeadowButton;
+            BuyMeadowButton.IsEnabled = vm.CanBuyMeadow;
+        }
 
         // Trading: one shared card, a row per buyer
         var offers = vm.TradeOffers;
@@ -209,10 +220,13 @@ public partial class BeekeeperView : UserControl
         BuildCombButton.IsEnabled = vm.CanBuildComb;
         ShowWall(CombWallText, BuildCombButton, vm.CombIsWall, N(vm.WaxStorage));
 
-        // Capacity upgrades (stage 7.5): Beebits only, bought again and again, so never walls.
-        HoneySuperRow.IsVisible = vm.CapacityUpgradesShown;
+        // Capacity upgrades (stage 7.5): bought again and again, never walls. Stage 8 (spec 017): the
+        // Honey Super costs wood and shows with the first wood; the Wax Tray stays on Beebits.
+        // Cut in stage 8: HoneySuperRow.IsVisible = vm.CapacityUpgradesShown;
+        // Cut in stage 8: HoneySuperInfoText.Text = BeekeeperText.Price(N(vm.HoneySuperCost), null, null) + ...
+        HoneySuperRow.IsVisible = vm.HoneySuperShown;
         HoneySuperNameText.Text = BeekeeperText.HoneySuper;
-        HoneySuperInfoText.Text = BeekeeperText.Price(N(vm.HoneySuperCost), null, null)
+        HoneySuperInfoText.Text = BeekeeperText.Price(null, null, null, wood: N(vm.HoneySuperCost))
             + " · " + BeekeeperText.HoneySuperBlurb(N(vm.HoneySuperCapacity), N(vm.HoneySupers));
         BuyHoneySuperButton.Content = BeekeeperText.Add;
         BuyHoneySuperButton.IsEnabled = vm.CanBuyHoneySuper;
@@ -233,13 +247,20 @@ public partial class BeekeeperView : UserControl
         // The herbal candle (was the sage repellent candle): opens with the first herb from the bear.
         RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
-        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.Config.HerbalCandleWax), N(vm.Config.HerbalCandleHerbs))
+        // Stage 8: candle prices follow the Dipping Rack, and with the Candle Molds a craft "makes 2".
+        string makes = vm.CandlesPerCraft > 1 ? " · " + BeekeeperText.Makes(vm.CandlesPerCraft) : "";
+        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.HerbalCandleWaxNow), N(vm.Config.HerbalCandleHerbs)) + makes
             + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Roughly(vm.HerbalCandleBurnSeconds));
+        // Cut in stage 8: BeekeeperText.Price(null, N(vm.Config.HerbalCandleWax), N(vm.Config.HerbalCandleHerbs))
         HerbBurningText.IsVisible = vm.HerbBuff is not null;
         if (vm.HerbBuff is { } buff)
             HerbBurningText.Text = BeekeeperText.HerbBurning(buff, BeekeeperText.Clock(vm.HerbSecondsLeft));
         CraftRepellentButton.Content = BeekeeperText.Make;
         CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
+        // Stage 8: a candle's wax price above the cap is a wall too (it follows the Dipping Rack).
+        ShowWallTip(CraftRepellentButton, vm.CandleIsWall(vm.HerbalCandleWaxNow));
+        ShowWallTip(CraftBeeBoostButton, vm.CandleIsWall(vm.BeeBoostCandleWaxNow));
+        ShowWallTip(CraftSagePropolisButton, vm.CandleIsWall(vm.SagePropolisCandleWaxNow));
         ShowBatch(Repellent10Button, 10, vm.CanCraftRepellentTimes(10));
         ShowBatch(Repellent100Button, 100, vm.CanCraftRepellentTimes(100));
         LightRepellentButton.Content = BeekeeperText.Light;
@@ -249,7 +270,7 @@ public partial class BeekeeperView : UserControl
         // The propolis candles (stage 7): once the poplar has sprouted
         BeeBoostRow.IsVisible = vm.PropolisCandlesShown;
         BeeBoostNameText.Text = BeekeeperText.BeeBoostCandle;
-        BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.Config.BeeBoostCandleWax), null, propolis: N(vm.Config.BeeBoostCandlePropolis))
+        BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.BeeBoostCandleWaxNow), null, propolis: N(vm.Config.BeeBoostCandlePropolis)) + makes
             + " · " + BeekeeperText.BeeBoostBlurb(N(vm.BeeBoostBonusPercent), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
         CraftBeeBoostButton.Content = BeekeeperText.Make;
         CraftBeeBoostButton.IsEnabled = vm.CanCraftBeeBoost;
@@ -259,8 +280,8 @@ public partial class BeekeeperView : UserControl
         LightBeeBoostButton.IsEnabled = vm.CanLightBeeBoost;
         SagePropolisRow.IsVisible = vm.PropolisCandlesShown;
         SagePropolisNameText.Text = BeekeeperText.SagePropolisCandle;
-        SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.Config.SagePropolisCandleWax), N(vm.Config.SagePropolisCandleHerbs),
-                propolis: N(vm.Config.SagePropolisCandlePropolis))
+        SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.SagePropolisCandleWaxNow), N(vm.Config.SagePropolisCandleHerbs),
+                propolis: N(vm.Config.SagePropolisCandlePropolis)) + makes
             + " · " + BeekeeperText.SagePropolisBlurb(N(vm.SagePropolisBonusPercent), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
         CraftSagePropolisButton.Content = BeekeeperText.Make;
         CraftSagePropolisButton.IsEnabled = vm.CanCraftSagePropolis;
@@ -274,10 +295,10 @@ public partial class BeekeeperView : UserControl
         NotebookTitleText.Text = BeekeeperText.NotebookTitle;
         if (vm.HasNotebook) UpdateNotebook(vm, lang);
 
-        // The Garden (stage 7): the beds, the seeds in hand, the plants once sprouted
+        // The Garden (stage 8): the seeds in hand by kind, the plants by kind with their counts
         GardenCard.IsVisible = vm.GardenRevealed;
         GardenTitleText.Text = BeekeeperText.GardenTitle;
-        UpdateBeds(vm);
+        // Cut in stage 8 (spec 017): UpdateBeds(vm);   // plants grow at once
         UpdateSeeds(vm, lang);
         UpdatePlants(vm, lang);
 
@@ -330,6 +351,12 @@ public partial class BeekeeperView : UserControl
         // text.Opacity = 1.0;
         // if (wall) text.Text = BeekeeperText.WaxWall(holds);
         text.IsVisible = false;
+        ShowWallTip(button, wall);
+    }
+
+    /// <summary>A wall's hover on its (disabled) button: the ways past it.</summary>
+    private static void ShowWallTip(Button button, bool wall)
+    {
         ToolTip.SetShowOnDisabled(button, true);
         ToolTip.SetTip(button, wall ? BeekeeperText.WaxWallTip : null);
     }
@@ -438,67 +465,86 @@ public partial class BeekeeperView : UserControl
             }
     }
 
-    // The beds are plain text, so they are simply redrawn each tick (a row per bed, empty or growing).
-    private void UpdateBeds(BeekeeperViewModel vm)
-    {
-        var growing = vm.GrowingBeds;
-        int total = vm.BedRowCount;
-        while (BedRows.Children.Count > total) BedRows.Children.RemoveAt(BedRows.Children.Count - 1);
-        while (BedRows.Children.Count < total) BedRows.Children.Add(new TextBlock { Classes = { "bk-body" } });
-        for (int i = 0; i < total; i++)
-        {
-            var line = (TextBlock)BedRows.Children[i];
-            bool busy = i < growing.Count;
-            line.Text = busy ? BeekeeperText.BedGrowing(growing[i].Plant, growing[i].SecondsLeft) : BeekeeperText.GardenEmptyBed;
-            line.Opacity = busy ? 1.0 : 0.6;
-        }
-    }
+    // Cut in stage 8 (spec 017, FR-815): plants grow at once, so there are no bed rows.
+    // // The beds are plain text, so they are simply redrawn each tick (a row per bed, empty or growing).
+    // private void UpdateBeds(BeekeeperViewModel vm)
+    // {
+    //     var growing = vm.GrowingBeds;
+    //     int total = vm.BedRowCount;
+    //     while (BedRows.Children.Count > total) BedRows.Children.RemoveAt(BedRows.Children.Count - 1);
+    //     while (BedRows.Children.Count < total) BedRows.Children.Add(new TextBlock { Classes = { "bk-body" } });
+    //     for (int i = 0; i < total; i++)
+    //     {
+    //         var line = (TextBlock)BedRows.Children[i];
+    //         bool busy = i < growing.Count;
+    //         line.Text = busy ? BeekeeperText.BedGrowing(growing[i].Plant, growing[i].SecondsLeft) : BeekeeperText.GardenEmptyBed;
+    //         line.Opacity = busy ? 1.0 : 0.6;
+    //     }
+    // }
 
-    // Each seed in hand has its own Plant button. Rebuilt only when the seeds change, so a button is
-    // never swapped under the mouse; whether it is enabled (a free bed) is refreshed every tick.
+    // One row per kind of seed in hand, with the count and a Plant button that plants one (stage 8).
+    // Rebuilt only when a kind comes or goes, so a button is never swapped under the mouse; the
+    // counts and enabled states are refreshed every tick.
     private string _seedsSignature = "";
-    private readonly Dictionary<string, Button> _seedButtons = new();
+    private readonly Dictionary<string, (TextBlock Line, Button Plant)> _seedRows = new();
 
     private void UpdateSeeds(BeekeeperViewModel vm, AppLanguage lang)
     {
-        var seeds = vm.SeedsInHand;
-        string sig = lang + "|" + string.Join(",", seeds.Select(p => p.Id));
+        var rows = vm.SeedRows;
+        string sig = lang + "|" + string.Join(",", rows.Select(r => r.Plant.Id));
         if (sig != _seedsSignature)
         {
             _seedsSignature = sig;
-            _seedButtons.Clear();
+            _seedRows.Clear();
             SeedRows.Children.Clear();
-            foreach (var plant in seeds)
+            foreach (var r in rows)
             {
-                var id = plant.Id;
+                var id = r.Plant.Id;
                 var row = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
-                row.Children.Add(new TextBlock
+                var line = new TextBlock
                 {
-                    Text = BeekeeperText.SeedLine(id), Classes = { "bk-body" },
-                    FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center,
-                });
+                    Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center,
+                };
+                row.Children.Add(line);
                 var button = new Button
                 {
                     Classes = { "bk-button" }, MinWidth = 90, Content = BeekeeperText.GardenPlant,
                     HorizontalContentAlignment = HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center,
                 };
-                ToolTip.SetTip(button, BeekeeperText.TakesToGrow(plant.GrowSeconds));
-                ToolTip.SetShowOnDisabled(button, true);   // beds full: the button is off but still says how long it takes
+                // Cut in stage 8 (spec 017): the hover said how long the plant takes to grow.
+                // ToolTip.SetTip(button, BeekeeperText.TakesToGrow(plant.GrowSeconds));
                 button.Click += (_, _) => _vm?.PlantSeedCommand.Execute(id);
                 Grid.SetColumn(button, 1);
                 row.Children.Add(button);
                 SeedRows.Children.Add(row);
-                _seedButtons[id] = button;
+                _seedRows[id] = (line, button);
             }
         }
-        foreach (var (id, button) in _seedButtons) button.IsEnabled = vm.CanPlantSeedOf(id);
+        foreach (var r in rows)
+        {
+            if (!_seedRows.TryGetValue(r.Plant.Id, out var c)) continue;
+            c.Line.Text = BeekeeperText.SeedsLine(r.Plant.Id, r.Count);
+            c.Plant.IsEnabled = vm.CanPlantSeedOf(r.Plant.Id);
+        }
     }
 
-    // The Notebook's notes: plain text, rebuilt only when a note is added.
+    // The Notebook (stage 8: two tabs). The notes and the bees are plain text, rebuilt only when
+    // something is added; a fact is picked at random each time the Bees tab opens.
     private string _notebookSignature = "";
+    private string _beesSignature = "";
+    private bool _beesTab;
+    private readonly Dictionary<string, string> _beeFacts = new();
 
     private void UpdateNotebook(BeekeeperViewModel vm, AppLanguage lang)
     {
+        NotesTabButton.Content = BeekeeperText.TabNotes;
+        BeesTabButton.Content = BeekeeperText.TabBees;
+        NotesTabButton.Opacity = _beesTab ? 0.6 : 1.0;
+        BeesTabButton.Opacity = _beesTab ? 1.0 : 0.6;
+        NotebookRows.IsVisible = !_beesTab;
+        BeesRows.IsVisible = _beesTab;
+        if (_beesTab) { UpdateBees(vm, lang); return; }
+
         var notes = vm.NotebookNotes;
         string sig = lang + "|" + string.Join(",", notes);
         if (sig == _notebookSignature) return;
@@ -508,23 +554,83 @@ public partial class BeekeeperView : UserControl
             NotebookRows.Children.Add(new TextBlock { Text = BeekeeperText.NotebookNote(id), Classes = { "bk-body" }, Opacity = 0.9 });
     }
 
-    private string _plantsSignature = "";
+    private void UpdateBees(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        var bees = vm.BeesMet;
+        string sig = lang + "|" + string.Join(",", bees);
+        if (sig == _beesSignature) return;
+        _beesSignature = sig;
+        BeesRows.Children.Clear();
+        foreach (var id in bees)
+        {
+            if (!_beeFacts.ContainsKey(id))
+            {
+                var facts = BeekeeperText.BeeFacts(id);
+                _beeFacts[id] = facts.Count == 0 ? "" : facts[Random.Shared.Next(facts.Count)];
+            }
+            var row = new StackPanel { Spacing = 2 };
+            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeTitle(id), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.BeeDoes(id), Classes = { "bk-body" }, Opacity = 0.9, TextWrapping = TextWrapping.Wrap });
+            row.Children.Add(new TextBlock { Text = _beeFacts[id], Classes = { "bk-muted" }, TextWrapping = TextWrapping.Wrap });
+            BeesRows.Children.Add(row);
+        }
+    }
 
-    // Plain text rows, rebuilt only when what they show changes.
+    private void NotesTab_Click(object? sender, RoutedEventArgs e)
+    {
+        _beesTab = false;
+        if (_vm != null) UpdateNotebook(_vm, SettingsService.LoadOptions().Language);
+    }
+
+    private void BeesTab_Click(object? sender, RoutedEventArgs e)
+    {
+        // Each time the tab opens, every bee picks a fresh fact from its list.
+        _beesTab = true;
+        _beeFacts.Clear();
+        _beesSignature = "";
+        if (_vm != null) UpdateNotebook(_vm, SettingsService.LoadOptions().Language);
+    }
+
+    // One row per kind of plant growing, with how many, its specialty and (stage 8) the bonus the
+    // plants after the first add. Rebuilt only when a kind comes; the counts refresh every tick.
+    private string _plantsSignature = "";
+    private readonly Dictionary<string, (TextBlock Count, TextBlock Bonus)> _plantRows = new();
+
     private void UpdatePlants(BeekeeperViewModel vm, AppLanguage lang)
     {
-        var plants = vm.SproutedPlants;
-        string sig = lang + "|" + string.Join(",", plants.Select(p => p.Id));
-        if (sig == _plantsSignature) return;
-        _plantsSignature = sig;
-        PlantRows.Children.Clear();
-        foreach (var p in plants)
+        var rows = vm.PlantRows;
+        string sig = lang + "|" + string.Join(",", rows.Select(r => r.Plant.Id));
+        if (sig != _plantsSignature)
         {
-            var row = new StackPanel { Spacing = 2 };
-            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantLine(p), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
-            row.Children.Add(new TextBlock { Text = BeekeeperText.PlantBlurb(p.Id), Classes = { "bk-muted" } });
-            PlantRows.Children.Add(row);
+            _plantsSignature = sig;
+            _plantRows.Clear();
+            PlantRows.Children.Clear();
+            foreach (var r in rows)
+            {
+                var p = r.Plant;
+                var row = new StackPanel { Spacing = 2 };
+                var head = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+                head.Children.Add(new TextBlock { Text = BeekeeperText.PlantLine(p), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+                var count = new TextBlock { Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold };
+                Grid.SetColumn(count, 1);
+                head.Children.Add(count);
+                row.Children.Add(head);
+                row.Children.Add(new TextBlock { Text = BeekeeperText.PlantBlurb(p.Id), Classes = { "bk-muted" }, TextWrapping = TextWrapping.Wrap });
+                var bonus = new TextBlock { Classes = { "bk-muted" }, TextWrapping = TextWrapping.Wrap };
+                row.Children.Add(bonus);
+                PlantRows.Children.Add(row);
+                _plantRows[p.Id] = (count, bonus);
+            }
         }
+        foreach (var r in rows)
+        {
+            if (!_plantRows.TryGetValue(r.Plant.Id, out var c)) continue;
+            c.Count.Text = NumberFormatter.Format(r.Count, lang);
+            c.Bonus.IsVisible = r.Plant.BonusPerExtra > 0m;
+            c.Bonus.Text = BeekeeperText.PlantBonusLine(r.Plant, vm.PlantBonusPercent(r.Plant));
+        }
+        // Cut in stage 8 (spec 017): one line per sprouted plant, one plant of each kind.
+        // foreach (var p in vm.SproutedPlants) { PlantLine(p); PlantBlurb(p.Id); }
     }
 
     private void UpdateShop(BeekeeperViewModel vm, AppLanguage lang)
@@ -565,9 +671,14 @@ public partial class BeekeeperView : UserControl
             foreach (var u in upgrades)
             {
                 string id = u.Id;
+                // Stage 8: wood joins the price; the Bee Hotel's blurb says how often a gift comes.
+                string blurb = id == BeekeeperUpgrades.BeeHotel
+                    ? BeekeeperText.HotelBlurb(vm.Config.HotelGiftSeconds)
+                    : BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id));
                 ShopRows.Children.Add(MakeShopRow(
-                    BeekeeperText.UpgradeName(id), BeekeeperText.UpgradeBlurb(id, vm.UpgradeBonusPercent(id)), false,
-                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Herbs), paper: Part(u.Paper), propolis: Part(u.Propolis), bees: Part(u.Bees)),
+                    BeekeeperText.UpgradeName(id), blurb, false,
+                    BeekeeperText.Price(Part(u.Beebits), Part(u.Wax), Part(u.Herbs), paper: Part(u.Paper), propolis: Part(u.Propolis),
+                        bees: Part(u.Bees), wood: Part(u.Wood)),
                     "upgrade:" + id, _ => vm.BuyUpgrade(id), withWall: true));
             }
         }
@@ -828,6 +939,7 @@ public partial class BeekeeperView : UserControl
     private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
     private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);
     private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
+    private void BuyMeadow_Click(object? sender, RoutedEventArgs e) => _vm?.BuyMeadowCommand.Execute(null);
     private void Smoker_Click(object? sender, RoutedEventArgs e) => _vm?.UseSmokerCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup

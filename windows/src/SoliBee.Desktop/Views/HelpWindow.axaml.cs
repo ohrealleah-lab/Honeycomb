@@ -230,6 +230,8 @@ public partial class HelpWindow : Window
         BeekeeperGardenBody.Text = T(StringKey.HelpBeekeeperGarden);
         BeekeeperQueenHeading.Text = T(StringKey.HelpBeekeeperQueenTitle);
         BeekeeperQueenBody.Text = T(StringKey.HelpBeekeeperQueen);
+        BeekeeperMeadowHeading.Text = T(StringKey.HelpBeekeeperMeadowTitle);   // stage 8: wood, the bee hotel, the meadow, the Bees tab
+        BeekeeperMeadowBody.Text = T(StringKey.HelpBeekeeperMeadow);
 
         // ── Themes ───────────────────────────────────────────────────────
         ThemesCustomizationHeading.Text = T(StringKey.HelpThemesCustomizationTitle);

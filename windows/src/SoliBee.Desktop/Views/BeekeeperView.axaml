@@ -151,6 +151,16 @@
                             <Button x:Name="MoveHiveButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MoveHive_Click" />
                         </Grid>
+                        <!-- Stage 8 (spec 017): offered once a wildflower and a clover are planted; bought with 50 of each (counted, not spent) -->
+                        <Grid x:Name="MeadowRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="MeadowNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="MeadowNeedText" Classes="bk-muted" />
+                                <TextBlock x:Name="MeadowInfoText" Classes="bk-muted" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button x:Name="BuyMeadowButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyMeadow_Click" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -159,7 +169,13 @@
                 <Border x:Name="NotebookCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="8">
                         <TextBlock x:Name="NotebookTitleText" Classes="bk-title" />
+                        <!-- Stage 8 (spec 017): two tabs, the notes on the specialties and the Bees tab (every bee, what it does, a fact) -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button x:Name="NotesTabButton" Classes="bk-button" MinWidth="70" HorizontalContentAlignment="Center" Click="NotesTab_Click" />
+                            <Button x:Name="BeesTabButton" Classes="bk-button" MinWidth="70" HorizontalContentAlignment="Center" Click="BeesTab_Click" />
+                        </StackPanel>
                         <StackPanel x:Name="NotebookRows" Spacing="8" />
+                        <StackPanel x:Name="BeesRows" Spacing="8" IsVisible="False" />
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -211,7 +227,7 @@
                             <Button x:Name="BuildCombButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuildComb_Click" />
                         </Grid>
-                        <!-- Stage 7.5 (spec 016): capacity upgrades, bought again and again for Beebits -->
+                        <!-- Stage 7.5 (spec 016): capacity upgrades, bought again and again (stage 8: the Honey Super for wood, the Wax Tray for Beebits) -->
                         <Grid x:Name="HoneySuperRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="HoneySuperNameText" Classes="bk-body" FontWeight="SemiBold" />
@@ -300,9 +316,10 @@
                 <Border x:Name="GardenCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="GardenTitleText" Classes="bk-title" />
-                        <!-- Since stage 7 (spec 015): the beds (growing or empty), the seeds in hand with a
-                             Plant button each, then the plants that have sprouted. -->
-                        <StackPanel x:Name="BedRows" Spacing="4" />
+                        <!-- Since stage 8 (spec 017): one row per kind of seed in hand (with the count and a
+                             Plant button), then one row per kind of plant growing (with the count). Plants
+                             grow at once, so the beds are gone (stage 7 listed them here). -->
+                        <StackPanel x:Name="BedRows" Spacing="4" IsVisible="False" />
                         <StackPanel x:Name="SeedRows" Spacing="8" />
                         <StackPanel x:Name="PlantRows" Spacing="8" />
                     </StackPanel>

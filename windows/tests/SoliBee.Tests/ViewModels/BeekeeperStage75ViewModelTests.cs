@@ -99,23 +99,24 @@ public class BeekeeperStage75ViewModelTests
         Assert.Equal(0.2m, Row(vm, BeekeeperHiveRows.Honey).Rate);
     }
 
-    [Fact]
-    public void CapacityRows_BuyAgainAndAgain_AndShowTheNextPriceAndLevel()
-    {
-        var vm = Make(new BeekeeperState { ShopRevealed = true, CombsRevealed = true, Beebits = 500m });
-        Assert.True(vm.CapacityUpgradesShown);
-        Assert.Equal(75m, vm.HoneySuperCost);
-        vm.BuyHoneySuperCommand.Execute(null);
-        Assert.Equal(1, vm.HoneySupers);
-        Assert.Equal(112m, vm.HoneySuperCost);
-        Assert.Equal(1200m, vm.HoneyStorage);
-        vm.BuyWaxTrayCommand.Execute(null);
-        Assert.Equal(1, vm.WaxTrays);
-        Assert.Equal(30m, vm.WaxStorage);
-        Assert.Equal(145m, vm.WaxTrayCost);
-        Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.HoneySuperBought);
-        Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.WaxTrayBought);
-    }
+    // Cut in stage 8 (spec 017): Honey Supers cost wood (see BeekeeperStage8ViewModelTests).
+    // [Fact]
+    // public void CapacityRows_BuyAgainAndAgain_AndShowTheNextPriceAndLevel()
+    // {
+    //     var vm = Make(new BeekeeperState { ShopRevealed = true, CombsRevealed = true, Beebits = 500m });
+    //     Assert.True(vm.CapacityUpgradesShown);
+    //     Assert.Equal(75m, vm.HoneySuperCost);
+    //     vm.BuyHoneySuperCommand.Execute(null);
+    //     Assert.Equal(1, vm.HoneySupers);
+    //     Assert.Equal(112m, vm.HoneySuperCost);
+    //     Assert.Equal(1200m, vm.HoneyStorage);
+    //     vm.BuyWaxTrayCommand.Execute(null);
+    //     Assert.Equal(1, vm.WaxTrays);
+    //     Assert.Equal(30m, vm.WaxStorage);
+    //     Assert.Equal(145m, vm.WaxTrayCost);
+    //     Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.HoneySuperBought);
+    //     Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.WaxTrayBought);
+    // }
 
     [Fact]
     public void TheCombRow_ShowsBothPrices_AndWhatAOneCombGives()

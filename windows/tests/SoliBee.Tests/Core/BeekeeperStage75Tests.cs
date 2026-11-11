@@ -154,33 +154,35 @@ public class BeekeeperStage75Tests
     }
 
     // Review change (Bee): the Shop showing because the Workbench opened is enough.
-    [Fact]
-    public void CapacityUpgrades_ShowOnceTheWorkbenchHasOpenedTheShop_WithoutFifteenBeebits()
-    {
-        var e = Make(new BeekeeperState { Beebits = 10_000m, WorkbenchRevealed = true, CombsRevealed = true });
-        Assert.False(e.State.ShopRevealed);
-        Assert.True(e.CapacityUpgradesShown);
-        Assert.True(e.BuyHoneySuper().Done);
-    }
+    // Cut in stage 8 (spec 017): Honey Supers cost wood, not Beebits (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void CapacityUpgrades_ShowOnceTheWorkbenchHasOpenedTheShop_WithoutFifteenBeebits()
+    // {
+    //     var e = Make(new BeekeeperState { Beebits = 10_000m, WorkbenchRevealed = true, CombsRevealed = true });
+    //     Assert.False(e.State.ShopRevealed);
+    //     Assert.True(e.CapacityUpgradesShown);
+    //     Assert.True(e.BuyHoneySuper().Done);
+    // }
 
-    [Fact]
-    public void HoneySupers_RepeatAtRisingPrices_ForBeebitsOnly()
-    {
-        var e = Make(new BeekeeperState { ShopRevealed = true, CombsRevealed = true, Beebits = 1000m });
-        var prices = new List<decimal>();
-        for (int i = 0; i < 4; i++)
-        {
-            prices.Add(e.HoneySuperCost);
-            var r = e.BuyHoneySuper();
-            Assert.True(r.Done);
-            Assert.Contains(r.Events, x => x.Key == BeekeeperEvents.HoneySuperBought && x.Value == i + 1);
-        }
-        Assert.Equal(new[] { 75m, 112m, 168m, 253m }, prices);   // +50%, rounded down
-        Assert.Equal(4, e.State.HoneySupers);
-        Assert.Equal(200m + 4000m, e.HoneyStorage);
-        Assert.Equal(1000m - 608m, e.State.Beebits);
-        Assert.Equal(0m, e.State.Wax);
-    }
+    // Cut in stage 8 (spec 017): Honey Supers cost wood, not Beebits (see BeekeeperStage8Tests).
+    // [Fact]
+    // public void HoneySupers_RepeatAtRisingPrices_ForBeebitsOnly()
+    // {
+    //     var e = Make(new BeekeeperState { ShopRevealed = true, CombsRevealed = true, Beebits = 1000m });
+    //     var prices = new List<decimal>();
+    //     for (int i = 0; i < 4; i++)
+    //     {
+    //         prices.Add(e.HoneySuperCost);
+    //         var r = e.BuyHoneySuper();
+    //         Assert.True(r.Done);
+    //         Assert.Contains(r.Events, x => x.Key == BeekeeperEvents.HoneySuperBought && x.Value == i + 1);
+    //     }
+    //     Assert.Equal(new[] { 75m, 112m, 168m, 253m }, prices);   // +50%, rounded down
+    //     Assert.Equal(4, e.State.HoneySupers);
+    //     Assert.Equal(200m + 4000m, e.HoneyStorage);
+    //     Assert.Equal(1000m - 608m, e.State.Beebits);
+    //     Assert.Equal(0m, e.State.Wax);
+    // }
 
     [Fact]
     public void WaxTrays_RepeatAtRisingPrices_AndAddWaxRoom()

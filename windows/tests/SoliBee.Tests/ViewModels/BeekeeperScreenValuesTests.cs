@@ -85,12 +85,13 @@ public class BeekeeperScreenValuesTests
         Assert.Contains("%@", Strings.Get(key, AppLanguage.Spanish));
     }
 
-    [Fact]
-    public void BedRows_CoverTheOwnedBeds()
-    {
-        var vm = Make(new BeekeeperState { BearName = "B" });
-        Assert.Equal(1, vm.BedRowCount);
-        vm.State.Upgrades.Add(BeekeeperUpgrades.ThirdBed);   // only an old save owns this now
-        Assert.Equal(2, vm.BedRowCount);
-    }
+    // Cut in stage 8 (spec 017): no beds.
+    // [Fact]
+    // public void BedRows_CoverTheOwnedBeds()
+    // {
+    //     var vm = Make(new BeekeeperState { BearName = "B" });
+    //     Assert.Equal(1, vm.BedRowCount);
+    //     vm.State.Upgrades.Add(BeekeeperUpgrades.ThirdBed);   // only an old save owns this now
+    //     Assert.Equal(2, vm.BedRowCount);
+    // }
 }
