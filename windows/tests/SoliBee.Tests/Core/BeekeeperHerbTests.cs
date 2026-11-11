@@ -97,14 +97,14 @@ public class BeekeeperHerbTests
     // ============================================================ the herbal candle
 
     [Fact]
-    public void AnHerbalCandle_CostsTenWaxAndOneHerb()
+    public void AnHerbalCandle_CostsOneWaxAndOneHerb()   // Bee, 2026-11-11: was 10 wax
     {
         var e = Make(candles: 0m);
         e.State.RepellentUnlocked = true;
         e.State.Wax = 20m;
         e.State.Herbs = 1m;
         Assert.True(e.CraftRepellent().Done);
-        Assert.Equal(10m, e.State.Wax);
+        Assert.Equal(19m, e.State.Wax);
         Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(1m, e.State.RepellentCandles);
         Assert.False(e.CanCraftRepellent);           // no herb left

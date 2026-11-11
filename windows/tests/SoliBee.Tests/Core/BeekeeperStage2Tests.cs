@@ -134,7 +134,7 @@ public class BeekeeperStage2Tests : IDisposable
 
         var e = Make(Workshop(s => { s.Wax = 50m; s.Herbs = 1m; s.RepellentUnlocked = true; }));
         Assert.True(e.CraftRepellent().Done);
-        Assert.Equal(40m, e.State.Wax);
+        Assert.Equal(49m, e.State.Wax);   // 1 wax (Bee, 2026-11-11; was 10)
         Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(1m, e.State.RepellentCandles);
         Assert.False(e.CraftRepellent().Done);   // no sage left

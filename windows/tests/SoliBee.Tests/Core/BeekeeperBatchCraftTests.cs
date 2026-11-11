@@ -7,7 +7,11 @@ namespace SoliBee.Tests.Core;
 /// <summary>Crafting in batches (x10, x100): exactly N times the cost, or nothing.</summary>
 public class BeekeeperBatchCraftTests
 {
-    private static BeekeeperEngine Make(BeekeeperState state) => new(BeekeeperConfig.Default, state);
+    // Bee, 2026-11-11: the herbal candle costs 1 wax now. These test the batch rule, so they keep a
+    // 10-wax candle, where "ten times the cost" shows.
+    private static readonly BeekeeperConfig TenWax = new() { HerbalCandleWax = 10m };
+    private static BeekeeperEngine Make(BeekeeperState state) => new(TenWax, state);
+    // Before: private static BeekeeperEngine Make(BeekeeperState state) => new(BeekeeperConfig.Default, state);
 
     // Bee, 2026-11-11: the beeswax candle is gone; these batches use the herbal candle (10 wax + 1 herb).
     private static BeekeeperState Herbal(decimal wax, decimal herbs) =>

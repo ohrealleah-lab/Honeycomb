@@ -42,6 +42,9 @@ public class BeekeeperStage8Tests : IDisposable
 
     private static readonly BeekeeperConfig BigCaps = new() { StartingHoneyCap = 1e12m, StartingWaxCap = 1e12m };
 
+    /// <summary>The candle tests show halving on a 10-wax herbal candle (Bee set it to 1 wax on 2026-11-11).</summary>
+    private static readonly BeekeeperConfig TenWax = new() { HerbalCandleWax = 10m };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null, IRandomSource? rng = null, BeekeeperConfig? config = null)
         => new(config ?? BeekeeperConfig.Default, state, rng ?? new Script());
 
@@ -446,7 +449,7 @@ public class BeekeeperStage8Tests : IDisposable
         e.BuyUpgrade(BeekeeperUpgrades.WoodenFrames);
         Assert.Equal(6m, e.CombCost);
         Assert.Equal(bees, e.CombBeeCost);
-        Assert.Equal(10m, e.HerbalCandleWaxNow);
+        Assert.Equal(e.Config.HerbalCandleWax, e.HerbalCandleWaxNow);
         Assert.Equal(1, e.CandlesPerCraft);
         Assert.Equal(2m, Make(new BeekeeperState { Upgrades = { BeekeeperUpgrades.WoodenFrames } }).CombCost);   // 5 → 2
     }
@@ -458,7 +461,7 @@ public class BeekeeperStage8Tests : IDisposable
         e.BuyUpgrade(BeekeeperUpgrades.CandleMolds);
         Assert.Equal(2, e.CraftRepellent().Amount);
         Assert.Equal(2m, e.State.RepellentCandles);
-        Assert.Equal(990m, e.State.Wax);
+        Assert.Equal(1000m - e.Config.HerbalCandleWax, e.State.Wax);
         Assert.Equal(99m, e.State.Herbs);
         e.CraftBeeBoost();
         e.CraftSagePropolis();
@@ -471,7 +474,7 @@ public class BeekeeperStage8Tests : IDisposable
     [Fact]
     public void TheDippingRack_HalvesEveryCandlesWax_AndNothingElse()
     {
-        var e = Make(Woodshop());
+        var e = Make(Woodshop(), config: TenWax);
         e.BuyUpgrade(BeekeeperUpgrades.DippingRack);
         Assert.Equal(5m, e.HerbalCandleWaxNow);
         Assert.Equal(10m, e.BeeBoostCandleWaxNow);
@@ -490,7 +493,7 @@ public class BeekeeperStage8Tests : IDisposable
         var s = Woodshop();
         s.Wax = 55m;
         s.Herbs = 11m;
-        var e = Make(s);
+        var e = Make(s, config: TenWax);
         Assert.False(e.CanCraftRepellentTimes(10));   // 100 wax at the old price
         e.BuyUpgrade(BeekeeperUpgrades.CandleMolds);
         e.BuyUpgrade(BeekeeperUpgrades.DippingRack);
