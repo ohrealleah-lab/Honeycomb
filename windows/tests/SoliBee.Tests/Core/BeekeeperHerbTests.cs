@@ -121,7 +121,7 @@ public class BeekeeperHerbTests
     }
 
     [Fact]
-    public void TheHippies_BuyHerbalCandlesForBeebits_AndTheFirstBeebitsOpenTheShop()
+    public void TheHippies_BuyHerbalCandlesForBeebits()
     {
         var e = Make(candles: 3m);
         e.State.ShopRevealed = false;
@@ -133,7 +133,7 @@ public class BeekeeperHerbTests
         Assert.Equal(e.Config.HippieBeebitsPerCandle, e.State.Beebits);
         Assert.Equal(1, e.State.HippieTrades);
         Assert.True(e.State.BeebitsRevealed);
-        Assert.True(e.State.ShopRevealed);
+        Assert.False(e.State.ShopRevealed);   // Bee, 2026-11-11: the first comb opens the Shop, not the first Beebits
 
         e.TradeAllCandles();
         Assert.Equal(0m, e.State.RepellentCandles);

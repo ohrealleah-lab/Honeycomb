@@ -221,13 +221,7 @@ public class BeekeeperViewModelTests : IDisposable
         vm.State.RepellentCandles = 8m;
         vm.TradeAllCandlesCommand.Execute(null);
         Assert.Equal(80m, vm.Beebits);                   // 8 herbal candles, 10 Beebits each
-        Assert.True(vm.ShopRevealed);
-        Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
-
-        vm.State.ToolLevel = 1;                          // the gloves are found, not bought (story card)
-        vm.BuyNextToolCommand.Execute(null);             // the Net
-        Assert.Equal(2, vm.ToolLevel);
-        Assert.Equal(5, vm.BeesPerClick);
+        Assert.False(vm.ShopRevealed);                   // Bee, 2026-11-11: the first comb opens the Shop
 
         vm.BuildCombCommand.Execute(null);
         Assert.Equal(2, vm.Combs);                       // the starter and one bought (stage 7.5)
@@ -235,6 +229,13 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.Equal(22m, vm.WaxStorage);
         Assert.Equal(5m, vm.Bees);                       // 250 bees moved in
         Assert.True(Logged(vm, BeekeeperEvents.CombBuilt));
+        Assert.True(vm.ShopRevealed);
+        Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
+
+        vm.State.ToolLevel = 1;                          // the gloves are found, not bought (story card)
+        vm.BuyNextToolCommand.Execute(null);             // the Net
+        Assert.Equal(2, vm.ToolLevel);
+        Assert.Equal(5, vm.BeesPerClick);
     }
 
     [Fact]

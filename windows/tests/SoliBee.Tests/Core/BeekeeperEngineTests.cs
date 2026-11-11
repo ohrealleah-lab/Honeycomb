@@ -395,7 +395,40 @@ public class BeekeeperEngineTests
     // ============================================================ the shop
 
     [Fact]
-    public void Shop_AppearsWithTheFirstBeebits_AndStays()
+    public void Shop_AppearsWithTheFirstCombBuilt_AndStays()
+    {
+        // Bee, 2026-11-11: the first comb built opens the Shop; Beebits alone never do.
+        var c = Make(state: new BeekeeperState { Beebits = 500m, Bees = 300m, Wax = 10m, HoneyRevealed = true });
+        c.Advance(1m);
+        Assert.False(c.State.ShopRevealed);
+        var built = c.BuildComb();
+        Assert.True(built.Done);
+        Assert.True(c.State.ShopRevealed);
+        Assert.True(Has(built.Events, BeekeeperEvents.ShopOpened));
+        Assert.True(c.CanBuyWaxCatcher);
+        c.State.Beebits = 0m;
+        c.Advance(1m);
+        Assert.True(c.State.ShopRevealed);
+    }
+
+    // Cut (Bee, 2026-11-11): the first Beebits opened the Shop.
+    // [Fact]
+    // public void Shop_AppearsWithTheFirstBeebits_AndStays()
+    // {
+    //     var e = Make(state: new BeekeeperState { Honey = 150m });
+    //     e.SellAll();                          // herbs, no Beebits
+    //     Assert.False(e.State.ShopRevealed);
+    //     e.State.HippiesRevealed = true;
+    //     e.State.RepellentCandles = 1m;
+    //     e.TradeTenCandles();                  // 10 Beebits
+    //     Assert.True(e.State.ShopRevealed);
+    //     e.State.Beebits = 0m;                 // spent
+    //     e.Advance(1m);
+    //     Assert.True(e.State.ShopRevealed);
+    // }
+
+    [Fact]
+    public void Beebits_NoLongerOpenTheShop()
     {
         // Bee, 2026-11-11: Beebits come from the Hippies (herbal candles), not the bear.
         var e = Make(state: new BeekeeperState { Honey = 150m });
@@ -404,10 +437,7 @@ public class BeekeeperEngineTests
         e.State.HippiesRevealed = true;
         e.State.RepellentCandles = 1m;
         e.TradeTenCandles();                  // 10 Beebits
-        Assert.True(e.State.ShopRevealed);
-        e.State.Beebits = 0m;                 // spent
-        e.Advance(1m);
-        Assert.True(e.State.ShopRevealed);
+        Assert.False(e.State.ShopRevealed);   // Bee, 2026-11-11: the Shop waits for the first comb
     }
 
     [Fact]
@@ -661,16 +691,17 @@ public class BeekeeperEngineTests
     [Fact]
     public void DebugGrant_AddsWhatItSays_AndRevealsTheCardsItUnlocks()
     {
-        var e = Make(state: new BeekeeperState());   // an empty hive (a new game starts with 75 Beebits and the Shop open)
+        var e = Make(state: new BeekeeperState());   // an empty hive (a new game starts with 75 Beebits)
         var events = e.DebugGrant(250m, 100m, 100m);   // 250 bees: the first comb's price
 
         Assert.Equal(250m, e.State.Bees);
         Assert.Equal(100m, e.State.Wax);          // +wax may go over the cap, like +honey
         Assert.Equal(100m, e.State.Beebits);
         Assert.True(e.State.HoneyRevealed && e.State.WaxRevealed && e.State.BeebitsRevealed);
-        Assert.True(e.State.ShopRevealed);    // 100 Beebits ≥ 15
+        // Bee, 2026-11-11: the Shop waits for the first comb built, however many Beebits (was: open at 15).
+        Assert.False(e.State.ShopRevealed);
         Assert.True(e.State.CombsRevealed);   // 100 wax ≥ 5
-        Assert.True(Has(events, BeekeeperEvents.ShopOpened));
+        Assert.False(Has(events, BeekeeperEvents.ShopOpened));
         Assert.True(e.CanBuildComb);
     }
 
@@ -719,17 +750,22 @@ public class BeekeeperEngineTests
         Assert.Equal(1, e.State.Combs);           // the starter comb (stage 7.5)
         Assert.Equal(0, e.State.ToolLevel);
         Assert.Equal(75m, e.State.Beebits);       // a new game starts with 75 Beebits...
-        Assert.True(e.State.ShopRevealed);        // ...and the Shop open: one Wax-Catcher is a free choice
+        Assert.False(e.State.ShopRevealed);       // ...and no Shop until the first comb (Bee, 2026-11-11; was open at once)
         Assert.True(e.State.BeebitsRevealed);
         Assert.Equal("Buster", e.State.BearName);
     }
 
     [Fact]
-    public void ANewGame_CanBuyTheWaxCatcherAtOnce_ForItsWholeStartingPurse()
+    public void ANewGame_CanBuyTheWaxCatcherOnceTheShopOpens_ForItsWholeStartingPurse()
     {
         var e = Make();
         Assert.Equal(75m, e.Config.WaxCatcherCost);
         Assert.Equal(75m, e.State.Beebits);
+        // Bee, 2026-11-11: no Shop until the first comb is built (it used to be open at once).
+        Assert.False(e.State.ShopRevealed);
+        Assert.False(e.CanBuyWaxCatcher);
+        e.DebugAddCombs(1);
+        Assert.True(e.State.ShopRevealed);
         Assert.True(e.CanBuyWaxCatcher);
         Assert.True(e.BuyWaxCatcher().Done);
         Assert.Equal(0m, e.State.Beebits);

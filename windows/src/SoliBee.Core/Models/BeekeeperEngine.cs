@@ -277,7 +277,9 @@ public sealed class BeekeeperEngine
     private BeekeeperState NewState() => new()
     {
         BearName = PickBearName(), Beebits = Config.StartingBeebits,
-        BeebitsRevealed = Config.StartingBeebits > 0m, ShopRevealed = Config.StartingBeebits >= Config.ShopRevealBeebits,
+        // Bee, 2026-11-11: the Shop waits for the first comb built (was: open at once, 75 ≥ 10 Beebits).
+        // ShopRevealed = Config.StartingBeebits >= Config.ShopRevealBeebits,
+        BeebitsRevealed = Config.StartingBeebits > 0m,
     };
 
     private string PickBearName()
@@ -1177,7 +1179,8 @@ public sealed class BeekeeperEngine
         RefreshStorageFlag();
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, bees) };
         OpenWorkbenchIfDue(events);
-        CheckWalls(events);
+        CheckReveals(events);   // the first comb opens the Shop (Bee, 2026-11-11); also checks the walls
+        // Before: CheckWalls(events);
         return new ActionResult(true, wax, events);
         // Cut in stage 7.5 (spec 016): wax only, and the event carried the honey storage added.
         // decimal cost = CombCost;
@@ -2614,7 +2617,8 @@ public sealed class BeekeeperEngine
             State.BearRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BearArrives, 0m, State.BearName));
         }
-        if (!State.ShopRevealed && State.Beebits >= Config.ShopRevealBeebits)
+        // Bee, 2026-11-11: the Shop opens with the first comb built. Was: State.Beebits >= Config.ShopRevealBeebits.
+        if (!State.ShopRevealed && CombsBought >= Config.ShopRevealCombsBought)
         {
             State.ShopRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.ShopOpened));

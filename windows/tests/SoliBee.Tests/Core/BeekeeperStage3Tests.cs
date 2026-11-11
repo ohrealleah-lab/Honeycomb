@@ -122,10 +122,10 @@ public class BeekeeperStage3Tests : IDisposable
     public void TheSmoker_IsNeverInTheShop_EvenWithBeebits()
     {
         // Bee, 2026-11-11: Beebits come from the Hippies, and the Smoker is repaired in a story card.
-        var e = Make(new BeekeeperState { HippiesRevealed = true, BearName = "Bruno", RepellentCandles = 1m, HoneyRevealed = true });
+        // Bee, 2026-11-11: the Shop opens with the first comb, so it is open here from the start.
+        var e = Make(new BeekeeperState { HippiesRevealed = true, BearName = "Bruno", RepellentCandles = 1m, HoneyRevealed = true, ShopRevealed = true });
         e.TradeTenCandles();
         Assert.Equal(10m, e.State.Beebits);
-        Assert.True(e.State.ShopRevealed);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Smoker);
         Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.Smoker));
         Assert.False(e.CanUseSmoker);

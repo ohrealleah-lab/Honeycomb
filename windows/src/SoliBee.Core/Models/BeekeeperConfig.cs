@@ -297,7 +297,10 @@ public sealed class BeekeeperConfig
     // Bee, 2026-11-11: the bear comes at 100 bees caught by hand (100 successful clicks), no longer at 10 honey.
     // public decimal BearRevealHoney { get; init; } = 10m;
     public long BearRevealBees { get; init; } = 100;
-    public decimal ShopRevealBeebits { get; init; } = 10m;   // Bee, 2026-11-10: opens with the Smoker's price (was 15)
+    // Cut (Bee, 2026-11-11): the Shop opened at 10 Beebits, so a new game (75 Beebits) had it at once.
+    // public decimal ShopRevealBeebits { get; init; } = 10m;   // Bee, 2026-11-10: opens with the Smoker's price (was 15)
+    /// <summary>The Shop opens once this many combs have been built (the starter comb doesn't count). Bee, 2026-11-11.</summary>
+    public int ShopRevealCombsBought { get; init; } = 1;
     /// <summary>Stage 7.5 (spec 016): was 50. Comes before a comb can be paid for.</summary>
     public decimal CombsRevealWax { get; init; } = 5m;
 
