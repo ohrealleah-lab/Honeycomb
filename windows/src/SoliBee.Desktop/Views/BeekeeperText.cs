@@ -49,7 +49,8 @@ internal static class BeekeeperText
 
     public static string ToolName(string id) => id switch
     {
-        "gloves" => T(StringKey.BeekeeperShopGloves),
+        // Bee, 2026-11-11: the gloves are found in a story card, no longer shown in the Shop.
+        // "gloves" => T(StringKey.BeekeeperShopGloves),
         "net" => T(StringKey.BeekeeperShopNet),
         "vacuum" => T(StringKey.BeekeeperShopVacuum),
         "lure" => T(StringKey.BeekeeperShopLure),
@@ -134,6 +135,13 @@ internal static class BeekeeperText
     public static string WaspHere => T(StringKey.BeekeeperWaspHere);
     public static string TimeLeft(string time) => Fill(T(StringKey.BeekeeperTimeLeftFmt), time);
     public static string ThrowShoe => T(StringKey.BeekeeperThrowShoe);
+    // Story cards
+    public static string StoryOuch => T(StringKey.BeekeeperStoryOuch);
+    public static string StoryGloves => T(StringKey.BeekeeperStoryGloves);
+    public static string StorySmoker => T(StringKey.BeekeeperStorySmoker);
+    public static string StoryYes => T(StringKey.Yes);
+    public static string StoryNo => T(StringKey.BeekeeperStoryNo);
+    public static string StoryRepair => T(StringKey.BeekeeperStoryRepair);
     public static string Bribe(string honey) => Fill(T(StringKey.BeekeeperBribeFmt), honey);
     public static string Engage => T(StringKey.BeekeeperEngage);
     public static string VisitorsTitle => T(StringKey.BeekeeperVisitorsTitle);
@@ -560,6 +568,9 @@ internal static class BeekeeperText
             BeekeeperEvents.RepEngaged => Fill(L(StringKey.BeekeeperLogRepEngagedFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
             BeekeeperEvents.RepLeft => Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
             BeekeeperEvents.WaspEngaged => L(StringKey.BeekeeperLogWaspEngaged),
+            BeekeeperEvents.GlovesOn => L(StringKey.BeekeeperLogGloves),
+            BeekeeperEvents.GlovesGone => L(StringKey.BeekeeperLogGlovesGone),
+            BeekeeperEvents.SmokerRepaired => L(StringKey.BeekeeperLogSmokerRepaired),
             BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
             // Raids take only honey since stage 6 (spec 014). Lines saved before then keep their
             // old wording (bees flown off, or the guards keeping them safe), so the story stays true.

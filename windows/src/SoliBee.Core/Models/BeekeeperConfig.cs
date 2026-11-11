@@ -96,6 +96,19 @@ public static class BeekeeperUpgrades
     public const string NeedsVacuum = "vacuum_owned";
     /// <summary>Nothing first: in the Shop as soon as the Shop is open.</summary>
     public const string NeedsNothing = "";
+    /// <summary>Never sold: it arrives as a story card (the Smoker is repaired, not bought).</summary>
+    public const string NeedsStory = "story_only";
+}
+
+/// <summary>Story cards: small moments shown one at a time in the right column, in this order.
+/// A new moment is a new id here, its "due" rule in the engine and a case in the view.</summary>
+public static class BeekeeperStories
+{
+    /// <summary>"Ouch!": the first sting, which comes once 10 bees have been caught by hand.</summary>
+    public const string Ouch = "ouch";
+    public const string Gloves = "gloves";
+    public const string Smoker = "smoker";
+    public static readonly string[] Order = { Ouch, Gloves, Smoker };
 }
 
 /// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
@@ -153,7 +166,7 @@ public sealed class BeekeeperConfig
     // --- Comb prices: floor(base × growth^n), n = combs bought (the starter doesn't count).
     public decimal CombBaseBeeCost { get; init; } = 250m;   // Bee, 2026-11-11: was 20
     public decimal CombBeeCostGrowth { get; init; } = 1.4m;
-    public decimal CombBaseWaxCost { get; init; } = 10m;
+    public decimal CombBaseWaxCost { get; init; } = 5m;   // Bee, 2026-11-11: was 10
     public decimal CombCostGrowth { get; init; } = 1.25m;
 
     // --- Capacity upgrades: bought again and again, for Beebits only, at The Workbench.
@@ -170,13 +183,32 @@ public sealed class BeekeeperConfig
     // public decimal CombBaseWaxCost { get; init; } = 50m;
 
     // --- Catching ------------------------------------------------------------
+    // Story cards (Bee, 2026-11-11; placeholders).
+    /// <summary>Bees caught by hand, all time, before the gloves are found.</summary>
+    public long GlovesOfferBees { get; init; } = 30;   // Bee, 2026-11-11: was 100
+    /// <summary>Play seconds until a declined gloves card comes back.</summary>
+    public decimal GlovesReturnSeconds { get; init; } = 2m * 60m;
+    /// <summary>The Nth No puts the gloves away for good.</summary>
+    public int GlovesMaxDeclines { get; init; } = 5;
+    /// <summary>Bees in the hive when the Smoker card shows.</summary>
+    public decimal SmokerStoryBees { get; init; } = 250m;
+
+    /// <summary>Bees caught by hand before the first sting (guaranteed, then the story card says "Ouch!").
+    /// Before this many, bare hands are never stung (Bee, 2026-11-11).</summary>
+    public long StingsStartAtBees { get; init; } = 10;
+    /// <summary>After a sting the Catch Bee button is red and disabled for this long (live seconds).</summary>
+    /// <summary>The "Ouch!" card goes away by itself after this many play seconds (no button).</summary>
+    public decimal OuchSeconds { get; init; } = 5m;
+    public decimal StingLockoutSeconds { get; init; } = 1m;
     public double StingChance { get; init; } = 0.20;
     public int BareHandsBees { get; init; } = 1;
 
     /// <summary>Bought in this order. Index 0 is level 1 (Gloves); level 0 is Bare Hands.</summary>
     public IReadOnlyList<BeekeeperTool> Tools { get; init; } = new[]
     {
-        new BeekeeperTool("gloves", 15m, 2),
+        // Bee, 2026-11-11: gloves are found (a story card), not bought.
+        // new BeekeeperTool("gloves", 15m, 2),
+        new BeekeeperTool("gloves", 0m, 2),
         new BeekeeperTool("net", 75m, 5),
         new BeekeeperTool("vacuum", 400m, 10),
         // Stage 3 (spec 011): names Leah's, numbers placeholders.
@@ -193,7 +225,9 @@ public sealed class BeekeeperConfig
     /// hold, so time away can never overflow; a save above it is refused as damaged.</summary>
     public decimal MaxBees { get; init; } = 1e20m;
 
-    public decimal WaxCatcherCost { get; init; } = 150m;
+    public decimal WaxCatcherCost { get; init; } = 75m;   // Bee, 2026-11-11: was 150
+    /// <summary>Beebits a new game starts with (Bee, 2026-11-11): enough for one Wax-Catcher at once, a choice.</summary>
+    public decimal StartingBeebits { get; init; } = 75m;
 
     // --- Trading -------------------------------------------------------------
     // Bee, 2026-11-11 (placeholders): the bear trades herbs for honey, 1 herb a trade; Beebits now
@@ -213,7 +247,9 @@ public sealed class BeekeeperConfig
     };
 
     // --- When things appear --------------------------------------------------
-    public decimal BearRevealHoney { get; init; } = 10m;
+    // Bee, 2026-11-11: the bear comes at 100 bees caught by hand (100 successful clicks), no longer at 10 honey.
+    // public decimal BearRevealHoney { get; init; } = 10m;
+    public long BearRevealBees { get; init; } = 100;
     public decimal ShopRevealBeebits { get; init; } = 10m;   // Bee, 2026-11-10: opens with the Smoker's price (was 15)
     /// <summary>Stage 7.5 (spec 016): was 50. Comes before a comb can be paid for.</summary>
     public decimal CombsRevealWax { get; init; } = 5m;
@@ -295,7 +331,9 @@ public sealed class BeekeeperConfig
         new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice, Bees: 3_000m),
         // Bee, 2026-11-10: the Smoker is an early buy, 10 Beebits after two bear trades
         // (was 1,000 + 50 wax + 300 bees, after the Vacuum).
-        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 10m, 0m, 0m, BeekeeperUpgrades.NeedsNothing),
+        // Bee, 2026-11-11: the Smoker is repaired in a story card, never sold.
+        // new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 10m, 0m, 0m, BeekeeperUpgrades.NeedsNothing),
+        new BeekeeperUpgrade(BeekeeperUpgrades.Smoker, 0m, 0m, 0m, BeekeeperUpgrades.NeedsStory),
         // Stage 7 (spec 015): paper and propolis join the prices (all placeholders).
         new BeekeeperUpgrade(BeekeeperUpgrades.Notebook, 150m, 0m, 0m, BeekeeperUpgrades.NeedsPaper, Paper: 20m),
         // Off the Shop (Leah, 2026-11-10): extra beds become a technology bought after a swarm (stage 11, not built yet).

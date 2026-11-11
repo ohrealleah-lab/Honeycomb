@@ -71,6 +71,11 @@
             <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
             <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
         </Style>
+        <!-- After a sting Catch Bee is red and disabled for a second (Bee, 2026-11-11). -->
+        <Style Selector="Button#CatchButton:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#E0533D" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
         <Style Selector="Button#CatchButton:pressed /template/ ContentPresenter#PART_ContentPresenter">
             <Setter Property="Background" Value="{Binding $parent[Button].Background}" />
             <Setter Property="Foreground" Value="{Binding $parent[Button].Foreground}" />
@@ -83,10 +88,26 @@
             <!-- ───────── LEFT: art, Catch Bee, Hive, Smoker, Notebook ───────── -->
             <StackPanel Grid.Column="0" Spacing="12">
                 <!-- Pixel-art slot (170x102 shown at 2x). Art arrives later; until then a quiet placeholder. -->
-                <Border Classes="bk-card" Height="204" Padding="0" ClipToBounds="True">
+                <!-- The story area (Bee, 2026-11-11): story cards and visitors (Bear, Hippies) show here, one
+                     story at a time; when there is none, the bee art. It grows to fit what is in it. -->
+                <Border Classes="bk-card" MinHeight="204" Padding="0" ClipToBounds="True">
                     <Grid>
-                        <TextBlock Text="🐝" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        <Image x:Name="ArtImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                        <Grid x:Name="ArtLayer">
+                            <TextBlock Text="🐝" FontSize="56" Opacity="0.35" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                            <Image x:Name="ArtImage" Stretch="Uniform" RenderOptions.BitmapInterpolationMode="None" />
+                        </Grid>
+                        <StackPanel Spacing="14" Margin="16">
+                            <!-- Story card: one moment at a time (ouch, gloves found, Smoker repaired, ...) -->
+                            <StackPanel x:Name="StoryCard" Spacing="8" IsVisible="False">
+                                <TextBlock x:Name="StoryText" Classes="bk-body" TextWrapping="Wrap" />
+                                <StackPanel x:Name="StoryButtons" Spacing="6" />
+                            </StackPanel>
+                            <!-- Reps at the door (Bear, Hippies): each has Throw a shoe / Engage -->
+                            <StackPanel x:Name="VisitorsCard" Spacing="8" IsVisible="False">
+                                <TextBlock x:Name="VisitorsTitleText" Classes="bk-title" />
+                                <StackPanel x:Name="VisitorRows" Spacing="10" />
+                            </StackPanel>
+                        </StackPanel>
                     </Grid>
                 </Border>
 
@@ -290,14 +311,6 @@
 
             <!-- ───────── RIGHT: wasps, story log ───────── -->
             <StackPanel Grid.Column="2" Spacing="12" VerticalAlignment="Top">
-                <!-- Reps at the door (Bear, Hippies): each has Throw a shoe / Engage -->
-                <Border x:Name="VisitorsCard" Classes="bk-card" IsVisible="False">
-                    <StackPanel Spacing="8">
-                        <TextBlock x:Name="VisitorsTitleText" Classes="bk-title" />
-                        <StackPanel x:Name="VisitorRows" Spacing="10" />
-                    </StackPanel>
-                </Border>
-
                 <!-- Shown while a wasp is here or a repellent candle burns -->
                 <Border x:Name="WaspCard" Classes="bk-card" IsVisible="False" BorderBrush="#66FFA38F">
                     <StackPanel Spacing="8">

@@ -1746,6 +1746,8 @@ public partial class MainWindow : Window
             case "Beebits": hive.DebugGrant(0m, 0m, 100m); break;
             case "Skip":    hive.DebugSkip(600m); break;
             case "Wasp":    hive.DebugCallWasp(); break;   // needs The Workbench (3 combs, the starter counted)
+            case "StoryGloves": hive.DebugShowStory(BeekeeperStories.Gloves); break;   // story cards
+            case "StorySmoker": hive.DebugShowStory(BeekeeperStories.Smoker); break;
             case "Seed":    hive.DebugGiveSeed(); break;
             case "EverySeed": hive.DebugGiveEverySeed(); break;   // every seed not yet given (stage 7)
             case "Grow":    hive.DebugFinishGrowing(); break;   // finishes every bed

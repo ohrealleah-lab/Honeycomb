@@ -76,11 +76,32 @@ public class BeekeeperViewModelTests : IDisposable
     [Fact]
     public void AStingShowsAPopup_ButIsNotWrittenToTheLog()
     {
-        var vm = Make(new Clock(), rng: new SeqRandom(0.0));
+        var vm = Make(new Clock(), new BeekeeperState { BeesCaught = 10, FirstStingDone = true }, rng: new SeqRandom(0.0));
         vm.CatchCommand.Execute(null);
         Assert.True(vm.LastCatch!.Stung);
         Assert.Equal(0m, vm.Bees);
         Assert.False(Logged(vm, BeekeeperEvents.Sting));
+    }
+
+    [Fact]
+    public void AfterASting_CatchBeeIsLockedForASecond_ThenWorksAgain()
+    {
+        var clock = new Clock();
+        var vm = Make(clock, new BeekeeperState { BeesCaught = 10, FirstStingDone = true }, rng: new SeqRandom(0.0, 0.99));
+        vm.CatchCommand.Execute(null);
+        Assert.True(vm.IsStingLocked);
+
+        int serial = vm.CatchSerial;
+        vm.Catch();                       // refused: the button is disabled
+        Assert.Equal(serial, vm.CatchSerial);
+
+        clock.Advance(0.5);
+        Assert.True(vm.IsStingLocked);
+        clock.Advance(0.6);
+        Assert.False(vm.IsStingLocked);
+        vm.Catch();
+        Assert.False(vm.LastCatch!.Stung);
+        Assert.Equal(1m, vm.Bees);
     }
 
     // ============================================================ time
@@ -203,9 +224,10 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.True(vm.ShopRevealed);
         Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
 
-        vm.BuyNextToolCommand.Execute(null);
-        Assert.Equal(1, vm.ToolLevel);
-        Assert.Equal(2, vm.BeesPerClick);
+        vm.State.ToolLevel = 1;                          // the gloves are found, not bought (story card)
+        vm.BuyNextToolCommand.Execute(null);             // the Net
+        Assert.Equal(2, vm.ToolLevel);
+        Assert.Equal(5, vm.BeesPerClick);
 
         vm.BuildCombCommand.Execute(null);
         Assert.Equal(2, vm.Combs);                       // the starter and one bought (stage 7.5)

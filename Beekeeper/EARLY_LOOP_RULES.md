@@ -14,17 +14,25 @@ NOT in the first build (planned, see `LONG_TERM_DESIGN.md`): candles, hive roles
 - Button: **Catch Bee**. Each click catches bees according to the tool you have. **There is no limit on how many bees you can have.**
 - **From stage 7.5:** the bees you hold are **free bees**. Bees spent on a comb move in and leave that count, and the catch slice reads free bees only.
 - A popup appears on each click: "+1 Bee" (or "+2 Bees" etc.).
-- **Stinging:** with **Bare Hands only**, each click has a **20% chance** of a sting. A sting catches **no bees**, and the popup says so.
-  Once you own Padded Gloves (or anything better), stings stop for good.
+- **Stinging:** with **Bare Hands only**, and only after the first **10 bees caught by hand** (never before). The first sting at 10 is certain and brings the "Ouch!" story card; after that each click has a **20% chance** of a sting. A sting catches **no bees**, and the popup says so. The Catch Bee button then turns red and is disabled for **1 second**.
+  Once you have the Padded Gloves (found, not bought: see Story cards), stings stop for good.
 
 | Tool | Cost | Bees per click |
 |---|---|---|
 | Bare Hands | free | 1 (20% sting) |
-| Padded Gloves | 15 Beebits | 2 |
+| Padded Gloves | found (story card) | 2 |
 | Mesh Net | 75 Beebits | 5 |
 | Bee-Safe Vacuum | 250 Beebits | 10 |
 
-Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces the one before.
+The gloves are found, never bought. After that, tools are bought **in order** (Net, then Vacuum, then the stage 3 tools). Each replaces the one before. **Without the gloves the Shop lists no catching tools** (Practice and More Practice need the Vacuum, so they wait too).
+
+### Story cards
+Small story moments appear in the **story area** at the top of the left column (where the bee art is; the bee art shows when there is no story). Visitors (Bear, Hippies) show there too. Story cards are **one at a time, in a fixed order**; each has its own buttons.
+0. **Ouch!**, after the first sting (at 10 bees caught by hand). OK to dismiss; said once.
+1. **Gloves**, due once **30 bees** have been caught by hand (all time). "You find a pair of gloves on the ground. Put them on?" **Yes**: gloves on (2 bees a click, no more stings). **No**: the card goes away and comes back after **2 minutes of play** (not while away). The **5th No** puts it away for good ("You're one tough cookie. Bare hands it is.") and sets a saved flag for a future hard-mode achievement.
+2. **Smoker**, due when the hive holds **250 bees** (once shown, it stays until answered). "An old smoker lies in the grass…" **Repair?** is free and the Smoker works at once. It is no longer sold in the Shop.
+
+A save that already has the gloves or the Smoker never sees that card. To add a moment: an id in `BeekeeperStories`, its "due" rule and answers in `BeekeeperEngine`, and one case in `BeekeeperView.UpdateStory`.
 
 ## 2. Honey
 - **From stage 7.5:** every second, each comb makes **0.2 honey** *(placeholder)*, however many bees live in it. You start with one comb, and it makes no honey until the first bee is caught. Calm, candles, the wooden hive and guarding boost this honey.
@@ -44,7 +52,7 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 ## 4. Combs (honey, and room for honey and wax)
 **From stage 7.5** *(all numbers placeholders)*:
 - You start with **one comb**. Each comb you buy adds **0.2 honey a second**, **+300 honey room** and **+2 wax room**.
-- A comb costs **bees and wax**, starting at **20 bees and 10 wax**. The bee price grows 40% each, the wax price **25%** each (rounded down). The starter comb doesn't count towards the price: wax 10, 12, 15, 19, 24, 30, 38...
+- A comb costs **bees and wax**, starting at **250 bees and 5 wax** (Bee, 2026-11-11: wax was 10). The bee price grows 40% each, the wax price **25%** each (rounded down). The starter comb doesn't count towards the price: wax 5, 6, 7, 9, 12, 15, 19...
 - The bees you pay move in and stop being free bees. How many bees fit in a comb is simply its bee price.
 - The Combs panel appears when you first have **5 wax** and stays after that.
 - **Capacity upgrades** can be bought again and again, for Beebits: **Honey Super** (+1,000 honey room) and **Wax Tray** (+8 wax room).
@@ -58,7 +66,7 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 - The Combs panel appears when you first have 50 wax and stays after that.
 
 ## 5. The Bear (selling honey)
-- The trade panel appears when you first hold **10 honey**, and stays after that.
+- The bear (and so the trade panel) appears once you have caught **100 bees by hand** (100 successful clicks), and stays after that. (Before 2026-11-11: at 10 honey.)
 - **10 honey = 1 Beebit.**
 - **Sell All** turns as much honey as it can into Beebits, in whole bundles of 10. Any left over (under 10) stays with you.
 - The bear gets a random name **per game** (Barnaby, Billy, Berenstein, Bruno, Baloo, Buster, Bartholomew), chosen when a new game starts and then kept.
@@ -66,8 +74,8 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 - **From stage 7.5:** at **25 trades**, the bear's trade agreement gives a better rate: **8 honey = 1 Beebit** *(placeholder)*. Selling stays in whole bundles at the rate of the moment. There is no auto-sale: when the combs are full, honey simply stops.
 
 ## 6. The Shop
-- Appears once you've first reached **15 Beebits**, and stays after that.
-- Sells: Padded Gloves, Mesh Net, Bee-Safe Vacuum, Wax-Catcher. Stage 7.5 leaves these prices alone for now; the ones to look at again are listed in `windows/016-beekeeper-combs/spec.md`.
+- A new game **starts with 75 Beebits and the Shop open** (Bee, 2026-11-11): enough for one Wax-Catcher (75) right away, a free choice. (Otherwise it appears once you've reached 10 Beebits.)
+- Sells: Mesh Net, Bee-Safe Vacuum (once you have the gloves), Wax-Catcher (75 Beebits). Stage 7.5 leaves these prices alone for now; the ones to look at again are listed in `windows/016-beekeeper-combs/spec.md`.
 - Items you can't afford yet are shown but unavailable. Owned items show as owned.
 
 ## 7. Saving and offline earnings
@@ -90,3 +98,8 @@ Tools must be bought **in order** (Gloves, then Net, then Vacuum). Each replaces
 4. Gemini treats the Bear and Hippies as plain buyers. Your notes have four reputations. Not in the first build.
 5. Gemini's wasps kill 50% of bees. Your decision: **wasps steal honey** (cozy). Not in the first build.
 6. Gemini's Sage-Propolis candle lasts 180s; your notes say "X amount of time" (later).
+
+## Achievements to build later (Bee, 2026-11-11)
+There is no Beekeeper achievements system yet. The numbers are already saved, so one can read them later:
+- **100 successful clicks**: `BeekeeperState.BeesCaught >= 100` (bees caught by hand, stings don't count). The same moment the bear arrives.
+- **Tough cookie (hard mode)**: `BeekeeperState.GlovesRefusedForGood`, set on the 5th No to the gloves.

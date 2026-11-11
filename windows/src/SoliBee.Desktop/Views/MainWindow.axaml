@@ -96,6 +96,8 @@
                                         <MenuItem Header="+100 Beebits" Click="DebugBeekeeper_Click" Tag="Beebits" />
                                         <MenuItem Header="Skip 10 minutes" Click="DebugBeekeeper_Click" Tag="Skip" />
                                         <MenuItem Header="Call a wasp" Click="DebugBeekeeper_Click" Tag="Wasp" />
+                                        <MenuItem Header="Show the gloves card" Click="DebugBeekeeper_Click" Tag="StoryGloves" />
+                                        <MenuItem Header="Show the Smoker card" Click="DebugBeekeeper_Click" Tag="StorySmoker" />
                                         <MenuItem Header="Give a seed" Click="DebugBeekeeper_Click" Tag="Seed" />
                                         <MenuItem Header="Give every seed" Click="DebugBeekeeper_Click" Tag="EverySeed" />
                                         <MenuItem Header="Finish growing" Click="DebugBeekeeper_Click" Tag="Grow" />

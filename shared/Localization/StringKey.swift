@@ -1564,7 +1564,7 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogFirstWax = "beekeeper_log_first_wax"
     /// Story log
     case beekeeperLogShopOpened = "beekeeper_log_shop_opened"
-    /// Story log
+    /// Story log, the gloves go on
     case beekeeperLogGloves = "beekeeper_log_gloves"
     /// Story log
     case beekeeperLogNet = "beekeeper_log_net"
@@ -2174,4 +2174,20 @@ public enum StringKey: String, CaseIterable {
     case beekeeperBoostGuardingFmt = "beekeeper_boost_guarding_fmt"
     /// Bees hover with nursing; %@ = how much faster the queen lays, in percent
     case beekeeperBoostNursingFmt = "beekeeper_boost_nursing_fmt"
+    /// Story card: the gloves are found (after 100 bees caught by hand)
+    case beekeeperStoryGloves = "beekeeper_story_gloves"
+    /// Story card button: leave the gloves (No)
+    case beekeeperStoryNo = "beekeeper_story_no"
+    /// Story log, the 5th No to the gloves: bare hands for good
+    case beekeeperLogGlovesGone = "beekeeper_log_gloves_gone"
+    /// Story card: the old Smoker is found (at 250 bees in the hive)
+    case beekeeperStorySmoker = "beekeeper_story_smoker"
+    /// Story card button: repair the Smoker (free)
+    case beekeeperStoryRepair = "beekeeper_story_repair"
+    /// Story log, the Smoker is repaired
+    case beekeeperLogSmokerRepaired = "beekeeper_log_smoker_repaired"
+    /// Story card: the first sting (after 10 bees caught by hand)
+    case beekeeperStoryOuch = "beekeeper_story_ouch"
+    /// Story card button: read the card
+    case beekeeperStoryOk = "beekeeper_story_ok"
 }

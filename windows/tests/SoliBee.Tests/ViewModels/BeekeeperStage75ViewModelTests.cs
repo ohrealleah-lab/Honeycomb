@@ -27,10 +27,10 @@ public class BeekeeperStage75ViewModelTests
     [Fact]
     public void AWall_AndCantAffordYet_AreTwoDifferentStates()
     {
-        var wall = Make(new BeekeeperState { Combs = 8, CombsRevealed = true, Bees = 1000m, Wax = 34m });
-        Assert.True(wall.CombIsWall);           // 47 wax, but the hive holds 34
+        var wall = Make(new BeekeeperState { Combs = 11, CombsRevealed = true, Bees = 1000m, Wax = 40m });
+        Assert.True(wall.CombIsWall);           // 46 wax, but the hive holds 40
         Assert.False(wall.CanBuildComb);
-        Assert.Equal(34m, wall.WaxStorage);
+        Assert.Equal(40m, wall.WaxStorage);
 
         var poor = Make(new BeekeeperState { Combs = 2, CombsRevealed = true, Bees = 1000m, Wax = 5m });
         Assert.False(poor.CombIsWall);          // 12 wax fits in 22; there just isn't enough yet
@@ -122,7 +122,7 @@ public class BeekeeperStage75ViewModelTests
     {
         var vm = Make();
         Assert.Equal(250m, vm.CombBeeCost);
-        Assert.Equal(10m, vm.CombCost);
+        Assert.Equal(5m, vm.CombCost);
         Assert.Equal(0.2m, vm.HoneyPerComb);
         Assert.Equal(300m, vm.StoragePerComb);
         Assert.Equal(2m, vm.WaxStoragePerComb);

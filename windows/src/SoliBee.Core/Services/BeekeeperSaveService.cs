@@ -153,7 +153,14 @@ public static class BeekeeperSaveService
             && s.Beds.All(b => b is not null && b.SecondsLeft >= 0m)
             && s.Propolis >= 0m && s.BeeBoostCandles >= 0m && s.SagePropolisCandles >= 0m
             && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m
-            && s.Herbs >= 0m && s.HerbSecondsLeft >= 0m;
+            && s.Herbs >= 0m && s.HerbSecondsLeft >= 0m
+            // Story cards: known ids, nothing negative, declines within the limit.
+            && s.StoriesDone is not null && s.StoryReturnIn is not null
+            && s.StoriesDone.All(id => id is not null && BeekeeperStories.Order.Contains(id))
+            && s.StoryReturnIn.All(kv => kv.Key is not null && BeekeeperStories.Order.Contains(kv.Key) && kv.Value >= 0m)
+            && (s.StoryHere is null || BeekeeperStories.Order.Contains(s.StoryHere))
+            && s.BeesCaught >= 0 && s.OuchSecondsLeft >= 0m
+            && s.GlovesDeclines >= 0 && s.GlovesDeclines <= BeekeeperConfig.Default.GlovesMaxDeclines;
     }
 
     // Every damaged file keeps its own backup: .unreadable, then .unreadable2, .unreadable3…

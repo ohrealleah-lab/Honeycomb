@@ -221,7 +221,7 @@ public class BeekeeperStage2Tests : IDisposable
     [Fact]
     public void BetterWaxCatcher_TriplesTheWaxRate()
     {
-        var e = Make(Workshop(s => { s.Bees = 1000m; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
+        var e = Make(Workshop(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
         Assert.Equal(0.315m, e.WaxPerSecondNow);   // (0.005 + 1,000 × 0.0001) × 3
         e.Advance(10m);
         Assert.Equal(3.15m, e.State.Wax);

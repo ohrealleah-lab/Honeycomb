@@ -34,7 +34,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void BareHands_StingsBelowTwentyPercent_AndCatchesAtOrAbove()
     {
-        var e = Make(rng: new FakeRandom(new[] { 0.19, 0.20 }));
+        var e = Make(state: new BeekeeperState { BeesCaught = 10, FirstStingDone = true }, rng: new FakeRandom(new[] { 0.19, 0.20 }));
         var stung = e.Catch();
         Assert.True(stung.Stung);
         Assert.Equal(0m, stung.BeesGained);
@@ -195,18 +195,22 @@ public class BeekeeperEngineTests
     // }
 
     [Fact]
-    public void Wax_DripsFromTheStart_WithNoBeesAtAll()
+    public void Wax_DoesNotDrip_BeforeTheFirstBee_ThenDrips()
     {
         var e = Make();
         e.Advance(100m);
-        Assert.Equal(0.5m, e.State.Wax);              // 0.005 a second
-        Assert.Equal(0m, e.State.Honey);              // no honey before the first bee
+        Assert.Equal(0m, e.State.Wax);                // Bee, 2026-11-11: no wax before the first bee
+        Assert.Equal(0m, e.State.Honey);              // and no honey
+
+        e.State.HoneyRevealed = true;                 // the first bee is caught
+        e.Advance(100m);
+        Assert.Equal(0.5m, e.State.Wax);              // 0.005 a second, with no free bees
     }
 
     [Fact]
     public void Wax_FreeBeesAddToTheRate()
     {
-        var e = Make(state: new BeekeeperState { Bees = 1000m });
+        var e = Make(state: new BeekeeperState { Bees = 1000m, HoneyRevealed = true });
         Assert.Equal(0.105m, e.WaxPerSecondNow);      // 0.005 + 1,000 × 0.0001
         e.Advance(10m);
         Assert.Equal(1.05m, e.State.Wax);
@@ -215,11 +219,11 @@ public class BeekeeperEngineTests
     [Fact]
     public void WaxCatcher_DoublesTheWholeRate_AndTheBetterOneTriplesIt()
     {
-        var e = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true });
+        var e = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true, HoneyRevealed = true });
         e.Advance(10m);
         Assert.Equal(2.1m, e.State.Wax);
 
-        var better = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true,
+        var better = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true, HoneyRevealed = true,
             Upgrades = { BeekeeperUpgrades.BetterWaxCatcher } });
         better.Advance(10m);
         Assert.Equal(3.15m, better.State.Wax);
@@ -271,7 +275,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void BuyingTheWaxCatcherMidGame_OnlyChangesLaterWax()
     {
-        var e = Make(state: new BeekeeperState { Bees = 1000m, Beebits = 150m, ShopRevealed = true });
+        var e = Make(state: new BeekeeperState { Bees = 1000m, Beebits = 150m, ShopRevealed = true, HoneyRevealed = true });
         e.Advance(10m);                      // 1.05 wax at the normal rate
         Assert.Equal(1.05m, e.State.Wax);
         Assert.True(e.BuyWaxCatcher().Done);
@@ -282,7 +286,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void FirstWax_IsAnnouncedOnce_AtOneWholeWax()
     {
-        var e = Make();                                  // the drip alone: 1 wax in 200 seconds
+        var e = Make(state: new BeekeeperState { HoneyRevealed = true });   // the drip alone: 1 wax in 200 seconds
         Assert.False(Has(e.Advance(199m).Events, BeekeeperEvents.FirstWax));
         Assert.False(e.State.WaxRevealed);
         Assert.True(Has(e.Advance(1m).Events, BeekeeperEvents.FirstWax));
@@ -293,7 +297,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void Wax_StopsAtTheWaxCap_AndNothingIsSaid()
     {
-        var e = Make(state: new BeekeeperState { Bees = 1000m, Wax = 19.99m });   // cap 20
+        var e = Make(state: new BeekeeperState { Bees = 1000m, Wax = 19.99m, HoneyRevealed = true });   // cap 20
         Assert.Equal(20m, e.WaxStorage);
         var first = e.Advance(1m);
         Assert.Equal(20m, e.State.Wax);
@@ -367,11 +371,13 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void Bear_AppearsAtTenHoney_AndStays()
+    public void Bear_AppearsAtOneHundredBeesCaughtByHand_AndStays()
     {
-        var e = Make(state: BeekeeperTestHives.Started(50)); // 10 honey per second
-        Assert.False(e.State.BearRevealed);
-        var r = e.Advance(1m);
+        // Bee, 2026-11-11: the bear comes at 100 successful clicks, not at 10 honey.
+        var e = Make(state: new BeekeeperState { BeesCaught = 98, ToolLevel = 1, HoneyRevealed = true, Honey = 500m });   // gloves: 2 a click
+        e.Advance(1m);
+        Assert.False(e.State.BearRevealed);          // plenty of honey, but not enough bees caught
+        var r = e.Catch();                           // 100 caught
         Assert.True(e.State.BearRevealed);
         Assert.True(Has(r.Events, BeekeeperEvents.BearArrives));
         e.SellAll();
@@ -405,23 +411,32 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void Tools_AreBoughtInOrder_GlovesNetVacuum()
+    public void Tools_AreBoughtInOrder_NetVacuum_AfterTheGlovesAreFound()
     {
-        var e = Make(state: new BeekeeperState { Beebits = 80m, ShopRevealed = true });
-        Assert.Equal("gloves", e.NextTool!.Id);
-        Assert.True(e.BuyNextTool().Done);     // Gloves 15 -> 65 left
-        Assert.Equal(1, e.State.ToolLevel);
-        Assert.Equal(65m, e.State.Beebits);
-        Assert.False(e.BuyNextTool().Done);    // Net costs 75
-        Assert.Equal(1, e.State.ToolLevel);
+        // Bee, 2026-11-11: the gloves are found in a story card, so buying starts at level 1.
+        var e = Make(state: new BeekeeperState { Beebits = 80m, ShopRevealed = true, ToolLevel = 1 });
+        Assert.Equal("net", e.NextTool!.Id);
+        Assert.True(e.BuyNextTool().Done);     // Net 75 -> 5 left
+        Assert.Equal(2, e.State.ToolLevel);
+        Assert.Equal(5m, e.State.Beebits);
+        Assert.False(e.BuyNextTool().Done);    // Vacuum costs 400
+        Assert.Equal(2, e.State.ToolLevel);
 
         e.State.Beebits = 1000m;
-        Assert.True(e.BuyNextTool().Done);     // Net
         Assert.True(e.BuyNextTool().Done);     // Vacuum
         Assert.Equal(3, e.State.ToolLevel);
         Assert.Equal("lure", e.NextTool!.Id);   // stage 3 tools come after the Vacuum
         Assert.False(e.BuyNextTool().Done);      // the Bee Lure costs 3,000
-        Assert.Equal(1000m - 75m - 400m, e.State.Beebits);
+        Assert.Equal(1000m - 400m, e.State.Beebits);
+    }
+
+    [Fact]
+    public void NoToolCanBeBought_WithoutTheGloves()
+    {
+        var e = Make(state: new BeekeeperState { Beebits = 100_000m, ShopRevealed = true, ToolLevel = 0 });
+        Assert.False(e.CanBuyNextTool);
+        Assert.False(e.BuyNextTool().Done);
+        Assert.Equal(0, e.State.ToolLevel);
     }
 
     [Fact]
@@ -439,9 +454,9 @@ public class BeekeeperEngineTests
         Assert.True(e.BuyWaxCatcher().Done);   // before any tool
         Assert.True(e.State.HasWaxCatcher);
         Assert.Equal(0, e.State.ToolLevel);
-        Assert.Equal(250m, e.State.Beebits);
+        Assert.Equal(325m, e.State.Beebits);   // the Wax-Catcher costs 75
         Assert.False(e.BuyWaxCatcher().Done);
-        Assert.Equal(250m, e.State.Beebits);
+        Assert.Equal(325m, e.State.Beebits);
     }
 
     // ============================================================ combs
@@ -463,7 +478,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void CombPrices_CountCombsBought_NotTheStarter()
     {
-        var wax = new[] { 10m, 12m, 15m, 19m, 24m, 30m, 38m };
+        var wax = new[] { 5m, 6m, 7m, 9m, 12m, 15m, 19m };   // Bee, 2026-11-11: base 5 (was 10)
         var bees = new[] { 250m, 350m, 490m, 686m, 960m, 1344m, 1882m };   // Bee, 2026-11-11: starts at 250 (was 20)
         var e = Make();
         for (int n = 0; n < wax.Length; n++)
@@ -481,7 +496,7 @@ public class BeekeeperEngineTests
         Assert.Equal(1, e.State.Combs);
         Assert.Equal(0m, e.State.Bees);
         Assert.Equal(250m, e.CombBeeCost);
-        Assert.Equal(10m, e.CombCost);
+        Assert.Equal(5m, e.CombCost);
         Assert.Equal(200m, e.HoneyStorage);
         Assert.Equal(20m, e.WaxStorage);
         Assert.Equal(0m, e.HoneyPerSecondNow);            // no honey before the first bee
@@ -508,12 +523,12 @@ public class BeekeeperEngineTests
         var r = e.BuildComb();
         Assert.True(r.Done);
         Assert.Equal(5m, e.State.Bees);                   // the 250 bees moved in
-        Assert.Equal(2m, e.State.Wax);
+        Assert.Equal(7m, e.State.Wax);
         Assert.Equal(2, e.State.Combs);
         Assert.Equal(500m, e.HoneyStorage);               // 200 + 300
         Assert.Equal(22m, e.WaxStorage);                  // 20 + 2
         Assert.Equal(350m, e.CombBeeCost);
-        Assert.Equal(12m, e.CombCost);
+        Assert.Equal(6m, e.CombCost);
         Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.CombBuilt && ev.Value == 250m);
         Assert.Equal(0.4m, e.HoneyPerSecondNow);          // two combs
     }
@@ -548,7 +563,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void CombsPanel_AppearsAtFiveWax_AndStays()
     {
-        var e = Make(state: new BeekeeperState { Wax = 4.999m, Bees = 250m, WaxRevealed = true });
+        var e = Make(state: new BeekeeperState { Wax = 4.999m, Bees = 250m, WaxRevealed = true, HoneyRevealed = true });
         Assert.False(e.State.CombsRevealed);
         var r = e.Advance(1m);                    // the drip and the bees take it past 5
         Assert.True(e.State.CombsRevealed);
@@ -636,7 +651,7 @@ public class BeekeeperEngineTests
         var empty = Make();
         var none = empty.AdvanceAway(3600m);
         Assert.Empty(none.WelcomeBack);
-        Assert.Equal(18m, empty.State.Wax);       // the drip still counted: 0.005 × 3,600
+        Assert.Equal(0m, empty.State.Wax);        // no first bee yet, so no wax drip either
 
         var full = Make(state: new BeekeeperState { HoneyRevealed = true, Combs = 5, Honey = 1400m });
         var r = full.AdvanceAway(3600m);
@@ -646,7 +661,7 @@ public class BeekeeperEngineTests
     [Fact]
     public void DebugGrant_AddsWhatItSays_AndRevealsTheCardsItUnlocks()
     {
-        var e = Make();
+        var e = Make(state: new BeekeeperState());   // an empty hive (a new game starts with 75 Beebits and the Shop open)
         var events = e.DebugGrant(250m, 100m, 100m);   // 250 bees: the first comb's price
 
         Assert.Equal(250m, e.State.Bees);
@@ -703,7 +718,21 @@ public class BeekeeperEngineTests
         Assert.Equal(0m, e.State.Bees);
         Assert.Equal(1, e.State.Combs);           // the starter comb (stage 7.5)
         Assert.Equal(0, e.State.ToolLevel);
-        Assert.False(e.State.ShopRevealed);
+        Assert.Equal(75m, e.State.Beebits);       // a new game starts with 75 Beebits...
+        Assert.True(e.State.ShopRevealed);        // ...and the Shop open: one Wax-Catcher is a free choice
+        Assert.True(e.State.BeebitsRevealed);
         Assert.Equal("Buster", e.State.BearName);
+    }
+
+    [Fact]
+    public void ANewGame_CanBuyTheWaxCatcherAtOnce_ForItsWholeStartingPurse()
+    {
+        var e = Make();
+        Assert.Equal(75m, e.Config.WaxCatcherCost);
+        Assert.Equal(75m, e.State.Beebits);
+        Assert.True(e.CanBuyWaxCatcher);
+        Assert.True(e.BuyWaxCatcher().Done);
+        Assert.Equal(0m, e.State.Beebits);
+        Assert.False(e.CanBuyNextTool);   // no tool without the gloves
     }
 }

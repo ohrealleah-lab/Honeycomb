@@ -42,6 +42,7 @@ public partial class BeekeeperView : UserControl
     private readonly DispatcherTimer _popupTimer = new() { Interval = TimeSpan.FromMilliseconds(16) };
     private readonly Stopwatch _popupClock = new();
     private bool _popupStung;
+    private readonly DispatcherTimer _lockTimer = new();
 
     // Shop rows are built once per (tool level, catcher, revealed) so a button is never
     // replaced under the player's mouse while the hive ticks.
@@ -60,6 +61,7 @@ public partial class BeekeeperView : UserControl
     {
         InitializeComponent();
         _popupTimer.Tick += PopupTick;
+        _lockTimer.Tick += (_, _) => { _lockTimer.Stop(); Redraw(); };
         ApplyAccent();
         AddHandler(PointerPressedEvent, (_, _) => _vm?.NoteActivity(), RoutingStrategies.Tunnel, handledEventsToo: true);
         AddHandler(KeyDownEvent, (_, _) => _vm?.NoteActivity(), RoutingStrategies.Tunnel, handledEventsToo: true);
@@ -148,6 +150,14 @@ public partial class BeekeeperView : UserControl
         string N(decimal v, int d = 0) => NumberFormatter.Format(v, lang, d);
 
         CatchButton.Content = BeekeeperText.Catch;
+        // After a sting the button is red and disabled for a second; a one-shot timer brings it back.
+        CatchButton.IsEnabled = !vm.IsStingLocked;
+        if (vm.IsStingLocked)
+        {
+            _lockTimer.Stop();
+            _lockTimer.Interval = vm.StingLockoutLeft + TimeSpan.FromMilliseconds(30);
+            _lockTimer.Start();
+        }
 
         // The Smoker
         // The Smoker: a button beside Catch Bee once bought; brighter while its boost is on.
@@ -288,6 +298,8 @@ public partial class BeekeeperView : UserControl
         EngageWaspButton.IsEnabled = vm.CanEngageWasp;
         BribeButton.IsVisible = !vm.WaspFirstVisit;
         UpdateVisitors(vm.RepsPresent, lang);
+        UpdateStory(vm, lang);
+        ArtLayer.IsVisible = !StoryCard.IsVisible && !VisitorsCard.IsVisible;   // the bee art when there is no story
         // Cut: the wasp card's "Light a candle" button (sage candles are going away).
         // WaspLightButton.Content = BeekeeperText.LightCandle;
         // WaspLightButton.IsVisible = vm.RepellentShown;
@@ -530,8 +542,12 @@ public partial class BeekeeperView : UserControl
 
             // Bought things are hidden (Leah, 2026-11-07): only the next tool is listed. A
             // "show bought things" option may come later; it would just flip ShowBoughtItems.
+            // Bee, 2026-11-11: no catching tools without the gloves, and the gloves (tool 0) are found
+            // in a story card, never listed here.
             for (int i = 0; i < vm.Config.Tools.Count; i++)
             {
+                if (vm.ToolLevel < 1) break;
+                if (i == 0) continue;
                 var tool = vm.Config.Tools[i];
                 bool owned = vm.ToolLevel > i;
                 bool isNext = vm.ToolLevel == i;
@@ -762,6 +778,46 @@ public partial class BeekeeperView : UserControl
             row.Children.Add(shoe);
             row.Children.Add(engage);
             VisitorRows.Children.Add(row);
+        }
+    }
+
+    // Story card: one moment at a time, rebuilt only when the story or the language changes.
+    // A new moment is one more case here (plus its id, due rule and answers in the engine).
+    private string _storySignature = "";
+
+    private void UpdateStory(BeekeeperViewModel vm, AppLanguage lang)
+    {
+        string? id = vm.StoryHere;
+        StoryCard.IsVisible = id is not null;
+        string sig = lang + "|" + id;
+        if (sig == _storySignature) return;
+        _storySignature = sig;
+        StoryButtons.Children.Clear();
+        if (id is null) return;
+
+        Button MakeButton(string text, Action onClick)
+        {
+            var b = new Button { Classes = { "bk-button" }, Content = text,
+                HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
+            b.Click += (_, _) => onClick();
+            return b;
+        }
+
+        switch (id)
+        {
+            case BeekeeperStories.Ouch:
+                StoryText.Text = BeekeeperText.StoryOuch;
+                // No button: the card goes by itself.
+                break;
+            case BeekeeperStories.Gloves:
+                StoryText.Text = BeekeeperText.StoryGloves;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryYes, () => _vm?.PutOnGloves()));
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryNo, () => _vm?.LeaveGloves()));
+                break;
+            case BeekeeperStories.Smoker:
+                StoryText.Text = BeekeeperText.StorySmoker;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryRepair, () => _vm?.RepairSmoker()));
+                break;
         }
     }
 

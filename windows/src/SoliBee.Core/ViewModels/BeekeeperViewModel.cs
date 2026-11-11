@@ -611,11 +611,21 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     // ------------------------------------------------------------------ player actions
 
+    private DateTime _stingLockedUntilUtc = DateTime.MinValue;
+
+    /// <summary>A sting just happened: Catch Bee is disabled for <see cref="BeekeeperConfig.StingLockoutSeconds"/>.</summary>
+    public bool IsStingLocked => _clock() < _stingLockedUntilUtc;
+
+    /// <summary>How long the sting lockout has left, for the button to time its own recovery.</summary>
+    public TimeSpan StingLockoutLeft => IsStingLocked ? _stingLockedUntilUtc - _clock() : TimeSpan.Zero;
+
     [RelayCommand]
     public void Catch()
     {
         NoteActivity();
+        if (IsStingLocked) return;   // the button is red and disabled for a moment after a sting
         var result = Engine.Catch();
+        if (result.Stung) _stingLockedUntilUtc = _clock().AddSeconds((double)Config.StingLockoutSeconds);
         LastCatch = result;
         CatchSerial++;
         LogEvents(result.Events);
@@ -661,6 +671,21 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     public void EngageRep(string id) => Apply(Engine.EngageRep(id));
     public void ThrowShoeAtRep(string id) => Apply(Engine.ThrowShoeAtRep(id));
+
+    // Story cards
+    /// <summary>The story card showing now (a <see cref="BeekeeperStories"/> id), or null.</summary>
+    public string? StoryHere => Engine.StoryHere;
+    public void PutOnGloves() => Apply(Engine.PutOnGloves());
+    public void LeaveGloves() => Apply(Engine.LeaveGloves());
+    public void RepairSmoker() => Apply(Engine.RepairSmoker());
+
+    /// <summary>Debug builds only: shows a story card now (<see cref="BeekeeperStories"/> id).</summary>
+    public void DebugShowStory(string id)
+    {
+        NoteActivity();
+        LogEvents(Engine.DebugShowStory(id));
+        Refresh();
+    }
 
     [RelayCommand(CanExecute = nameof(CanBribe))]
     public void Bribe() => Apply(Engine.Bribe());
@@ -928,6 +953,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
         AdvanceWasps(gap, away, now);
         if (!away) LogEvents(Engine.AdvanceRepTime(gap));
+        if (!away) LogEvents(Engine.AdvanceStoryTime(gap));   // play time only: the 2 minutes don't pass while away
 
         _secondsSinceSave += gap;
         if (_secondsSinceSave >= AutosaveEverySeconds) SaveNow();
@@ -988,6 +1014,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         {
             // A sting is shown as a popup only; logging every one would drown the story.
             if (e.Key == BeekeeperEvents.Sting) continue;
+            // A story card speaks for itself: no log line when it arrives.
+            if (e.Key == BeekeeperEvents.StoryArrives) continue;
 
             State.Log.Insert(0, new BeekeeperLogEntry { Key = e.Key, Value = e.Value, Value2 = e.Value2, Text = e.Text });
         }

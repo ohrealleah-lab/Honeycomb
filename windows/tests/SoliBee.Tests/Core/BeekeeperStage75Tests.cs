@@ -27,23 +27,23 @@ public class BeekeeperStage75Tests
     // ============================================================ the starter comb (User Story 1)
 
     [Fact]
-    public void ANewGame_HasOneComb_NoBees_AndMakesNoHoney_ButTheWaxDrips()
+    public void ANewGame_HasOneComb_NoBees_AndMakesNoHoney_AndNoWaxEither()
     {
         var e = Make();
         Assert.Equal(1, e.State.Combs);
         Assert.Equal(0m, e.State.Bees);
         Assert.False(e.HiveStarted);
         Assert.Equal(0m, e.HoneyPerSecondNow);
-        Assert.Equal(0.005m, e.WaxPerSecondNow);
+        Assert.Equal(0m, e.WaxPerSecondNow);   // Bee, 2026-11-11: the wax drip waits for the first bee
         e.Advance(60m);
         Assert.Equal(0m, e.State.Honey);
-        Assert.Equal(0.3m, e.State.Wax);
+        Assert.Equal(0m, e.State.Wax);
     }
 
     [Fact]
     public void TheFirstBee_StartsTheStarterComb_AndAStingStartsNothing()
     {
-        var e = Make(dice: new[] { 0.0, 0.99 });   // a sting, then a catch
+        var e = Make(new BeekeeperState { BeesCaught = 10, FirstStingDone = true }, dice: new[] { 0.0, 0.99 });   // a sting, then a catch
         Assert.True(e.Catch().Stung);
         Assert.False(e.HiveStarted);
         e.Advance(10m);
@@ -58,7 +58,7 @@ public class BeekeeperStage75Tests
     [Fact]
     public void WithZeroFreeBees_AStartedHiveStillMakesHoney()
     {
-        var e = Make(new BeekeeperState { HoneyRevealed = true, Bees = 250m, Wax = 10m });
+        var e = Make(new BeekeeperState { HoneyRevealed = true, Bees = 250m, Wax = 5m });
         Assert.True(e.BuildComb().Done);
         Assert.Equal(0m, e.State.Bees);            // every free bee moved in
         Assert.True(e.HiveStarted);
@@ -225,13 +225,13 @@ public class BeekeeperStage75Tests
     [Fact]
     public void AWaxPriceAboveTheCap_IsAWall_NotJustUnaffordable()
     {
-        var e = Make(new BeekeeperState { Combs = 8, CombsRevealed = true });   // comb #9: 47 wax; cap 20 + 7 × 2 = 34
-        Assert.Equal(47m, e.CombCost);
-        Assert.Equal(34m, e.WaxStorage);
+        var e = Make(new BeekeeperState { Combs = 11, CombsRevealed = true });   // comb #11: 46 wax; cap 20 + 10 × 2 = 40
+        Assert.Equal(46m, e.CombCost);
+        Assert.Equal(40m, e.WaxStorage);
         Assert.True(e.CombIsWall);
         Assert.False(e.CanBuildComb);
 
-        var poor = Make(new BeekeeperState { Combs = 2, CombsRevealed = true });  // 12 wax, cap 22: merely unaffordable
+        var poor = Make(new BeekeeperState { Combs = 2, CombsRevealed = true });  // 6 wax, cap 22: merely unaffordable
         Assert.False(poor.CombIsWall);
         Assert.False(poor.CanBuildComb);
     }
@@ -239,27 +239,27 @@ public class BeekeeperStage75Tests
     [Fact]
     public void AWall_IsReportedOnce_AndNeverChangesAPriceOrACap()
     {
-        var e = Make(new BeekeeperState { Combs = 7, CombsRevealed = true, Bees = 10_000m, Wax = 30m, HoneyRevealed = true });
-        Assert.Equal(38m, e.CombCost);            // comb #8
-        Assert.Equal(32m, e.WaxStorage);
+        var e = Make(new BeekeeperState { Combs = 11, CombsRevealed = true, Bees = 10_000m, Wax = 38m, HoneyRevealed = true });
+        Assert.Equal(46m, e.CombCost);            // comb #11
+        Assert.Equal(40m, e.WaxStorage);
         var r = e.Advance(1m);
         Assert.True(Has(r.Events, BeekeeperEvents.FirstWall));
         Assert.True(e.State.FirstWallAnnounced);
-        Assert.Equal(38m, e.CombCost);            // nothing clamps
-        Assert.Equal(32m, e.WaxStorage);
+        Assert.Equal(46m, e.CombCost);            // nothing clamps
+        Assert.Equal(40m, e.WaxStorage);
 
         for (int i = 0; i < 100; i++) Assert.False(Has(e.Advance(60m).Events, BeekeeperEvents.FirstWall));
-        Assert.Equal(32m, e.State.Wax);           // stuck at the cap: intended
+        Assert.Equal(40m, e.State.Wax);           // stuck at the cap: intended
         Assert.False(e.CanBuildComb);
-        Assert.Equal(38m, e.CombCost);
+        Assert.Equal(46m, e.CombCost);
     }
 
     [Fact]
     public void TheWall_GoesAwayByItself_WhenTheCapRisesPastThePrice()
     {
-        var e = Make(new BeekeeperState { Combs = 7, CombsRevealed = true, ShopRevealed = true, Beebits = 500m, Bees = 10_000m, Wax = 32m });
+        var e = Make(new BeekeeperState { Combs = 11, CombsRevealed = true, ShopRevealed = true, Beebits = 500m, Bees = 10_000m, Wax = 40m, HoneyRevealed = true });
         Assert.True(e.CombIsWall);
-        Assert.True(e.BuyWaxTray().Done);         // 32 + 8 = 40
+        Assert.True(e.BuyWaxTray().Done);         // 40 + 10 = 50
         Assert.False(e.CombIsWall);
         e.Advance(60m);
         Assert.True(e.CanBuildComb);
@@ -280,7 +280,7 @@ public class BeekeeperStage75Tests
     [Fact]
     public void AHiddenPrice_IsNotAWallTheLogMentions()
     {
-        var e = Make(new BeekeeperState { Combs = 8 });   // a wall price, but the Combs panel hasn't shown
+        var e = Make(new BeekeeperState { Combs = 11 });   // a wall price, but the Combs panel hasn't shown
         Assert.True(e.CombIsWall);
         Assert.False(e.AnyWallShown);
         Assert.False(Has(e.Advance(1m).Events, BeekeeperEvents.FirstWall));
@@ -299,7 +299,7 @@ public class BeekeeperStage75Tests
     [Fact]
     public void DebugWaxOverTheCap_CanStillPayPastAWall()
     {
-        var e = Make(new BeekeeperState { Combs = 8, CombsRevealed = true, Bees = 10_000m });
+        var e = Make(new BeekeeperState { Combs = 11, CombsRevealed = true, Bees = 10_000m });
         e.DebugGrant(0m, 100m, 0m);
         Assert.Equal(100m, e.State.Wax);
         Assert.True(e.CombIsWall);

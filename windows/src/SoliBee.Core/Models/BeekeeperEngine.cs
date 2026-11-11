@@ -105,6 +105,12 @@ public static class BeekeeperEvents
     public const string HerbLit = "herb_lit";                    // Text = the buff rolled (BeekeeperHerbs), "dud" included
     public const string HerbOut = "herb_out";                    // Text = the buff that ended
 
+    // Story cards (Bee, 2026-11-11)
+    public const string StoryArrives = "story_arrives";          // Text = story id; no log line, the card speaks
+    public const string GlovesOn = "gloves_on";                  // the gloves were put on
+    public const string GlovesGone = "gloves_gone";              // the 5th No: bare hands for good
+    public const string SmokerRepaired = "smoker_repaired";
+
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
         key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackPantry
@@ -229,9 +235,25 @@ public sealed class BeekeeperEngine
         s.BeeBoostSecondsLeft = Math.Min(s.BeeBoostSecondsLeft, Config.BeeBoostCapSeconds);
         s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
         s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
+
+        // Story cards: only known moments, nothing negative, and a card already answered never shows.
+        s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id)).Distinct().ToList();
+        s.StoryReturnIn = s.StoryReturnIn.Where(kv => BeekeeperStories.Order.Contains(kv.Key) && kv.Value > 0m)
+            .ToDictionary(kv => kv.Key, kv => Math.Min(kv.Value, Config.GlovesReturnSeconds));
+        s.BeesCaught = Math.Max(0, s.BeesCaught);
+        s.OuchSecondsLeft = Math.Clamp(s.OuchSecondsLeft, 0m, Config.OuchSeconds);
+        s.GlovesDeclines = Math.Clamp(s.GlovesDeclines, 0, Config.GlovesMaxDeclines);
+        if (s.StoryHere is not null && (!BeekeeperStories.Order.Contains(s.StoryHere) || s.StoriesDone.Contains(s.StoryHere)))
+            s.StoryHere = null;
     }
 
-    private BeekeeperState NewState() => new() { BearName = PickBearName() };
+    // Bee, 2026-11-11: a new game starts with 75 Beebits and the Shop open (one Wax-Catcher is a free choice).
+    // Before: new() { BearName = PickBearName() }
+    private BeekeeperState NewState() => new()
+    {
+        BearName = PickBearName(), Beebits = Config.StartingBeebits,
+        BeebitsRevealed = Config.StartingBeebits > 0m, ShopRevealed = Config.StartingBeebits >= Config.ShopRevealBeebits,
+    };
 
     private string PickBearName()
     {
@@ -363,8 +385,10 @@ public sealed class BeekeeperEngine
     /// <summary>Wax the hive makes right now (spec 016, FR-705): a tiny drip plus a little from
     /// every free bee, times the Wax-Catchers. Not multiplied by combs, and no calm, candle,
     /// wooden-hive or guarding term: those boost honey only.</summary>
-    public decimal WaxPerSecondNow =>
+    // Bee, 2026-11-11: no wax at all (drip included) until the first bee is caught.
+    public decimal WaxPerSecondNow => !HiveStarted ? 0m :
         (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * HerbWaxNow;
+    // Before: (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * HerbWaxNow;
     // Cut in stage 7.5 (spec 016): wax followed all the honey made, calm counted.
     // public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
 
@@ -427,7 +451,8 @@ public sealed class BeekeeperEngine
 
     public bool CanSell => State.Honey >= HoneyPerTradeNow;
 
-    public bool CanBuyNextTool => NextTool is { } t && State.ShopRevealed && State.Beebits >= t.Cost;
+    // Bee, 2026-11-11: no catching tool can be bought without the gloves (found in a story card).
+    public bool CanBuyNextTool => NextTool is { } t && State.ShopRevealed && State.ToolLevel >= 1 && State.Beebits >= t.Cost;
 
     public bool CanBuyWaxCatcher =>
         !State.HasWaxCatcher && State.ShopRevealed && State.Beebits >= Config.WaxCatcherCost;
@@ -520,20 +545,26 @@ public sealed class BeekeeperEngine
     {
         var events = new List<BeekeeperEvent>();
 
-        // Only Bare Hands ever get stung; better tools never roll the dice.
-        if (State.ToolLevel == 0 && _rng.NextDouble() < Config.StingChance)
+        // Only Bare Hands ever get stung, and only after the first 10 bees caught by hand: the first
+        // sting at 10 is certain (it brings the "Ouch!" card), then it is a chance on every click.
+        // Better tools never roll the dice.
+        bool stingsOn = State.ToolLevel == 0 && State.BeesCaught >= Config.StingsStartAtBees;
+        if (stingsOn && (!State.FirstStingDone || _rng.NextDouble() < Config.StingChance))
         {
+            State.FirstStingDone = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.Sting));
             return new CatchResult(true, 0m, events);
         }
 
         decimal gained = BeesPerCatch;
         State.Bees = Math.Min(Config.MaxBees, State.Bees + gained);
+        State.BeesCaught += (long)gained;
         if (!State.HoneyRevealed)
         {
             State.HoneyRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.FirstBee));
         }
+        CheckReveals(events);   // the bear comes at 100 bees caught by hand
         return new CatchResult(false, gained, events);
     }
 
@@ -880,7 +911,9 @@ public sealed class BeekeeperEngine
 
         // Wax (spec 016, FR-705/706): the drip plus the free bees' share, times the Wax-Catchers;
         // no calm, candle, wooden-hive or guarding term. Stored up to the wax cap; the rest stops.
-        decimal waxMade = (Config.WaxBasePerSecond * seconds + beeSeconds * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * waxBoost;
+        // Bee, 2026-11-11: the drip waits for the first bee caught (HiveStarted), like the honey.
+        decimal waxMade = !HiveStarted ? 0m
+            : (Config.WaxBasePerSecond * seconds + beeSeconds * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * waxBoost;
         decimal waxRoom = Math.Max(0m, WaxStorage - State.Wax);
         decimal waxStored = Math.Min(waxMade, waxRoom);
         State.Wax = Snap(State.Wax + waxStored);
@@ -1327,6 +1360,7 @@ public sealed class BeekeeperEngine
         BeekeeperUpgrades.NeedsGardenAndPaper => State.GardenRevealed && PaperSeen,
         BeekeeperUpgrades.NeedsPropolis => PropolisSeen,
         BeekeeperUpgrades.NeedsNothing => true,
+        BeekeeperUpgrades.NeedsStory => false,   // never in the Shop: a story card hands it out
         var other => Owns(other),
     };
 
@@ -1521,6 +1555,103 @@ public sealed class BeekeeperEngine
         if (!State.RepsPresent.Remove(id)) return ActionResult.Refused;
         State.RepReturnIn[id] = Config.RepReturnSeconds;
         return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.RepLeft, 0m, id) });
+    }
+
+    // ------------------------------------------------------------------ story cards
+
+    /// <summary>The story card showing now, or null.</summary>
+    public string? StoryHere => State.StoryHere;
+
+    private bool StoryDue(string id) => id switch
+    {
+        BeekeeperStories.Ouch => State.ToolLevel == 0 && State.FirstStingDone,
+        BeekeeperStories.Gloves => State.ToolLevel == 0 && !State.GlovesRefusedForGood
+                                   && State.BeesCaught >= Config.GlovesOfferBees,
+        BeekeeperStories.Smoker => !Owns(BeekeeperUpgrades.Smoker) && State.Bees >= Config.SmokerStoryBees,
+        _ => false,
+    };
+
+    /// <summary>Story time passes (play time only, like rep time). Counts down declined moments, then,
+    /// if no card is showing, shows the first moment in order that is due and not done or waiting.
+    /// Raises <see cref="BeekeeperEvents.StoryArrives"/> (no log line: the card speaks).</summary>
+    public IReadOnlyList<BeekeeperEvent> AdvanceStoryTime(decimal seconds)
+    {
+        var events = new List<BeekeeperEvent>();
+        foreach (var id in State.StoryReturnIn.Keys.ToList())
+        {
+            decimal left = State.StoryReturnIn[id] - Math.Max(0m, seconds);
+            if (left > 0m) State.StoryReturnIn[id] = left;
+            else State.StoryReturnIn.Remove(id);
+        }
+        if (State.StoryHere == BeekeeperStories.Ouch)
+        {
+            // "Ouch!" has no button: it fades by itself after a few seconds of play.
+            State.OuchSecondsLeft -= Math.Max(0m, seconds);
+            if (State.OuchSecondsLeft <= 0m) { State.OuchSecondsLeft = 0m; FinishStory(BeekeeperStories.Ouch); }
+        }
+        if (State.StoryHere is not null) return events;
+        foreach (var id in BeekeeperStories.Order)
+        {
+            if (State.StoriesDone.Contains(id) || State.StoryReturnIn.ContainsKey(id) || !StoryDue(id)) continue;
+            State.StoryHere = id;
+            if (id == BeekeeperStories.Ouch) State.OuchSecondsLeft = Config.OuchSeconds;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.StoryArrives, 0m, id));
+            break;
+        }
+        return events;
+    }
+
+    /// <summary>Yes: the gloves go on (tool level 1). Refused unless the gloves card is showing.</summary>
+    public ActionResult PutOnGloves()
+    {
+        if (State.StoryHere != BeekeeperStories.Gloves) return ActionResult.Refused;
+        State.ToolLevel = Math.Max(State.ToolLevel, 1);
+        FinishStory(BeekeeperStories.Gloves);
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.GlovesOn) };
+        CheckWalls(events);
+        return new ActionResult(true, 0m, events);
+    }
+
+    /// <summary>No: the card goes away and comes back after GlovesReturnSeconds of play; the Nth No is for good.</summary>
+    public ActionResult LeaveGloves()
+    {
+        if (State.StoryHere != BeekeeperStories.Gloves) return ActionResult.Refused;
+        State.GlovesDeclines++;
+        State.StoryHere = null;
+        if (State.GlovesDeclines >= Config.GlovesMaxDeclines)
+        {
+            State.GlovesRefusedForGood = true;
+            if (!State.StoriesDone.Contains(BeekeeperStories.Gloves)) State.StoriesDone.Add(BeekeeperStories.Gloves);
+            return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.GlovesGone) });
+        }
+        State.StoryReturnIn[BeekeeperStories.Gloves] = Config.GlovesReturnSeconds;
+        return new ActionResult(true, 0m, Array.Empty<BeekeeperEvent>());
+    }
+
+    /// <summary>Repair (free): the Smoker works right away. Refused unless the Smoker card is showing.</summary>
+    public ActionResult RepairSmoker()
+    {
+        if (State.StoryHere != BeekeeperStories.Smoker) return ActionResult.Refused;
+        if (!State.Upgrades.Contains(BeekeeperUpgrades.Smoker)) State.Upgrades.Add(BeekeeperUpgrades.Smoker);
+        FinishStory(BeekeeperStories.Smoker);
+        return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.SmokerRepaired) });
+    }
+
+    private void FinishStory(string id)
+    {
+        State.StoryHere = null;
+        State.StoryReturnIn.Remove(id);
+        if (!State.StoriesDone.Contains(id)) State.StoriesDone.Add(id);
+    }
+
+    /// <summary>Shows a story card now (debug builds only; the game never does this).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugShowStory(string id)
+    {
+        if (!BeekeeperStories.Order.Contains(id) || State.StoryHere is not null || State.StoriesDone.Contains(id))
+            return Array.Empty<BeekeeperEvent>();
+        State.StoryReturnIn.Remove(id);
+        State.StoryHere = id;
+        return new[] { new BeekeeperEvent(BeekeeperEvents.StoryArrives, 0m, id) };
     }
 
     private void RollNextWasp()
@@ -2070,7 +2201,8 @@ public sealed class BeekeeperEngine
 
     private void CheckReveals(List<BeekeeperEvent> events)
     {
-        if (!State.BearRevealed && State.Honey >= Config.BearRevealHoney)
+        // Before: State.Honey >= Config.BearRevealHoney (10 honey).
+        if (!State.BearRevealed && State.BeesCaught >= Config.BearRevealBees)
         {
             State.BearRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BearArrives, 0m, State.BearName));

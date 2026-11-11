@@ -1093,4 +1093,12 @@ public enum StringKey
     BeekeeperBoostWoodenHiveFmt,
     BeekeeperBoostGuardingFmt,
     BeekeeperBoostNursingFmt,
+    BeekeeperStoryGloves,
+    BeekeeperStoryNo,
+    BeekeeperLogGlovesGone,
+    BeekeeperStorySmoker,
+    BeekeeperStoryRepair,
+    BeekeeperLogSmokerRepaired,
+    BeekeeperStoryOuch,
+    BeekeeperStoryOk,
 }

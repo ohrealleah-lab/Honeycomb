@@ -197,6 +197,23 @@ public sealed class BeekeeperState
     public List<string> RepsEngaged { get; set; } = new();
     /// <summary>Seconds until a rep that was sent away comes back, by rep id.</summary>
     public Dictionary<string, decimal> RepReturnIn { get; set; } = new();
+    // ----- Story cards (older saves load with these empty)
+    /// <summary>The story card showing now (a <see cref="BeekeeperStories"/> id), or null.</summary>
+    public string? StoryHere { get; set; }
+    /// <summary>Moments answered for good.</summary>
+    public List<string> StoriesDone { get; set; } = new();
+    /// <summary>Play seconds until a declined moment comes back, by story id.</summary>
+    public Dictionary<string, decimal> StoryReturnIn { get; set; } = new();
+    /// <summary>Bees caught by clicking, all time.</summary>
+    public long BeesCaught { get; set; }
+    /// <summary>True once the first sting has happened (at 10 bees caught by hand): brings the "Ouch!" card.</summary>
+    public bool FirstStingDone { get; set; }
+    /// <summary>Play seconds the "Ouch!" card has left before it goes by itself.</summary>
+    public decimal OuchSecondsLeft { get; set; }
+    public int GlovesDeclines { get; set; }
+    /// <summary>True once the gloves were refused five times: kept for a future hard-mode achievement.</summary>
+    public bool GlovesRefusedForGood { get; set; }
+
     /// <summary>Wasps that have shown up in all; the first visit offers Engage, later ones Bribe.</summary>
     public long WaspVisits { get; set; }
 

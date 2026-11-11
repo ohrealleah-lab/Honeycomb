@@ -61,12 +61,12 @@ public class BeekeeperStage3Tests : IDisposable
     }
 
     [Fact]
-    public void PracticeComesWithTheVacuum_WithoutTheWorkbench_AndTheSmokerNeedsNothing()
+    public void PracticeComesWithTheVacuum_WithoutTheWorkbench_AndTheSmokerIsNeverSold()
     {
-        Assert.Equal(new[] { BeekeeperUpgrades.Smoker }, Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades.Select(u => u.Id));
+        Assert.Empty(Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades);   // the Smoker is repaired in a story card, not sold
 
         var e = Make(new BeekeeperState { ToolLevel = 3, Beebits = 5_000m, Wax = 500m, Herbs = 5m, Bees = 5_000m, WaxTrays = 100 });   // trays: room for every wax price
-        Assert.Equal(new[] { BeekeeperUpgrades.Practice, BeekeeperUpgrades.Smoker }, e.ShopUpgrades.Select(u => u.Id));
+        Assert.Equal(new[] { BeekeeperUpgrades.Practice }, e.ShopUpgrades.Select(u => u.Id));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Practice).Done);
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.MorePractice);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Practice);
@@ -101,7 +101,7 @@ public class BeekeeperStage3Tests : IDisposable
     [Fact]
     public void AStingCatchesNothing_SliceIncluded()
     {
-        var e = Make(new BeekeeperState { Bees = 500_000m }, 0.0);   // bare hands, stung
+        var e = Make(new BeekeeperState { Bees = 500_000m, BeesCaught = 10, FirstStingDone = true }, 0.0);   // bare hands, stung
         var r = e.Catch();
         Assert.True(r.Stung);
         Assert.Equal(500_000m, e.State.Bees);
@@ -119,18 +119,16 @@ public class BeekeeperStage3Tests : IDisposable
     }
 
     [Fact]
-    public void OneHerbalCandle_BuysTheSmoker_WithNothingElseNeeded()
+    public void TheSmoker_IsNeverInTheShop_EvenWithBeebits()
     {
-        // Bee, 2026-11-11: Beebits come from the Hippies; one herbal candle pays for the Smoker.
+        // Bee, 2026-11-11: Beebits come from the Hippies, and the Smoker is repaired in a story card.
         var e = Make(new BeekeeperState { HippiesRevealed = true, BearName = "Bruno", RepellentCandles = 1m, HoneyRevealed = true });
-        Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.Smoker));   // no Beebits yet
         e.TradeTenCandles();
         Assert.Equal(10m, e.State.Beebits);
         Assert.True(e.State.ShopRevealed);
-        Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Smoker);
-        Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Smoker).Done);
-        Assert.Equal(0m, e.State.Beebits);
-        Assert.True(e.CanUseSmoker);
+        Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Smoker);
+        Assert.False(e.CanBuyUpgrade(BeekeeperUpgrades.Smoker));
+        Assert.False(e.CanUseSmoker);
     }
 
     [Fact]
