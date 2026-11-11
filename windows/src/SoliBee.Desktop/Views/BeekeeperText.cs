@@ -239,6 +239,21 @@ internal static class BeekeeperText
     public static string LightSagePropolis => T(StringKey.BeekeeperLightSagePropolis);
     public static string NotebookTitle => T(StringKey.BeekeeperNotebookTitle);
 
+    // ---- Bee Herbs (in the Shop)
+    public static string BeeHerbs => T(StringKey.BeekeeperBeeHerbs);
+    public static string BeeHerbsBlurb(string owned, string time) => Fill(T(StringKey.BeekeeperBeeHerbsBlurbFmt), owned, time);
+    public static string LightBeeHerb => T(StringKey.BeekeeperLightBeeHerb);
+    public static string HerbBurning(string buff, string time) => Fill(T(StringKey.BeekeeperHerbBurningFmt), HerbName(buff), time);
+    public static string HerbName(string buff) => buff switch
+    {
+        BeekeeperHerbs.BusyBees => T(StringKey.BeekeeperHerbBusyBees),
+        BeekeeperHerbs.Wax => T(StringKey.BeekeeperHerbWax),
+        BeekeeperHerbs.Trades => T(StringKey.BeekeeperHerbTrades),
+        BeekeeperHerbs.Wanderers => T(StringKey.BeekeeperHerbWanderers),
+        BeekeeperHerbs.LingeringSmoke => T(StringKey.BeekeeperHerbLingeringSmoke),
+        _ => buff,
+    };
+
     public static string NotebookNote(string id) => id switch
     {
         BeekeeperNotes.Queen => T(StringKey.BeekeeperNoteQueen),
@@ -559,6 +574,18 @@ internal static class BeekeeperText
             BeekeeperEvents.FirstWall => L(StringKey.BeekeeperLogFirstWall),
             BeekeeperEvents.HoneySuperBought => L(StringKey.BeekeeperLogHoneySuperBought),
             BeekeeperEvents.WaxTrayBought => L(StringKey.BeekeeperLogWaxTrayBought),
+            // Bee Herbs: one line for the buff the herb rolled; Value is the number it quotes.
+            BeekeeperEvents.HerbLit => e.Text switch
+            {
+                BeekeeperHerbs.BusyBees => Fill(L(StringKey.BeekeeperLogHerbBusyBeesFmt), N(e.Value)),
+                BeekeeperHerbs.Wax => Fill(L(StringKey.BeekeeperLogHerbWaxFmt), N(e.Value)),
+                BeekeeperHerbs.Trades => Fill(L(StringKey.BeekeeperLogHerbTradesFmt), N(e.Value)),
+                BeekeeperHerbs.Wanderers => L(StringKey.BeekeeperLogHerbWanderers),
+                BeekeeperHerbs.LingeringSmoke => Fill(L(StringKey.BeekeeperLogHerbLingeringSmokeFmt), N(e.Value)),
+                BeekeeperHerbs.Dud => L(StringKey.BeekeeperLogHerbDud),
+                _ => "",
+            },
+            BeekeeperEvents.HerbOut => L(StringKey.BeekeeperLogHerbOut),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "beeswax" => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),

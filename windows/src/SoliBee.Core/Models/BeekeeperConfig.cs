@@ -97,6 +97,19 @@ public static class BeekeeperUpgrades
     public const string NeedsNothing = "";
 }
 
+/// <summary>The buffs a lit Bee Herb can roll (one per herb).</summary>
+public static class BeekeeperHerbs
+{
+    public const string BusyBees = "busy_bees";             // more honey
+    public const string Wax = "wax";                        // more wax
+    public const string Trades = "trades";                  // more from the bear and the Hippies
+    public const string Wanderers = "wanderers";            // stray bees fly in
+    public const string LingeringSmoke = "lingering_smoke"; // smoker clicks last longer
+    public const string Dud = "dud";                        // nothing happens
+
+    public static readonly IReadOnlyList<string> All = new[] { BusyBees, Wax, Trades, Wanderers, LingeringSmoke, Dud };
+}
+
 /// <summary>
 /// Every Beekeeper tuning number, in one place (spec FR-002). Nothing else in the game
 /// hard-codes these. Values marked "approved" were checked with
@@ -383,6 +396,32 @@ public sealed class BeekeeperConfig
     public decimal SagePropolisHoneyMultiplier { get; init; } = 1.1m;
     public decimal SagePropolisBurnSeconds { get; init; } = 4m * 3600m;
     public decimal SagePropolisCapSeconds { get; init; } = 24m * 3600m;
+
+    // --- Bee Herbs (Bee, 2026-11-10; all placeholders). Bought in the Shop, again and again.
+    // Lighting one rolls one buff, which burns in live play only (like the bee-boost candle).
+    // One herb burns at a time.
+    public decimal BeeHerbCost { get; init; } = 25m;
+    public decimal BeeHerbBurnSeconds { get; init; } = 5m * 60m;
+    /// <summary>Busy Bees: honey while it burns (+25%).</summary>
+    public decimal HerbHoneyMultiplier { get; init; } = 1.25m;
+    /// <summary>Wax while it burns (+25%).</summary>
+    public decimal HerbWaxMultiplier { get; init; } = 1.25m;
+    /// <summary>What the bear and the Hippies give for a trade while it burns (+50%).</summary>
+    public decimal HerbTradeMultiplier { get; init; } = 1.5m;
+    /// <summary>Wanderers: stray bees that fly in a minute while it burns.</summary>
+    public decimal HerbWanderersBeesPerMinute { get; init; } = 6m;
+    /// <summary>Lingering Smoke: live seconds one smoker click lasts while it burns (instead of 1).</summary>
+    public decimal HerbSmokerSeconds { get; init; } = 30m;
+    /// <summary>How likely each roll is, as weights (the dud is rare).</summary>
+    public IReadOnlyList<(string Buff, int Weight)> HerbBuffWeights { get; init; } = new[]
+    {
+        (BeekeeperHerbs.BusyBees, 4),
+        (BeekeeperHerbs.Wax, 4),
+        (BeekeeperHerbs.Trades, 4),
+        (BeekeeperHerbs.Wanderers, 4),
+        (BeekeeperHerbs.LingeringSmoke, 4),
+        (BeekeeperHerbs.Dud, 1),
+    };
 
     public static BeekeeperConfig Default { get; } = new();
 }

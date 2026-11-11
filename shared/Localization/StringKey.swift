@@ -2104,4 +2104,36 @@ public enum StringKey: String, CaseIterable {
     case beekeeperLogRepLeftFmt = "beekeeper_log_rep_left_fmt"
     /// Story log; first wasp visit, Engage
     case beekeeperLogWaspEngaged = "beekeeper_log_wasp_engaged"
+    /// Shop: Bee Herbs, bought again and again; lighting one rolls one buff
+    case beekeeperBeeHerbs = "beekeeper_bee_herbs"
+    /// Shop, under Bee Herbs; %@ = how many you have, %@ = how long one burns ("5 minutes")
+    case beekeeperBeeHerbsBlurbFmt = "beekeeper_bee_herbs_blurb_fmt"
+    /// Shop button: light one Bee Herb
+    case beekeeperLightBeeHerb = "beekeeper_light_bee_herb"
+    /// Shop, under Bee Herbs while one burns; %@ = the buff's name, %@ = time left
+    case beekeeperHerbBurningFmt = "beekeeper_herb_burning_fmt"
+    /// Bee Herb buff: more honey
+    case beekeeperHerbBusyBees = "beekeeper_herb_busy_bees"
+    /// Bee Herb buff: more wax
+    case beekeeperHerbWax = "beekeeper_herb_wax"
+    /// Bee Herb buff: more from trades
+    case beekeeperHerbTrades = "beekeeper_herb_trades"
+    /// Bee Herb buff: stray bees fly in
+    case beekeeperHerbWanderers = "beekeeper_herb_wanderers"
+    /// Bee Herb buff: Smoker clicks last longer
+    case beekeeperHerbLingeringSmoke = "beekeeper_herb_lingering_smoke"
+    /// Story log, a herb rolled Busy Bees; %@ = extra honey in percent
+    case beekeeperLogHerbBusyBeesFmt = "beekeeper_log_herb_busy_bees_fmt"
+    /// Story log, a herb rolled Wax Makers; %@ = extra wax in percent
+    case beekeeperLogHerbWaxFmt = "beekeeper_log_herb_wax_fmt"
+    /// Story log, a herb rolled Good Deals; %@ = extra from trades in percent
+    case beekeeperLogHerbTradesFmt = "beekeeper_log_herb_trades_fmt"
+    /// Story log, a herb rolled Wanderers
+    case beekeeperLogHerbWanderers = "beekeeper_log_herb_wanderers"
+    /// Story log, a herb rolled Lingering Smoke; %@ = seconds a Smoker click lasts
+    case beekeeperLogHerbLingeringSmokeFmt = "beekeeper_log_herb_lingering_smoke_fmt"
+    /// Story log, a herb rolled nothing (rare)
+    case beekeeperLogHerbDud = "beekeeper_log_herb_dud"
+    /// Story log, a lit herb has burned out
+    case beekeeperLogHerbOut = "beekeeper_log_herb_out"
 }

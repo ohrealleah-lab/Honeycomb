@@ -194,6 +194,14 @@ public sealed class BeekeeperState
     /// <summary>Wasps that have shown up in all; the first visit offers Engage, later ones Bribe.</summary>
     public long WaspVisits { get; set; }
 
+    // ----- Bee Herbs (older saves load with none)
+    /// <summary>Bee Herbs bought and not yet lit.</summary>
+    public decimal BeeHerbs { get; set; }
+    /// <summary>The buff the lit herb rolled (a <see cref="BeekeeperHerbs"/> id), or null when none burns.</summary>
+    public string? HerbBuff { get; set; }
+    /// <summary>Live seconds the lit herb has left; 0 = none burning. Waits while the app is closed.</summary>
+    public decimal HerbSecondsLeft { get; set; }
+
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>
     [JsonIgnore]

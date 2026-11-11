@@ -184,6 +184,22 @@ public partial class BeekeeperView : UserControl
         ShopTitleText.Text = BeekeeperText.ShopTitle;
         if (ShopCard.IsVisible) UpdateShop(vm, lang);
 
+        // Bee Herbs: in the Shop once it opens (bought for Beebits, lit one at a time).
+        BeeHerbRow.IsVisible = vm.ShopRevealed;
+        if (BeeHerbRow.IsVisible)
+        {
+            BeeHerbNameText.Text = BeekeeperText.BeeHerbs;
+            BeeHerbInfoText.Text = BeekeeperText.BeeHerbsBlurb(N(vm.BeeHerbs), BeekeeperText.Roughly(vm.Config.BeeHerbBurnSeconds));
+            BeeHerbBurningText.IsVisible = vm.HerbBuff is not null;
+            if (vm.HerbBuff is { } buff)
+                BeeHerbBurningText.Text = BeekeeperText.HerbBurning(buff, BeekeeperText.Clock(vm.HerbSecondsLeft));
+            BuyBeeHerbButton.Content = BeekeeperText.Price(N(vm.Config.BeeHerbCost), null, null);
+            BuyBeeHerbButton.IsEnabled = vm.CanBuyBeeHerb;
+            LightBeeHerbButton.Content = BeekeeperText.LightBeeHerb;
+            LightBeeHerbButton.IsVisible = vm.BeeHerbs >= 1m || vm.HerbBuff is not null;
+            LightBeeHerbButton.IsEnabled = vm.CanLightBeeHerb;
+        }
+
         // Combs: how many is on the Hive card; building one is The Workbench's first row (Leah).
 
         // The Workbench: shows from the first 5 wax (combs); candles join at the 3rd comb (stage 7.5).
@@ -290,9 +306,10 @@ public partial class BeekeeperView : UserControl
         EngageWaspButton.IsEnabled = vm.CanEngageWasp;
         BribeButton.IsVisible = !vm.WaspFirstVisit;
         UpdateVisitors(vm.RepsPresent, lang);
-        WaspLightButton.Content = BeekeeperText.LightCandle;
-        WaspLightButton.IsVisible = vm.RepellentShown;
-        WaspLightButton.IsEnabled = vm.CanLightRepellent;
+        // Cut: the wasp card's "Light a candle" button (sage candles are going away).
+        // WaspLightButton.Content = BeekeeperText.LightCandle;
+        // WaspLightButton.IsVisible = vm.RepellentShown;
+        // WaspLightButton.IsEnabled = vm.CanLightRepellent;
         CandleBurningText.IsVisible = burning && !vm.WaspApproaching;
         CandleBurningText.Text = BeekeeperText.CandleBurning(BeekeeperText.Clock(vm.RepellentSecondsLeft));
 
@@ -769,6 +786,8 @@ public partial class BeekeeperView : UserControl
     private void Bribe_Click(object? sender, RoutedEventArgs e) => _vm?.BribeCommand.Execute(null);
     private void CraftBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeBoostCommand.Execute(null);
     private void LightBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeBoostCommand.Execute(null);
+    private void BuyBeeHerb_Click(object? sender, RoutedEventArgs e) => _vm?.BuyBeeHerbCommand.Execute(null);
+    private void LightBeeHerb_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeHerbCommand.Execute(null);
     private void CraftSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.CraftSagePropolisCommand.Execute(null);
     private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
     private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);

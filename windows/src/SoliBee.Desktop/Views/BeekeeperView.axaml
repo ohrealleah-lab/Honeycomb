@@ -157,6 +157,18 @@
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="ShopTitleText" Classes="bk-title" />
                         <StackPanel x:Name="ShopRows" Spacing="8" />
+                        <!-- Bee Herbs: bought again and again, lit one at a time; each rolls one buff -->
+                        <Grid x:Name="BeeHerbRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="BeeHerbNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="BeeHerbInfoText" Classes="bk-muted" TextWrapping="Wrap" />
+                                <TextBlock x:Name="BeeHerbBurningText" Classes="bk-muted" IsVisible="False" />
+                                <Button x:Name="LightBeeHerbButton" Classes="bk-button" MinWidth="90" Margin="0,4,0,0"
+                                        HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="LightBeeHerb_Click" />
+                            </StackPanel>
+                            <Button x:Name="BuyBeeHerbButton" Grid.Column="1" Classes="bk-button" MinWidth="110"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyBeeHerb_Click" />
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -309,8 +321,10 @@
                                     HorizontalContentAlignment="Center" Click="EngageWasp_Click" />
                             <Button x:Name="BribeButton" Classes="bk-button" HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" Click="Bribe_Click" />
+                            <!-- Cut: the sage candles are going away (Leah). Kept in case it returns.
                             <Button x:Name="WaspLightButton" Classes="bk-button" HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
+                            -->
                         </StackPanel>
                         <TextBlock x:Name="CandleBurningText" Classes="bk-body" IsVisible="False" />
                     </StackPanel>

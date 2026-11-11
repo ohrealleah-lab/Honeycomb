@@ -294,7 +294,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                     Engine.HoneyPerTradeNow, "honey", Engine.BeebitsPerTradeNow, "beebits", CanSell, SellTen, SellAll));
             if (State.HippiesRevealed && Engine.RepEngaged("hippies"))
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
-                    Config.CandlesPerSage, "beeswax_candles", 1m, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
+                    Config.CandlesPerSage, "beeswax_candles", Engine.SagePerTradeNow, "sage", CanTradeCandles, TradeTenCandles, TradeAllCandles));
             // Stage 6: the wasps, once their emissary has come. One paper a click, or x10 / x100.
             if (State.EmissaryCome)
                 offers.Add(new BeekeeperTradeOffer("wasps", null, State.WaspTrades,
@@ -614,6 +614,20 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     [RelayCommand(CanExecute = nameof(CanLightSagePropolis))]
     public void LightSagePropolis() => Apply(Engine.LightSagePropolis());
+
+    // Bee Herbs: bought in the Shop, lit one at a time; each rolls one buff.
+    public decimal BeeHerbs => State.BeeHerbs;
+    /// <summary>The buff the lit herb rolled, or null when none burns.</summary>
+    public string? HerbBuff => Engine.IsHerbBurning ? State.HerbBuff : null;
+    public decimal HerbSecondsLeft => State.HerbSecondsLeft;
+    public bool CanBuyBeeHerb => Engine.CanBuyBeeHerb;
+    public bool CanLightBeeHerb => Engine.CanLightBeeHerb;
+
+    [RelayCommand(CanExecute = nameof(CanBuyBeeHerb))]
+    public void BuyBeeHerb() => Apply(Engine.BuyBeeHerb());
+
+    [RelayCommand(CanExecute = nameof(CanLightBeeHerb))]
+    public void LightBeeHerb() => Apply(Engine.LightBeeHerb());
 
     [RelayCommand(CanExecute = nameof(CanMakeBeeBread))]
     public void MakeBeeBread() => Apply(Engine.MakeBeeBread());
@@ -936,6 +950,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         CraftSagePropolisCommand.NotifyCanExecuteChanged();
         LightBeeBoostCommand.NotifyCanExecuteChanged();
         LightSagePropolisCommand.NotifyCanExecuteChanged();
+        BuyBeeHerbCommand.NotifyCanExecuteChanged();
+        LightBeeHerbCommand.NotifyCanExecuteChanged();
         MakeBeeBreadCommand.NotifyCanExecuteChanged();
         MoveToWoodenHiveCommand.NotifyCanExecuteChanged();
     }

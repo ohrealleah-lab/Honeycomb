@@ -130,7 +130,7 @@ public static class BeekeeperSaveService
             s.Honey, s.Wax, s.Beebits, s.BeeswaxCandles, s.RepellentCandles, s.Sage,
             s.RepellentSecondsLeft, s.NextWaspInSeconds, s.WaspCountdown,
             s.Pollen, s.BeeBread, s.Paper,
-            s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles,
+            s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles, s.BeeHerbs, s.HerbSecondsLeft,
         };
         return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
             && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m
@@ -152,7 +152,8 @@ public static class BeekeeperSaveService
             && s.SeedsInHand is not null && s.SeedsGivenIds is not null && s.Beds is not null
             && s.Beds.All(b => b is not null && b.SecondsLeft >= 0m)
             && s.Propolis >= 0m && s.BeeBoostCandles >= 0m && s.SagePropolisCandles >= 0m
-            && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m;
+            && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m
+            && s.BeeHerbs >= 0m && s.HerbSecondsLeft >= 0m;
     }
 
     // Every damaged file keeps its own backup: .unreadable, then .unreadable2, .unreadable3…

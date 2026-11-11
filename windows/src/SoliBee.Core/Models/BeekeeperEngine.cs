@@ -102,6 +102,10 @@ public static class BeekeeperEvents
     public const string HoneySuperBought = "honey_super_bought"; // Value = level now owned
     public const string WaxTrayBought = "wax_tray_bought";       // Value = level now owned
 
+    // Bee Herbs
+    public const string HerbLit = "herb_lit";                    // Text = the buff rolled (BeekeeperHerbs), "dud" included
+    public const string HerbOut = "herb_out";                    // Text = the buff that ended
+
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
         key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackPantry
@@ -209,7 +213,16 @@ public sealed class BeekeeperEngine
 
         foreach (var bed in s.Beds)
             bed.SecondsLeft = Math.Min(bed.SecondsLeft, Config.Plants.First(p => p.Id == bed.PlantId).GrowSeconds);
-        s.SmokerBoostSecondsLeft = Math.Clamp(s.SmokerBoostSecondsLeft, 0m, Config.SmokerBoostSeconds);
+        s.BeeHerbs = Math.Max(0m, s.BeeHerbs);
+        s.HerbSecondsLeft = Math.Clamp(s.HerbSecondsLeft, 0m, Config.BeeHerbBurnSeconds);
+        if (s.HerbSecondsLeft <= 0m || s.HerbBuff is null || s.HerbBuff == BeekeeperHerbs.Dud || !BeekeeperHerbs.All.Contains(s.HerbBuff))
+        {
+            s.HerbBuff = null;
+            s.HerbSecondsLeft = 0m;
+        }
+        // A smoker click lasts longer only under Lingering Smoke.
+        decimal smokerMax = s.HerbBuff == BeekeeperHerbs.LingeringSmoke ? Config.HerbSmokerSeconds : Config.SmokerBoostSeconds;
+        s.SmokerBoostSecondsLeft = Math.Clamp(s.SmokerBoostSecondsLeft, 0m, smokerMax);
         s.BeeBoostSecondsLeft = Math.Min(s.BeeBoostSecondsLeft, Config.BeeBoostCapSeconds);
         s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
         s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
@@ -338,7 +351,8 @@ public sealed class BeekeeperEngine
     /// <summary>The boosts that only work while the app is open, multiplied: calm bees and a
     /// bee-boost candle (stage 7). Time away never has them.</summary>
     public decimal LiveBoostNow =>
-        SmokerBoostNow * (IsBeeBoosted ? Config.BeeBoostHoneyMultiplier : 1m);
+        SmokerBoostNow * (IsBeeBoosted ? Config.BeeBoostHoneyMultiplier : 1m)
+        * (IsHerb(BeekeeperHerbs.BusyBees) ? Config.HerbHoneyMultiplier : 1m);
 
     /// <summary>The sage-propolis candle's boost, on while it burns, live or away.</summary>
     public decimal SagePropolisBoostNow => IsSagePropolisBurning ? Config.SagePropolisHoneyMultiplier : 1m;
@@ -347,7 +361,7 @@ public sealed class BeekeeperEngine
     /// every free bee, times the Wax-Catchers. Not multiplied by combs, and no calm, candle,
     /// wooden-hive or guarding term: those boost honey only.</summary>
     public decimal WaxPerSecondNow =>
-        (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier;
+        (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * HerbWaxNow;
     // Cut in stage 7.5 (spec 016): wax followed all the honey made, calm counted.
     // public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
 
@@ -399,7 +413,15 @@ public sealed class BeekeeperEngine
 
     /// <summary>Beebits one bear trade pays right now: 5, or 6 under the trade agreement
     /// (stage 7.5, spec 016, FR-711).</summary>
-    public decimal BeebitsPerTradeNow => State.HasTradeAgreement ? Config.BetterBeebitsPerTrade : Config.BeebitsPerTrade;
+    public decimal BeebitsPerTradeNow =>
+        WithTradeHerb(State.HasTradeAgreement ? Config.BetterBeebitsPerTrade : Config.BeebitsPerTrade);
+
+    /// <summary>Sage one Hippie trade (10 candles) gives right now: 1, more under a trades herb.</summary>
+    public decimal SagePerTradeNow => WithTradeHerb(1m);
+
+    /// <summary>A trade's pay under a Good Deals herb, rounded up to a whole amount (Beebits and
+    /// sage stay whole); unchanged otherwise.</summary>
+    private decimal WithTradeHerb(decimal pay) => HerbTradeNow == 1m ? pay : Math.Ceiling(pay * HerbTradeNow);
 
     public bool CanSell => State.Honey >= HoneyPerTradeNow;
 
@@ -528,16 +550,31 @@ public sealed class BeekeeperEngine
         while (left > 0m)
         {
             bool smoker = State.SmokerBoostSecondsLeft > 0m, beeBoost = State.BeeBoostSecondsLeft > 0m;
+            bool herb = IsHerbBurning;
             decimal step = left;
             if (smoker) step = Math.Min(step, State.SmokerBoostSecondsLeft);
             if (beeBoost) step = Math.Min(step, State.BeeBoostSecondsLeft);
-            total += Work(step, events, LiveBoostNow);   // the hive goes on growing across the parts (FR-402)
+            if (herb) step = Math.Min(step, State.HerbSecondsLeft);
+            total += Work(step, events, LiveBoostNow, HerbWaxNow);   // the hive goes on growing across the parts (FR-402)
+            // Wanderers: stray bees fly in while the herb burns (added after the stretch's work).
+            if (IsHerb(BeekeeperHerbs.Wanderers))
+                State.Bees = Math.Min(Config.MaxBees, Snap(State.Bees + Config.HerbWanderersBeesPerMinute * step / 60m));
             left -= step;
             if (smoker) State.SmokerBoostSecondsLeft = Math.Max(0m, State.SmokerBoostSecondsLeft - step);
             if (beeBoost)
             {
                 State.BeeBoostSecondsLeft -= step;
                 if (State.BeeBoostSecondsLeft <= 0m) { State.BeeBoostSecondsLeft = 0m; events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBoostOut)); }
+            }
+            if (herb)
+            {
+                State.HerbSecondsLeft -= step;
+                if (State.HerbSecondsLeft <= 0m)
+                {
+                    events.Add(new BeekeeperEvent(BeekeeperEvents.HerbOut, 0m, State.HerbBuff));
+                    State.HerbSecondsLeft = 0m;
+                    State.HerbBuff = null;
+                }
             }
         }
         return new AdvanceResult(total.Stored, total.Wax, events, total.Raised);
@@ -557,12 +594,16 @@ public sealed class BeekeeperEngine
     /// Multiplied with the other honey boosts.</summary>
     public decimal SmokerBoostNow => IsSmokerBoosted ? 1m + SmokerBoostPercent / 100m : 1m;
 
+    /// <summary>Live seconds one smoker click lasts: 1, or 30 under Lingering Smoke.</summary>
+    public decimal SmokerClickSeconds =>
+        IsHerb(BeekeeperHerbs.LingeringSmoke) ? Config.HerbSmokerSeconds : Config.SmokerBoostSeconds;
+
     /// <summary>A smoker click: honey is boosted for the next few live seconds (refreshes, not stacks).</summary>
     public ActionResult UseSmoker()
     {
         if (!CanUseSmoker) return ActionResult.Refused;
-        State.SmokerBoostSecondsLeft = Config.SmokerBoostSeconds;
-        return new ActionResult(true, Config.SmokerBoostSeconds, Array.Empty<BeekeeperEvent>());
+        State.SmokerBoostSecondsLeft = SmokerClickSeconds;
+        return new ActionResult(true, SmokerClickSeconds, Array.Empty<BeekeeperEvent>());
     }
 
     /// <summary>
@@ -655,9 +696,9 @@ public sealed class BeekeeperEngine
     /// part-way, the stretch is split there, so a new specialty (guarding's honey, foraging's
     /// pollen) only counts from the moment it sprouts, the same live and away (spec 014, FR-503).
     /// </summary>
-    private Made Work(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
+    private Made Work(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m, decimal waxBoost = 1m)
     {
-        if (seconds <= 0m) return Produce(seconds, events, boost);
+        if (seconds <= 0m) return Produce(seconds, events, boost, waxBoost);
 
         // Cut in stage 7 (spec 015): the stretch was split once, at the one growing seed's sprout.
         // decimal before = IsGrowing ? Math.Min(seconds, State.GrowSecondsLeft) : seconds;
@@ -678,7 +719,7 @@ public sealed class BeekeeperEngine
             foreach (var bed in State.Beds) step = Math.Min(step, bed.SecondsLeft);
             if (State.SagePropolisSecondsLeft > 0m) step = Math.Min(step, State.SagePropolisSecondsLeft);
 
-            made += Produce(step, events, boost);
+            made += Produce(step, events, boost, waxBoost);
             Attract(step, events);
             left -= step;
 
@@ -739,7 +780,7 @@ public sealed class BeekeeperEngine
     /// nothing is sold). The rates never read what is stored, so <c>min(made, room)</c> keeps many
     /// short stretches equal to one long one, even when a cap is reached part-way.</para>
     /// </summary>
-    private Made Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m)
+    private Made Produce(decimal seconds, List<BeekeeperEvent> events, decimal boost = 1m, decimal waxBoost = 1m)
     {
         RefreshStorageFlag();
         if (seconds <= 0m) return default;
@@ -837,7 +878,7 @@ public sealed class BeekeeperEngine
 
         // Wax (spec 016, FR-705/706): the drip plus the free bees' share, times the Wax-Catchers;
         // no calm, candle, wooden-hive or guarding term. Stored up to the wax cap; the rest stops.
-        decimal waxMade = (Config.WaxBasePerSecond * seconds + beeSeconds * Config.WaxPerFreeBeePerSecond) * WaxMultiplier;
+        decimal waxMade = (Config.WaxBasePerSecond * seconds + beeSeconds * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * waxBoost;
         decimal waxRoom = Math.Max(0m, WaxStorage - State.Wax);
         decimal waxStored = Math.Min(waxMade, waxRoom);
         State.Wax = Snap(State.Wax + waxStored);
@@ -1185,12 +1226,14 @@ public sealed class BeekeeperEngine
         if (!CanTradeCandles) return ActionResult.Refused;
         decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
         State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
-        State.Sage += bundles;
+        decimal sage = bundles * SagePerTradeNow;
+        State.Sage += sage;
+        // Before Bee Herbs: State.Sage += bundles;
         State.HippieTrades += (long)bundles;   // each bundle of 10 candles is a trade
         // Before: State.HippieTrades++;
         State.SageRevealed = true;
 
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, bundles, null, bundles * Config.CandlesPerSage) };
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, sage, null, bundles * Config.CandlesPerSage) };
         if (!State.RepellentUnlocked)
         {
             // The sage repellent candle comes once there is sage to make it with (placeholder rule).
@@ -1200,6 +1243,76 @@ public sealed class BeekeeperEngine
         GiveSeedsIfDue(events);
         CheckWalls(events);   // the repellent candle brings Stronger Candles, which may be a wall
         return new ActionResult(true, bundles, events);
+    }
+
+    // ------------------------------------------------------------------ Bee Herbs (in the Shop)
+
+    /// <summary>A herb is burning (a dud never burns).</summary>
+    public bool IsHerbBurning => State.HerbSecondsLeft > 0m && State.HerbBuff is not null;
+
+    /// <summary>The lit herb rolled <paramref name="buff"/> and still burns.</summary>
+    public bool IsHerb(string buff) => IsHerbBurning && State.HerbBuff == buff;
+
+    /// <summary>The wax factor of the moment: more under a wax herb, else 1.</summary>
+    public decimal HerbWaxNow => IsHerb(BeekeeperHerbs.Wax) ? Config.HerbWaxMultiplier : 1m;
+
+    /// <summary>The trade factor of the moment: more under a trades herb, else 1.</summary>
+    public decimal HerbTradeNow => IsHerb(BeekeeperHerbs.Trades) ? Config.HerbTradeMultiplier : 1m;
+
+    public bool CanBuyBeeHerb => State.ShopRevealed && State.Beebits >= Config.BeeHerbCost;
+
+    public ActionResult BuyBeeHerb()
+    {
+        if (!CanBuyBeeHerb) return ActionResult.Refused;
+        State.Beebits -= Config.BeeHerbCost;
+        State.BeeHerbs++;
+        return new ActionResult(true, Config.BeeHerbCost, Array.Empty<BeekeeperEvent>());
+    }
+
+    /// <summary>One herb at a time: another can be lit once the last has burned out.</summary>
+    public bool CanLightBeeHerb => State.BeeHerbs >= 1m && !IsHerbBurning;
+
+    /// <summary>Lights a herb: it rolls one buff (by the config's weights) that burns in live play.
+    /// A dud is used up with nothing burning.</summary>
+    public ActionResult LightBeeHerb()
+    {
+        if (!CanLightBeeHerb) return ActionResult.Refused;
+        State.BeeHerbs--;
+        string buff = RollHerbBuff();
+        if (buff == BeekeeperHerbs.Dud)
+        {
+            State.HerbBuff = null;
+            State.HerbSecondsLeft = 0m;
+        }
+        else
+        {
+            State.HerbBuff = buff;
+            State.HerbSecondsLeft = Config.BeeHerbBurnSeconds;
+        }
+        // Value: the number the log line quotes (percent, or a Smoker click's seconds), kept with the line.
+        decimal value = buff switch
+        {
+            BeekeeperHerbs.BusyBees => (Config.HerbHoneyMultiplier - 1m) * 100m,
+            BeekeeperHerbs.Wax => (Config.HerbWaxMultiplier - 1m) * 100m,
+            BeekeeperHerbs.Trades => (Config.HerbTradeMultiplier - 1m) * 100m,
+            BeekeeperHerbs.LingeringSmoke => Config.HerbSmokerSeconds,
+            _ => 0m,
+        };
+        return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.HerbLit, value, buff) });
+    }
+
+    private string RollHerbBuff()
+    {
+        var weights = Config.HerbBuffWeights.Where(w => w.Weight > 0).ToList();
+        int total = weights.Sum(w => w.Weight);
+        if (total <= 0) return BeekeeperHerbs.Dud;
+        int roll = _rng.Next(total);
+        foreach (var (buff, weight) in weights)
+        {
+            if (roll < weight) return buff;
+            roll -= weight;
+        }
+        return weights[^1].Buff;
     }
 
     // ------------------------------------------------------------------ upgrades (in the Shop)
