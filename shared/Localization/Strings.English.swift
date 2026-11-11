@@ -859,7 +859,7 @@ enum StringsEnglish {
         .beekeeperUpgradeSmoker: "The Smoker",
         .beekeeperUpgradeSmokerBlurb: "Each click of the smoker button: +%@% honey for a moment",
         .helpBeekeeperSmokerTitle: "💨 Catching More & the Smoker",
-        .helpBeekeeperSmoker: "After the Bee-Safe Vacuum, the Shop sells more tools (Bee Lure, Flower Cart, Hive Whistle) and Practice upgrades that make every click catch more. Every catch also brings in a small slice of your free bees (0.1%), so a big swarm of free bees grows faster (up to 10 times what your tool catches).\n\nThe Smoker, an old one you find in the grass and repair for free, adds a 💨 button beside Catch Bee. Each click boosts honey for a moment (double honey for a second), and keeps boosting while you keep clicking. The boost only works while you play.",
+        .helpBeekeeperSmoker: "After the Bee-Safe Vacuum, the Shop sells more tools (Bee Lure, Flower Cart, Hive Whistle) and Practice upgrades that make every click catch more. Every catch also brings in a small slice of your free bees (0.1%), so a big swarm of free bees grows faster (up to 10 times what your tool catches).\n\nThe Smoker, an old one you find in the grass and repair for free, adds a 💨 button beside Catch Bee: click it instead of catching bees when you want honey. Each click boosts honey for a moment (+150% honey for a second), and keeps boosting while you keep clicking. The boost only works while you play.",
         .beekeeperHiveCombs: "Combs",
         .beekeeperComb: "Comb",
         .beekeeperBuild: "Build",

@@ -112,7 +112,7 @@ public class BeekeeperStage75Tests
         plain.Advance(50m);
         boosted.Advance(50m);
         Assert.Equal(plain.State.Wax, boosted.State.Wax);
-        Assert.Equal(0.8m * 50m * 2m * 1.2m * 1.1m * 1.25m * 1.25m, boosted.State.Honey);
+        Assert.Equal(0.8m * 50m * 2.5m * 1.2m * 1.1m * 1.25m * 1.25m, boosted.State.Honey);   // the Smoker: ×2.5
     }
 
     // ============================================================ caps (User Story 5)

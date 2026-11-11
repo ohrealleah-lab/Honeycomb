@@ -301,7 +301,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         vm.UseSmokerCommand.Execute(null);
         var smoker = Assert.Single(Row(vm, BeekeeperHiveRows.Honey)!.Boosts!);
         Assert.Equal("smoker", smoker.Id);
-        Assert.Equal(100m, smoker.Percent);
+        Assert.Equal(150m, smoker.Percent);
 
         var wax = Assert.Single(Row(vm, BeekeeperHiveRows.Wax)!.Boosts!);
         Assert.Equal(BeekeeperHerbs.Wax, wax.Id);

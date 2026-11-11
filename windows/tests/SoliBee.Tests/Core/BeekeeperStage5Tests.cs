@@ -182,8 +182,8 @@ public class BeekeeperStage5Tests : IDisposable
         var e = Make(Queen(10m));
         e.State.SmokerBoostSecondsLeft = 60m;   // set directly: a long boost, to split the stretch
         e.Advance(120m);
-        // The smoker boosts the combs' honey only: 250 a second × (2 × 60 + 60).
-        Assert.Equal(45000m, e.State.Honey);
+        // The smoker boosts the combs' honey only: 250 a second × (2.5 × 60 + 60) (+150% since 2026-11-11).
+        Assert.Equal(52500m, e.State.Honey);
         // The wax follows the growing bees, boosted or not: 0.005 × 120 + 0.0001 × (60,600 + 61,800).
         Assert.Equal(12.84, (double)e.State.Wax, Places);
         Assert.Equal(1040m, e.State.Bees);

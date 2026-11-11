@@ -405,7 +405,7 @@ public sealed class BeekeeperConfig
     public decimal MorePracticeMultiplier { get; init; } = 2m;     // +100% (placeholder)
     /// <summary>Extra honey while the smoker boost is on, in percent (Bee, 2026-11-10: +100%,
     /// was +50%). Later smoker upgrades will each add 25 points on top.</summary>
-    public decimal SmokerBoostPercent { get; init; } = 100m;
+    public decimal SmokerBoostPercent { get; init; } = 150m;   // Bee, 2026-11-11: was 100 (felt too faint early on)
     /// <summary>Live seconds one smoker click keeps the boost on; a click refreshes it (placeholder: 1).</summary>
     public decimal SmokerBoostSeconds { get; init; } = 1m;
 

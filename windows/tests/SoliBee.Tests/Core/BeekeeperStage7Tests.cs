@@ -265,9 +265,9 @@ public class BeekeeperStage7Tests : IDisposable
         both.State.BeeBread = 0m;
         both.State.BeeBoostSecondsLeft = 10m;
         both.State.SmokerBoostSecondsLeft = 10m;
-        Assert.Equal(12.5m * 2m * 1.2m, both.HoneyPerSecondNow);
+        Assert.Equal(12.5m * 2.5m * 1.2m, both.HoneyPerSecondNow);   // the Smoker: +150% (Bee, 2026-11-11)
         both.Advance(10m);
-        Assert.Equal(12.5m * 2m * 1.2m * 10m, both.State.Honey);
+        Assert.Equal(12.5m * 2.5m * 1.2m * 10m, both.State.Honey);
     }
 
     [Fact]
