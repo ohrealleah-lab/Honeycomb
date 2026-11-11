@@ -352,7 +352,7 @@ public class BeekeeperStage8Tests : IDisposable
     public void Specialties_CountKinds_NotPlants()
     {
         var e = Make(Garden((BeekeeperPlants.Bramble, 2), (BeekeeperPlants.Wildflowers, 3), (BeekeeperPlants.Clover, 2),
-            (BeekeeperPlants.Willow, 5), (BeekeeperPlants.Poplar, 4)));
+            (BeekeeperPlants.Willow, 5), (BeekeeperPlants.Poplar, 4)), config: BeekeeperTestHives.NoBlooms());   // stage 9: no crocus
         Assert.Equal(1.25m, e.GuardingMultiplier);           // not 1.5625
         Assert.Equal(6m, e.ForagingPollenPerMinute);         // wildflowers and clover once each
         Assert.Equal(1.5m, e.NursingMultiplier);

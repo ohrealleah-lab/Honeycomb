@@ -49,8 +49,20 @@ public sealed record BeekeeperSource(string Id, decimal PerSecond, decimal Count
 /// <summary>A boost that is on right now, for a hover: <see cref="Id"/> is "smoker", "bee_boost",
 /// "sage_propolis", "free_bees", "wax_catcher", "wooden_hive", "guarding", "nursing", "plant"
 /// (stage 8: <see cref="Plant"/>'s bonus from <see cref="Count"/> plants after the first) or a
-/// <see cref="BeekeeperHerbs"/> id; <see cref="Percent"/> its extra (100 = +100%).</summary>
-public sealed record BeekeeperBoost(string Id, decimal Percent, string? Plant = null, decimal Count = 0m);
+/// <see cref="BeekeeperHerbs"/> id; <see cref="Percent"/> its extra (100 = +100%).
+/// Stage 9: "bloom" (<see cref="Plant"/> = the bloom id, <see cref="Specialty"/> the specialty it
+/// favours, <see cref="Count"/> how much harder it works, ×2) and "winter" (<see cref="Count"/> the
+/// honey factor, ×0.75).</summary>
+public sealed record BeekeeperBoost(string Id, decimal Percent, string? Plant = null, decimal Count = 0m,
+    string? Specialty = null);
+
+/// <summary>The Garden card's bloom line and hover (stage 9, spec 018, FR-908). The view turns it into
+/// words: <see cref="Bloom"/> out now with <see cref="SecondsLeft"/>, what it <see cref="Favours"/>
+/// (null in winter), whether the hive <see cref="HasFavoured"/> that specialty, and the <see cref="Next"/> bloom.
+/// <see cref="GuardingPercent"/>: guarding's extra honey now (the linden hover quotes it);
+/// <see cref="WinterPercent"/>: how much slower honey comes in winter (25).</summary>
+public sealed record BeekeeperBloomView(string Bloom, decimal SecondsLeft, string? Favours, bool HasFavoured, string Next,
+    decimal GuardingPercent = 0m, decimal WinterPercent = 0m);
 
 /// <summary>Bee ids on the Bees tab (stage 8, FR-813): <see cref="BeekeeperBees"/> ids.</summary>
 public static class BeekeeperBeeTab
@@ -446,11 +458,44 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         }
     }
 
-    /// <summary>Boosts on the bees: nursing speeds the queen (already in her rate).</summary>
-    public IReadOnlyList<BeekeeperBoost> BeeBoostsNow =>
-        Engine.IsQueenLaying && Engine.NursingMultiplier > 1m
-            ? new[] { new BeekeeperBoost("nursing", (Engine.NursingMultiplier - 1m) * 100m) }
+    /// <summary>Boosts on the bees: nursing speeds the queen (already in her rate); stage 9: the crocus
+    /// makes nursing work harder.</summary>
+    public IReadOnlyList<BeekeeperBoost> BeeBoostsNow
+    {
+        get
+        {
+            if (!Engine.IsQueenLaying || Engine.NursingMultiplier <= 1m) return Array.Empty<BeekeeperBoost>();
+            var boosts = new List<BeekeeperBoost> { new("nursing", (Engine.NursingMultiplier - 1m) * 100m) };
+            boosts.AddRange(BloomBoosts(BeekeeperSpecialties.Nursing));
+            return boosts;
+        }
+    }
+    // Before stage 9: nursing alone.
+    // public IReadOnlyList<BeekeeperBoost> BeeBoostsNow =>
+    //     Engine.IsQueenLaying && Engine.NursingMultiplier > 1m
+    //         ? new[] { new BeekeeperBoost("nursing", (Engine.NursingMultiplier - 1m) * 100m) }
+    //         : Array.Empty<BeekeeperBoost>();
+
+    /// <summary>Stage 9 (FR-909): the bloom line for a hover, when the bloom out now favours
+    /// <paramref name="specialty"/> and the hive has it ("Linden in bloom: guarding ×2"); else none.</summary>
+    public IReadOnlyList<BeekeeperBoost> BloomBoosts(string specialty) =>
+        Engine.CurrentBloom is { } b && b.Favours == specialty && Engine.HasSpecialty(specialty)
+            ? new[] { new BeekeeperBoost("bloom", (Config.BloomFavourMultiplier - 1m) * 100m, b.Id, Config.BloomFavourMultiplier, specialty) }
             : Array.Empty<BeekeeperBoost>();
+
+    // Stage 9 (spec 018): the bloom calendar
+    /// <summary>The calendar has started (the first plant): the Garden card shows the bloom line.</summary>
+    public bool BloomShown => Engine.CurrentBloom is not null;
+
+    /// <summary>The Garden card's bloom line and hover, or null before the calendar.</summary>
+    public BeekeeperBloomView? Bloom => Engine.CurrentBloom is { } b
+        ? new BeekeeperBloomView(b.Id, Engine.BloomSecondsLeft, b.Favours,
+            b.Favours is { } f && Engine.HasSpecialty(f), Engine.NextBloomUp!.Id,
+            (Engine.GuardingMultiplier - 1m) * 100m, -WinterHoneyPercent)
+        : null;
+
+    /// <summary>Winter's honey factor as a percent change ("-25"), for the winter hover.</summary>
+    public decimal WinterHoneyPercent => (Config.WinterHoneyMultiplier - 1m) * 100m;
 
     /// <summary>The honey boosts on right now: the lasting ones (the wooden hive, guarding, the free
     /// bees' bonus) and the passing ones (the Smoker, Busy Bees, the two propolis candles), for the
@@ -462,6 +507,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             var boosts = new List<BeekeeperBoost>();
             if (State.HasWoodenHive) boosts.Add(new("wooden_hive", WoodenHiveBonusPercent));
             if (Engine.GuardingMultiplier > 1m) boosts.Add(new("guarding", (Engine.GuardingMultiplier - 1m) * 100m));
+            boosts.AddRange(BloomBoosts(BeekeeperSpecialties.Guarding));   // stage 9: the linden
+            if (Engine.IsWinter) boosts.Add(new("winter", WinterHoneyPercent, BeekeeperBlooms.Winter, Config.WinterHoneyMultiplier));
             // hidden until the bonus reaches 0.01% (below that it would read "+0%")
             if (FreeBeeHoneyBonusPercent >= 0.01m) boosts.Add(new("free_bees", FreeBeeHoneyBonusPercent));
             boosts.AddRange(PlantBoosts(BeekeeperBonusTargets.Honey));   // stage 8: wildflowers and bramble past the first
@@ -657,14 +704,16 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                     new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),
                     new(BeekeeperHiveRows.Pollen, Engine.PollenShown, Math.Floor(State.Pollen),
                         Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null,
-                        Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.PollenPerSecondNow) } : null),
+                        Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.PollenPerSecondNow) } : null,
+                        Boosts: BloomBoosts(BeekeeperSpecialties.Foraging)),   // stage 9: the clover
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
                     // Stage 8: the resin's own rate as the source, the poplars past the first as a boost.
                     new(BeekeeperHiveRows.Propolis, Engine.PropolisShown,
                         Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null,
                         Sources: Engine.ResinPropolisPerMinute > 0m ? new[] { new BeekeeperSource("resin", Engine.ResinPropolisPerMinute / 60m) } : null,
-                        Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis)),
+                        Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis).Concat(BloomBoosts(BeekeeperSpecialties.Resin)).ToList()),   // stage 9: the goldenrod
+                    // Before stage 9: Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis)),
                     // Cut in stage 8: Sources: ... new BeekeeperSource("resin", Engine.PropolisPerSecondNow) ...
                     // Stage 8 (spec 017): wood from the carpenter bee, with the willows' bonus. No cap.
                     new(BeekeeperHiveRows.Wood, Engine.WoodShown, Math.Floor(State.Wood),
@@ -873,6 +922,12 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
     /// <summary>Debug builds only: a bee hotel gift now (once the hotel is bought).</summary>
     public void DebugHotelGift() => DebugDo(Engine.DebugHotelGift());
+
+    /// <summary>Debug builds only (stage 9): the next bloom comes out now, nothing produced.</summary>
+    public void DebugNextBloom() => DebugDo(Engine.DebugNextBloom());
+
+    /// <summary>Debug builds only (stage 9): starts the calendar on crocus (for a save with no plant).</summary>
+    public void DebugStartCalendar() => DebugDo(Engine.StartCalendar());
 
     private void DebugDo(IReadOnlyList<BeekeeperEvent> events)
     {

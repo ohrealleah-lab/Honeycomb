@@ -1766,6 +1766,9 @@ public partial class MainWindow : Window
             case "BeeBread": hive.DebugGiveBeeBread(10m); break;
             case "Trades":  hive.DebugBearTradesToAlmostAgreement(); break;   // one more sale brings the agreement
             case "Away":    hive.DebugSpendAway(8m * 60m * 60m); break;      // time away, with the welcome-back lines
+            case "Away3Days": hive.DebugSpendAway(3m * 24m * 3600m); break;  // stage 9: crosses three blooms
+            case "StartCalendar": hive.DebugStartCalendar(); break;          // stage 9: for a save with no plant
+            case "NextBloom": hive.DebugNextBloom(); break;                  // stage 9: nothing produced
             case "BeesX10": hive.DebugMultiplyBees(); break;
             case "Honey":   hive.DebugGiveHoney(500m); break;
             case "Bribes":  hive.DebugBribesToAlmostEmissary(); break;   // one more bribe brings the emissary

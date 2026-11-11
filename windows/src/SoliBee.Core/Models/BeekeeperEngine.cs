@@ -125,10 +125,17 @@ public static class BeekeeperEvents
     /// <summary>Value = seeds, Value2 = herbs, Text = propolis (invariant number) the guests left while away.</summary>
     public const string WelcomeBackHotel = "welcome_back_hotel";
 
+    // Stage 9 (spec 018)
+    public const string CalendarStarted = "calendar_started";    // the first plant: the crocuses are in bloom
+    public const string BloomChanged = "bloom_changed";          // Text = the new bloom's id (live; away says WelcomeBackBlooms)
+    /// <summary>Text = every bloom that came out while away, in order, joined by '|'; the last is out now.</summary>
+    public const string WelcomeBackBlooms = "welcome_back_blooms";
+
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
         key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackPantry
-            or WelcomeBackPropolis or WelcomeBackSageOut or WelcomeBackWood or WelcomeBackHotel;
+            or WelcomeBackPropolis or WelcomeBackSageOut or WelcomeBackWood or WelcomeBackHotel or WelcomeBackBlooms;
+    // Before stage 9: … or WelcomeBackWood or WelcomeBackHotel;
     // Cut in stage 7.5 (spec 016): WelcomeBackBear.
     //     key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry
     //         or WelcomeBackPropolis or WelcomeBackSageOut;
@@ -170,6 +177,8 @@ public sealed record ActionResult(bool Done, decimal Amount, IReadOnlyList<Beeke
 public sealed class BeekeeperEngine
 {
     private readonly IRandomSource _rng;
+    /// <summary>Stage 9: the loaded save had plants but no calendar, so Tidy started it; RevealOnLoad tells it.</summary>
+    private bool _calendarStartedOnLoad;
 
     public BeekeeperConfig Config { get; }
     public BeekeeperState State { get; private set; }
@@ -233,6 +242,23 @@ public sealed class BeekeeperEngine
         s.HotelSecondsToNext = Math.Clamp(s.HotelSecondsToNext, 0m, Config.HotelGiftSeconds);
         if (s.Upgrades.Contains(BeekeeperUpgrades.BeeHotel) && s.HotelSecondsToNext <= 0m)
             s.HotelSecondsToNext = Config.HotelGiftSeconds;
+        // Stage 9 (spec 018, FR-910): the bloom index wraps into range and its time left is clamped
+        // to (0, that bloom's length]; a running calendar with no time left gets the full length.
+        // A save with plants but no calendar (stage 8) starts it on crocus now (told by RevealOnLoad).
+        if (Config.Blooms.Count == 0) s.CalendarStarted = false;
+        if (s.CalendarStarted)
+        {
+            int n = Config.Blooms.Count;
+            s.BloomIndex = ((s.BloomIndex % n) + n) % n;
+            decimal length = Config.Blooms[s.BloomIndex].Seconds;
+            s.BloomSecondsLeft = s.BloomSecondsLeft <= 0m ? length : Math.Min(s.BloomSecondsLeft, length);
+        }
+        else
+        {
+            s.BloomIndex = 0;
+            s.BloomSecondsLeft = 0m;
+            if (s.Plants.Count > 0 && Config.Blooms.Count > 0) { SetCalendarStart(s); _calendarStartedOnLoad = true; }
+        }
         // Cut in stage 8 (spec 017): each plant was in one place only (sprouted, in a bed or in hand),
         // and beds past the ones owned gave their seeds back.
         // s.Plants = s.Plants.Where(id => id is not null).Distinct().ToList();
@@ -418,8 +444,11 @@ public sealed class BeekeeperEngine
     /// raids, hover rates) sees it, live and away alike. Wax never does.</summary>
     /// <remarks>Stage 8 (spec 017, FR-805): the honey plants' bonus (wildflowers and bramble past the
     /// first of each) multiplies in here with the other lasting boosts.</remarks>
+    /// <remarks>Stage 9 (spec 018, FR-906): winter slows it (<see cref="WinterMultiplier"/>); being
+    /// here, it slows the meadow's honey too.</remarks>
     public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier
-        * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey);
+        * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier;
+    // Before stage 9: … * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey);
     // Cut in stage 8: public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier * FreeBeeHoneyFactor;
 
     /// <summary>What the hive makes right now: the base rate with whichever boosts are on (calm
@@ -747,6 +776,9 @@ public sealed class BeekeeperEngine
             }
         }
         events.RemoveAll(e => e.Key == BeekeeperEvents.HotelGift);
+        // Stage 9 (spec 018): bloom changes while away make one welcome-back line, in order.
+        var blooms = events.Where(e => e.Key == BeekeeperEvents.BloomChanged).Select(e => e.Text ?? "").ToList();
+        events.RemoveAll(e => e.Key == BeekeeperEvents.BloomChanged);
 
         // In reading order, top line first: "the combs filled…", "the queen raised…", "propolis…",
         // "the pantry…", "the candle…".
@@ -779,6 +811,10 @@ public sealed class BeekeeperEngine
             if (m.PantryEmptied) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackPantry));
             if (sageOut) welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackSageOut));
         }
+        // The calendar runs from the first plant, which needs a started hive in play, but a debug
+        // start can come first: tell the blooms whatever the hive.
+        if (blooms.Count > 0)
+            welcome.Add(new BeekeeperEvent(BeekeeperEvents.WelcomeBackBlooms, blooms.Count, string.Join("|", blooms)));
         return new AwayResult(credited, m.Stored, m.Wax, events, m.Raised, m.PantryEmptied)
         {
             WelcomeBack = welcome,
@@ -852,10 +888,20 @@ public sealed class BeekeeperEngine
             if (State.SagePropolisSecondsLeft > 0m) step = Math.Min(step, State.SagePropolisSecondsLeft);
             bool hotel = HasBeeHotel;
             if (hotel) step = Math.Min(step, State.HotelSecondsToNext);
+            // Stage 9 (spec 018, FR-904): and at every change of bloom. Produce and Attract read the
+            // piece's bloom; it moves on only at the end of the piece.
+            bool calendar = State.CalendarStarted;
+            if (calendar) step = Math.Min(step, State.BloomSecondsLeft);
 
             made += Produce(step, events, boost, waxBoost);
             Attract(step, events);
             left -= step;
+
+            if (calendar)
+            {
+                State.BloomSecondsLeft -= step;
+                if (State.BloomSecondsLeft <= 0m) NextBloom(events);
+            }
 
             if (hotel)
             {
@@ -1226,6 +1272,12 @@ public sealed class BeekeeperEngine
         // Cut in stage 8 (spec 017): GiveSeedsIfDue(events);   // a save past a seed's trade count gets that seed (stage 7)
         UnlockSeedsIfDue(events);          // stage 8: a save past a seed's trade count has it in the roll
         SummonCarpenterBeeIfDue(events);   // stage 8: a save with a willow (or a bed that sprouted on load)
+        // Stage 9: a save with plants and no calendar started it on load (Tidy); say so once.
+        if (_calendarStartedOnLoad)
+        {
+            _calendarStartedOnLoad = false;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.CalendarStarted, 0m, CurrentBloom?.Id));
+        }
         CheckWalls(events);
         return events;
     }
@@ -2024,8 +2076,12 @@ public sealed class BeekeeperEngine
 
     public bool HasSpecialty(string id) => PlantKinds.Any(p => p.Specialty == id);
 
-    /// <summary>Nursing's laying multiplier: each nursing plant kind's strength once, multiplied (1 = none).</summary>
-    public decimal NursingMultiplier
+    /// <summary>Nursing's laying multiplier: each nursing plant kind's strength once, multiplied (1 = none).
+    /// Stage 9: its bonus part works twice as hard in crocus (×1.5 → ×2).</summary>
+    public decimal NursingMultiplier => 1m + (NursingMultiplierAlone - 1m) * BloomFavour(BeekeeperSpecialties.Nursing);
+
+    /// <summary>Nursing's laying multiplier without the bloom (for the hovers).</summary>
+    public decimal NursingMultiplierAlone
     {
         get
         {
@@ -2037,9 +2093,11 @@ public sealed class BeekeeperEngine
     }
 
     /// <summary>Propolis a minute from resin: each resin plant kind's strength once, added up
-    /// (before the poplars' bonus; see <see cref="PropolisPerMinute"/>).</summary>
+    /// (before the poplars' bonus; see <see cref="PropolisPerMinute"/>). Stage 9: doubled in goldenrod.</summary>
     public decimal ResinPropolisPerMinute =>
-        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
+        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength)
+        * BloomFavour(BeekeeperSpecialties.Resin);
+    // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
 
     /// <summary>Propolis a minute, with the propolis plants' bonus (stage 8, FR-805).</summary>
     public decimal PropolisPerMinute => ResinPropolisPerMinute * PlantBonus(BeekeeperBonusTargets.Propolis);
@@ -2048,13 +2106,20 @@ public sealed class BeekeeperEngine
 
     /// <summary>Pollen a minute from foraging: each foraging plant kind's strength once, added up
     /// (wildflowers and clover: 3 + 3).</summary>
+    /// <remarks>Stage 9: doubled in clover (6 → 12).</remarks>
     public decimal ForagingPollenPerMinute =>
-        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
+        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength)
+        * BloomFavour(BeekeeperSpecialties.Foraging);
+    // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
 
     public decimal PollenPerSecondNow => ForagingPollenPerMinute / 60m;
 
-    /// <summary>Guarding's honey multiplier: each guarding plant kind's strength once, multiplied (1 = none).</summary>
-    public decimal GuardingMultiplier
+    /// <summary>Guarding's honey multiplier: each guarding plant kind's strength once, multiplied (1 = none).
+    /// Stage 9: its bonus part works twice as hard in linden (+25% → +50%).</summary>
+    public decimal GuardingMultiplier => 1m + (GuardingMultiplierAlone - 1m) * BloomFavour(BeekeeperSpecialties.Guarding);
+
+    /// <summary>Guarding's honey multiplier without the bloom (for the hovers).</summary>
+    public decimal GuardingMultiplierAlone
     {
         get
         {
@@ -2063,6 +2128,74 @@ public sealed class BeekeeperEngine
                 if (p.Specialty == BeekeeperSpecialties.Guarding) m *= p.Strength;
             return m;
         }
+    }
+
+    // ---- the bloom calendar (stage 9, spec 018)
+
+    /// <summary>The bloom out now, or null before the calendar has started.</summary>
+    public BeekeeperBloom? CurrentBloom =>
+        State.CalendarStarted && Config.Blooms.Count > 0 ? Config.Blooms[State.BloomIndex % Config.Blooms.Count] : null;
+
+    /// <summary>The bloom that comes after this one (null before the calendar).</summary>
+    public BeekeeperBloom? NextBloomUp =>
+        CurrentBloom is null ? null : Config.Blooms[(State.BloomIndex + 1) % Config.Blooms.Count];
+
+    /// <summary>Seconds of game time the bloom has left (0 before the calendar).</summary>
+    public decimal BloomSecondsLeft => State.CalendarStarted ? State.BloomSecondsLeft : 0m;
+
+    public bool IsWinter => CurrentBloom?.Id == BeekeeperBlooms.Winter;
+
+    /// <summary>How hard <paramref name="specialty"/> works because of the bloom:
+    /// <see cref="BeekeeperConfig.BloomFavourMultiplier"/> while the bloom favours it, else 1 (FR-905).</summary>
+    public decimal BloomFavour(string specialty) =>
+        CurrentBloom?.Favours == specialty ? Config.BloomFavourMultiplier : 1m;
+
+    /// <summary>True when the bloom out now favours a specialty the hive has (the bloom changes a number).</summary>
+    public bool BloomFavourActive => CurrentBloom?.Favours is { } f && HasSpecialty(f);
+
+    /// <summary>Winter's honey factor: <see cref="BeekeeperConfig.WinterHoneyMultiplier"/> in winter, else 1 (FR-906).</summary>
+    public decimal WinterMultiplier => IsWinter ? Config.WinterHoneyMultiplier : 1m;
+
+    private void SetCalendarStart(BeekeeperState s)
+    {
+        s.CalendarStarted = true;
+        s.BloomIndex = 0;
+        s.BloomSecondsLeft = BloomLength(0);
+    }
+
+    private decimal BloomLength(int index) => Math.Max(1m, Config.Blooms[index].Seconds);   // never 0, or Work would stall
+
+    /// <summary>Starts the calendar on the first bloom (crocus) with its full length, once (FR-903).
+    /// Every path that adds the first plant calls this; it is also the debug shortcut.</summary>
+    public IReadOnlyList<BeekeeperEvent> StartCalendar()
+    {
+        var events = new List<BeekeeperEvent>();
+        StartCalendarIfDue(events, force: true);
+        return events;
+    }
+
+    /// <summary>The calendar starts with the first plant (or at once when <paramref name="force"/>d).</summary>
+    private void StartCalendarIfDue(List<BeekeeperEvent> events, bool force = false)
+    {
+        if (State.CalendarStarted || Config.Blooms.Count == 0 || (!force && State.Plants.Count == 0)) return;
+        SetCalendarStart(State);
+        events.Add(new BeekeeperEvent(BeekeeperEvents.CalendarStarted, 0m, CurrentBloom!.Id));
+    }
+
+    /// <summary>The next bloom comes out (wrapping), with its full length and a <see cref="BeekeeperEvents.BloomChanged"/> event.</summary>
+    private void NextBloom(List<BeekeeperEvent> events)
+    {
+        State.BloomIndex = (State.BloomIndex + 1) % Config.Blooms.Count;
+        State.BloomSecondsLeft = BloomLength(State.BloomIndex);
+        events.Add(new BeekeeperEvent(BeekeeperEvents.BloomChanged, 0m, Config.Blooms[State.BloomIndex].Id));
+    }
+
+    /// <summary>Debug builds only: the next bloom comes out now, nothing produced.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugNextBloom()
+    {
+        var events = new List<BeekeeperEvent>();
+        if (State.CalendarStarted) NextBloom(events);
+        return events;
     }
 
     // ---- plant bonuses (stage 8, FR-805)
@@ -2201,6 +2334,7 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.SeedPlanted, 0m, plantId) };
         // The first of a kind brings its specialty: the Notebook and the Hive card show it.
         if (firstOfKind) events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, plantId));
+        StartCalendarIfDue(events);   // stage 9: the first plant starts the calendar
         SummonCarpenterBeeIfDue(events);
         CheckWalls(events);
         return new ActionResult(true, 1m, events);
@@ -2449,6 +2583,7 @@ public sealed class BeekeeperEngine
         if (!State.Plants.Contains(plantId)) events.Add(new BeekeeperEvent(BeekeeperEvents.PlantRevealed, 0m, plantId));
         for (int i = 0; i < count; i++) State.Plants.Add(plantId);
         State.GardenRevealed = true;
+        StartCalendarIfDue(events);   // stage 9
         SummonCarpenterBeeIfDue(events);
         CheckWalls(events);
         return events;

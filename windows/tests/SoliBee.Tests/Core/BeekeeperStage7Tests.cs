@@ -179,14 +179,16 @@ public class BeekeeperStage7Tests : IDisposable
     [Fact]
     public void Nursing_MakesTheQueenLayFiftyPercentFaster_AndOnlyInAWoodenHive()
     {
-        var e = Make(Hive(BeekeeperPlants.Willow));
+        // Stage 9: without the bloom calendar (crocus would double nursing's bonus).
+        var noBlooms = BeekeeperTestHives.NoBlooms();
+        var e = Make(Hive(BeekeeperPlants.Willow), noBlooms);
         Assert.Equal(30m, e.QueenRatePerMinute);
         Assert.Equal(0.5m, e.QueenBeesPerSecondNow);
-        Assert.Equal(20m, Make(Hive()).QueenRatePerMinute);
+        Assert.Equal(20m, Make(Hive(), noBlooms).QueenRatePerMinute);
 
         var skep = Hive(BeekeeperPlants.Willow);
         skep.HasWoodenHive = false;
-        Assert.Equal(0m, Make(skep).QueenRatePerMinute);
+        Assert.Equal(0m, Make(skep, noBlooms).QueenRatePerMinute);
     }
 
     [Fact]

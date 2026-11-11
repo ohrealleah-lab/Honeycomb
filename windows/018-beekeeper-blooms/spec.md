@@ -2,7 +2,7 @@
 
 **Feature Branch**: `018-beekeeper-blooms`
 **Created**: 2026-11-11
-**Status**: Specced 2026-11-11, not built. From Bee's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
+**Status**: Specced 2026-11-11; **built** 2026-11-11. From Bee's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009–017 and the commits after 017 (herbal candle prices, seeds that plant themselves, the Smoker at +150%). Design: `Beekeeper/LONG_TERM_DESIGN.md`, "Update: The bloom calendar", stage 8 of "Planned stages" and "Decisions made".
 

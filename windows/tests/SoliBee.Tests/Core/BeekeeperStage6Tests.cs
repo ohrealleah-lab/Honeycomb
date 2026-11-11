@@ -76,7 +76,9 @@ public class BeekeeperStage6Tests : IDisposable
         Assert.Equal(1440m, e.State.Pollen);
         var f = Make(Garden(BeekeeperPlants.Wildflowers));
         f.AdvanceAway(10m * 24m * 3600m);
-        Assert.Equal(3m * 24m * 60m * 3m, f.State.Pollen);   // only 3 days count
+        // Only 3 days count. Stage 9: day 1 is crocus, day 2 clover (foraging doubled), day 3 linden.
+        Assert.Equal(24m * 60m * (3m + 6m + 3m), f.State.Pollen);
+        // Before stage 9: Assert.Equal(3m * 24m * 60m * 3m, f.State.Pollen);
     }
 
     [Fact]

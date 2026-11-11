@@ -316,6 +316,8 @@
                 <Border x:Name="GardenCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="GardenTitleText" Classes="bk-title" />
+                        <!-- Stage 9 (spec 018): the bloom calendar's one line, from the first plant; its hover says what the bloom favours. -->
+                        <TextBlock x:Name="BloomText" Classes="bk-body" IsVisible="False" Background="Transparent" TextWrapping="Wrap" />
                         <!-- Since stage 8 (spec 017): one row per kind of seed in hand (with the count and a
                              Plant button), then one row per kind of plant growing (with the count). Plants
                              grow at once, so the beds are gone (stage 7 listed them here). -->

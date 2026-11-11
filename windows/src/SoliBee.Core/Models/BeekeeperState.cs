@@ -245,6 +245,14 @@ public sealed class BeekeeperState
     /// <summary>True once the meadow has been bought (it works like one giant comb).</summary>
     public bool HasMeadow { get; set; }
 
+    // ----- Stage 9 (spec 018): the bloom calendar (older saves load with these empty, FR-910)
+    /// <summary>True once the calendar has started (the first plant). Sticky.</summary>
+    public bool CalendarStarted { get; set; }
+    /// <summary>Which bloom is out now: an index into BeekeeperConfig.Blooms.</summary>
+    public int BloomIndex { get; set; }
+    /// <summary>Seconds of game time (live or credited away) the bloom has left.</summary>
+    public decimal BloomSecondsLeft { get; set; }
+
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>
     [JsonIgnore]

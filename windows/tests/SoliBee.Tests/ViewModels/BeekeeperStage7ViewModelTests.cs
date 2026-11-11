@@ -66,7 +66,9 @@ public class BeekeeperStage7ViewModelTests
             Plants = { BeekeeperPlants.Willow, BeekeeperPlants.Poplar },
             Propolis = 4.7m, BeeBoostCandles = 1m, SagePropolisSecondsLeft = 7200m,
         });
-        Assert.Equal(50m, Row(vm, BeekeeperHiveRows.Nursing).Value);
+        // Stage 9: the save has plants, so the calendar starts on crocus and nursing's +50% doubles.
+        Assert.Equal(100m, Row(vm, BeekeeperHiveRows.Nursing).Value);
+        // Before stage 9: Assert.Equal(50m, Row(vm, BeekeeperHiveRows.Nursing).Value);
         Assert.True(Row(vm, BeekeeperHiveRows.Resin).Visible);
         var propolis = Row(vm, BeekeeperHiveRows.Propolis);
         Assert.True(propolis.Visible);

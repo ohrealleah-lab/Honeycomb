@@ -48,6 +48,21 @@ public static class BeekeeperPlants
     public const string Clover = "clover";
 }
 
+/// <summary>One step of the bloom calendar (stage 9, spec 018, FR-902): which flower, how many
+/// seconds of game time (live plus away) it lasts, and the specialty it favours (a
+/// <see cref="BeekeeperSpecialties"/> id; null for winter, which favours none).</summary>
+public sealed record BeekeeperBloom(string Id, decimal Seconds, string? Favours);
+
+/// <summary>The bloom ids (stage 9). Clover is also a plant; the clover bloom is not a seed.</summary>
+public static class BeekeeperBlooms
+{
+    public const string Crocus = "crocus";
+    public const string Clover = "clover";
+    public const string Linden = "linden";
+    public const string Goldenrod = "goldenrod";
+    public const string Winter = "winter";
+}
+
 /// <summary>What each plant after the first of its kind adds a tiny bonus to (spec 017, FR-805).</summary>
 public static class BeekeeperBonusTargets
 {
@@ -595,6 +610,25 @@ public sealed class BeekeeperConfig
     public decimal MeadowHoneyCap { get; init; } = 25_000m;
     /// <summary>Wax room it adds, before the Technologies.</summary>
     public decimal MeadowWaxCap { get; init; } = 250m;
+
+    // ===== Stage 9 (spec 018): the bloom calendar. All placeholders (Bee, 2026-11-11).
+
+    /// <summary>The blooms, in order, then round again for ever. The calendar starts on the first
+    /// with the first plant. A day is 24 hours of game time (live play plus credited time away).</summary>
+    public IReadOnlyList<BeekeeperBloom> Blooms { get; init; } = new[]
+    {
+        new BeekeeperBloom(BeekeeperBlooms.Crocus, 24m * 3600m, BeekeeperSpecialties.Nursing),
+        new BeekeeperBloom(BeekeeperBlooms.Clover, 24m * 3600m, BeekeeperSpecialties.Foraging),
+        new BeekeeperBloom(BeekeeperBlooms.Linden, 24m * 3600m, BeekeeperSpecialties.Guarding),
+        new BeekeeperBloom(BeekeeperBlooms.Goldenrod, 24m * 3600m, BeekeeperSpecialties.Resin),
+        new BeekeeperBloom(BeekeeperBlooms.Winter, 12m * 3600m, null),
+    };
+    /// <summary>How much harder the favoured specialty works: a multiplier's bonus part is
+    /// multiplied by this (+25% → +50%), a rate by this outright (6 pollen → 12). Plant bonuses stay outside it.</summary>
+    public decimal BloomFavourMultiplier { get; init; } = 2m;
+    /// <summary>Honey (combs and meadow) in winter (×0.75). Nothing else slows.</summary>
+    public decimal WinterHoneyMultiplier { get; init; } = 0.75m;
+    // Later (named honey, dropped from stage 9): each bloom was to give its own named honey.
 
     public static BeekeeperConfig Default { get; } = new();
 }

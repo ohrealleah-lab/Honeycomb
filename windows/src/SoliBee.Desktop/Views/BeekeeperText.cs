@@ -488,6 +488,10 @@ internal static class BeekeeperText
                 // Stage 8: "Wildflowers ×49: +49%"
                 BeekeeperBeeTab.PlantBoost => Fill(T(StringKey.BeekeeperBoostPlantFmt), PlantName(b.Plant ?? ""),
                     NumberFormatter.Format(b.Count, Lang), pct),
+                // Stage 9: "Linden in bloom: guarding ×2", "Winter: ×0.75"
+                "bloom" => Fill(T(StringKey.BeekeeperBoostBloomFmt), CapFirst(BloomName(b.Plant ?? "")),
+                    SpecialtyName(b.Specialty ?? ""), NumberFormatter.Format(b.Count, Lang, 2)),
+                "winter" => Fill(T(StringKey.BeekeeperBoostWinterFmt), NumberFormatter.Format(b.Count, Lang, 2)),
                 _ => Fill(T(StringKey.BeekeeperBoostHerbFmt), pct, HerbName(b.Id)),
             });
         }
@@ -614,6 +618,90 @@ internal static class BeekeeperText
         BeekeeperPlants.Clover => T(StringKey.BeekeeperPlantCloverBlurb),
         _ => "",
     };
+
+    // ---- stage 9: the bloom calendar
+
+    /// <summary>A bloom's name, lower case: "linden", "winter".</summary>
+    public static string BloomName(string id) => BloomNameIn(id, Lang);
+
+    private static string BloomNameIn(string id, AppLanguage lang) => id switch
+    {
+        BeekeeperBlooms.Crocus => Strings.Get(StringKey.BeekeeperBloomCrocus, lang),
+        BeekeeperBlooms.Clover => Strings.Get(StringKey.BeekeeperBloomClover, lang),
+        BeekeeperBlooms.Linden => Strings.Get(StringKey.BeekeeperBloomLinden, lang),
+        BeekeeperBlooms.Goldenrod => Strings.Get(StringKey.BeekeeperBloomGoldenrod, lang),
+        BeekeeperBlooms.Winter => Strings.Get(StringKey.BeekeeperBloomWinter, lang),
+        _ => id,
+    };
+
+    /// <summary>A bloom with its article, for the welcome-back list: "the linden", "winter".</summary>
+    private static string TheBloomIn(string id, AppLanguage lang) => id switch
+    {
+        BeekeeperBlooms.Crocus => Strings.Get(StringKey.BeekeeperBloomTheCrocus, lang),
+        BeekeeperBlooms.Clover => Strings.Get(StringKey.BeekeeperBloomTheClover, lang),
+        BeekeeperBlooms.Linden => Strings.Get(StringKey.BeekeeperBloomTheLinden, lang),
+        BeekeeperBlooms.Goldenrod => Strings.Get(StringKey.BeekeeperBloomTheGoldenrod, lang),
+        BeekeeperBlooms.Winter => Strings.Get(StringKey.BeekeeperBloomTheWinter, lang),
+        _ => id,
+    };
+
+    /// <summary>Time left on the bloom line: whole hours rounded up, minutes under an hour ("9 h", "40 min").</summary>
+    public static string BloomTimeLeft(decimal seconds)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        decimal minutes = System.Math.Ceiling(System.Math.Max(1m, seconds) / 60m);
+        if (minutes < 60m) return Fill(T(StringKey.BeekeeperTimeMinFmt), N(minutes));
+        return Fill(T(StringKey.BeekeeperTimeHourFmt), N(System.Math.Ceiling(seconds / 3600m)));
+    }
+
+    /// <summary>The Garden card's line: "In bloom: linden · 9 h left", or "Winter · 5 h left".</summary>
+    public static string BloomLine(BeekeeperBloomView b) =>
+        b.Bloom == BeekeeperBlooms.Winter
+            ? Fill(T(StringKey.BeekeeperBloomWinterLineFmt), BloomTimeLeft(b.SecondsLeft))
+            : Fill(T(StringKey.BeekeeperBloomLineFmt), BloomName(b.Bloom), BloomTimeLeft(b.SecondsLeft));
+
+    /// <summary>The bloom line's hover: what it favours (and whether the hive has it), then what blooms next.</summary>
+    public static string BloomTip(BeekeeperBloomView b)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        string first = (b.Bloom, b.HasFavoured) switch
+        {
+            (BeekeeperBlooms.Crocus, true) => T(StringKey.BeekeeperBloomTipCrocus),
+            (BeekeeperBlooms.Crocus, false) => T(StringKey.BeekeeperBloomTipCrocusNone),
+            (BeekeeperBlooms.Clover, true) => T(StringKey.BeekeeperBloomTipClover),
+            (BeekeeperBlooms.Clover, false) => T(StringKey.BeekeeperBloomTipCloverNone),
+            (BeekeeperBlooms.Linden, true) => Fill(T(StringKey.BeekeeperBloomTipLindenFmt), N(b.GuardingPercent)),
+            (BeekeeperBlooms.Linden, false) => T(StringKey.BeekeeperBloomTipLindenNone),
+            (BeekeeperBlooms.Goldenrod, true) => T(StringKey.BeekeeperBloomTipGoldenrod),
+            (BeekeeperBlooms.Goldenrod, false) => T(StringKey.BeekeeperBloomTipGoldenrodNone),
+            (BeekeeperBlooms.Winter, _) => Fill(T(StringKey.BeekeeperBloomTipWinterFmt), N(b.WinterPercent)),
+            _ => "",
+        };
+        return first + "\n" + Fill(T(StringKey.BeekeeperBloomTipNextFmt), BloomName(b.Next));
+    }
+
+    /// <summary>The welcome-back line for the blooms that came out while away (Text = ids in order,
+    /// joined by '|'; the last is out now).</summary>
+    private static string WelcomeBackBloomsIn(string? text, AppLanguage lang)
+    {
+        var ids = (text ?? "").Split('|', System.StringSplitOptions.RemoveEmptyEntries);
+        if (ids.Length == 0) return "";
+        string now = ids[^1];
+        if (ids.Length == 1)
+            return now == BeekeeperBlooms.Winter
+                ? Strings.Get(StringKey.BeekeeperLogWelcomeBackWinterOne, lang)
+                : Fill(Strings.Get(StringKey.BeekeeperLogWelcomeBackBloomOneFmt, lang), TheBloomIn(now, lang));
+        var passed = ids.Take(ids.Length - 1).ToList();
+        var names = passed.Select(id => TheBloomIn(id, lang)).ToList();
+        string list = names.Count == 1 ? names[0]
+            : string.Join(", ", names.Take(names.Count - 1)) + Strings.Get(StringKey.BeekeeperListAnd, lang) + names[^1];
+        if (now == BeekeeperBlooms.Winter)
+            return Fill(Strings.Get(StringKey.BeekeeperLogWelcomeBackBloomsWinterFmt, lang), list);
+        // "the goldenrod and winter bloomed" reads wrong, so a winter in the list "came and went".
+        var key = passed.Contains(BeekeeperBlooms.Winter)
+            ? StringKey.BeekeeperLogWelcomeBackSeasonsFmt : StringKey.BeekeeperLogWelcomeBackBloomsFmt;
+        return Fill(Strings.Get(key, lang), list, TheBloomIn(now, lang));
+    }
 
     // ---- story log (saved as keys plus values, so old lines follow a language change)
 
@@ -786,6 +874,18 @@ internal static class BeekeeperText
             // Value = seeds, Value2 = herbs, Text = propolis (an invariant number).
             BeekeeperEvents.WelcomeBackHotel => Fill(L(StringKey.BeekeeperLogWelcomeBackHotelFmt), GiftsIn(e.Value, e.Value2,
                 decimal.TryParse(e.Text, System.Globalization.NumberStyles.Number, System.Globalization.CultureInfo.InvariantCulture, out var pr) ? pr : 0m, lang)),
+            // Stage 9 (spec 018)
+            BeekeeperEvents.CalendarStarted => L(StringKey.BeekeeperLogCalendarStarted),
+            BeekeeperEvents.BloomChanged => e.Text switch
+            {
+                BeekeeperBlooms.Crocus => L(StringKey.BeekeeperLogBloomCrocus),
+                BeekeeperBlooms.Clover => L(StringKey.BeekeeperLogBloomClover),
+                BeekeeperBlooms.Linden => L(StringKey.BeekeeperLogBloomLinden),
+                BeekeeperBlooms.Goldenrod => L(StringKey.BeekeeperLogBloomGoldenrod),
+                BeekeeperBlooms.Winter => L(StringKey.BeekeeperLogBloomWinter),
+                _ => "",
+            },
+            BeekeeperEvents.WelcomeBackBlooms => WelcomeBackBloomsIn(e.Text, lang),
             BeekeeperEvents.Crafted => e.Text switch
             {
                 "repellent" => Fill(L(StringKey.BeekeeperLogCraftedRepellentFmt), N(e.Value)),

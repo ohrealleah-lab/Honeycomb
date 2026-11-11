@@ -2332,4 +2332,74 @@ public enum StringKey: String, CaseIterable {
     case beekeeperHerbQuickFingers = "beekeeper_herb_quick_fingers"
     /// Story log, a herb rolled Quick Fingers; %@ = how strong clicks are in percent (300), %@ = seconds it burns
     case beekeeperLogHerbQuickFingersFmt = "beekeeper_log_herb_quick_fingers_fmt"
+    /// Bloom calendar: a flower's name, lower case
+    case beekeeperBloomCrocus = "beekeeper_bloom_crocus"
+    /// Bloom calendar: a flower's name, lower case (the clover in bloom, not a seed)
+    case beekeeperBloomClover = "beekeeper_bloom_clover"
+    /// Bloom calendar: a flower's name, lower case
+    case beekeeperBloomLinden = "beekeeper_bloom_linden"
+    /// Bloom calendar: a flower's name, lower case
+    case beekeeperBloomGoldenrod = "beekeeper_bloom_goldenrod"
+    /// Bloom calendar: the half-day winter, lower case
+    case beekeeperBloomWinter = "beekeeper_bloom_winter"
+    /// Welcome-back list item: a bloom with its article
+    case beekeeperBloomTheCrocus = "beekeeper_bloom_the_crocus"
+    /// Welcome-back list item: a bloom with its article
+    case beekeeperBloomTheClover = "beekeeper_bloom_the_clover"
+    /// Welcome-back list item: a bloom with its article
+    case beekeeperBloomTheLinden = "beekeeper_bloom_the_linden"
+    /// Welcome-back list item: a bloom with its article
+    case beekeeperBloomTheGoldenrod = "beekeeper_bloom_the_goldenrod"
+    /// Welcome-back list item: winter with its article
+    case beekeeperBloomTheWinter = "beekeeper_bloom_the_winter"
+    /// Garden card; %@ = the bloom (lower case), %@ = time left ("9 h", "40 min")
+    case beekeeperBloomLineFmt = "beekeeper_bloom_line_fmt"
+    /// Garden card in winter; %@ = time left ("5 h")
+    case beekeeperBloomWinterLineFmt = "beekeeper_bloom_winter_line_fmt"
+    /// Garden bloom hover, crocus, the hive has nursing (a willow)
+    case beekeeperBloomTipCrocus = "beekeeper_bloom_tip_crocus"
+    /// Garden bloom hover, crocus, no nursing yet
+    case beekeeperBloomTipCrocusNone = "beekeeper_bloom_tip_crocus_none"
+    /// Garden bloom hover, clover, the hive has foraging
+    case beekeeperBloomTipClover = "beekeeper_bloom_tip_clover"
+    /// Garden bloom hover, clover, no foraging yet
+    case beekeeperBloomTipCloverNone = "beekeeper_bloom_tip_clover_none"
+    /// Garden bloom hover, linden, the hive has guarding; %@ = guarding's extra honey now, in percent (50)
+    case beekeeperBloomTipLindenFmt = "beekeeper_bloom_tip_linden_fmt"
+    /// Garden bloom hover, linden, no guarding yet
+    case beekeeperBloomTipLindenNone = "beekeeper_bloom_tip_linden_none"
+    /// Garden bloom hover, goldenrod, the hive has resin
+    case beekeeperBloomTipGoldenrod = "beekeeper_bloom_tip_goldenrod"
+    /// Garden bloom hover, goldenrod, no resin yet
+    case beekeeperBloomTipGoldenrodNone = "beekeeper_bloom_tip_goldenrod_none"
+    /// Garden bloom hover, winter; %@ = how much slower honey comes, in percent (25)
+    case beekeeperBloomTipWinterFmt = "beekeeper_bloom_tip_winter_fmt"
+    /// Garden bloom hover, last line; %@ = the next bloom (lower case)
+    case beekeeperBloomTipNextFmt = "beekeeper_bloom_tip_next_fmt"
+    /// Growth hover; %@ = the bloom (capitalised), %@ = the specialty it favours, %@ = how much harder (2)
+    case beekeeperBoostBloomFmt = "beekeeper_boost_bloom_fmt"
+    /// Honey hover in winter; %@ = the honey factor (0.75)
+    case beekeeperBoostWinterFmt = "beekeeper_boost_winter_fmt"
+    /// Story log: the first plant starts the bloom calendar
+    case beekeeperLogCalendarStarted = "beekeeper_log_calendar_started"
+    /// Story log: crocus again, after winter
+    case beekeeperLogBloomCrocus = "beekeeper_log_bloom_crocus"
+    /// Story log: the clover bloom (not a seed or a new plant)
+    case beekeeperLogBloomClover = "beekeeper_log_bloom_clover"
+    /// Story log
+    case beekeeperLogBloomLinden = "beekeeper_log_bloom_linden"
+    /// Story log
+    case beekeeperLogBloomGoldenrod = "beekeeper_log_bloom_goldenrod"
+    /// Story log: winter begins
+    case beekeeperLogBloomWinter = "beekeeper_log_bloom_winter"
+    /// Story log on reopening the app, one bloom came out; %@ = the bloom with its article
+    case beekeeperLogWelcomeBackBloomOneFmt = "beekeeper_log_welcome_back_bloom_one_fmt"
+    /// Story log on reopening the app, winter came
+    case beekeeperLogWelcomeBackWinterOne = "beekeeper_log_welcome_back_winter_one"
+    /// Story log on reopening the app; %@ = the blooms that came and went, %@ = the bloom out now (with articles)
+    case beekeeperLogWelcomeBackBloomsFmt = "beekeeper_log_welcome_back_blooms_fmt"
+    /// Story log on reopening the app, and it is winter now; %@ = the blooms that came and went
+    case beekeeperLogWelcomeBackBloomsWinterFmt = "beekeeper_log_welcome_back_blooms_winter_fmt"
+    /// Story log on reopening the app, a winter among the blooms; %@ = what came and went, %@ = the bloom out now (with articles)
+    case beekeeperLogWelcomeBackSeasonsFmt = "beekeeper_log_welcome_back_seasons_fmt"
 }

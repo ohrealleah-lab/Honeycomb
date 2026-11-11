@@ -296,8 +296,17 @@ public partial class BeekeeperView : UserControl
         if (vm.HasNotebook) UpdateNotebook(vm, lang);
 
         // The Garden (stage 8): the seeds in hand by kind, the plants by kind with their counts
-        GardenCard.IsVisible = vm.GardenRevealed;
+        GardenCard.IsVisible = vm.GardenRevealed || vm.BloomShown;   // stage 9: a debug start can come before the garden
+        // Before stage 9: GardenCard.IsVisible = vm.GardenRevealed;
         GardenTitleText.Text = BeekeeperText.GardenTitle;
+        // Stage 9: "In bloom: linden · 9 h left", refreshed every tick like the other timers.
+        if (vm.Bloom is { } bloom)
+        {
+            BloomText.IsVisible = true;
+            BloomText.Text = BeekeeperText.BloomLine(bloom);
+            ToolTip.SetTip(BloomText, BeekeeperText.BloomTip(bloom));
+        }
+        else BloomText.IsVisible = false;
         // Cut in stage 8 (spec 017): UpdateBeds(vm);   // plants grow at once
         // Cut (Bee, 2026-11-11): the seed rows with their Plant buttons. A new kind is planted from the
         // story card ("Plant it?"), and seeds of a kind already growing plant themselves.

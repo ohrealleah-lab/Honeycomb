@@ -24,4 +24,8 @@ internal static class BeekeeperTestHives
 
     /// <summary>A config whose caps never get in the way.</summary>
     public static BeekeeperConfig BigCaps() => new() { StartingHoneyCap = 1_000_000_000m, StartingWaxCap = 1_000_000_000m };
+
+    /// <summary>Stage 9: a config with no bloom calendar, for the older rule tests (a hive with plants
+    /// would otherwise start on crocus, which doubles nursing's bonus).</summary>
+    public static BeekeeperConfig NoBlooms() => new() { Blooms = System.Array.Empty<BeekeeperBloom>() };
 }
