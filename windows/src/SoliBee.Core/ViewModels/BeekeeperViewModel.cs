@@ -618,9 +618,11 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             };
             foreach (var id in specialties)
             {
-                if (id == BeekeeperSpecialties.Foraging)
-                    bees.Add(new(BeekeeperHiveRows.Foraging, true, Engine.ForagingPollenPerMinute));
-                else if (id == BeekeeperSpecialties.Guarding)
+                // Cut (Bee, 2026-11-11): the "Foraging: 3 pollen a minute" line. The Pollen row's hover still names foraging.
+                // if (id == BeekeeperSpecialties.Foraging)
+                //     bees.Add(new(BeekeeperHiveRows.Foraging, true, Engine.ForagingPollenPerMinute));
+                // else
+                if (id == BeekeeperSpecialties.Guarding)
                     bees.Add(new(BeekeeperHiveRows.Guarding, true, (Engine.GuardingMultiplier - 1m) * 100m));
                 else if (id == BeekeeperSpecialties.Nursing)
                     bees.Add(new(BeekeeperHiveRows.Nursing, true, (Engine.NursingMultiplier - 1m) * 100m));

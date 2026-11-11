@@ -110,8 +110,9 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         s.PollenRevealed = true;
         var vm = Make(new Clock(), s);
         var bees = Group(vm, BeekeeperHiveRows.GroupBees).Rows.Where(r => r.Visible).Select(r => r.Id).ToArray();
-        Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Foraging, BeekeeperHiveRows.Guarding }, bees);
-        Assert.Equal(3m, Row(vm, BeekeeperHiveRows.Foraging)!.Value);
+        // Bee, 2026-11-11: no Foraging line (it said "Foraging: 3 pollen a minute"); foraging still counts.
+        Assert.Equal(new[] { BeekeeperHiveRows.Honeybees, BeekeeperHiveRows.Guarding }, bees);
+        // Cut: Assert.Equal(3m, Row(vm, BeekeeperHiveRows.Foraging)!.Value);
         Assert.Equal(25m, Row(vm, BeekeeperHiveRows.Guarding)!.Value);
         Assert.Equal(new[] { BeekeeperSpecialties.Foraging, BeekeeperSpecialties.Guarding }, vm.Specialties);
     }
