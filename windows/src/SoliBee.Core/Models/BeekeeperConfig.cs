@@ -324,7 +324,7 @@ public sealed class BeekeeperConfig
     public int WorkbenchCombs { get; init; } = 3;
     // Bee, 2026-11-11: the sage repellent candle became the herbal candle (10 wax + 1 herb). Lit, it
     // rolls one buff (see Herbal candles below); the Hippies buy it for Beebits. It no longer keeps wasps away.
-    public decimal HerbalCandleWax { get; init; } = 1m;   // Bee, 2026-11-11: was 10
+    public decimal HerbalCandleWax { get; init; } = 2m;   // Bee, 2026-11-11: was 10, then 1; the Dipping Rack takes it to 1
     public decimal HerbalCandleHerbs { get; init; } = 1m;
     // Cut (Bee, 2026-11-11): the repellent candle (10 wax + 1 sage) kept wasps away for 15 minutes.
     // public decimal RepellentCandleWax { get; init; } = 10m;

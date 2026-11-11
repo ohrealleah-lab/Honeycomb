@@ -156,12 +156,12 @@ public class BeekeeperStage8ViewModelTests : IDisposable
     public void CandlePrices_FollowTheRack_AndTheMoldsMakeTwo()
     {
         var vm = Make(new BeekeeperState { CarpenterBeeCame = true, Wood = 100m, WoodRevealed = true, ShopRevealed = true, BearName = "Bruno" });
-        Assert.Equal(vm.Config.HerbalCandleWax, vm.HerbalCandleWaxNow);
+        Assert.Equal(2m, vm.HerbalCandleWaxNow);
         Assert.Equal(1, vm.CandlesPerCraft);
         Assert.Contains(vm.ShopUpgrades, u => u.Id == BeekeeperUpgrades.DippingRack);
         vm.BuyUpgrade(BeekeeperUpgrades.DippingRack);
         vm.BuyUpgrade(BeekeeperUpgrades.CandleMolds);
-        Assert.Equal(Math.Floor(vm.Config.HerbalCandleWax * 0.5m), vm.HerbalCandleWaxNow);
+        Assert.Equal(1m, vm.HerbalCandleWaxNow);   // Bee, 2026-11-11: 2 wax, and the rack takes it to 1
         Assert.Equal(10m, vm.BeeBoostCandleWaxNow);
         Assert.Equal(10m, vm.SagePropolisCandleWaxNow);
         Assert.Equal(2, vm.CandlesPerCraft);
