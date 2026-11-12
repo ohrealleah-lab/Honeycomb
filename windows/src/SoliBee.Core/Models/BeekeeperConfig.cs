@@ -503,7 +503,7 @@ public sealed class BeekeeperConfig
     // Cut in stage 6 (spec 014): pollen comes from the foraging specialty (the plant's Strength).
     // /// <summary>Every this many forager bees bring back 1 pollen a minute.</summary>
     // public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
-    public decimal BeeBreadPollen { get; init; } = 1m;   // Bee, 2026-11-12: was 10
+    public decimal BeeBreadPollen { get; init; } = 10m;   // Bee, 2026-11-12: 10 pollen + 1 honey (honey was 10)
     public decimal BeeBreadHoney { get; init; } = 1m;   // Bee, 2026-11-12: was 10
     public decimal WoodenHiveWax { get; init; } = 50m;   // Bee, 2026-11-12: was 100 (pacing review 2026-11-10: was 200)
     public decimal WoodenHiveBeeBread { get; init; } = 10m;

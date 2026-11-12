@@ -95,7 +95,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     {
         var vm = Make(new Clock(), new BeekeeperState
         {
-            PollenRevealed = true, Pollen = 10m, Honey = 10m, Wax = 250m,   // bee bread: 1 pollen + 1 honey (Bee, 2026-11-12) Bees = 10m, HoneyRevealed = true, BearName = "Bruno",
+            PollenRevealed = true, Pollen = 100m, Honey = 10m, Wax = 250m,   // bee bread: 10 pollen + 1 honey (Bee, 2026-11-12) Bees = 10m, HoneyRevealed = true, BearName = "Bruno",
         });
         for (int i = 0; i < 10; i++) vm.MakeBeeBreadCommand.Execute(null);
         Assert.Equal(10m, vm.BeeBread);

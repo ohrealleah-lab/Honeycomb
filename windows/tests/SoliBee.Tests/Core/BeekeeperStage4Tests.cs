@@ -324,13 +324,13 @@ public class BeekeeperStage4Tests : IDisposable
     // ============================================================ bee bread
 
     [Fact]
-    public void BeeBread_TakesOnePollenAndOneHoney_Instantly()   // Bee, 2026-11-12: was 10 and 10
+    public void BeeBread_TakesTenPollenAndOneHoney_Instantly()   // Bee, 2026-11-12: honey was 10
     {
-        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 3m, Honey = 1m });
+        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 25m, Honey = 1m });
         var r = e.MakeBeeBread();
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.BeeBreadMade));
-        Assert.Equal(2m, e.State.Pollen);
+        Assert.Equal(15m, e.State.Pollen);
         Assert.Equal(0m, e.State.Honey);
         Assert.Equal(1m, e.State.BeeBread);
 
@@ -344,8 +344,8 @@ public class BeekeeperStage4Tests : IDisposable
     [Fact]
     public void BeeBread_IsRefusedWithoutPollenOrHoney()
     {
-        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 0m, Honey = 100m }).MakeBeeBread().Done);
-        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 1m, Honey = 0m }).MakeBeeBread().Done);
+        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 9m, Honey = 100m }).MakeBeeBread().Done);
+        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 10m, Honey = 0m }).MakeBeeBread().Done);
     }
 
     // ============================================================ the wooden hive
