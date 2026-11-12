@@ -35,7 +35,8 @@ public class BeekeeperQueenViewModelTests : IDisposable
 
     private BeekeeperViewModel Make(Clock clock, BeekeeperState? state = null, bool persist = false)
         => new(isHeadless: true, rng: new NoRandom(), clock: clock.Func, persist: persist,
-               savePath: SavePath, initialState: state, noStressMode: () => true);
+               savePath: SavePath, initialState: state, noStressMode: () => true,
+               config: new BeekeeperConfig { QueenBeesPerMinute = new[] { 0m, 20m } });   // the old rate (Bee, 2026-11-12: now 1 a second)
 
     private static bool Logged(BeekeeperViewModel vm, string key) => vm.Log.Any(e => e.Key == key);
 

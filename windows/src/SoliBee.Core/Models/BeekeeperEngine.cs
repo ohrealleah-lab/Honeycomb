@@ -693,6 +693,7 @@ public sealed class BeekeeperEngine
         decimal gained = BeesPerCatch;
         State.Bees = Math.Min(Config.MaxBees, State.Bees + gained);
         State.BeesCaught += (long)gained;
+        if (State.GlovesLineBeesLeft > 0) State.GlovesLineBeesLeft = Math.Max(0, State.GlovesLineBeesLeft - (int)gained);
         FinishOpeningIfDue();   // stage 10: the first bee caught ends the opening card
         if (!State.HoneyRevealed)
         {
@@ -1158,7 +1159,9 @@ public sealed class BeekeeperEngine
 
     private void SettleQueenIfDue(List<BeekeeperEvent> events)
     {
-        if (State.QueenSettled || !State.HasWoodenHive) return;
+        // Bee, 2026-11-12: the queen settles with the first bee bread, not the wooden hive.
+        if (State.QueenSettled || !(State.BeeBreadRevealed || State.HasWoodenHive)) return;   // older saves: the wooden hive still brings her
+        // Before: if (State.QueenSettled || !State.HasWoodenHive) return;
         State.QueenSettled = true;
         events.Add(new BeekeeperEvent(BeekeeperEvents.QueenSettles));
         // Moving in with an empty pantry: no "pantry is empty" line, but fresh bee bread says so.
@@ -1972,6 +1975,7 @@ public sealed class BeekeeperEngine
     private void FinishOpeningIfDue()
     {
         if (State.StoriesDone.Contains(BeekeeperStories.Opening)) return;
+        if (State.BeesCaught < Config.OpeningCardClicks) return;   // Bee, 2026-11-12: stays up for the first few clicks
         if (State.StoryHere == BeekeeperStories.Opening) FinishStory(BeekeeperStories.Opening);
         else State.StoriesDone.Add(BeekeeperStories.Opening);
     }
@@ -1981,6 +1985,7 @@ public sealed class BeekeeperEngine
     {
         if (State.StoryHere != BeekeeperStories.Gloves) return ActionResult.Refused;
         State.ToolLevel = Math.Max(State.ToolLevel, 1);
+        State.GlovesLineBeesLeft = Config.GlovesLineBees;
         FinishStory(BeekeeperStories.Gloves);
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.GlovesOn) };
         CheckWalls(events);
@@ -2655,6 +2660,7 @@ public sealed class BeekeeperEngine
             State.BeeBreadRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
+        SettleQueenIfDue(events);   // Bee, 2026-11-12: the first bee bread brings the queen
         NoteBeeBreadAdded(events);
         CheckWalls(events);   // the wooden hive is offered now, and may be a wall
         return new ActionResult(true, count, events);

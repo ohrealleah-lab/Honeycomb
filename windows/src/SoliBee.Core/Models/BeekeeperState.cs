@@ -214,6 +214,8 @@ public sealed class BeekeeperState
     public bool FirstStingDone { get; set; }
     /// <summary>Play seconds the "Ouch!" card has left before it goes by itself.</summary>
     public decimal OuchSecondsLeft { get; set; }
+    /// <summary>Bees still to catch while the pinned "those gloves fit well" line stays at the top of the Story panel (Bee, 2026-11-12).</summary>
+    public int GlovesLineBeesLeft { get; set; }
     public int GlovesDeclines { get; set; }
     /// <summary>True once the gloves were refused five times: kept for a future hard-mode achievement.</summary>
     public bool GlovesRefusedForGood { get; set; }

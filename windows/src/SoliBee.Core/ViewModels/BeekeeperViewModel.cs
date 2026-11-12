@@ -43,7 +43,8 @@ public sealed record BeekeeperTradeOffer(
 /// </summary>
 public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0m, decimal Value2 = 0m,
     decimal? Rate = null, decimal Rate2 = 0m, decimal? SecondsToFull = null,
-    IReadOnlyList<BeekeeperBoost>? Boosts = null, IReadOnlyList<BeekeeperSource>? Sources = null);
+    IReadOnlyList<BeekeeperBoost>? Boosts = null, IReadOnlyList<BeekeeperSource>? Sources = null,
+    IReadOnlyList<BeekeeperSource>? Gives = null);   // Gives (Bee, 2026-11-12): what the free bees feed right now, "wax" (PerSecond) and "honey" (PerSecond = percent)
 
 /// <summary>Something that adds to a growing stat, for a hover: <see cref="Id"/> is "combs",
 /// "wax_drip", "free_bees", "queen", "foraging", "resin", "meadow", "carpenter_bee" (stage 8) or a
@@ -293,7 +294,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HoneyRevealed => State.HoneyRevealed;
     /// <summary>The Hive card: the first bee, or the first whole wax from the drip (stage 7.5: wax
     /// can come before any bee is caught).</summary>
-    public bool HiveCardShown => State.HoneyRevealed || State.WaxRevealed || ClayJarsShown;
+    /// <summary>The pinned gloves line at the top of the Story panel, for the first bees after the gloves go on.</summary>
+    public bool GlovesLineShown => State.GlovesLineBeesLeft > 0;
+    public bool HiveCardShown => State.BeesCaught > 0 || State.HoneyRevealed || State.WaxRevealed;   // Bee, 2026-11-12: hidden until a bee is caught
     // Before stage 10: State.HoneyRevealed || State.WaxRevealed
 
     // Stage 10 (spec 019): clay jars, potted honey and the beeswax candle
@@ -469,6 +472,19 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public IReadOnlyList<BeekeeperBoost> PlantBoosts(string target) =>
         Engine.PlantBonusSources(target)
             .Select(x => new BeekeeperBoost(BeekeeperBeeTab.PlantBoost, x.Share * 100m, x.Plant.Id, x.Extra)).ToList();
+
+    /// <summary>What the free bees feed right now, for the Free bees hover (only what is active).</summary>
+    public IReadOnlyList<BeekeeperSource> FreeBeesGiveNow
+    {
+        get
+        {
+            var gives = new List<BeekeeperSource>();
+            if (Engine.HiveStarted && State.Bees > 0m && Config.WaxPerFreeBeePerSecond > 0m)
+                gives.Add(new("wax", State.Bees * Config.WaxPerFreeBeePerSecond));
+            if (FreeBeeHoneyBonusPercent >= 0.01m) gives.Add(new("honey", FreeBeeHoneyBonusPercent));
+            return gives;
+        }
+    }
 
     /// <summary>Where the wax comes from: the drip, and the free bees (before any boost).</summary>
     public IReadOnlyList<BeekeeperSource> WaxSourcesNow
@@ -723,7 +739,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 // Stage 7.5: free bees (they can be 0 in a running game).
                 new(BeekeeperHiveRows.Honeybees, true, State.Bees,
                     Rate: Engine.HasQueen || BeeSourcesNow.Count > 0 ? BeeSourcesNow.Sum(x => x.PerSecond) : null,
-                    Sources: BeeSourcesNow, Boosts: BeeBoostsNow),
+                    Sources: BeeSourcesNow, Boosts: BeeBoostsNow, Gives: FreeBeesGiveNow),
                 new(BeekeeperHiveRows.Queen, Engine.HasQueen, Engine.IsQueenLaying ? 1m : 0m),
             };
             foreach (var id in specialties)

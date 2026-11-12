@@ -72,9 +72,9 @@ public class BeekeeperBatchCraftTests
     [Fact]
     public void BeeBreadBatches_NeedPollenAndHoneyForTheWholeBatch()
     {
-        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 100m, Honey = 99m });
+        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 10m, Honey = 9m });   // 1 pollen + 1 honey each (Bee, 2026-11-12)
         Assert.False(e.CanMakeBeeBreadTimes(10));
-        e.State.Honey = 100m;
+        e.State.Honey = 10m;
         var r = e.MakeBeeBread(10);
         Assert.True(r.Done);
         Assert.Equal(10m, e.State.BeeBread);

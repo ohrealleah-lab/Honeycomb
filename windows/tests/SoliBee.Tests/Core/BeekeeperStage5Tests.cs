@@ -24,8 +24,13 @@ public class BeekeeperStage5Tests : IDisposable
         public int Next(int maxExclusive) => 0;
     }
 
+    // Bee, 2026-11-12: the queen now lays 1 bee a second in any hive. These older tests keep her old
+    // rate (none in the skep, 20 a minute in the wooden hive) so their arithmetic still holds;
+    // BeekeeperQueenRateTests checks the new rate.
+    private static readonly BeekeeperConfig OldQueen = new() { QueenBeesPerMinute = new[] { 0m, 20m } };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null)
-        => new(BeekeeperConfig.Default, state, new FakeRandom());
+        => new(OldQueen, state, new FakeRandom());
 
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 
@@ -182,8 +187,8 @@ public class BeekeeperStage5Tests : IDisposable
         var e = Make(Queen(10m));
         e.State.SmokerBoostSecondsLeft = 60m;   // set directly: a long boost, to split the stretch
         e.Advance(120m);
-        // The smoker boosts the combs' honey only: 250 a second × (2.5 × 60 + 60) (+150% since 2026-11-11).
-        Assert.Equal(52500m, e.State.Honey);
+        // The smoker boosts the combs' honey only: 250 a second × (3 × 60 + 60) (+200% since 2026-11-12).
+        Assert.Equal(60000m, e.State.Honey);
         // The wax follows the growing bees, boosted or not: 0.005 × 120 + 0.0001 × (60,600 + 61,800).
         Assert.Equal(12.84, (double)e.State.Wax, Places);
         Assert.Equal(1040m, e.State.Bees);

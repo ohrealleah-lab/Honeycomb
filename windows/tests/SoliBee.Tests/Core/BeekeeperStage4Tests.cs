@@ -324,19 +324,19 @@ public class BeekeeperStage4Tests : IDisposable
     // ============================================================ bee bread
 
     [Fact]
-    public void BeeBread_TakesTenPollenAndTenHoney_Instantly()
+    public void BeeBread_TakesOnePollenAndOneHoney_Instantly()   // Bee, 2026-11-12: was 10 and 10
     {
-        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 25m, Honey = 15m });
+        var e = Make(new BeekeeperState { PollenRevealed = true, Pollen = 3m, Honey = 1m });
         var r = e.MakeBeeBread();
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.BeeBreadMade));
-        Assert.Equal(15m, e.State.Pollen);
-        Assert.Equal(5m, e.State.Honey);
+        Assert.Equal(2m, e.State.Pollen);
+        Assert.Equal(0m, e.State.Honey);
         Assert.Equal(1m, e.State.BeeBread);
 
         // only the first one is announced, and it needs both parts
         Assert.False(e.CanMakeBeeBread);
-        e.State.Honey = 10m;
+        e.State.Honey = 1m;
         Assert.False(Has(e.MakeBeeBread().Events, BeekeeperEvents.BeeBreadMade));
         Assert.Equal(2m, e.State.BeeBread);
     }
@@ -344,14 +344,14 @@ public class BeekeeperStage4Tests : IDisposable
     [Fact]
     public void BeeBread_IsRefusedWithoutPollenOrHoney()
     {
-        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 9m, Honey = 100m }).MakeBeeBread().Done);
-        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 10m, Honey = 9m }).MakeBeeBread().Done);
+        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 0m, Honey = 100m }).MakeBeeBread().Done);
+        Assert.False(Make(new BeekeeperState { PollenRevealed = true, Pollen = 1m, Honey = 0m }).MakeBeeBread().Done);
     }
 
     // ============================================================ the wooden hive
 
     [Fact]
-    public void TheWoodenHive_IsOfferedAfterTheFirstBeeBread_AndCosts100WaxAnd10BeeBread()
+    public void TheWoodenHive_IsOfferedAfterTheFirstBeeBread_AndCosts50WaxAnd10BeeBread()
     {
         var e = Make(new BeekeeperState { Wax = 300m, BeeBread = 10m });
         Assert.False(e.WoodenHiveOffered);          // no bee bread made yet
@@ -360,7 +360,7 @@ public class BeekeeperStage4Tests : IDisposable
         var r = e.MoveToWoodenHive();
         Assert.True(r.Done);
         Assert.True(Has(r.Events, BeekeeperEvents.WoodenHive));
-        Assert.Equal(200m, e.State.Wax);
+        Assert.Equal(250m, e.State.Wax);
         Assert.Equal(0m, e.State.BeeBread);
         Assert.True(e.State.HasWoodenHive);
         Assert.False(e.WoodenHiveOffered);
@@ -369,7 +369,7 @@ public class BeekeeperStage4Tests : IDisposable
     [Fact]
     public void TheWoodenHive_IsRefusedWhenShort_OrAlreadyMoved()
     {
-        Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 99m, BeeBread = 10m }).MoveToWoodenHive().Done);
+        Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 49m, BeeBread = 10m }).MoveToWoodenHive().Done);
         Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, Wax = 500m, BeeBread = 9m }).MoveToWoodenHive().Done);
         Assert.False(Make(new BeekeeperState { BeeBreadRevealed = true, HasWoodenHive = true, Wax = 500m, BeeBread = 50m }).MoveToWoodenHive().Done);
     }

@@ -33,8 +33,13 @@ public class BeekeeperStage7Tests : IDisposable
     // private static readonly BeekeeperConfig TwoBedsBigCombs = new()
     //     { StartingBeds = 2, StartingHoneyCap = 100_000_000m, StartingWaxCap = 100_000_000m };
 
+    // Bee, 2026-11-12: the queen now lays 1 bee a second in any hive. These older tests keep her old
+    // rate (none in the skep, 20 a minute in the wooden hive) so their arithmetic still holds;
+    // BeekeeperQueenRateTests checks the new rate.
+    private static readonly BeekeeperConfig OldQueen = new() { QueenBeesPerMinute = new[] { 0m, 20m } };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
-        => new(config ?? BeekeeperConfig.Default, state, new FakeRandom());
+        => new(config ?? OldQueen, state, new FakeRandom());
 
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 
@@ -177,18 +182,19 @@ public class BeekeeperStage7Tests : IDisposable
     // ============================================================ nursing, resin, clover
 
     [Fact]
-    public void Nursing_MakesTheQueenLayFiftyPercentFaster_AndOnlyInAWoodenHive()
+    public void Nursing_MakesTheQueenLayFiftyPercentFaster_InAnyHive()
     {
         // Stage 9: without the bloom calendar (crocus would double nursing's bonus).
+        // Bee, 2026-11-12: the queen lays 1 bee a second in any hive (was 20 a minute, wooden hive only).
         var noBlooms = BeekeeperTestHives.NoBlooms();
         var e = Make(Hive(BeekeeperPlants.Willow), noBlooms);
-        Assert.Equal(30m, e.QueenRatePerMinute);
-        Assert.Equal(0.5m, e.QueenBeesPerSecondNow);
-        Assert.Equal(20m, Make(Hive(), noBlooms).QueenRatePerMinute);
+        Assert.Equal(90m, e.QueenRatePerMinute);
+        Assert.Equal(1.5m, e.QueenBeesPerSecondNow);
+        Assert.Equal(60m, Make(Hive(), noBlooms).QueenRatePerMinute);
 
         var skep = Hive(BeekeeperPlants.Willow);
         skep.HasWoodenHive = false;
-        Assert.Equal(0m, Make(skep, noBlooms).QueenRatePerMinute);
+        Assert.Equal(90m, Make(skep, noBlooms).QueenRatePerMinute);
     }
 
     [Fact]
@@ -267,9 +273,9 @@ public class BeekeeperStage7Tests : IDisposable
         both.State.BeeBread = 0m;
         both.State.BeeBoostSecondsLeft = 10m;
         both.State.SmokerBoostSecondsLeft = 10m;
-        Assert.Equal(12.5m * 2.5m * 1.2m, both.HoneyPerSecondNow);   // the Smoker: +150% (Bee, 2026-11-11)
+        Assert.Equal(12.5m * 3m * 1.2m, both.HoneyPerSecondNow);   // the Smoker: +200% (Bee, 2026-11-12)
         both.Advance(10m);
-        Assert.Equal(12.5m * 2.5m * 1.2m * 10m, both.State.Honey);
+        Assert.Equal(12.5m * 3m * 1.2m * 10m, both.State.Honey);
     }
 
     [Fact]

@@ -219,7 +219,7 @@ Bee's design notes from a thinking session. **Built in stage 10 (2026-11-12, `wi
    - **Herbs leave the Shop's prices.** They're for buff candles.
    - **Herbs come only from the leafcutter bee** (Bee: "an interesting boost for later"). *(Dropped the same day: an herb every 5th Hippie trade.)* So herbal candles and their buffs, and Stronger Candles, arrive with the bee hotel.
    - **Potting happens on the Hive card**, from the first honey.
-8. **Placeholders** (in the stage 10 spec): 10 honey + 1 jar per potted honey; plain honey 5 Beebits per 10 (8 honey under the agreement); potted honey 15 Beebits; the beeswax candle 2 wax; 3 candles per jar; the leafcutter's 2 herbs a gift (unchanged).
+8. **Placeholders** (in the stage 10 spec): 10 honey + 1 jar per potted honey; plain honey 5 Beebits per 10 (8 honey under the agreement); potted honey 20 Beebits (was 15, Bee 2026-11-12); the beeswax candle 2 wax; 3 candles per jar; the leafcutter's 2 herbs a gift (unchanged).
 9. **Later (Bee, 2026-11-12, not in stage 10): sage as Smoker fuel.** Some real beekeepers burn dried herbs like sage in their smokers. Sage could become fuel that makes the Smoker's boost stronger or last longer, a use for sage beyond the candles. More sage could come from bee hotel upgrades.
 10. **Still open:**
    - Whether "herbs" go back to being called sage on screen, or sage becomes one herb among others.

@@ -50,7 +50,7 @@ public class BeekeeperStage10ViewModelTests
     {
         var clock = new Clock();
         var vm = Make(clock: clock);
-        Assert.True(vm.HiveCardShown);
+        Assert.False(vm.HiveCardShown);   // hidden until a bee is caught (Bee, 2026-11-12)
         var jars = Row(vm, BeekeeperHiveRows.ClayJars);
         Assert.True(jars.Visible);
         Assert.Equal(3m, jars.Value);
@@ -72,6 +72,9 @@ public class BeekeeperStage10ViewModelTests
         clock.Advance(1);
         vm.Tick();
         vm.Catch();
+        Assert.Equal(BeekeeperStories.Opening, vm.StoryHere);   // stays for the first 5 clicks
+        Assert.True(vm.HiveCardShown);
+        for (int i = 1; i < 5; i++) vm.Catch();
         Assert.Null(vm.StoryHere);
         Assert.True(vm.PotHoneyShown);   // the first bee starts the honey
     }
@@ -112,12 +115,12 @@ public class BeekeeperStage10ViewModelTests
         bear = vm.TradeOffers.Single(o => o.Id == "bear");
         Assert.True(bear.PottedShown);
         Assert.True(bear.CanSellPotted);
-        Assert.Equal(15m, bear.PottedGet);
+        Assert.Equal(20m, bear.PottedGet);
         bear.SellPotted!();
-        Assert.Equal(15m, vm.Beebits);
+        Assert.Equal(20m, vm.Beebits);
         Assert.Equal(1, vm.Trades);
         vm.TradeOffers.Single(o => o.Id == "bear").SellAllPotted!();
-        Assert.Equal(30m, vm.Beebits);
+        Assert.Equal(40m, vm.Beebits);
         Assert.Equal(2, vm.Trades);
         Assert.False(vm.TradeOffers.Single(o => o.Id == "bear").CanSellPotted);
         Assert.True(Logged(vm, BeekeeperEvents.PottedSale));
@@ -187,7 +190,7 @@ public class BeekeeperStage10ViewModelTests
         row = Row(vm, BeekeeperHiveRows.Beebits);
         Assert.Equal(new[] { "plain_honey_agreement", "potted_honey" }, row.Sources!.Select(x => x.Id));
         Assert.Equal(8m, row.Sources![0].Count);
-        Assert.Equal(15m, row.Sources![1].PerSecond);
+        Assert.Equal(20m, row.Sources![1].PerSecond);
         var boost = Assert.Single(row.Boosts!);
         Assert.Equal((BeekeeperHerbs.Trades, 50m), (boost.Id, boost.Percent));
     }

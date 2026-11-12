@@ -70,9 +70,9 @@ public class BeekeeperHardeningTests : IDisposable
     [Fact]
     public void ThePantryRunsOut_OnTheExactSecond()
     {
-        var e = Queen(1000m, 1m);   // 1 bee bread feeds 100 bees: 300 s at 20 a minute
+        var e = Queen(1000m, 1m);   // 1 bee bread feeds 100 bees: 100 s at 1 a second (Bee, 2026-11-12; was 300 s)
 
-        for (int i = 0; i < 299; i++)
+        for (int i = 0; i < 99; i++)
             Assert.DoesNotContain(e.Advance(1m).Events, x => x.Key == BeekeeperEvents.PantryEmpty);
 
         Assert.Contains(e.Advance(1m).Events, x => x.Key == BeekeeperEvents.PantryEmpty);

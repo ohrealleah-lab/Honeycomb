@@ -44,8 +44,13 @@ public class BeekeeperStage9Tests : IDisposable
         },
     };
 
+    // Bee, 2026-11-12: the queen now lays 1 bee a second in any hive. These older tests keep her old
+    // rate (none in the skep, 20 a minute in the wooden hive) so their arithmetic still holds;
+    // BeekeeperQueenRateTests checks the new rate.
+    private static readonly BeekeeperConfig OldQueen = new() { QueenBeesPerMinute = new[] { 0m, 20m } };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null)
-        => new(config ?? BeekeeperConfig.Default, state, new NoRandom());
+        => new(config ?? OldQueen, state, new NoRandom());
 
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 

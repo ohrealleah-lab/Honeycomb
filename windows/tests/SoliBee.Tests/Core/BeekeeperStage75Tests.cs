@@ -19,8 +19,13 @@ public class BeekeeperStage75Tests
         public int Next(int maxExclusive) => 0;
     }
 
+    // Bee, 2026-11-12: the queen now lays 1 bee a second in any hive. These older tests keep her old
+    // rate (none in the skep, 20 a minute in the wooden hive) so their arithmetic still holds;
+    // BeekeeperQueenRateTests checks the new rate.
+    private static readonly BeekeeperConfig OldQueen = new() { QueenBeesPerMinute = new[] { 0m, 20m } };
+
     private static BeekeeperEngine Make(BeekeeperState? state = null, BeekeeperConfig? config = null, params double[] dice)
-        => new(config ?? BeekeeperConfig.Default, state, new FakeRandom(dice));
+        => new(config ?? OldQueen, state, new FakeRandom(dice));
 
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 
@@ -112,7 +117,7 @@ public class BeekeeperStage75Tests
         plain.Advance(50m);
         boosted.Advance(50m);
         Assert.Equal(plain.State.Wax, boosted.State.Wax);
-        Assert.Equal(0.8m * 50m * 2.5m * 1.2m * 1.1m * 1.25m * 1.25m, boosted.State.Honey);   // the Smoker: ×2.5
+        Assert.Equal(0.8m * 50m * 3m * 1.2m * 1.1m * 1.25m * 1.25m, boosted.State.Honey);   // the Smoker: ×3 (Bee, 2026-11-12)
     }
 
     // ============================================================ caps (User Story 5)

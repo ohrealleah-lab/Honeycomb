@@ -60,7 +60,7 @@ public class BeekeeperScreenValuesTests
         Assert.Equal(100m, vm.UpgradeBonusPercent(BeekeeperUpgrades.BiggerCombs2));
         Assert.Equal(50m, vm.UpgradeBonusPercent(BeekeeperUpgrades.BetterWaxCatcher));
         Assert.Equal(25m, vm.UpgradeBonusPercent(BeekeeperUpgrades.PropolisSeal));
-        Assert.Equal(150m, vm.UpgradeBonusPercent(BeekeeperUpgrades.Smoker));
+        Assert.Equal(200m, vm.UpgradeBonusPercent(BeekeeperUpgrades.Smoker));
 
         var tuned = new BeekeeperViewModel(isHeadless: true, persist: false,
             config: new BeekeeperConfig { PracticeMultiplier = 1.75m, StrongerCandlesBonus = 2m },

@@ -255,7 +255,8 @@ public partial class BeekeeperView : UserControl
         // Stage 10: the beeswax candle (wax only), with The Workbench, for the Hippies.
         BeeswaxRow.IsVisible = vm.BeeswaxShown;
         BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
-        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.BeeswaxCandleWaxNow), null) + makes + " · " + BeekeeperText.BeeswaxBlurb;
+        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.BeeswaxCandleWaxNow), null) + makes;   // Bee, 2026-11-12: no "The Hippies like these." blurb
+        // Before: makes + " · " + BeekeeperText.BeeswaxBlurb;
         CraftBeeswaxButton.Content = BeekeeperText.Make;
         CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
         ShowWallTip(CraftBeeswaxButton, vm.CandleIsWall(vm.BeeswaxCandleWaxNow));
@@ -888,6 +889,7 @@ public partial class BeekeeperView : UserControl
         // count and the newest) matters once the log is full at 50: then a new line identical
         // to the newest one (Sell 10 twice) leaves the count and the newest line unchanged.
         var sigBuilder = new System.Text.StringBuilder(lang.ToString());
+        sigBuilder.Append(vm.GlovesLineShown ? "|pin" : "|nopin");
         for (int i = 0; i < shown; i++)
             sigBuilder.Append('|').Append(log[i].Key).Append(':').Append(log[i].Value).Append(':').Append(log[i].Text);
         string sig = sigBuilder.ToString();
@@ -895,6 +897,15 @@ public partial class BeekeeperView : UserControl
         _logSignature = sig;
 
         LogLines.Children.Clear();
+        if (vm.GlovesLineShown)   // Bee, 2026-11-12: pinned for the first bees after the gloves go on
+            LogLines.Children.Add(new TextBlock
+            {
+                Text = BeekeeperText.PinnedGloves,
+                FontFamily = new FontFamily("Georgia"),
+                FontSize = 14,
+                Foreground = WhiteBrush,
+                TextWrapping = TextWrapping.Wrap,
+            });
         for (int i = 0; i < shown; i++)
         {
             string line = BeekeeperText.LogLine(log[i], lang);
@@ -976,7 +987,8 @@ public partial class BeekeeperView : UserControl
         {
             case BeekeeperStories.Opening:   // stage 10: the grandmother's farmhouse
                 StoryText.Text = BeekeeperText.StoryOpening;
-                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryLookAround, () => _vm?.BeginFromStory()));
+                // Bee, 2026-11-12: no button; the card leaves after the first few clicks.
+                // StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryLookAround, () => _vm?.BeginFromStory()));
                 break;
             case BeekeeperStories.Ouch:
                 StoryText.Text = BeekeeperText.StoryOuch;

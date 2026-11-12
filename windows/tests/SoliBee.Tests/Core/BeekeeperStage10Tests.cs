@@ -65,7 +65,10 @@ public class BeekeeperStage10Tests
     {
         var e = Make();
         e.AdvanceStoryTime(1m);
-        var r = e.Catch();
+        CatchResult r = e.Catch();
+        for (int i = 1; i < e.Config.OpeningCardClicks - 1; i++) r = e.Catch();
+        Assert.Equal(BeekeeperStories.Opening, e.StoryHere);   // still up before the 5th click
+        r = e.Catch();
         Assert.False(r.Stung);
         Assert.Null(e.StoryHere);
         Assert.Contains(BeekeeperStories.Opening, e.State.StoriesDone);
@@ -73,7 +76,7 @@ public class BeekeeperStage10Tests
 
         // Even when it never showed (no story time yet), a bee caught first means it never comes.
         var early = Make();
-        early.Catch();
+        for (int i = 0; i < early.Config.OpeningCardClicks; i++) early.Catch();
         early.AdvanceStoryTime(1m);
         Assert.Null(early.StoryHere);
     }
@@ -172,19 +175,19 @@ public class BeekeeperStage10Tests
     }
 
     [Fact]
-    public void PottedHoney_SellsForFifteenEach_OneOrAll_EachClickOneTrade()
+    public void PottedHoney_SellsForTwentyEach_OneOrAll_EachClickOneTrade()
     {
         var e = Make(new BeekeeperState { BearName = "Bruno", PottedHoney = 4m });
         var one = e.SellPotted();
         Assert.True(one.Done);
-        Assert.Equal(15m, e.State.Beebits);
+        Assert.Equal(20m, e.State.Beebits);
         Assert.Equal(3m, e.State.PottedHoney);
         Assert.Equal(1, e.State.Trades);
         var sale = one.Events.Single(x => x.Key == BeekeeperEvents.PottedSale);
-        Assert.Equal((15m, 1m, "Bruno"), (sale.Value, sale.Value2, sale.Text));
+        Assert.Equal((20m, 1m, "Bruno"), (sale.Value, sale.Value2, sale.Text));
 
         var all = e.SellAllPotted();
-        Assert.Equal(60m, e.State.Beebits);
+        Assert.Equal(80m, e.State.Beebits);
         Assert.Equal(0m, e.State.PottedHoney);
         Assert.Equal(2, e.State.Trades);             // Sell all potted counts once
         Assert.Equal(3m, all.Events.Single(x => x.Key == BeekeeperEvents.PottedSale).Value2);
@@ -203,9 +206,9 @@ public class BeekeeperStage10Tests
         Assert.True(Has(r.Events, BeekeeperEvents.TradeAgreement));
         Assert.True(e.State.HasTradeAgreement);
         Assert.Equal(8m, e.HoneyPerTradeNow);
-        Assert.Equal(15m, e.PottedHoneyBeebitsNow);  // one price for potted honey
+        Assert.Equal(20m, e.PottedHoneyBeebitsNow);  // one price for potted honey
         e.SellPotted();
-        Assert.Equal(30m, e.State.Beebits);
+        Assert.Equal(40m, e.State.Beebits);
     }
 
     // ============================================================ the beeswax candle (User Story 4)

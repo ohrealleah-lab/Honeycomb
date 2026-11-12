@@ -267,6 +267,10 @@ public sealed class BeekeeperConfig
     /// <summary>Bees caught by hand before the first sting (guaranteed, then the story card says "Ouch!").
     /// Before this many, bare hands are never stung (Bee, 2026-11-11).</summary>
     public long StingsStartAtBees { get; init; } = 10;
+    /// <summary>Stage 10 (Bee, 2026-11-12): the opening card stays up for this many Catch Bee clicks (placeholder).</summary>
+    public long OpeningCardClicks { get; init; } = 5;
+    /// <summary>Bee, 2026-11-12: bees caught after the gloves go on while their pinned line stays up (placeholder).</summary>
+    public int GlovesLineBees { get; init; } = 10;
     /// <summary>After a sting the Catch Bee button is red and disabled for this long (live seconds).</summary>
     /// <summary>The "Ouch!" card goes away by itself after this many play seconds (no button).</summary>
     public decimal OuchSeconds { get; init; } = 5m;
@@ -317,7 +321,7 @@ public sealed class BeekeeperConfig
     // Still cut: the agreement once paid more Beebits a bundle instead of taking less honey.
     // public decimal BetterBeebitsPerTrade { get; init; } = 6m;
     /// <summary>Beebits the bear pays for one potted honey (3× the plain rate for the same 10 honey).</summary>
-    public decimal PottedHoneyBeebits { get; init; } = 15m;
+    public decimal PottedHoneyBeebits { get; init; } = 20m;   // Bee, 2026-11-12: was 15
 
     // --- Clay jars and potted honey (stage 10, spec 019; placeholders) ------
     /// <summary>Clay jars a new game starts with (found in the garden). An older save gets them once.</summary>
@@ -447,7 +451,7 @@ public sealed class BeekeeperConfig
     public decimal MorePracticeMultiplier { get; init; } = 2m;     // +100% (placeholder)
     /// <summary>Extra honey while the smoker boost is on, in percent (Bee, 2026-11-10: +100%,
     /// was +50%). Later smoker upgrades will each add 25 points on top.</summary>
-    public decimal SmokerBoostPercent { get; init; } = 150m;   // Bee, 2026-11-11: was 100 (felt too faint early on)
+    public decimal SmokerBoostPercent { get; init; } = 200m;   // Bee, 2026-11-12: was 150 (2026-11-11: was 100, felt too faint early on)
     /// <summary>Live seconds one smoker click keeps the boost on; a click refreshes it (placeholder: 1).</summary>
     public decimal SmokerBoostSeconds { get; init; } = 1m;
 
@@ -499,9 +503,9 @@ public sealed class BeekeeperConfig
     // Cut in stage 6 (spec 014): pollen comes from the foraging specialty (the plant's Strength).
     // /// <summary>Every this many forager bees bring back 1 pollen a minute.</summary>
     // public decimal ForagersPerPollenPerMinute { get; init; } = 10m;
-    public decimal BeeBreadPollen { get; init; } = 10m;
-    public decimal BeeBreadHoney { get; init; } = 10m;
-    public decimal WoodenHiveWax { get; init; } = 100m;   // pacing review 2026-11-10: was 200
+    public decimal BeeBreadPollen { get; init; } = 1m;   // Bee, 2026-11-12: was 10
+    public decimal BeeBreadHoney { get; init; } = 1m;   // Bee, 2026-11-12: was 10
+    public decimal WoodenHiveWax { get; init; } = 50m;   // Bee, 2026-11-12: was 100 (pacing review 2026-11-10: was 200)
     public decimal WoodenHiveBeeBread { get; init; } = 10m;
     /// <summary>Honey from the combs in a wooden hive (+25%; before stage 7.5, from every honeybee).</summary>
     public decimal WoodenHiveHoneyMultiplier { get; init; } = 1.25m;
@@ -510,7 +514,10 @@ public sealed class BeekeeperConfig
 
     /// <summary>Bees the queen raises a minute, per hive step: index 0 is the skep (no room
     /// for brood), 1 the wooden hive. Later hives (the meadow apiary) add entries here.</summary>
-    public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 0m, 20m };
+    /// Bee, 2026-11-12: 1 bee a second in any hive (the queen no longer needs the wooden hive),
+    /// so the free bees visibly climb; a loaf of 100 bees lasts 100 seconds.
+    public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 60m, 60m };
+    // Before (Bee, 2026-11-12): new[] { 0m, 20m } (the skep raised none; the wooden hive 20 a minute).
     /// <summary>Bees raised for every 1 bee bread the brood eats.</summary>
     public decimal BeesPerBeeBread { get; init; } = 100m;
     // Cut (may return): the slice of the hive was never more than this many times the tool's bees.

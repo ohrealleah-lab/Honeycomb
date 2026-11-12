@@ -95,7 +95,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
     {
         var vm = Make(new Clock(), new BeekeeperState
         {
-            PollenRevealed = true, Pollen = 100m, Honey = 100m, Wax = 250m, Bees = 10m, HoneyRevealed = true, BearName = "Bruno",
+            PollenRevealed = true, Pollen = 10m, Honey = 10m, Wax = 250m,   // bee bread: 1 pollen + 1 honey (Bee, 2026-11-12) Bees = 10m, HoneyRevealed = true, BearName = "Bruno",
         });
         for (int i = 0; i < 10; i++) vm.MakeBeeBreadCommand.Execute(null);
         Assert.Equal(10m, vm.BeeBread);
@@ -109,7 +109,7 @@ public class BeekeeperGardenViewModelTests : IDisposable
         Assert.True(vm.HasWoodenHive);
         Assert.True(Logged(vm, BeekeeperEvents.WoodenHive));
         Assert.False(vm.WoodenHiveOffered);
-        Assert.Equal(150m, vm.Wax);   // the wooden hive costs 100 wax
+        Assert.Equal(200m, vm.Wax);   // the wooden hive costs 50 wax (Bee, 2026-11-12; was 100)
         Assert.False(vm.CanMoveToWoodenHive);
     }
 

@@ -252,7 +252,7 @@ public class BeekeeperHerbTests
         var e = Make(RollFor(BeekeeperHerbs.Trades), candles: 1m);
         Assert.True(e.LightRepellent().Done);
         Assert.Equal(8m, e.BeebitsPerTradeNow);      // 5 × 1.5, rounded up
-        Assert.Equal(23m, e.PottedHoneyBeebitsNow);  // 15 × 1.5, rounded up
+        Assert.Equal(30m, e.PottedHoneyBeebitsNow);  // 20 × 1.5
 
         e.State.Honey = 10m;
         Assert.True(e.SellTen().Done);
@@ -261,7 +261,7 @@ public class BeekeeperHerbTests
 
         e.State.PottedHoney = 2m;
         Assert.True(e.SellAllPotted().Done);
-        Assert.Equal(8m + 46m, e.State.Beebits);     // two pots, 23 each
+        Assert.Equal(8m + 60m, e.State.Beebits);     // two pots, 30 each
 
         // The Hippies' jars are never touched: still 1 jar for 3 candles.
         e.State.HippiesRevealed = true;

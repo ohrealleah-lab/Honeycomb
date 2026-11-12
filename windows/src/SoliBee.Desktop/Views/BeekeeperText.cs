@@ -147,6 +147,7 @@ internal static class BeekeeperText
     public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
     public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
     public static string StoryOpening => T(StringKey.BeekeeperStoryOpening);
+    public static string PinnedGloves => T(StringKey.BeekeeperPinnedGloves);
     public static string StoryLookAround => T(StringKey.BeekeeperStoryLookAround);
     /// <summary>The hover on a burning Good Deals candle: "+50% Beebits from the Bear."</summary>
     public static string HerbTradesTip(decimal percent) => Fill(T(StringKey.BeekeeperHerbTradesTipFmt), NumberFormatter.Format(percent, Lang));
@@ -547,6 +548,18 @@ internal static class BeekeeperText
         return sb.ToString();
     }
 
+    /// <summary>What the free bees give right now (wax, honey), each on its own line; empty if nothing is active.</summary>
+    private static string GivesLines(BeekeeperHiveRow r)
+    {
+        if (r.Gives is null || r.Gives.Count == 0) return "";
+        var sb = new System.Text.StringBuilder("\n").Append(T(StringKey.BeekeeperFreeBeesGiveHeader));
+        foreach (var g in r.Gives)
+            sb.Append('\n').Append(g.Id == "wax"
+                ? Fill(T(StringKey.BeekeeperFreeBeesGiveWaxFmt), NumberFormatter.Format(g.PerSecond, Lang, 4))
+                : Fill(T(StringKey.BeekeeperFreeBeesGiveHoneyFmt), NumberFormatter.Format(g.PerSecond, Lang, 2)));
+        return sb.ToString();
+    }
+
     /// <summary>Everything that feeds a growing stat: its sources, then its boosts.</summary>
     private static string Parts(BeekeeperHiveRow r) => SourceLines(r.Sources) + BoostLines(r.Boosts);
 
@@ -560,6 +573,8 @@ internal static class BeekeeperText
             case BeekeeperHiveRows.ClayJars:
                 return Fill(T(StringKey.BeekeeperClayJarsTipFmt), NumberFormatter.Format(r.Rate2, Lang), NumberFormatter.Format(r.Value2, Lang));
             case BeekeeperHiveRows.Herbs: return T(StringKey.BeekeeperHerbsTip);
+            case BeekeeperHiveRows.Honeybees when r.Rate is null:   // no queen yet: the hover still says what the bees give
+                return GivesLines(r).TrimStart('\n') is { Length: > 0 } g ? g : null;
         }
         if (r.Rate is not { } rate) return null;
         string N(decimal v, int d) => NumberFormatter.Format(v, Lang, d);
@@ -567,7 +582,7 @@ internal static class BeekeeperText
         {
             // Every stat that grows on its own lists all that feeds it (Bee, 2026-11-11). The free
             // bees' honey bonus is now one of the honey boosts (it was read from Rate2 here).
-            BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)) + Parts(r),
+            BeekeeperHiveRows.Honeybees => BeesPerSecond(N(rate, 2)) + Parts(r) + GivesLines(r),
             BeekeeperHiveRows.Honey => HoneyPerSecond(N(rate, 2)) + Parts(r),
             BeekeeperHiveRows.Wax => WaxPerSecond(N(rate, 2)) + Parts(r),
             BeekeeperHiveRows.Pollen => PollenPerSecond(N(rate, 2)) + Parts(r),

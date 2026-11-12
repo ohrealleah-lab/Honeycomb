@@ -142,19 +142,19 @@ public class BeekeeperStage3Tests : IDisposable
     }
 
     [Fact]
-    public void ASmokerClick_GivesHalfAgainMoreThanDouble_ForOneSecond()   // Bee, 2026-11-11: +150% (was doubles)
+    public void ASmokerClick_TriplesHoney_ForOneSecond()   // Bee, 2026-11-12: +200% (2026-11-11: +150%; before: doubles)
     {
         var e = WithSmoker();
         Assert.True(e.UseSmoker().Done);
         Assert.True(e.IsSmokerBoosted);
-        Assert.Equal(2.5m, e.HoneyPerSecondNow);
+        Assert.Equal(3m, e.HoneyPerSecondNow);
         Assert.Equal(1m, e.HoneyPerSecond);   // raids still use the plain rate
 
         e.Advance(0.5m);
-        Assert.Equal(1.25m, e.State.Honey);
+        Assert.Equal(1.5m, e.State.Honey);
         Assert.True(e.IsSmokerBoosted);
         e.Advance(1.5m);                       // 0.5 boosted second, then 1 plain
-        Assert.Equal(1.25m + 1.25m + 1m, e.State.Honey);
+        Assert.Equal(1.5m + 1.5m + 1m, e.State.Honey);
         Assert.False(e.IsSmokerBoosted);
         Assert.Equal(1m, e.HoneyPerSecondNow);
     }
@@ -165,10 +165,10 @@ public class BeekeeperStage3Tests : IDisposable
         var e = WithSmoker();
         e.UseSmoker();
         for (int i = 0; i < 4; i++) { e.Advance(0.8m); e.UseSmoker(); }
-        Assert.Equal(4 * 0.8m * 2.5m, e.State.Honey);
+        Assert.Equal(4 * 0.8m * 3m, e.State.Honey);
         Assert.Equal(1m, e.State.SmokerBoostSecondsLeft);   // a click refreshes to 1s, never more
         e.Advance(3m);
-        Assert.Equal(4 * 0.8m * 2.5m + 2.5m + 2m, e.State.Honey);   // 1 boosted second, then 2 plain
+        Assert.Equal(4 * 0.8m * 3m + 3m + 2m, e.State.Honey);   // 1 boosted second, then 2 plain
     }
 
     [Fact]
@@ -177,9 +177,9 @@ public class BeekeeperStage3Tests : IDisposable
         var e = WithSmoker(s => s.BeeBoostSecondsLeft = 10m);
         decimal candle = e.HoneyPerSecondNow;
         e.UseSmoker();
-        Assert.Equal(candle * 2.5m, e.HoneyPerSecondNow);
+        Assert.Equal(candle * 3m, e.HoneyPerSecondNow);
         e.Advance(1m);
-        Assert.Equal(candle * 2.5m, e.State.Honey);
+        Assert.Equal(candle * 3m, e.State.Honey);
     }
 
     [Fact]

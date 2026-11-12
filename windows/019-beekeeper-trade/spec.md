@@ -53,7 +53,7 @@ Things to watch:
 
 ### User Story 3 - The Bear (Priority: P1)
 1. **Given** the Bear, **When** plain honey is sold, **Then** 10 honey pays **5 Beebits** *(placeholder; the rate before 2026-11-11)*. Under the agreement a bundle is 8 honey for the same 5 Beebits (today's agreement, unchanged).
-2. **Given** potted honey, **Then** the Bear's card shows **"Sell potted honey"** (1) and **"Sell all potted"**: each potted honey pays **15 Beebits** *(placeholder; 3× the plain rate for the same 10 honey)*.
+2. **Given** potted honey, **Then** the Bear's card shows **"Sell potted honey"** (1) and **"Sell all potted"**: each potted honey pays **20 Beebits** *(placeholder, was 15; 4× the plain rate for the same 10 honey)*.
 3. Each sale click (plain or potted, one or all) **counts as one Bear trade** toward the agreement at 40, as Sell All does today.
 4. The agreement's better rate is for plain honey only *(default)*. Potted honey has its own price.
 5. The Bear never gives herbs.
@@ -117,7 +117,7 @@ Things to watch:
 | `StartingClayJars` | 3 |
 | `PotHoneyHoney` | 10 honey per potted honey |
 | `BeebitsPerTrade` | 5 Beebits per bundle (10 honey; 8 under the agreement) |
-| `PottedHoneyBeebits` | 15 Beebits per potted honey |
+| `PottedHoneyBeebits` | 20 Beebits per potted honey |
 | `BeeswaxCandleWax` | 2 wax (1 with the Dipping Rack) |
 | `CandlesPerJar` | 3 beeswax candles per clay jar |
 | Shop herb prices | all 0 (old amounts in comments) |
@@ -180,7 +180,7 @@ Things to watch:
 1. Start a new game: the opening card shows, and the Hive card has 3 clay jars. Click **Look around**: the card goes.
 2. Start another new game and catch a bee without clicking the card: it goes by itself.
 3. Make 10 honey: **Pot honey** shows. Click it: honey −10, jars 2, potted honey 1.
-4. Get the Bear (100 bees caught): sell plain honey (5 Beebits a bundle, no herbs), then **Sell potted honey** (15 Beebits).
+4. Get the Bear (100 bees caught): sell plain honey (5 Beebits a bundle, no herbs), then **Sell potted honey** (20 Beebits).
 5. Hover Beebits: it lists plain honey, potted honey and the agreement.
 6. Get to the Workbench (3 combs): craft 5 beeswax candles. The Hippies arrive.
 7. **+30 beeswax candles**, then **Trade all**: 10 jars, no Beebits and no herbs. The herbal recipe is still closed.
