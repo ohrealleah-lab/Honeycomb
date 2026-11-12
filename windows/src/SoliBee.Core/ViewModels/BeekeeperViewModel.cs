@@ -18,11 +18,16 @@ namespace SoliBee.Core.ViewModels;
 /// <remarks>A buyer with <see cref="TradeTimes"/> (the wasps) offers one trade plus x10 and x100
 /// buttons, each shown only when <see cref="CanTradeTimes"/> says the whole batch is affordable;
 /// <see cref="TradeAll"/> is then unused.</remarks>
+/// <remarks>Stage 10 (spec 019): the bear also buys potted honey once the first has been made
+/// (<see cref="PottedShown"/>): <see cref="PottedGet"/> Beebits each, sold one at a time
+/// (<see cref="SellPotted"/>) or all at once (<see cref="SellAllPotted"/>).</remarks>
 public sealed record BeekeeperTradeOffer(
     string Id, string? Name, long Trades,
     decimal GiveAmount, string Give, decimal GetAmount, string Get,
     bool CanTrade, Action TradeOne, Action TradeAll,
-    Func<int, bool>? CanTradeTimes = null, Action<int>? TradeTimes = null);
+    Func<int, bool>? CanTradeTimes = null, Action<int>? TradeTimes = null,
+    bool PottedShown = false, bool CanSellPotted = false, decimal PottedGet = 0m,
+    Action? SellPotted = null, Action? SellAllPotted = null);
 
 /// <summary>
 /// One row of the Hive card (spec 014, FR-505). The view model knows no words: <see cref="Id"/>
@@ -43,7 +48,10 @@ public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0
 /// <summary>Something that adds to a growing stat, for a hover: <see cref="Id"/> is "combs",
 /// "wax_drip", "free_bees", "queen", "foraging", "resin", "meadow", "carpenter_bee" (stage 8) or a
 /// <see cref="BeekeeperHerbs"/> id; <see cref="PerSecond"/> its amount a second (before boosts);
-/// <see cref="Count"/> how many combs or bees it comes from, where the line says so.</summary>
+/// <see cref="Count"/> how many combs or bees it comes from, where the line says so.
+/// Stage 10, on the Beebits row (paid per trade, not a second): "plain_honey" (<see cref="PerSecond"/> =
+/// Beebits a bundle, <see cref="Count"/> = honey in it), "plain_honey_agreement" (the same under the
+/// trade agreement) and "potted_honey" (<see cref="PerSecond"/> = Beebits a pot).</summary>
 public sealed record BeekeeperSource(string Id, decimal PerSecond, decimal Count = 0m);
 
 /// <summary>A boost that is on right now, for a hover: <see cref="Id"/> is "smoker", "bee_boost",
@@ -114,6 +122,10 @@ public static class BeekeeperHiveRows
     public const string SagePropolisBurning = "sage_propolis_burning"; // full-width line; Value = seconds left
     // Stage 8 (spec 017)
     public const string Wood = "wood";                    // Value = wood (rounded down); Rate = wood/s from the carpenter bee
+    // Stage 10 (spec 019)
+    public const string ClayJars = "clay_jars";           // Value = jars; Value2 = honey one pots; Rate2 = jars a new game starts with (hover)
+    public const string PottedHoney = "potted_honey";     // Value = potted honey (no cap)
+    public const string BeeswaxCandles = "beeswax_candles";
     // Cut in stage 6 (spec 014): counts of forager and guard bees.
     // public const string Foragers = "foragers";
     // public const string Guards = "guards";
@@ -281,7 +293,26 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HoneyRevealed => State.HoneyRevealed;
     /// <summary>The Hive card: the first bee, or the first whole wax from the drip (stage 7.5: wax
     /// can come before any bee is caught).</summary>
-    public bool HiveCardShown => State.HoneyRevealed || State.WaxRevealed;
+    public bool HiveCardShown => State.HoneyRevealed || State.WaxRevealed || ClayJarsShown;
+    // Before stage 10: State.HoneyRevealed || State.WaxRevealed
+
+    // Stage 10 (spec 019): clay jars, potted honey and the beeswax candle
+    /// <summary>The Clay jars row: from a new game (the jars found in the garden), so the Hive card shows it at once.</summary>
+    public bool ClayJarsShown => State.StartingJarsGiven || State.ClayJars > 0m;
+    public decimal ClayJars => State.ClayJars;
+    public decimal PottedHoney => State.PottedHoney;
+    public bool PottedHoneyRevealed => State.PottedHoneyRevealed;
+    /// <summary>The Pot honey button (Hive card): from the first honey.</summary>
+    public bool PotHoneyShown => Engine.PotHoneyShown;
+    public bool CanPotHoney => Engine.CanPotHoney;
+    public decimal BeeswaxCandles => State.BeeswaxCandles;
+    /// <summary>The beeswax candle's recipe: with The Workbench, before any herb.</summary>
+    public bool BeeswaxShown => Engine.BeeswaxShown;
+    public bool CanCraftBeeswax => Engine.CanCraftBeeswax;
+    public decimal BeeswaxCandleWaxNow => Engine.BeeswaxCandleWaxNow;
+    public bool CanCraftBeeswaxTimes(int n) => Engine.CanCraftBeeswaxTimes(n);
+    public void CraftBeeswaxTimes(int n) => Apply(Engine.CraftBeeswax(n));
+    public bool CanSellPotted => Engine.CanSellPotted;
     public bool BearRevealed => State.BearRevealed;
     public bool BeebitsRevealed => State.BeebitsRevealed;
     public bool WaxRevealed => State.WaxRevealed;
@@ -324,15 +355,20 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         get
         {
             var offers = new List<BeekeeperTradeOffer>();
-            // The bear's trade of the moment: 10 honey for 1 herb, or 8 honey under the agreement.
-            // Reps' trades appear only once the player has engaged them.
+            // The bear's trade of the moment: 10 honey for 5 Beebits, or 8 honey under the agreement
+            // (stage 10; 2026-11-11 to 11-12 it was 1 herb). Reps' trades appear only once the player
+            // has engaged them.
             if (State.BearRevealed && Engine.RepEngaged("bear"))
                 offers.Add(new BeekeeperTradeOffer("bear", State.BearName, State.Trades,
-                    Engine.HoneyPerTradeNow, "honey", Engine.HerbsPerTradeNow, "herbs", CanSell, SellTen, SellAll));
-            // The Hippies buy herbal candles for Beebits (Bee, 2026-11-11: was 10 beeswax candles for 1 sage).
+                    Engine.HoneyPerTradeNow, "honey", Engine.BeebitsPerTradeNow, "beebits", CanSell, SellTen, SellAll,
+                    // Stage 10: potted honey, once the first has been made.
+                    PottedShown: State.PottedHoneyRevealed, CanSellPotted: Engine.CanSellPotted,
+                    PottedGet: Engine.PottedHoneyBeebitsNow, SellPotted: SellPotted, SellAllPotted: SellAllPotted));
+            // Stage 10: the Hippies trade a clay jar for 3 beeswax candles (2026-11-11 to 11-12 they
+            // bought herbal candles for Beebits; before, 10 beeswax candles for 1 sage).
             if (State.HippiesRevealed && Engine.RepEngaged("hippies"))
                 offers.Add(new BeekeeperTradeOffer("hippies", null, State.HippieTrades,
-                    1m, "herbal_candles", Engine.BeebitsPerCandleNow, "beebits", CanTradeCandles, TradeTenCandles, TradeAllCandles));
+                    Config.CandlesPerJar, "beeswax_candles", 1m, "clay_jars", CanTradeCandles, TradeTenCandles, TradeAllCandles));
             // Stage 6: the wasps, once their emissary has come. One paper a click, or x10 / x100.
             if (State.EmissaryCome)
                 offers.Add(new BeekeeperTradeOffer("wasps", null, State.WaspTrades,
@@ -543,7 +579,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public bool HasTradeAgreement => State.HasTradeAgreement;
     /// <summary>Honey in one bundle right now (10, or 8 under the agreement).</summary>
     public decimal HoneyPerTradeNow => Engine.HoneyPerTradeNow;
-    public decimal HerbsPerTradeNow => Engine.HerbsPerTradeNow;
+    /// <summary>Beebits one bundle of plain honey pays right now (stage 10; was herbs).</summary>
+    public decimal BeebitsPerTradeNow => Engine.BeebitsPerTradeNow;
+    /// <summary>Beebits one potted honey pays right now.</summary>
+    public decimal PottedHoneyBeebitsNow => Engine.PottedHoneyBeebitsNow;
     // Cut in stage 7.5 (spec 016): the agreement no longer sells honey by itself.
     // /// <summary>Beebits a second the bear's agreement brings while the combs are full.</summary>
     // public decimal AgreementBeebitsPerSecond => Engine.AgreementBeebitsPerSecondNow;
@@ -649,6 +688,30 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanBuyMeadow))]
     public void BuyMeadow() => Apply(Engine.BuyMeadow());
 
+    /// <summary>Stage 10 (FR-1015): where Beebits come from, for the Beebits hover. Only the bear pays
+    /// them: plain honey (its bundle now; the agreement's line once it is made) and, once potted honey
+    /// has been made, potted honey. The amounts are before the Trades herb, which is a boost.</summary>
+    public IReadOnlyList<BeekeeperSource> BeebitSourcesNow
+    {
+        get
+        {
+            var sources = new List<BeekeeperSource>
+            {
+                State.HasTradeAgreement
+                    ? new("plain_honey_agreement", Config.BeebitsPerTrade, Config.BetterHoneyPerTrade)
+                    : new("plain_honey", Config.BeebitsPerTrade, Config.HoneyPerTrade),
+            };
+            if (State.PottedHoneyRevealed) sources.Add(new("potted_honey", Config.PottedHoneyBeebits));
+            return sources;
+        }
+    }
+
+    /// <summary>The Trades herb while it burns: the bear pays more Beebits, plain and potted.</summary>
+    public IReadOnlyList<BeekeeperBoost> BeebitBoostsNow =>
+        Engine.IsHerb(BeekeeperHerbs.Trades)
+            ? new[] { new BeekeeperBoost(BeekeeperHerbs.Trades, (Config.HerbTradeMultiplier - 1m) * 100m) }
+            : Array.Empty<BeekeeperBoost>();
+
     /// <summary>The Hive card, in groups (spec 014, FR-505): Bees, The hive, Garden, Crafts, Trade goods.</summary>
     public IReadOnlyList<BeekeeperHiveGroup> HiveGroups
     {
@@ -688,6 +751,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                     // Stage 7.5 (spec 016): honey from the first bee; wax with its cap, rounded down.
                     CappedRow(BeekeeperHiveRows.Honey, Engine.HiveStarted, State.Honey, State.Honey, Engine.HoneyStorage, Engine.HoneyPerSecondNow)
                         with { Rate2 = FreeBeeHoneyBonusPercent, Boosts = HoneyBoostsNow, Sources = HoneySourcesNow },
+                    // Stage 10: potted honey (no cap) and the clay jars it needs, under the honey.
+                    new(BeekeeperHiveRows.PottedHoney, State.PottedHoneyRevealed, State.PottedHoney),
+                    new(BeekeeperHiveRows.ClayJars, ClayJarsShown, State.ClayJars, Config.PotHoneyHoney, Rate2: Config.StartingClayJars),
                     CappedRow(BeekeeperHiveRows.Wax, State.WaxRevealed, Math.Floor(State.Wax), State.Wax, Engine.WaxStorage, Engine.WaxPerSecondNow)
                         with { Boosts = WaxBoostsNow, Sources = WaxSourcesNow },
                     new(BeekeeperHiveRows.Combs, State.CombsRevealed, State.Combs),
@@ -723,6 +789,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
+                    new(BeekeeperHiveRows.BeeswaxCandles, Engine.BeeswaxShown || State.BeeswaxCandles > 0m, State.BeeswaxCandles),   // stage 10
                     new(BeekeeperHiveRows.RepellentCandles, Engine.RepellentCandlesRowShown, State.RepellentCandles),
                     new(BeekeeperHiveRows.BeeBoostCandles, Engine.BeeBoostCandlesShown, State.BeeBoostCandles),
                     new(BeekeeperHiveRows.SagePropolisCandles, Engine.SagePropolisCandlesShown, State.SagePropolisCandles),
@@ -731,7 +798,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupTradeGoods, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.Beebits, State.BeebitsRevealed, State.Beebits),
+                    // Stage 10: every source of Beebits on hover (only the bear pays them).
+                    new(BeekeeperHiveRows.Beebits, State.BeebitsRevealed, State.Beebits,
+                        Sources: BeebitSourcesNow, Boosts: BeebitBoostsNow),
                     new(BeekeeperHiveRows.Herbs, State.HerbsRevealed, State.Herbs),
                     new(BeekeeperHiveRows.Paper, Engine.PaperShown, State.Paper),
                 }),
@@ -802,6 +871,19 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     [RelayCommand(CanExecute = nameof(CanSell))]
     public void SellAll() => Apply(Engine.SellAll());
 
+    // Stage 10 (spec 019): potted honey and the beeswax candle
+    [RelayCommand(CanExecute = nameof(CanPotHoney))]
+    public void PotHoney() => Apply(Engine.PotHoney());
+
+    [RelayCommand(CanExecute = nameof(CanSellPotted))]
+    public void SellPotted() => Apply(Engine.SellPotted());
+
+    [RelayCommand(CanExecute = nameof(CanSellPotted))]
+    public void SellAllPotted() => Apply(Engine.SellAllPotted());
+
+    [RelayCommand(CanExecute = nameof(CanCraftBeeswax))]
+    public void CraftBeeswax() => Apply(Engine.CraftBeeswax());
+
     [RelayCommand(CanExecute = nameof(CanBuyNextTool))]
     public void BuyNextTool() => Apply(Engine.BuyNextTool());
 
@@ -839,6 +921,8 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     // Story cards
     /// <summary>The story card showing now (a <see cref="BeekeeperStories"/> id), or null.</summary>
     public string? StoryHere => Engine.StoryHere;
+    /// <summary>The opening card's button, "Look around" (stage 10).</summary>
+    public void BeginFromStory() => Apply(Engine.BeginFromStory());
     public void PutOnGloves() => Apply(Engine.PutOnGloves());
     public void LeaveGloves() => Apply(Engine.LeaveGloves());
     public void RepairSmoker() => Apply(Engine.RepairSmoker());
@@ -963,6 +1047,15 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     // Cut in stage 8 (spec 017): plants grow at once.
     // /// <summary>Debug builds only: every growing seed sprouts now.</summary>
     // public void DebugFinishGrowing() { LogEvents(Engine.DebugFinishGrowing()); SaveNow(); Refresh(); }
+
+    /// <summary>Debug builds only (stage 10): hands out clay jars.</summary>
+    public void DebugGiveClayJars(decimal jars) => DebugDo(Engine.DebugGiveClayJars(jars));
+
+    /// <summary>Debug builds only (stage 10): hands out potted honey.</summary>
+    public void DebugGivePottedHoney(decimal pots) => DebugDo(Engine.DebugGivePottedHoney(pots));
+
+    /// <summary>Debug builds only (stage 10): beeswax candles on the shelf.</summary>
+    public void DebugGiveBeeswaxCandles(decimal candles) => DebugDo(Engine.DebugGiveBeeswaxCandles(candles));
 
     /// <summary>Debug builds only: hands out pollen.</summary>
     public void DebugGivePollen(decimal pollen)
@@ -1215,6 +1308,10 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         OnPropertyChanged(string.Empty); // every property above may have changed
         SellTenCommand.NotifyCanExecuteChanged();
         SellAllCommand.NotifyCanExecuteChanged();
+        PotHoneyCommand.NotifyCanExecuteChanged();        // stage 10
+        SellPottedCommand.NotifyCanExecuteChanged();
+        SellAllPottedCommand.NotifyCanExecuteChanged();
+        CraftBeeswaxCommand.NotifyCanExecuteChanged();
         BuyNextToolCommand.NotifyCanExecuteChanged();
         BuyWaxCatcherCommand.NotifyCanExecuteChanged();
         BuildCombCommand.NotifyCanExecuteChanged();

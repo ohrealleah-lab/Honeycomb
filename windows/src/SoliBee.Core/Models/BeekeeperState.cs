@@ -87,7 +87,7 @@ public sealed class BeekeeperState
     public bool HippiesRevealed { get; set; }
     /// <summary>Cut (Bee, 2026-11-11): older saves only; becomes <see cref="HerbsRevealed"/> on load.</summary>
     public bool SageRevealed { get; set; }
-    /// <summary>The herbal candle's recipe is open (the first herb from the bear). Saved under its
+    /// <summary>The herbal candle's recipe is open (the first herbs; since stage 10 from the bee hotel). Saved under its
     /// old name: it was the sage repellent candle.</summary>
     public bool RepellentUnlocked { get; set; }
     /// <summary>True once the first herbal candle is made (brings its Hive row). Old name kept for saves.</summary>
@@ -222,7 +222,9 @@ public sealed class BeekeeperState
     public long WaspVisits { get; set; }
 
     // ----- Herbs (Bee, 2026-11-11; older saves load with their sage as herbs)
-    /// <summary>Herbs from the bear (1 a trade). They go into herbal candles and prices, as sage did.</summary>
+    /// <summary>Herbs. Since stage 10 they come only from the bee hotel (the leafcutter bee, or the mason
+    /// bee's fallback) and go only into the herbal and sage-propolis candles. (2026-11-11: from the
+    /// bear, 1 a trade, and in Shop prices.)</summary>
     public decimal Herbs { get; set; }
     /// <summary>True once herbs have been seen (sticky): shows the Herbs row.</summary>
     public bool HerbsRevealed { get; set; }
@@ -252,6 +254,19 @@ public sealed class BeekeeperState
     public int BloomIndex { get; set; }
     /// <summary>Seconds of game time (live or credited away) the bloom has left.</summary>
     public decimal BloomSecondsLeft { get; set; }
+
+    // ----- Stage 10 (spec 019): the core trade loops (older saves load with these empty, FR-1014)
+    /// <summary>Clay jars: 3 at the start, more from the Hippies for beeswax candles. One pots 10 honey.</summary>
+    public decimal ClayJars { get; set; }
+    /// <summary>True once the starting jars have been given. An older save (false) gets them once on
+    /// load, and its opening card counts as done.</summary>
+    public bool StartingJarsGiven { get; set; }
+    /// <summary>Potted honey (honey + a clay jar). No cap; only the bear buys it.</summary>
+    public decimal PottedHoney { get; set; }
+    /// <summary>True once the first potted honey was made (sticky): the Potted honey row and the bear's potted sale.</summary>
+    public bool PottedHoneyRevealed { get; set; }
+    /// <summary>Beeswax candles (wax only), for the Hippies. They can't be lit.</summary>
+    public decimal BeeswaxCandles { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

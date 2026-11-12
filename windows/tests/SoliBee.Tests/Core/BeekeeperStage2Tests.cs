@@ -102,27 +102,33 @@ public class BeekeeperStage2Tests : IDisposable
     }
 
     [Fact]
-    public void TradeOne_SellsOneHerbalCandle_ForBeebits()
+    public void TradeOne_GivesAClayJar_ForThreeBeeswaxCandles()   // stage 10 (was: one herbal candle for Beebits)
     {
-        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.RepellentCandles = 1m; }));
+        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.BeeswaxCandles = 4m; }));
+        decimal jars = e.State.ClayJars;
         var r = e.TradeTenCandles();
         Assert.True(r.Done);
-        Assert.Equal(0m, e.State.RepellentCandles);
-        Assert.Equal(10m, e.State.Beebits);
-        Assert.True(e.State.BeebitsRevealed);
-        Assert.Equal(10m, r.Events.Single(x => x.Key == BeekeeperEvents.CandlesTraded).Value);
-        Assert.False(e.TradeTenCandles().Done);   // none left
+        Assert.Equal(1m, e.State.BeeswaxCandles);
+        Assert.Equal(jars + 1m, e.State.ClayJars);
+        Assert.Equal(0m, e.State.Beebits);
+        Assert.Equal(0m, e.State.Herbs);
+        var traded = r.Events.Single(x => x.Key == BeekeeperEvents.CandlesTraded);
+        Assert.Equal(1m, traded.Value);    // jars
+        Assert.Equal(3m, traded.Value2);   // candles
+        Assert.False(e.TradeTenCandles().Done);   // one candle left: not enough
     }
 
     [Fact]
-    public void TradeAll_SellsEveryHerbalCandle()
+    public void TradeAll_GivesAsManyJarsAsTheCandlesAllow_EachJarATrade()
     {
-        // Bee, 2026-11-11: the Hippies buy herbal candles for Beebits.
-        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.RepellentCandles = 3m; }));
+        var e = Make(Workshop(s => { s.HippiesRevealed = true; s.BeeswaxCandles = 11m; s.RepellentCandles = 2m; }));
+        decimal jars = e.State.ClayJars;
         Assert.True(e.TradeAllCandles().Done);
-        Assert.Equal(30m, e.State.Beebits);
-        Assert.Equal(0m, e.State.RepellentCandles);
-        Assert.Equal(3, e.State.HippieTrades);   // each candle counts as a trade
+        Assert.Equal(jars + 3m, e.State.ClayJars);
+        Assert.Equal(2m, e.State.BeeswaxCandles);
+        Assert.Equal(3, e.State.HippieTrades);      // each jar counts as a trade
+        Assert.Equal(2m, e.State.RepellentCandles); // herbal candles stay on the shelf
+        Assert.Equal(0m, e.State.Beebits);
     }
 
     [Fact]

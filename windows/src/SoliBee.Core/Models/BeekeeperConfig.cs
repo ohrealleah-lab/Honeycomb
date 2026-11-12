@@ -171,7 +171,12 @@ public static class BeekeeperStories
     /// <summary>A seed of a kind never planted is in hand: "Plant it?" (Bee, 2026-11-11). Unlike the
     /// others it comes back for every new kind, so it is never marked done.</summary>
     public const string Seed = "seed";
-    public static readonly string[] Order = { Ouch, Gloves, Smoker, Seed };
+    /// <summary>Stage 10 (spec 019, FR-1004): the opening card of a new game (the grandmother's farmhouse).
+    /// It goes on its button or, silently, at the first bee caught, so it never holds up "Ouch!".
+    /// An older save never sees it (it is marked done on load).</summary>
+    public const string Opening = "opening";
+    public static readonly string[] Order = { Opening, Ouch, Gloves, Smoker, Seed };
+    // Before stage 10: { Ouch, Gloves, Smoker, Seed }
 }
 
 /// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
@@ -179,7 +184,7 @@ public static class BeekeeperHerbs
 {
     public const string BusyBees = "busy_bees";             // more honey
     public const string Wax = "wax";                        // more wax
-    public const string Trades = "trades";                  // more from the bear and the Hippies
+    public const string Trades = "trades";                  // more Beebits from the bear (stage 10: was the bear and the Hippies)
     public const string Wanderers = "wanderers";            // stray bees fly in
     public const string LingeringSmoke = "lingering_smoke"; // smoker clicks last longer
     public const string QuickFingers = "quick_fingers";     // Catch Bee and the Smoker are x3 for 30 s (Bee, 2026-11-11)
@@ -296,17 +301,31 @@ public sealed class BeekeeperConfig
     public decimal StartingBeebits { get; init; } = 75m;
 
     // --- Trading -------------------------------------------------------------
-    // Bee, 2026-11-11 (placeholders): the bear trades herbs for honey, 1 herb a trade; Beebits now
-    // come from the Hippies, who buy herbal candles.
+    // Stage 10 (spec 019, Bee, 2026-11-12; placeholders): the bear buys honey for Beebits again and is
+    // the only one who pays Beebits. (Bee, 2026-11-11 to 11-12: he traded herbs, 1 a trade, and
+    // the Hippies paid the Beebits.)
     /// <summary>Honey in one bear trade.</summary>
     public decimal HoneyPerTrade { get; init; } = 10m;
-    /// <summary>Honey in one bear trade under the trade agreement (a better rate).</summary>
+    /// <summary>Honey in one bear trade under the trade agreement (a better rate, plain honey only).</summary>
     public decimal BetterHoneyPerTrade { get; init; } = 8m;
-    /// <summary>Herbs the bear gives for one trade.</summary>
-    public decimal HerbsPerTrade { get; init; } = 1m;
-    // Cut (Bee, 2026-11-11): the bear paid Beebits (10 honey for 5, 6 under the agreement).
-    // public decimal BeebitsPerTrade { get; init; } = 5m;
+    // Cut (Bee, 2026-11-12): the bear paid herbs.
+    // /// <summary>Herbs the bear gives for one trade.</summary>
+    // public decimal HerbsPerTrade { get; init; } = 1m;
+    /// <summary>Beebits the bear pays for one bundle of plain honey (10 honey; 8 under the agreement).
+    /// Back in stage 10 (was cut 2026-11-11).</summary>
+    public decimal BeebitsPerTrade { get; init; } = 5m;
+    // Still cut: the agreement once paid more Beebits a bundle instead of taking less honey.
     // public decimal BetterBeebitsPerTrade { get; init; } = 6m;
+    /// <summary>Beebits the bear pays for one potted honey (3× the plain rate for the same 10 honey).</summary>
+    public decimal PottedHoneyBeebits { get; init; } = 15m;
+
+    // --- Clay jars and potted honey (stage 10, spec 019; placeholders) ------
+    /// <summary>Clay jars a new game starts with (found in the garden). An older save gets them once.</summary>
+    public decimal StartingClayJars { get; init; } = 3m;
+    /// <summary>Honey that goes into one potted honey.</summary>
+    public decimal PotHoneyHoney { get; init; } = 10m;
+    /// <summary>Clay jars one potted honey uses up.</summary>
+    public decimal PotHoneyJars { get; init; } = 1m;
     public IReadOnlyList<string> BearNames { get; init; } = new[]
     {
         "Barnaby", "Billy", "Berenstein", "Bruno", "Baloo", "Buster", "Bartholomew",
@@ -345,6 +364,8 @@ public sealed class BeekeeperConfig
     // rolls one buff (see Herbal candles below); the Hippies buy it for Beebits. It no longer keeps wasps away.
     public decimal HerbalCandleWax { get; init; } = 2m;   // Bee, 2026-11-11: was 10, then 1; the Dipping Rack takes it to 1
     public decimal HerbalCandleHerbs { get; init; } = 1m;
+    /// <summary>Stage 10 (spec 019): the beeswax candle is back, wax only, for the Hippies (the Dipping Rack halves it).</summary>
+    public decimal BeeswaxCandleWax { get; init; } = 2m;
     // Cut (Bee, 2026-11-11): the repellent candle (10 wax + 1 sage) kept wasps away for 15 minutes.
     // public decimal RepellentCandleWax { get; init; } = 10m;
     // public decimal RepellentCandleSage { get; init; } = 1m;
@@ -353,8 +374,11 @@ public sealed class BeekeeperConfig
     // --- The Hippies ---------------------------------------------------------
     /// <summary>They arrive once this many candles of any kind have been crafted (Leah).</summary>
     public long HippiesRevealCandles { get; init; } = 5;
-    /// <summary>Beebits the Hippies pay for one herbal candle (one trade; placeholder).</summary>
-    public decimal HippieBeebitsPerCandle { get; init; } = 10m;
+    // Cut (Bee, 2026-11-12): the Hippies paid Beebits for herbal candles.
+    // /// <summary>Beebits the Hippies pay for one herbal candle (one trade; placeholder).</summary>
+    // public decimal HippieBeebitsPerCandle { get; init; } = 10m;
+    /// <summary>Stage 10 (spec 019): beeswax candles the Hippies take for one clay jar (one trade; placeholder).</summary>
+    public decimal CandlesPerJar { get; init; } = 3m;
     // Cut (Bee, 2026-11-11): the Hippies gave 1 sage for 10 beeswax candles.
     // public decimal CandlesPerSage { get; init; } = 10m;
 
@@ -391,13 +415,15 @@ public sealed class BeekeeperConfig
         // Pacing review 2026-11-10 (Bee approved), was: Bigger Combs I 300 + 100 wax; II 800 + 250 wax + 2 sage;
         // Better Wax-Catcher 400 + 1 sage; Stronger Candles 200 + 50 wax + 2 sage; Practice 600;
         // More Practice 2,500 + 200 wax + 3 sage; Smoker 500; Notebook 100; Propolis Seal 1,000.
+        // Stage 10 (spec 019, Bee, 2026-11-12): herbs left the Shop's prices (they are for buff candles).
+        // The herb parts were: Bigger Combs II 20, Better Wax-Catcher 5, Stronger Candles 1, More Practice 15.
         new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 800m, 60m, 0m, BeekeeperUpgrades.NeedsWorkbench, Bees: 200m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 20m, BeekeeperUpgrades.BiggerCombs1, Bees: 5_000m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 5m, BeekeeperUpgrades.NeedsWaxCatcher, Bees: 1_000m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 50m, 20m, 1m, BeekeeperUpgrades.NeedsRepellent, Bees: 100m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 0m, BeekeeperUpgrades.BiggerCombs1, Bees: 5_000m),   // was 20 herbs
+        new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 0m, BeekeeperUpgrades.NeedsWaxCatcher, Bees: 1_000m),   // was 5 herbs
+        new BeekeeperUpgrade(BeekeeperUpgrades.StrongerCandles, 50m, 20m, 0m, BeekeeperUpgrades.NeedsRepellent, Bees: 100m),   // was 1 herb
         // Stage 3 (spec 011)
         new BeekeeperUpgrade(BeekeeperUpgrades.Practice, 1_500m, 50m, 0m, BeekeeperUpgrades.NeedsVacuum, Bees: 500m),
-        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 15m, BeekeeperUpgrades.Practice, Bees: 3_000m),
+        new BeekeeperUpgrade(BeekeeperUpgrades.MorePractice, 8_000m, 250m, 0m, BeekeeperUpgrades.Practice, Bees: 3_000m),   // was 15 herbs
         // Bee, 2026-11-10: the Smoker is an early buy, 10 Beebits after two bear trades
         // (was 1,000 + 50 wax + 300 bees, after the Vacuum).
         // Bee, 2026-11-11: the Smoker is repaired in a story card, never sold.
@@ -543,7 +569,8 @@ public sealed class BeekeeperConfig
     public decimal HerbHoneyMultiplier { get; init; } = 1.25m;
     /// <summary>Wax while it burns (+25%).</summary>
     public decimal HerbWaxMultiplier { get; init; } = 1.25m;
-    /// <summary>What the bear and the Hippies give for a trade while it burns (+50%).</summary>
+    /// <summary>The bear's Beebits (plain and potted honey) while it burns (+50%). Stage 10: the
+    /// Hippies' jars are never touched (was: what the bear and the Hippies gave).</summary>
     public decimal HerbTradeMultiplier { get; init; } = 1.5m;
     /// <summary>Wanderers: stray bees that fly in a minute while it burns.</summary>
     public decimal HerbWanderersBeesPerMinute { get; init; } = 6m;
@@ -569,7 +596,7 @@ public sealed class BeekeeperConfig
     // ===== Stage 8 (spec 017): seeds, wood and the meadow. All placeholders (Bee, 2026-11-11).
 
     // --- The seed rolls (FR-802)
-    /// <summary>Chance each Hippie trade (one herbal candle) also gives a seed (20%).</summary>
+    /// <summary>Chance each Hippie trade (stage 10: one clay jar; was one herbal candle) also gives a seed (20%).</summary>
     public double HippieSeedChance { get; init; } = 0.2;
     /// <summary>Chance each wasp trade (a batch counts as one) also gives a seed (20%).</summary>
     public double WaspSeedChance { get; init; } = 0.2;

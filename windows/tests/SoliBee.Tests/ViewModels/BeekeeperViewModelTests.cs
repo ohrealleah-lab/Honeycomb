@@ -215,13 +215,16 @@ public class BeekeeperViewModelTests : IDisposable
         var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 255m, BearName = "Bruno" });
 
         vm.SellAllCommand.Execute(null);
-        Assert.Equal(15m, vm.Herbs);                     // 15 trades of 10 honey for 1 herb
-        Assert.False(vm.ShopRevealed);                   // Beebits come from the Hippies
-        vm.State.HippiesRevealed = true;
-        vm.State.RepellentCandles = 8m;
-        vm.TradeAllCandlesCommand.Execute(null);
-        Assert.Equal(80m, vm.Beebits);                   // 8 herbal candles, 10 Beebits each
+        Assert.Equal(75m, vm.Beebits);                   // stage 10: 15 bundles of 10 honey for 5 Beebits (was 1 herb)
+        Assert.Equal(0m, vm.Herbs);
         Assert.False(vm.ShopRevealed);                   // Bee, 2026-11-11: the first comb opens the Shop
+        vm.State.HippiesRevealed = true;
+        vm.State.BeeswaxCandles = 8m;
+        decimal jars = vm.State.ClayJars;
+        vm.TradeAllCandlesCommand.Execute(null);
+        Assert.Equal(jars + 2m, vm.State.ClayJars);      // 8 beeswax candles: 2 jars, 2 candles left
+        Assert.Equal(75m, vm.Beebits);                   // the Hippies pay no Beebits
+        Assert.False(vm.ShopRevealed);
 
         vm.BuildCombCommand.Execute(null);
         Assert.Equal(2, vm.Combs);                       // the starter and one bought (stage 7.5)
@@ -365,16 +368,18 @@ public class BeekeeperViewModelTests : IDisposable
         vm.State.BearRevealed = true;
         vm.State.Honey = 25m;
         vm.State.HippiesRevealed = true;
-        vm.State.RepellentCandles = 1m;     // an herbal candle
+        vm.State.BeeswaxCandles = 3m;       // stage 10: enough for one jar (was an herbal candle)
         var offers = vm.TradeOffers;
         Assert.Equal(new[] { "bear", "hippies" }, offers.Select(o => o.Id));
         Assert.Equal("Bruno", offers[0].Name);
         Assert.True(offers.All(o => o.CanTrade));
 
-        offers[0].TradeAll();               // 25 honey -> 2 herbs, 5 kept
-        Assert.Equal(2m, vm.Herbs);
+        offers[0].TradeAll();               // 25 honey -> 10 Beebits, 5 kept
+        Assert.Equal(10m, vm.Beebits);
         Assert.Equal(5m, vm.Honey);
-        offers[1].TradeOne();               // 1 herbal candle -> 10 Beebits
+        decimal jars = vm.State.ClayJars;
+        offers[1].TradeOne();               // 3 beeswax candles -> 1 clay jar
+        Assert.Equal(jars + 1m, vm.State.ClayJars);
         Assert.Equal(10m, vm.Beebits);
         Assert.False(vm.TradeOffers[1].CanTrade);
         Assert.Equal(1, vm.TradeOffers[0].Trades);

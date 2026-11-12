@@ -132,6 +132,7 @@ public static class BeekeeperSaveService
             s.Pollen, s.BeeBread, s.Paper,
             s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles, s.HerbSecondsLeft,
             s.Wood, s.HotelSecondsToNext,   // stage 8
+            s.ClayJars, s.PottedHoney, s.BeeswaxCandles,   // stage 10 (negatives are set to 0 by the engine)
         };
         return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
             && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m

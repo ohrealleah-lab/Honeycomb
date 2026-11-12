@@ -53,7 +53,7 @@ public class BeekeeperStage8ViewModelTests : IDisposable
     [Fact]
     public void ALuckyHippieTrade_LogsTheSeed_AndTheGardenAppears()
     {
-        var vm = Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = 4, RepellentCandles = 1m, BearName = "Bruno" }, new Lucky());
+        var vm = Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = 4, BeeswaxCandles = 3m, BearName = "Bruno" }, new Lucky());
         vm.State.RepsMet.Add("hippies");
         vm.State.RepsEngaged.Add("hippies");
         Assert.False(vm.GardenRevealed);

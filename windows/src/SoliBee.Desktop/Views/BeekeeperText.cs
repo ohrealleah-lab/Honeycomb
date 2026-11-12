@@ -123,15 +123,33 @@ internal static class BeekeeperText
         string g = NumberFormatter.Format(give, Lang);
         return id switch
         {
-            "bear" => get == 1m ? Fill(T(StringKey.BeekeeperSellHintOneFmt), g)   // "10 honey = 1 herb"
-                : Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),
-            "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), NumberFormatter.Format(get, Lang)),   // 1 herbal candle = N Beebits
+            "bear" => get == 1m ? Fill(T(StringKey.BeekeeperSellHintOneFmt), g)   // "10 honey = 1 Beebit"
+                : Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),   // "10 honey = 5 Beebits"
+            // Stage 10: "3 beeswax candles = 1 clay jar" (was "1 herbal candle = N Beebits").
+            "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), g),
             "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), g),
             _ => "",
         };
     }
 
     public static string TradeOne => T(StringKey.BeekeeperTradeOne);
+
+    // ---- stage 10 (spec 019): potted honey, clay jars, the beeswax candle, the opening card
+    public static string PotHoney => T(StringKey.BeekeeperPotHoney);
+    /// <summary>"10 honey + 1 clay jar → 1 potted honey. The Bear pays more for it."</summary>
+    public static string PotHoneyTip(string honey) => Fill(T(StringKey.BeekeeperPotHoneyTipFmt), honey);
+    public static string SellPotted => T(StringKey.BeekeeperSellPotted);
+    public static string SellAllPotted => T(StringKey.BeekeeperSellAllPotted);
+    /// <summary>"1 potted honey = 15 Beebits".</summary>
+    public static string PottedRate(decimal beebits) => Fill(T(StringKey.BeekeeperPottedRateFmt), NumberFormatter.Format(beebits, Lang));
+    /// <summary>The Hippies' one-trade button: "Trade 3 candles for a clay jar".</summary>
+    public static string TradeJar(decimal candles) => Fill(T(StringKey.BeekeeperTradeJarFmt), NumberFormatter.Format(candles, Lang));
+    public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
+    public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
+    public static string StoryOpening => T(StringKey.BeekeeperStoryOpening);
+    public static string StoryLookAround => T(StringKey.BeekeeperStoryLookAround);
+    /// <summary>The hover on a burning Good Deals candle: "+50% Beebits from the Bear."</summary>
+    public static string HerbTradesTip(decimal percent) => Fill(T(StringKey.BeekeeperHerbTradesTipFmt), NumberFormatter.Format(percent, Lang));
 
     public static string WaspsTitle => T(StringKey.BeekeeperWaspsTitle);
     public static string WaspHere => T(StringKey.BeekeeperWaspHere);
@@ -449,6 +467,10 @@ internal static class BeekeeperText
             BeekeeperHiveRows.Herbs => T(StringKey.BeekeeperHiveSage),   // "Herbs" (key kept from sage)
             BeekeeperHiveRows.Paper => T(StringKey.BeekeeperHivePaper),
             BeekeeperHiveRows.Wood => T(StringKey.BeekeeperHiveWood),   // stage 8
+            // Stage 10
+            BeekeeperHiveRows.ClayJars => T(StringKey.BeekeeperHiveClayJars),
+            BeekeeperHiveRows.PottedHoney => T(StringKey.BeekeeperHivePottedHoney),
+            BeekeeperHiveRows.BeeswaxCandles => T(StringKey.BeekeeperHiveBeeswaxCandles),
             _ => r.Id,
         };
     }
@@ -531,6 +553,14 @@ internal static class BeekeeperText
     /// <summary>The hover text for a row with a rate, or null for none.</summary>
     public static string? HiveRowTip(BeekeeperHiveRow r)
     {
+        // Stage 10 (spec 019, FR-1015): rows whose hover is words, not a rate.
+        switch (r.Id)
+        {
+            case BeekeeperHiveRows.Beebits: return BeebitsTip(r);
+            case BeekeeperHiveRows.ClayJars:
+                return Fill(T(StringKey.BeekeeperClayJarsTipFmt), NumberFormatter.Format(r.Rate2, Lang), NumberFormatter.Format(r.Value2, Lang));
+            case BeekeeperHiveRows.Herbs: return T(StringKey.BeekeeperHerbsTip);
+        }
         if (r.Rate is not { } rate) return null;
         string N(decimal v, int d) => NumberFormatter.Format(v, Lang, d);
         string? tip = r.Id switch
@@ -550,6 +580,26 @@ internal static class BeekeeperText
         // The shared rule: any capped row (SecondsToFull set) also says how long until it is full.
         if (tip is not null && r.SecondsToFull is { } toFull) tip += "\n" + TimeToFull(toFull);
         return tip;
+    }
+
+    /// <summary>The Beebits hover (stage 10): only the bear pays them; a line for plain honey (or the
+    /// agreement's rate), one for potted honey once it has been made, then the Trades herb if it burns.</summary>
+    private static string BeebitsTip(BeekeeperHiveRow r)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, Lang);
+        var sb = new System.Text.StringBuilder(T(StringKey.BeekeeperBeebitsTip));
+        foreach (var s in r.Sources ?? System.Array.Empty<BeekeeperSource>())
+        {
+            string? line = s.Id switch
+            {
+                "plain_honey" => Fill(T(StringKey.BeekeeperBeebitsSourcePlainFmt), N(s.Count), N(s.PerSecond)),
+                "plain_honey_agreement" => Fill(T(StringKey.BeekeeperBeebitsSourceAgreementFmt), N(s.Count), N(s.PerSecond)),
+                "potted_honey" => Fill(T(StringKey.BeekeeperBeebitsSourcePottedFmt), N(s.PerSecond)),
+                _ => null,
+            };
+            if (line is not null) sb.Append('\n').Append(line);
+        }
+        return sb + BoostLines(r.Boosts);
     }
 
     /// <summary>"Full" at the cap, else "Full in 3 h 20 min".</summary>
@@ -738,9 +788,13 @@ internal static class BeekeeperText
             BeekeeperEvents.StorageFull => L(StringKey.BeekeeperLogStorageFull),
             BeekeeperEvents.BearArrives => Fill(L(StringKey.BeekeeperLogBearArrivesFmt), e.Text ?? ""),
             // Lines saved before the amounts were kept (Value2 = 0) show the old short wording.
+            // Stage 10: Value = Beebits got, Value2 = honey given ("Bruno pays 5 Beebits for 10 honey.").
             BeekeeperEvents.Sale => e.Value2 <= 0m ? Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? "")
                 : e.Value == 1m ? Fill(L(StringKey.BeekeeperLogTradeBearOneFmt), e.Text ?? "", N(e.Value2))
-                : Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value2), N(e.Value)),
+                : Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value), N(e.Value2)),
+            // Before stage 10 (herbs): Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value2), N(e.Value)),
+            BeekeeperEvents.PottedSale => Fill(L(StringKey.BeekeeperLogPottedSaleFmt), e.Text ?? "", N(e.Value), N(e.Value2)),
+            BeekeeperEvents.HoneyPotted => L(StringKey.BeekeeperLogHoneyPotted),
             BeekeeperEvents.FirstWax => L(StringKey.BeekeeperLogFirstWax),
             BeekeeperEvents.ShopOpened => L(StringKey.BeekeeperLogShopOpened),
             BeekeeperEvents.ToolBought => L(e.Text switch
@@ -760,10 +814,12 @@ internal static class BeekeeperText
             BeekeeperEvents.WelcomeBackNothing => L(StringKey.BeekeeperLogWelcomeBackNothing),
             BeekeeperEvents.WorkbenchOpened => L(StringKey.BeekeeperLogWorkbenchOpened),
             BeekeeperEvents.HippiesArrive => L(StringKey.BeekeeperLogHippiesArrive),
+            // Stage 10: Value = clay jars got, Value2 = beeswax candles given.
             BeekeeperEvents.CandlesTraded => e.Value2 <= 0m
                 ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
-                : e.Value2 == 1m ? Fill(L(StringKey.BeekeeperLogTradeHippiesOneFmt), N(e.Value))   // "1 herbal candle"
-                : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value2), N(e.Value)),
+                : e.Value == 1m ? Fill(L(StringKey.BeekeeperLogTradeHippiesOneFmt), N(e.Value2))   // "1 clay jar for 3 candles"
+                : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value), N(e.Value2)),
+            BeekeeperEvents.BeeswaxCrafted => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
             BeekeeperEvents.RepellentUnlocked => L(StringKey.BeekeeperLogRepellentUnlocked),
             BeekeeperEvents.UpgradeBought => e.Text switch
             {

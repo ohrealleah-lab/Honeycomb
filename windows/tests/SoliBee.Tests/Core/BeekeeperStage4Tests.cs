@@ -31,7 +31,7 @@ public class BeekeeperStage4Tests : IDisposable
 
     // Hippies who have already traded `trades` times, with candles for one more trade.
     private static BeekeeperEngine WithHippies(long trades)
-        => Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = trades, RepellentCandles = 100m });   // herbal candles
+        => Make(new BeekeeperState { HippiesRevealed = true, HippieTrades = trades, BeeswaxCandles = 300m });   // stage 10: beeswax candles (was herbal candles)
 
     // ============================================================ seeds from the Hippies
 
@@ -87,11 +87,13 @@ public class BeekeeperStage4Tests : IDisposable
     // }
 
     [Fact]
-    public void AHippieTrade_PaysBeebits_AndNoHerbs()
+    public void AHippieTrade_GivesAClayJar_NoBeebits_AndNoHerbs()   // stage 10 (was: Beebits)
     {
         var e = WithHippies(0);
+        decimal jars = e.State.ClayJars;
         e.TradeTenCandles();
-        Assert.Equal(10m, e.State.Beebits);
+        Assert.Equal(jars + 1m, e.State.ClayJars);
+        Assert.Equal(0m, e.State.Beebits);
         Assert.Equal(0m, e.State.Herbs);
     }
 

@@ -50,8 +50,10 @@ public class BeekeeperStage8Tests : IDisposable
 
     private static bool Has(IEnumerable<BeekeeperEvent> events, string key) => events.Any(e => e.Key == key);
 
-    private static BeekeeperState Hippies(long trades, decimal candles = 100m) =>
-        new() { HippiesRevealed = true, HippieTrades = trades, RepellentCandles = candles };
+    /// <summary>Stage 10: <paramref name="jars"/> is how many trades the shelf allows (a jar each, for
+    /// CandlesPerJar beeswax candles); before, it was herbal candles, one trade each.</summary>
+    private static BeekeeperState Hippies(long trades, decimal jars = 100m) =>
+        new() { HippiesRevealed = true, HippieTrades = trades, BeeswaxCandles = jars * BeekeeperConfig.Default.CandlesPerJar };
 
     private static List<string> Many(string id, int n) => Enumerable.Repeat(id, n).ToList();
 
@@ -87,7 +89,7 @@ public class BeekeeperStage8Tests : IDisposable
         Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedGiven && ev.Text == BeekeeperPlants.Wildflowers);
         Assert.Equal(new[] { BeekeeperPlants.Wildflowers }, e.State.SeedsInHand);
         Assert.True(e.State.GardenRevealed);
-        Assert.Equal(10m, e.State.Beebits);
+        Assert.Equal(0m, e.State.Beebits);   // stage 10: the Hippies pay a jar, no Beebits
     }
 
     [Fact]
@@ -98,7 +100,7 @@ public class BeekeeperStage8Tests : IDisposable
         Assert.True(r.Done);
         Assert.Empty(e.State.SeedsInHand);
         Assert.False(Has(r.Events, BeekeeperEvents.SeedGiven));
-        Assert.Equal(10m, e.State.Beebits);
+        Assert.Equal(BeekeeperConfig.Default.StartingClayJars + 1m, e.State.ClayJars);   // stage 10: a jar (was 10 Beebits)
         Assert.Equal(11, e.State.HippieTrades);
         Assert.False(e.State.GardenRevealed);
     }
@@ -128,11 +130,11 @@ public class BeekeeperStage8Tests : IDisposable
     }
 
     [Fact]
-    public void TradeAll_RollsOncePerCandle_WithOneLogLine()
+    public void TradeAll_RollsOncePerJar_WithOneLogLine()
     {
         var rng = new Script();
         for (int i = 0; i < 30; i++) rng.Doubles.Enqueue(i % 5 == 0 ? 0.1 : 0.9);   // 6 hits in 30
-        var e = Make(Hippies(50, candles: 30m), rng);
+        var e = Make(Hippies(50, jars: 30m), rng);
         var r = e.TradeAllCandles();
         Assert.Equal(80, e.State.HippieTrades);
         Assert.Equal(30, rng.DoubleCalls);
@@ -148,7 +150,7 @@ public class BeekeeperStage8Tests : IDisposable
         var rng = new Script();
         rng.Doubles.Enqueue(0.9);
         rng.Doubles.Enqueue(0.1);
-        var e = Make(Hippies(10, candles: 3m), rng);
+        var e = Make(Hippies(10, jars: 3m), rng);
         var r = e.TradeAllCandles();
         Assert.Contains(r.Events, ev => ev.Key == BeekeeperEvents.SeedGiven && ev.Text == BeekeeperPlants.Wildflowers);
         Assert.False(Has(r.Events, BeekeeperEvents.SeedsGivenBatch));
@@ -160,7 +162,7 @@ public class BeekeeperStage8Tests : IDisposable
     public void ASeedJoinsTheRoll_OnItsTrade_AndTheLogSaysSoOnce()
     {
         var rng = new Script { DefaultDouble = 0.1, DefaultInt = 99 };
-        var e = Make(Hippies(199, candles: 5m), rng);
+        var e = Make(Hippies(199, jars: 5m), rng);
         e.State.SeedsGivenIds.AddRange(new[] { BeekeeperPlants.Wildflowers, BeekeeperPlants.Bramble });
         var r = e.TradeTenCandles();   // the 200th
         Assert.Contains(BeekeeperPlants.Willow, e.State.SeedsGivenIds);   // in the roll (no log line since Bee, 2026-11-11)
@@ -247,7 +249,7 @@ public class BeekeeperStage8Tests : IDisposable
     public void OnceAKindGrows_ItsSeedsPlantThemselves_FromEveryGiver()
     {
         var rng = new Script { DefaultDouble = 0.1, DefaultInt = 0 };   // every roll a hit, the first choice
-        var s = Hippies(10, candles: 3m);
+        var s = Hippies(10, jars: 3m);
         s.Plants.Add(BeekeeperPlants.Wildflowers);
         var e = Make(s, rng);
         e.TradeAllCandles();

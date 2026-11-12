@@ -124,6 +124,10 @@
                                         <MenuItem Header="+5 combs" Click="DebugBeekeeper_Click" Tag="Combs5" />
                                         <MenuItem Header="Fill wax to the cap" Click="DebugBeekeeper_Click" Tag="FillWax" />
                                         <MenuItem Header="+10,000 free bees" Click="DebugBeekeeper_Click" Tag="Bees10k" />
+                                        <!-- Stage 10 (spec 019): the trade loops -->
+                                        <MenuItem Header="+10 clay jars" Click="DebugBeekeeper_Click" Tag="ClayJars" />
+                                        <MenuItem Header="+10 potted honey" Click="DebugBeekeeper_Click" Tag="PottedHoney" />
+                                        <MenuItem Header="+30 beeswax candles" Click="DebugBeekeeper_Click" Tag="BeeswaxCandles" />
                                     </MenuItem>
                                     <Separator />
                                     <MenuItem Header="Banner Catalog">

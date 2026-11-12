@@ -2,7 +2,7 @@
 
 **Feature Branch**: `019-beekeeper-trade`
 **Created**: 2026-11-12
-**Status**: Specced 2026-11-12, from Bee's decisions in the planning session. **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
+**Status**: Built 2026-11-12 (specced the same day, from Bee's decisions in the planning session). **Systems first:** every number marked *(placeholder)* lives in `BeekeeperConfig` and is tuned later.
 **Platform**: Windows only (Windows is the reference for Beekeeper).
 **Builds on**: specs 009–018. Design: `Beekeeper/LONG_TERM_DESIGN.md`, "Update: The core trade loops" and the build roadmap.
 

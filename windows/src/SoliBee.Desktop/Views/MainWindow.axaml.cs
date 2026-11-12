@@ -1777,6 +1777,10 @@ public partial class MainWindow : Window
             case "Combs5":  hive.DebugAddCombs(5); break;
             case "FillWax": hive.DebugFillWax(); break;          // +wax may still go over the cap
             case "Bees10k": hive.DebugGrant(10_000m, 0m, 0m); break;
+            // Stage 10 (spec 019)
+            case "ClayJars":       hive.DebugGiveClayJars(10m); break;
+            case "PottedHoney":    hive.DebugGivePottedHoney(10m); break;
+            case "BeeswaxCandles": hive.DebugGiveBeeswaxCandles(30m); break;   // not counted as crafted
         }
     }
 

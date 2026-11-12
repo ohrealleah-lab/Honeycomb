@@ -26,7 +26,7 @@ public static class BeekeeperEvents
     public const string StorageFull = "storage_full";
     public const string FirstWax = "first_wax";
     public const string BearArrives = "bear_arrives";      // Text = bear name
-    public const string Sale = "sale";                     // Value = herbs got (Beebits before 2026-11-11), Value2 = honey given, Text = bear name
+    public const string Sale = "sale";                     // Value = Beebits got (stage 10; herbs 2026-11-11 to 11-12), Value2 = honey given, Text = bear name
     public const string ShopOpened = "shop_opened";
     public const string ToolBought = "tool_bought";        // Value = new tool level, Text = tool id
     public const string WaxCatcherBought = "wax_catcher_bought";
@@ -39,7 +39,7 @@ public static class BeekeeperEvents
     // Stage 2
     public const string WorkbenchOpened = "workbench_opened";
     public const string HippiesArrive = "hippies_arrive";
-    public const string CandlesTraded = "candles_traded";    // Value = Beebits received (sage before 2026-11-11), Value2 = herbal candles given
+    public const string CandlesTraded = "candles_traded";    // Value = clay jars got (stage 10; Beebits 11-11, sage before), Value2 = beeswax candles given
     public const string RepellentUnlocked = "repellent_unlocked";   // the herbal candle's recipe opens (first herb)
     public const string UpgradeBought = "upgrade_bought";    // Text = upgrade id
     public const string WaspArrives = "wasp_arrives";
@@ -130,6 +130,11 @@ public static class BeekeeperEvents
     public const string BloomChanged = "bloom_changed";          // Text = the new bloom's id (live; away says WelcomeBackBlooms)
     /// <summary>Text = every bloom that came out while away, in order, joined by '|'; the last is out now.</summary>
     public const string WelcomeBackBlooms = "welcome_back_blooms";
+
+    // Stage 10 (spec 019)
+    public const string HoneyPotted = "honey_potted";            // the first potted honey only (later pots are silent)
+    public const string PottedSale = "potted_sale";              // Value = Beebits got, Value2 = potted honey given, Text = bear name
+    public const string BeeswaxCrafted = "beeswax_crafted";      // a batch of more than one: Value = how many
 
     /// <summary>The lines that only reopening the app shows ("While you were away…").</summary>
     public static bool IsWelcomeBack(string key) =>
@@ -291,6 +296,19 @@ public sealed class BeekeeperEngine
         s.SagePropolisSecondsLeft = Math.Min(s.SagePropolisSecondsLeft, Config.SagePropolisCapSeconds);
         s.Combs = Math.Max(1, s.Combs);   // the starter comb is always there (stage 7.5)
 
+        // Stage 10 (spec 019, FR-1003, FR-1014): nothing negative; an older save gets the starting
+        // jars once and never sees the opening card.
+        s.ClayJars = Math.Max(0m, s.ClayJars);
+        s.PottedHoney = Math.Max(0m, s.PottedHoney);
+        s.BeeswaxCandles = Math.Max(0m, s.BeeswaxCandles);
+        if (s.PottedHoney > 0m) s.PottedHoneyRevealed = true;
+        if (!s.StartingJarsGiven)
+        {
+            s.StartingJarsGiven = true;
+            s.ClayJars += Config.StartingClayJars;
+            if (!s.StoriesDone.Contains(BeekeeperStories.Opening)) s.StoriesDone.Add(BeekeeperStories.Opening);
+        }
+
         // Story cards: only known moments, nothing negative, and a card already answered never shows.
         // The seed card is never done (it comes back for each new kind), so it is never kept as done.
         s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id) && id != BeekeeperStories.Seed).Distinct().ToList();
@@ -311,6 +329,8 @@ public sealed class BeekeeperEngine
         // Bee, 2026-11-11: the Shop waits for the first comb built (was: open at once, 75 ≥ 10 Beebits).
         // ShopRevealed = Config.StartingBeebits >= Config.ShopRevealBeebits,
         BeebitsRevealed = Config.StartingBeebits > 0m,
+        // Stage 10 (spec 019): a skep and a few clay jars in the garden; the opening card is due.
+        ClayJars = Config.StartingClayJars, StartingJarsGiven = true,
     };
 
     private string PickBearName()
@@ -533,21 +553,31 @@ public sealed class BeekeeperEngine
         State.ToolLevel < Config.Tools.Count ? Config.Tools[State.ToolLevel] : null;
 
     /// <summary>Honey in one bear trade: 10, or 8 under the trade agreement. Everything about
-    /// selling reads this and <see cref="HerbsPerTradeNow"/>.</summary>
+    /// selling reads this and <see cref="BeebitsPerTradeNow"/>.</summary>
     public decimal HoneyPerTradeNow => State.HasTradeAgreement ? Config.BetterHoneyPerTrade : Config.HoneyPerTrade;
 
-    /// <summary>Herbs one bear trade gives right now: 1, more under Good Deals (Bee, 2026-11-11:
-    /// the bear paid Beebits before).</summary>
-    public decimal HerbsPerTradeNow => WithTradeHerb(Config.HerbsPerTrade);
+    /// <summary>Beebits one bundle of plain honey pays right now: 5, more under the Trades herb
+    /// (stage 10, spec 019; the bear paid herbs 2026-11-11 to 11-12).</summary>
+    public decimal BeebitsPerTradeNow => WithTradeHerb(Config.BeebitsPerTrade);
 
-    /// <summary>Beebits the Hippies pay for one herbal candle right now, more under Good Deals.</summary>
-    public decimal BeebitsPerCandleNow => WithTradeHerb(Config.HippieBeebitsPerCandle);
+    /// <summary>Beebits one potted honey pays right now: 15, more under the Trades herb.</summary>
+    public decimal PottedHoneyBeebitsNow => WithTradeHerb(Config.PottedHoneyBeebits);
 
-    /// <summary>A trade's pay under a Good Deals herb, rounded up to a whole amount (herbs and
-    /// Beebits stay whole); unchanged otherwise.</summary>
+    // Cut (Bee, 2026-11-12): the bear paid herbs, and the Hippies paid Beebits for herbal candles.
+    // /// <summary>Herbs one bear trade gives right now: 1, more under Good Deals.</summary>
+    // public decimal HerbsPerTradeNow => WithTradeHerb(Config.HerbsPerTrade);
+    // /// <summary>Beebits the Hippies pay for one herbal candle right now, more under Good Deals.</summary>
+    // public decimal BeebitsPerCandleNow => WithTradeHerb(Config.HippieBeebitsPerCandle);
+
+    /// <summary>A trade's pay under the Trades herb, rounded up to a whole amount (Beebits stay
+    /// whole); unchanged otherwise.</summary>
     private decimal WithTradeHerb(decimal pay) => HerbTradeNow == 1m ? pay : Math.Ceiling(pay * HerbTradeNow);
 
     public bool CanSell => State.Honey >= HoneyPerTradeNow;
+
+    /// <summary>At least one potted honey to sell (stage 10). Like plain honey, the screen only
+    /// offers it while the bear's trades are open.</summary>
+    public bool CanSellPotted => State.PottedHoney >= 1m;
 
     // Bee, 2026-11-11: no catching tool can be bought without the gloves (found in a story card).
     public bool CanBuyNextTool => NextTool is { } t && State.ShopRevealed && State.ToolLevel >= 1 && State.Beebits >= t.Cost;
@@ -663,6 +693,7 @@ public sealed class BeekeeperEngine
         decimal gained = BeesPerCatch;
         State.Bees = Math.Min(Config.MaxBees, State.Bees + gained);
         State.BeesCaught += (long)gained;
+        FinishOpeningIfDue();   // stage 10: the first bee caught ends the opening card
         if (!State.HoneyRevealed)
         {
             State.HoneyRevealed = true;
@@ -1159,7 +1190,7 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the bear
 
-    /// <summary>Trade exactly one bundle (10 honey for 1 herb; 8 honey under the agreement).</summary>
+    /// <summary>Trade exactly one bundle (10 honey for 5 Beebits; 8 honey under the agreement).</summary>
     public ActionResult SellTen() => Sell(all: false);
 
     /// <summary>Sell as many whole bundles as possible; the remainder stays. Counts as one trade.</summary>
@@ -1173,26 +1204,79 @@ public sealed class BeekeeperEngine
 
         decimal bundle = HoneyPerTradeNow;
         decimal bundles = all ? Math.Floor(State.Honey / bundle) : 1m;
-        decimal paid = bundles * HerbsPerTradeNow;
+        // Stage 10 (spec 019, FR-1002): the bear pays Beebits again.
+        decimal paid = bundles * BeebitsPerTradeNow;
         State.Honey -= bundles * bundle;
-        State.Herbs += paid;
+        State.Beebits += paid;
+        State.BeebitsRevealed = true;
         State.Trades++;
-        State.HerbsRevealed = true;
-        // Before (Bee, 2026-11-11): the bear paid Beebits.
-        // decimal paid = bundles * BeebitsPerTradeNow; State.Beebits += paid; State.BeebitsRevealed = true;
+        // Cut (Bee, 2026-11-12): the bear paid herbs, and the first herb opened the herbal candle.
+        // decimal paid = bundles * HerbsPerTradeNow;
+        // State.Herbs += paid;
+        // State.HerbsRevealed = true;
         RefreshStorageFlag();
 
-        // Value: herbs paid; Value2: honey given.
+        // Value: Beebits paid; Value2: honey given.
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Sale, paid, State.BearName, bundles * bundle) };
-        if (!State.RepellentUnlocked)
-        {
-            // The first herb opens the herbal candle's recipe (it was the sage repellent candle's).
-            State.RepellentUnlocked = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
-        }
+        // Cut (Bee, 2026-11-12): the leafcutter bee's first herbs open the recipe now (GiveHotelGift).
+        // if (!State.RepellentUnlocked)
+        // {
+        //     State.RepellentUnlocked = true;
+        //     events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
+        // }
         OfferAgreementIfDue(events);
         CheckReveals(events);
         return new ActionResult(true, paid, events);
+    }
+
+    /// <summary>Sell one potted honey to the bear (stage 10). One trade toward the agreement.</summary>
+    public ActionResult SellPotted() => SellPottedHoney(all: false);
+
+    /// <summary>Sell every potted honey at once. Still one trade, as Sell All is.</summary>
+    public ActionResult SellAllPotted() => SellPottedHoney(all: true);
+
+    /// <summary>Potted honey has one price (FR-1006): the agreement's better rate is for plain honey
+    /// only. The Trades herb lifts it as it does plain honey.</summary>
+    private ActionResult SellPottedHoney(bool all)
+    {
+        if (!CanSellPotted) return ActionResult.Refused;
+        decimal pots = all ? Math.Floor(State.PottedHoney) : 1m;
+        decimal paid = pots * PottedHoneyBeebitsNow;
+        State.PottedHoney -= pots;
+        State.Beebits += paid;
+        State.BeebitsRevealed = true;
+        State.Trades++;
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.PottedSale, paid, State.BearName, pots) };
+        OfferAgreementIfDue(events);
+        CheckReveals(events);
+        return new ActionResult(true, paid, events);
+    }
+
+    // ------------------------------------------------------------------ potted honey (stage 10)
+
+    /// <summary>The Pot honey button shows from the first honey (the hive has started).</summary>
+    public bool PotHoneyShown => State.HoneyRevealed;
+
+    /// <summary>Enough honey and a clay jar for one potted honey.</summary>
+    public bool CanPotHoney =>
+        PotHoneyShown && State.Honey >= Config.PotHoneyHoney && State.ClayJars >= Config.PotHoneyJars;
+
+    /// <summary>Honey + a clay jar make one potted honey (FR-1005). The jar is used up. Potted honey
+    /// has no cap and doesn't count toward the honey cap, so potting frees honey room.</summary>
+    public ActionResult PotHoney()
+    {
+        if (!CanPotHoney) return ActionResult.Refused;
+        State.Honey -= Config.PotHoneyHoney;
+        State.ClayJars -= Config.PotHoneyJars;
+        State.PottedHoney += 1m;
+        RefreshStorageFlag();   // honey went down
+        var events = new List<BeekeeperEvent>();
+        if (!State.PottedHoneyRevealed)
+        {
+            State.PottedHoneyRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.HoneyPotted, 1m));
+        }
+        return new ActionResult(true, 1m, events);
     }
 
     // ------------------------------------------------------------------ the shop
@@ -1323,6 +1407,7 @@ public sealed class BeekeeperEngine
         Owns(BeekeeperUpgrades.DippingRack) ? Math.Floor(baseWax * Config.RackWaxMultiplier) : baseWax;
 
     public decimal HerbalCandleWaxNow => CandleWax(Config.HerbalCandleWax);
+    public decimal BeeswaxCandleWaxNow => CandleWax(Config.BeeswaxCandleWax);
     public decimal BeeBoostCandleWaxNow => CandleWax(Config.BeeBoostCandleWax);
     public decimal SagePropolisCandleWaxNow => CandleWax(Config.SagePropolisCandleWax);
 
@@ -1347,6 +1432,31 @@ public sealed class BeekeeperEngine
         // if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.Crafted, count, "repellent"));
         // CountCandleCrafted(events, count);
         // return new ActionResult(true, count, events);
+    }
+
+    // ------------------------------------------------------------------ the beeswax candle (stage 10)
+
+    /// <summary>The beeswax candle's recipe (and its Hive row) shows with The Workbench, before any herb.</summary>
+    public bool BeeswaxShown => State.WorkbenchRevealed;
+
+    /// <summary>Wax only (FR-1007): the Dipping Rack halves it, rounded down.</summary>
+    public bool CanCraftBeeswaxTimes(int count) =>
+        count >= 1 && BeeswaxShown && State.Wax >= BeeswaxCandleWaxNow * count;
+
+    public bool CanCraftBeeswax => CanCraftBeeswaxTimes(1);
+
+    /// <summary>Beeswax candles for the Hippies. Each craft makes <see cref="CandlesPerCraft"/>, and
+    /// they count toward the candles that bring the Hippies. They can't be lit.</summary>
+    public ActionResult CraftBeeswax(int count = 1)
+    {
+        if (!CanCraftBeeswaxTimes(count)) return ActionResult.Refused;
+        int made = count * CandlesPerCraft;
+        State.Wax -= BeeswaxCandleWaxNow * count;
+        State.BeeswaxCandles += made;
+        var events = new List<BeekeeperEvent>();
+        if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.BeeswaxCrafted, made));
+        CountCandleCrafted(events, made);
+        return new ActionResult(true, made, events);
     }
 
     // ------------------------------------------------------------------ the propolis candles (stage 7)
@@ -1435,37 +1545,44 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ the Hippies
 
-    /// <summary>The Hippies buy herbal candles for Beebits (Bee, 2026-11-11: they took beeswax
-    /// candles for sage before).</summary>
-    public bool CanTradeCandles => State.HippiesRevealed && State.RepellentCandles >= 1m;
+    /// <summary>The Hippies trade clay jars for beeswax candles (stage 10, spec 019: "candles for pots
+    /// only"). They take no other candle, and pay no Beebits and no herbs. (2026-11-11 to 11-12 they
+    /// bought herbal candles for Beebits; before that, beeswax candles for sage.)</summary>
+    public bool CanTradeCandles => State.HippiesRevealed && State.BeeswaxCandles >= Config.CandlesPerJar;
+    // Cut (Bee, 2026-11-12): public bool CanTradeCandles => State.HippiesRevealed && State.RepellentCandles >= 1m;
 
-    /// <summary>One herbal candle for Beebits. (Name kept from when a trade was 10 beeswax candles.)</summary>
+    /// <summary>One clay jar for 3 beeswax candles. (Name kept from when a trade was 10 beeswax candles.)</summary>
     public ActionResult TradeTenCandles() => TradeCandles(all: false);
 
-    /// <summary>Every herbal candle on the shelf; each counts as a trade.</summary>
+    /// <summary>As many jars as the beeswax candles allow; each jar is a trade.</summary>
     public ActionResult TradeAllCandles() => TradeCandles(all: true);
 
     private ActionResult TradeCandles(bool all)
     {
         if (!CanTradeCandles) return ActionResult.Refused;
-        decimal candles = all ? Math.Floor(State.RepellentCandles) : 1m;
-        State.RepellentCandles -= candles;
-        decimal paid = candles * BeebitsPerCandleNow;
-        State.Beebits += paid;
-        // Cut in stage 8 (spec 017): State.HippieTrades += (long)candles;   // each candle is a trade
-        State.BeebitsRevealed = true;
+        decimal jars = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerJar) : 1m;
+        decimal candles = jars * Config.CandlesPerJar;
+        State.BeeswaxCandles -= candles;
+        State.ClayJars += jars;
+        // Cut (Bee, 2026-11-12): the Hippies paid Beebits for herbal candles, one candle a trade.
+        // decimal candles = all ? Math.Floor(State.RepellentCandles) : 1m;
+        // State.RepellentCandles -= candles;
+        // decimal paid = candles * BeebitsPerCandleNow;
+        // State.Beebits += paid;
+        // State.BeebitsRevealed = true;
         // Before (Bee, 2026-11-11): 10 beeswax candles for 1 sage, and the first sage opened the
         // repellent candle.
         // decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
         // State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
         // State.Sage += bundles * SagePerTradeNow; State.SageRevealed = true;
 
-        // Value: Beebits paid; Value2: candles given.
-        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, paid, null, candles) };
-        // Stage 8 (spec 017, FR-802): each candle is a trade and rolls on its own. A seed joins the
-        // roll from its trade on (that trade rolls with it). One log line for the seeds of a batch.
+        // Value: clay jars got; Value2: candles given.
+        var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CandlesTraded, jars, null, candles) };
+        // Stage 8 (spec 017, FR-802): each trade rolls on its own (stage 10: a trade is one jar, was one
+        // candle). A seed joins the roll from its trade on (that trade rolls with it). One log line for
+        // the seeds of a batch.
         var given = new List<string>();
-        for (long i = 0; i < (long)candles; i++)
+        for (long i = 0; i < (long)jars; i++)
         {
             State.HippieTrades++;
             UnlockSeedsIfDue(events);
@@ -1476,8 +1593,8 @@ public sealed class BeekeeperEngine
         else if (given.Count > 1)
             events.Add(new BeekeeperEvent(BeekeeperEvents.SeedsGivenBatch, given.Count));
         // Cut in stage 8 (spec 017): GiveSeedsIfDue(events);   // each seed once, on a set trade
-        CheckReveals(events);   // the first Beebits open the Shop
-        return new ActionResult(true, candles, events);
+        CheckReveals(events);
+        return new ActionResult(true, jars, events);
     }
 
     // ------------------------------------------------------------------ herbal candles (lit)
@@ -1791,6 +1908,7 @@ public sealed class BeekeeperEngine
 
     private bool StoryDue(string id) => id switch
     {
+        BeekeeperStories.Opening => true,   // until it is done (its button, or the first bee caught)
         BeekeeperStories.Ouch => State.ToolLevel == 0 && State.FirstStingDone,
         BeekeeperStories.Gloves => State.ToolLevel == 0 && !State.GlovesRefusedForGood
                                    && State.BeesCaught >= Config.GlovesOfferBees,
@@ -1839,6 +1957,23 @@ public sealed class BeekeeperEngine
             break;
         }
         return events;
+    }
+
+    /// <summary>The opening card's button ("Look around"): the card is done for good. No log line.</summary>
+    public ActionResult BeginFromStory()
+    {
+        if (State.StoryHere != BeekeeperStories.Opening) return ActionResult.Refused;
+        FinishStory(BeekeeperStories.Opening);
+        return new ActionResult(true, 0m, Array.Empty<BeekeeperEvent>());
+    }
+
+    /// <summary>The first bee caught finishes the opening card too, silently, whether it is showing
+    /// or not yet, so it never holds up "Ouch!" (FR-1004).</summary>
+    private void FinishOpeningIfDue()
+    {
+        if (State.StoriesDone.Contains(BeekeeperStories.Opening)) return;
+        if (State.StoryHere == BeekeeperStories.Opening) FinishStory(BeekeeperStories.Opening);
+        else State.StoriesDone.Add(BeekeeperStories.Opening);
     }
 
     /// <summary>Yes: the gloves go on (tool level 1). Refused unless the gloves card is showing.</summary>
@@ -2409,6 +2544,13 @@ public sealed class BeekeeperEngine
             case BeekeeperGifts.Herbs:
                 State.Herbs += amount;
                 State.HerbsRevealed = true;
+                // Stage 10 (spec 019, FR-1009): herbs come only from here, so the first ones open the
+                // herbal candle's recipe (the bear's first herb did before). Said before the gift line.
+                if (!State.RepellentUnlocked)
+                {
+                    State.RepellentUnlocked = true;
+                    events.Add(new BeekeeperEvent(BeekeeperEvents.RepellentUnlocked));
+                }
                 break;
             case BeekeeperGifts.Propolis:
                 State.Propolis += amount;
@@ -2652,9 +2794,39 @@ public sealed class BeekeeperEngine
             events.Add(new BeekeeperEvent(BeekeeperEvents.HippiesArrive));
         }
         State.HippieTrades = Math.Max(State.HippieTrades, 199);
-        if (State.RepellentCandles < 1m) State.RepellentCandles = 1m;   // an herbal candle for the trade
+        // Stage 10: beeswax candles for one jar (was one herbal candle for the trade).
+        if (State.BeeswaxCandles < Config.CandlesPerJar) State.BeeswaxCandles = Config.CandlesPerJar;
+        // Cut (Bee, 2026-11-12): if (State.RepellentCandles < 1m) State.RepellentCandles = 1m;
         UnlockSeedsIfDue(events);   // was GiveSeedsIfDue before stage 8
         return events;
+    }
+
+    /// <summary>Debug builds only (stage 10): hands out clay jars.</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveClayJars(decimal jars)
+    {
+        if (jars > 0m) State.ClayJars += jars;
+        return Array.Empty<BeekeeperEvent>();
+    }
+
+    /// <summary>Debug builds only (stage 10): hands out potted honey (its row and the bear's buttons show).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGivePottedHoney(decimal pots)
+    {
+        var events = new List<BeekeeperEvent>();
+        if (pots <= 0m) return events;
+        State.PottedHoney += pots;
+        if (!State.PottedHoneyRevealed)
+        {
+            State.PottedHoneyRevealed = true;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.HoneyPotted, pots));
+        }
+        return events;
+    }
+
+    /// <summary>Debug builds only (stage 10): beeswax candles on the shelf (not counted as crafted).</summary>
+    public IReadOnlyList<BeekeeperEvent> DebugGiveBeeswaxCandles(decimal candles)
+    {
+        if (candles > 0m) State.BeeswaxCandles += candles;
+        return Array.Empty<BeekeeperEvent>();
     }
 
     /// <summary>Debug builds only: hands out pollen.</summary>

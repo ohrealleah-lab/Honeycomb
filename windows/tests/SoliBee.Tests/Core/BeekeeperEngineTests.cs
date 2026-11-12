@@ -327,13 +327,13 @@ public class BeekeeperEngineTests
     // ============================================================ the bear
 
     [Fact]
-    public void SellAll_FortySevenHoney_GivesFourHerbsAndKeepsSeven()
+    public void SellAll_FortySevenHoney_GivesTwentyBeebitsAndKeepsSeven()
     {
         var e = Make(state: new BeekeeperState { Honey = 47m });
         var r = e.SellAll();
         Assert.True(r.Done);
-        Assert.Equal(4m, e.State.Herbs);      // 4 trades of 10 honey for 1 herb (Bee, 2026-11-11)
-        Assert.Equal(0m, e.State.Beebits);
+        Assert.Equal(20m, e.State.Beebits);   // stage 10: 4 bundles of 10 honey for 5 Beebits (was 1 herb each)
+        Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(7m, e.State.Honey);
         Assert.Equal(1, e.State.Trades);
     }
@@ -347,14 +347,16 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void SellTen_GivesOneHerb_AndCountsOneTrade()
+    public void SellTen_GivesFiveBeebits_AndCountsOneTrade()
     {
         var e = Make(state: new BeekeeperState { Honey = 25m });
         Assert.True(e.SellTen().Done);
         Assert.Equal(15m, e.State.Honey);
-        Assert.Equal(1m, e.State.Herbs);
+        Assert.Equal(5m, e.State.Beebits);    // stage 10 (was 1 herb)
+        Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(1, e.State.Trades);
-        Assert.True(e.State.HerbsRevealed);
+        Assert.True(e.State.BeebitsRevealed);
+        Assert.False(e.State.HerbsRevealed);
     }
 
     [Theory]

@@ -169,6 +169,12 @@ public partial class BeekeeperView : UserControl
         HiveCard.IsVisible = vm.HiveCardShown;   // stage 7.5: the drip's first wax can come before any bee
         HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive, vm.HasMeadow);
         UpdateHive(vm, lang);
+        // Stage 10: Pot honey, from the first honey (disabled while honey or a jar is short).
+        PotHoneyButton.IsVisible = vm.PotHoneyShown;
+        PotHoneyButton.Content = BeekeeperText.PotHoney;
+        PotHoneyButton.IsEnabled = vm.CanPotHoney;
+        ToolTip.SetShowOnDisabled(PotHoneyButton, true);
+        ToolTip.SetTip(PotHoneyButton, BeekeeperText.PotHoneyTip(N(vm.Config.PotHoneyHoney)));
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
         WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
@@ -244,17 +250,29 @@ public partial class BeekeeperView : UserControl
         MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
         ShowBatch(BeeBread10Button, 10, vm.CanMakeBeeBreadTimes(10));
         ShowBatch(BeeBread100Button, 100, vm.CanMakeBeeBreadTimes(100));
-        // The herbal candle (was the sage repellent candle): opens with the first herb from the bear.
-        RepellentRow.IsVisible = vm.RepellentShown;
-        RepellentNameText.Text = BeekeeperText.RepellentCandle;
         // Stage 8: candle prices follow the Dipping Rack, and with the Candle Molds a craft "makes 2".
         string makes = vm.CandlesPerCraft > 1 ? " · " + BeekeeperText.Makes(vm.CandlesPerCraft) : "";
+        // Stage 10: the beeswax candle (wax only), with The Workbench, for the Hippies.
+        BeeswaxRow.IsVisible = vm.BeeswaxShown;
+        BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
+        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.BeeswaxCandleWaxNow), null) + makes + " · " + BeekeeperText.BeeswaxBlurb;
+        CraftBeeswaxButton.Content = BeekeeperText.Make;
+        CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
+        ShowWallTip(CraftBeeswaxButton, vm.CandleIsWall(vm.BeeswaxCandleWaxNow));
+        ShowBatch(Beeswax10Button, 10, vm.CanCraftBeeswaxTimes(10));
+        ShowBatch(Beeswax100Button, 100, vm.CanCraftBeeswaxTimes(100));
+        // The herbal candle (was the sage repellent candle): opens with the first herbs (stage 10: from the bee hotel).
+        RepellentRow.IsVisible = vm.RepellentShown;
+        RepellentNameText.Text = BeekeeperText.RepellentCandle;
         RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.HerbalCandleWaxNow), N(vm.Config.HerbalCandleHerbs)) + makes
             + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Roughly(vm.HerbalCandleBurnSeconds));
         // Cut in stage 8: BeekeeperText.Price(null, N(vm.Config.HerbalCandleWax), N(vm.Config.HerbalCandleHerbs))
         HerbBurningText.IsVisible = vm.HerbBuff is not null;
         if (vm.HerbBuff is { } buff)
             HerbBurningText.Text = BeekeeperText.HerbBurning(buff, BeekeeperText.Clock(vm.HerbSecondsLeft));
+        // Stage 10: Good Deals says what it does now (only the bear's Beebits).
+        ToolTip.SetTip(HerbBurningText, vm.HerbBuff == BeekeeperHerbs.Trades
+            ? BeekeeperText.HerbTradesTip((vm.Config.HerbTradeMultiplier - 1m) * 100m) : null);
         CraftRepellentButton.Content = BeekeeperText.Make;
         CraftRepellentButton.IsEnabled = vm.CanCraftRepellent;
         // Stage 8: a candle's wax price above the cap is a wall too (it follows the Dipping Rack).
@@ -389,6 +407,7 @@ public partial class BeekeeperView : UserControl
         {
             case "BeeBread": _vm.MakeBeeBreadTimes(n); break;
             case "Repellent": _vm.CraftRepellentTimes(n); break;
+            case "Beeswax": _vm.CraftBeeswaxTimes(n); break;   // stage 10
             case "BeeBoost": _vm.CraftBeeBoostTimes(n); break;
             case "SagePropolis": _vm.CraftSagePropolisTimes(n); break;
         }
@@ -718,16 +737,20 @@ public partial class BeekeeperView : UserControl
     private readonly Dictionary<string, (TextBlock Name, Button One, Button? All, Button? Ten, Button? Hundred)> _tradeRows = new();
     private readonly Dictionary<string, TextBlock> _tradeRates = new();
     private TextBlock? _agreementText;
+    // Stage 10: the bear's potted-honey buttons and rate line (once the first potted honey is made).
+    private (Button One, Button All, TextBlock Rate)? _pottedRow;
 
     private void UpdateTrades(IReadOnlyList<BeekeeperTradeOffer> offers, AppLanguage lang)
     {
-        string sig = lang + "|" + string.Join(",", offers.Select(o => o.Id));
+        // Stage 10: the bear's potted-honey buttons arrive with the first potted honey, so they are part of the signature.
+        string sig = lang + "|" + string.Join(",", offers.Select(o => o.Id + (o.PottedShown ? "+potted" : "")));
         if (sig != _tradeSignature)
         {
             _tradeSignature = sig;
             _tradeRows.Clear();
             _tradeRates.Clear();
             _agreementText = null;
+            _pottedRow = null;
             TradeRows.Children.Clear();
             foreach (var offer in offers)
             {
@@ -772,6 +795,21 @@ public partial class BeekeeperView : UserControl
                     // The bear's trade agreement (25 trades): shown once offered.
                     _agreementText = new TextBlock { Text = BeekeeperText.AgreementLine, Classes = { "bk-muted" }, IsVisible = false };
                     row.Children.Add(_agreementText);
+                    if (o.PottedShown)
+                    {
+                        // Stage 10: potted honey sells only to the bear, one or all (each click is one trade).
+                        var potted = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8, Margin = new Thickness(0, 4, 0, 0) };
+                        var sellOne = new Button { Classes = { "bk-button" }, Content = BeekeeperText.SellPotted };
+                        var sellAll = new Button { Classes = { "bk-button" }, Content = BeekeeperText.SellAllPotted };
+                        sellOne.Click += (_, _) => Now()?.SellPotted?.Invoke();
+                        sellAll.Click += (_, _) => Now()?.SellAllPotted?.Invoke();
+                        potted.Children.Add(sellOne);
+                        potted.Children.Add(sellAll);
+                        row.Children.Add(potted);
+                        var pottedRate = new TextBlock { Text = BeekeeperText.PottedRate(o.PottedGet), Classes = { "bk-muted" } };
+                        row.Children.Add(pottedRate);
+                        _pottedRow = (sellOne, sellAll, pottedRate);
+                    }
                 }
                 TradeRows.Children.Add(row);
                 _tradeRows[o.Id] = (name, one, all, ten, hundred);
@@ -790,6 +828,14 @@ public partial class BeekeeperView : UserControl
             // the honey in his bundle, which looked like ten trades).
             // Before: if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(o.Id == "bear" ? o.GiveAmount : 1m);
             if (o.TradeTimes == null) r.One.Content = BeekeeperText.TradeBundle(1m);
+            // Stage 10: the Hippies' button says the trade: "Trade 3 candles for a clay jar".
+            if (o.Id == "hippies") r.One.Content = BeekeeperText.TradeJar(o.GiveAmount);
+            if (o.Id == "bear" && _pottedRow is { } p)
+            {
+                p.One.IsEnabled = o.CanSellPotted;
+                p.All.IsEnabled = o.CanSellPotted;
+                p.Rate.Text = BeekeeperText.PottedRate(o.PottedGet);   // follows the Trades herb
+            }
             if (r.All != null) r.All.IsEnabled = o.CanTrade;
             if (r.Ten != null) r.Ten.IsVisible = o.CanTradeTimes?.Invoke(10) == true;
             if (r.Hundred != null) r.Hundred.IsVisible = o.CanTradeTimes?.Invoke(100) == true;
@@ -928,6 +974,10 @@ public partial class BeekeeperView : UserControl
 
         switch (id)
         {
+            case BeekeeperStories.Opening:   // stage 10: the grandmother's farmhouse
+                StoryText.Text = BeekeeperText.StoryOpening;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryLookAround, () => _vm?.BeginFromStory()));
+                break;
             case BeekeeperStories.Ouch:
                 StoryText.Text = BeekeeperText.StoryOuch;
                 // No button: the card goes by itself.
@@ -957,6 +1007,8 @@ public partial class BeekeeperView : UserControl
     private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
     private void BuyMeadow_Click(object? sender, RoutedEventArgs e) => _vm?.BuyMeadowCommand.Execute(null);
     private void Smoker_Click(object? sender, RoutedEventArgs e) => _vm?.UseSmokerCommand.Execute(null);
+    private void PotHoney_Click(object? sender, RoutedEventArgs e) => _vm?.PotHoneyCommand.Execute(null);        // stage 10
+    private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup
 

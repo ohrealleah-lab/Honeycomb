@@ -337,13 +337,13 @@ public class BeekeeperStage5Tests : IDisposable
         Assert.Equal("Bruno", offer.Text);
         Assert.True(e.State.HasTradeAgreement);
         Assert.Equal(40, e.State.Trades);   // Sell All counts as one
-        Assert.Equal(10m, e.State.Herbs);   // the sale that reached it: 10 honey an herb
+        Assert.Equal(50m, e.State.Beebits);   // the sale that reached it: 10 honey for 5 Beebits (stage 10; was an herb)
         Assert.Equal(0m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
         Assert.Equal(100m, sale.Value2);
         e.State.Honey = 10m;
         Assert.False(Has(e.SellTen().Events, BeekeeperEvents.TradeAgreement));
-        Assert.Equal(11m, e.State.Herbs);   // from now on 8 honey an herb
+        Assert.Equal(55m, e.State.Beebits);   // from now on 8 honey for 5 Beebits
         Assert.Equal(2m, e.State.Honey);
     }
 
@@ -365,17 +365,18 @@ public class BeekeeperStage5Tests : IDisposable
     }
 
     [Fact]
-    public void WithTheAgreement_AnHerbCosts8Honey_AndTheLeftoverStays()
+    public void WithTheAgreement_FiveBeebitsCost8Honey_AndTheLeftoverStays()
     {
-        // Bee, 2026-11-11: the bear trades herbs (1 a trade); the agreement makes a trade 8 honey.
+        // Stage 10: the bear pays 5 Beebits a trade; the agreement makes a trade 8 honey (was 1 herb).
         var e = Make(new BeekeeperState { Honey = 47m, HasTradeAgreement = true, BearName = "Bruno" });
         Assert.Equal(8m, e.HoneyPerTradeNow);
-        Assert.Equal(1m, e.HerbsPerTradeNow);
+        Assert.Equal(5m, e.BeebitsPerTradeNow);
         var r = e.SellAll();
-        Assert.Equal(5m, e.State.Herbs);
+        Assert.Equal(25m, e.State.Beebits);
+        Assert.Equal(0m, e.State.Herbs);
         Assert.Equal(7m, e.State.Honey);
         var sale = r.Events.Single(x => x.Key == BeekeeperEvents.Sale);
-        Assert.Equal(5m, sale.Value);
+        Assert.Equal(25m, sale.Value);
         Assert.Equal(40m, sale.Value2);
 
         var none = Make(new BeekeeperState { Honey = 9m });
