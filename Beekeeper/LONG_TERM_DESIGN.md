@@ -199,3 +199,20 @@ Bee's decisions for build stage 9. **Built 2026-11-11** (spec: `windows/018-beek
 3. **Each bloom favours one specialty, from real beekeeping**, and it works **twice as hard**: crocus, nursing (spring brood); clover, foraging; linden, guarding (the big summer honey flow); goldenrod, resin (autumn propolis). A multiplier's bonus part doubles (+25% → +50%); a rate doubles (6 pollen → 12). Plant bonuses don't double. A bloom without its plant does nothing.
 4. **Winter** makes honey ×0.75. Nothing else slows, nothing is lost and no bee leaves.
 5. **Named honey is dropped for now.** Stage 10's buyers need another want, or it comes back with them.
+
+## Update: The core trade loops (Bee, 2026-11-12)
+Bee's design notes from a thinking session. **Not specced, not built.** Every number below is a placeholder.
+
+*Replaces:* the Hippies paying in herbs as a main trade (herbs are now an occasional gift). *Still open whether it replaces* the Hippies paying 1 sage per 10 beeswax candles (see the open questions below).
+
+1. **The Bear is the constant early trade: honey for Beebits.** It never stops being the honey buyer. The 25-trade agreement stays.
+2. **The game starts with clay jars.** The opening story card: "You have just inherited your grandmother's farmhouse. In the garden, you find a skep and a few clay jars. It seems a little quiet. What will you do?" The skep is already the starting hive; the new part is **3 clay jars** in hand from the start.
+3. **Potted honey:** honey + 1 clay jar crafts 1 potted honey. The jar is used up.
+4. **Potted honey sells only to the Bear**, at a higher Beebit rate than plain honey. No other buyer takes it. The Bear's card shows the potted-honey sale once the first potted honey is crafted. *(Dropped the same day: a Bear story card asking for potted honey, which blocked a trade; it isn't needed when the game starts with jars.)*
+5. **The Hippies:** they buy beeswax candles and sell **artisan clay pots**, the way to get more jars after the starting ones.
+6. **Herbs every 5th Hippie trade:** each 5th trade also gives one herb, used to craft herb candles (buffs). The 20% seed roll on every Hippie trade stays as it is.
+7. **Open:**
+   - How much more potted honey pays than plain honey, and how much honey goes into one pot.
+   - Whether herbs replace the sage payment, or sage becomes one of the herbs.
+   - Whether the Hippies' clay pots are the only way to get more jars.
+   - What the Hippies charge for a pot (candles per pot).
