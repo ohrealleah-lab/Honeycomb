@@ -76,7 +76,8 @@ Built so far (build stages 1–8; 6 to 8 are in the table below): catching and t
 | **7.5. Combs, bees as currency** (spec: `windows/016-beekeeper-combs/`) — **BUILT** (2026-11-09) | Bees pay for combs; combs make the honey | One starter comb. Each comb makes honey at a flat rate; wax comes from a tiny drip plus free bees. A comb costs bees and wax, and the bees move in. Honey and wax each have a cap, and the wax cap is small on purpose, so prices above it are walls. Repeatable capacity upgrades; Technologies boost both caps. The bear's trade agreement becomes a better selling rate at 25 trades (auto-sale commented out). Save version 8; older saves start a new game. |
 | **8. Seeds, wood and the meadow** (spec: `windows/017-beekeeper-meadow/`) — **BUILT** (`1aafa93`) *(reworked, Bee, 2026-11-09; seeds and the meadow's price reworked 2026-11-11, see "Update: Seeds, plants and the meadow"; the honey house moves to a later stage)* | Bigger places you buy | **First:** random Hippie seeds (20% a trade, paced by progress), instant growth, many of each plant with a tiny bonus each, the carpenter bee and wood, and the Bees tab with bee facts. **The meadow** is bought with 50 wildflowers and 50 clover *(was: for tons of bees)*, instead of the hive moving there. It works like **one giant comb**: the bees paid move in, there is still no bee limit, and it makes honey and raises both caps on a much larger scale. It takes bees out of the free count, so they stop making wax. **The honey house** is bought and holds tons of honey. **Later upgrades, priced with paper, automate selling, but it makes bottles of honey and the bottles are what gets sold** (not the auto-sale that stage 7.5 cuts; jar labels were already planned as a use of paper). The wooden hive and the queen stay. Meadow plants. Batch comb building. |
 | **9. The bloom calendar** (spec: `windows/018-beekeeper-blooms/`) — **BUILT** (2026-11-11) | A reason to come back tomorrow | One bloom per game-time day (live plus away), from the first plant: crocus, clover, linden, goldenrod, a half-day winter. Each bloom makes one specialty work twice as hard; winter slows honey a little. *(Named honey dropped for now, Bee, 2026-11-11.)* |
-| **10. New buyers** | Relationships | Hummingbirds and Badgers, each wanting a craft (named honey was dropped from stage 9; it may come back here) and giving something unique; slow standing orders; the road to the orchard (whether the orchard is bought like the meadow is still open). |
+| **10. The core trade loops** (spec: `windows/019-beekeeper-trade/`) — specced 2026-11-12 | Each trader has one job | The Bear buys honey for Beebits again, the only Beebit source. The game starts with 3 clay jars and an opening story card. Honey + a jar makes potted honey (Hive card), which only the Bear buys, at a better rate. The beeswax candle returns; the Hippies trade beeswax candles for clay jars, with an herb every 5th trade. Herbs leave the Shop. See "Update: The core trade loops". |
+| **10.5. New buyers** *(was stage 10, moved by Bee, 2026-11-12)* | Relationships | Hummingbirds and Badgers, each wanting a craft (named honey was dropped from stage 9; it may come back here) and giving something unique; slow standing orders; the road to the orchard (whether the orchard is bought like the meadow is still open). |
 | **11. The swarm** | The reset | A full wipe that keeps production bonuses. Specced once stages 6–10 show where growth levels off. |
 
 Gaps these stages answer: time away barely grew anything (5, built); content ran out after the wooden hive (6–10); resources with no sink, such as pollen and bee bread after the wooden hive (5), meaningless bee counts (6), Beebits after the Whistle and sage (7–8); the slice compounding without limit (5); storage that can't keep up with production (7.5, capacity upgrades; 8); walls with nothing past them (7.5 lists them; 8); no long timers (7, 9); no automation (8); a crowded Hive card (6).
@@ -134,7 +135,8 @@ Gaps these stages answer: time away barely grew anything (5, built); content ran
 16. Seeds and plants (stage 8, Bee, 2026-11-11): ~~when each seed joins the roll, the poplar, garden beds, each plant's tiny bonus~~ settled as placeholders (see "Update: Seeds, plants and the meadow", item 8). ~~How a specialty works with many copies~~ Settled: the first plant gives the specialty, each one after it only the tiny bonus.
 17. The carpenter bee and wood (stage 8): ~~which plant summons it~~ settled, the first willow; how fast it collects wood, and the building upgrades wood pays for. Wood is for further expansions, not paper (Bee, 2026-11-11). Open: which expansions, smaller ones first, and whether the honey house is built with wood later on.
 
-18. The bloom calendar (stage 9): the favour strength (placeholder ×2), winter's slowdown (placeholder ×0.75 honey), whether named honey comes back with stage 10's buyers, and whether crocus, linden and goldenrod become plants you can grow.
+18. The bloom calendar (stage 9): the favour strength (placeholder ×2), winter's slowdown (placeholder ×0.75 honey), whether named honey comes back with stage 10.5's buyers, and whether crocus, linden and goldenrod become plants you can grow.
+19. The trade loops (stage 10): potted honey's price, candles per jar, the herb rate, and whether the Shop's Beebit prices need retuning now that only the Bear pays Beebits.
 
 ## Update: Combs, bees as currency (planned for build stage 7.5, 2026-11-09)
 Bee's design notes (earlier sections call Bee "Leah"). **Built (2026-11-09, `windows/016-beekeeper-combs/`): the game follows these rules now.**
@@ -201,9 +203,9 @@ Bee's decisions for build stage 9. **Built 2026-11-11** (spec: `windows/018-beek
 5. **Named honey is dropped for now.** Stage 10's buyers need another want, or it comes back with them.
 
 ## Update: The core trade loops (Bee, 2026-11-12)
-Bee's design notes from a thinking session. **Not specced, not built.** Every number below is a placeholder.
+Bee's design notes from a thinking session. **Specced for build stage 10 (2026-11-12, `windows/019-beekeeper-trade/`); not built yet.** Every number below is a placeholder.
 
-*Replaces:* the Hippies paying in herbs as a main trade (herbs are now an occasional gift). *Still open whether it replaces* the Hippies paying 1 sage per 10 beeswax candles (see the open questions below).
+*Replaces (as built on 2026-11-11):* the Bear paying 1 herb a trade; the Hippies buying herbal candles for Beebits; herbs in Shop prices. Herbs are now an occasional gift, used only for buff candles. *(Sage was already gone: herbs replaced it on 2026-11-11.)*
 
 1. **The Bear is the constant early trade: honey for Beebits.** It never stops being the honey buyer. The 25-trade agreement stays.
 2. **The game starts with clay jars.** The opening story card: "You have just inherited your grandmother's farmhouse. In the garden, you find a skep and a few clay jars. It seems a little quiet. What will you do?" The skep is already the starting hive; the new part is **3 clay jars** in hand from the start.
@@ -211,8 +213,12 @@ Bee's design notes from a thinking session. **Not specced, not built.** Every nu
 4. **Potted honey sells only to the Bear**, at a higher Beebit rate than plain honey. No other buyer takes it. The Bear's card shows the potted-honey sale once the first potted honey is crafted. *(Dropped the same day: a Bear story card asking for potted honey, which blocked a trade; it isn't needed when the game starts with jars.)*
 5. **The Hippies:** they buy beeswax candles and sell **artisan clay pots**, the way to get more jars after the starting ones.
 6. **Herbs every 5th Hippie trade:** each 5th trade also gives one herb, used to craft herb candles (buffs). The 20% seed roll on every Hippie trade stays as it is.
-7. **Open:**
-   - How much more potted honey pays than plain honey, and how much honey goes into one pot.
-   - Whether herbs replace the sage payment, or sage becomes one of the herbs.
-   - Whether the Hippies' clay pots are the only way to get more jars.
-   - What the Hippies charge for a pot (candles per pot).
+7. **Settled in stage 10 planning (Bee, 2026-11-12):**
+   - **Stage 10 is the trade loops only.** The new buyers move to stage 10.5.
+   - **Candles for pots only:** the Hippies take beeswax candles and give clay jars; they never pay Beebits. **The Bear is the only Beebit source** (plus the 75 a new game starts with). The beeswax candle comes back for them; herbal candles are only for lighting.
+   - **Herbs leave the Shop's prices.** They're for buff candles; later they'll be a leafcutter bee reward for them.
+   - **Potting happens on the Hive card**, from the first honey.
+8. **Placeholders** (in the stage 10 spec): 10 honey + 1 jar per potted honey; plain honey 5 Beebits per 10 (8 honey under the agreement); potted honey 15 Beebits; the beeswax candle 2 wax; 3 candles per jar; 1 herb every 5th Hippie trade.
+9. **Still open:**
+   - Whether the 5th-trade herb stays once the leafcutter gives herbs for buff candles (the spec keeps both; it's one config number).
+   - Whether the Hippies' jars are the only way to get more jars.
