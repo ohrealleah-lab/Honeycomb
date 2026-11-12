@@ -169,12 +169,8 @@ public partial class BeekeeperView : UserControl
         HiveCard.IsVisible = vm.HiveCardShown;   // stage 7.5: the drip's first wax can come before any bee
         HiveTitleText.Text = BeekeeperText.HiveTitle(vm.HasWoodenHive, vm.HasMeadow);
         UpdateHive(vm, lang);
-        // Stage 10: Pot honey, from the first honey (disabled while honey or a jar is short).
-        PotHoneyButton.IsVisible = vm.PotHoneyShown;
-        PotHoneyButton.Content = BeekeeperText.PotHoney;
-        PotHoneyButton.IsEnabled = vm.CanPotHoney;
-        ToolTip.SetShowOnDisabled(PotHoneyButton, true);
-        ToolTip.SetTip(PotHoneyButton, BeekeeperText.PotHoneyTip(N(vm.Config.PotHoneyHoney)));
+        // Bee, 2026-11-12: the Pot honey button is gone; the Honey row's +1 / +10 / +100 links pot honey
+        // (opened by the pot-honey story card). Likewise bee bread and beeswax candles left The Workbench.
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
         WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
@@ -242,26 +238,10 @@ public partial class BeekeeperView : UserControl
             + " · " + BeekeeperText.WaxTrayBlurb(N(vm.WaxTrayCapacity, 1), N(vm.WaxTrays));
         BuyWaxTrayButton.Content = BeekeeperText.Add;
         BuyWaxTrayButton.IsEnabled = vm.CanBuyWaxTray;
-        BeeBreadRow.IsVisible = vm.PollenRevealed;
-        BeeBreadNameText.Text = BeekeeperText.BeeBread;
-        BeeBreadInfoText.Text = BeekeeperText.Price(null, null, null, pollen: N(vm.Config.BeeBreadPollen), honey: N(vm.Config.BeeBreadHoney))
-            + " · " + BeekeeperText.BeeBreadBlurb;
-        MakeBeeBreadButton.Content = BeekeeperText.Make;
-        MakeBeeBreadButton.IsEnabled = vm.CanMakeBeeBread;
-        ShowBatch(BeeBread10Button, 10, vm.CanMakeBeeBreadTimes(10));
-        ShowBatch(BeeBread100Button, 100, vm.CanMakeBeeBreadTimes(100));
+        // Bee, 2026-11-12: bee bread moved to the Hive card (its row's craft links). Before: a workbench row with Make / x10 / x100.
         // Stage 8: candle prices follow the Dipping Rack, and with the Candle Molds a craft "makes 2".
         string makes = vm.CandlesPerCraft > 1 ? " · " + BeekeeperText.Makes(vm.CandlesPerCraft) : "";
-        // Stage 10: the beeswax candle (wax only), with The Workbench, for the Hippies.
-        BeeswaxRow.IsVisible = vm.BeeswaxShown;
-        BeeswaxNameText.Text = BeekeeperText.BeeswaxCandle;
-        BeeswaxInfoText.Text = BeekeeperText.Price(null, N(vm.BeeswaxCandleWaxNow), null) + makes;   // Bee, 2026-11-12: no "The Hippies like these." blurb
-        // Before: makes + " · " + BeekeeperText.BeeswaxBlurb;
-        CraftBeeswaxButton.Content = BeekeeperText.Make;
-        CraftBeeswaxButton.IsEnabled = vm.CanCraftBeeswax;
-        ShowWallTip(CraftBeeswaxButton, vm.CandleIsWall(vm.BeeswaxCandleWaxNow));
-        ShowBatch(Beeswax10Button, 10, vm.CanCraftBeeswaxTimes(10));
-        ShowBatch(Beeswax100Button, 100, vm.CanCraftBeeswaxTimes(100));
+        // Stage 10: the beeswax candle (wax only) is a craft link on the Beeswax candles Hive row now (Bee, 2026-11-12).
         // The herbal candle (was the sage repellent candle): opens with the first herbs (stage 10: from the bee hotel).
         RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
@@ -406,9 +386,7 @@ public partial class BeekeeperView : UserControl
         int n = int.Parse(parts[1]);
         switch (parts[0])
         {
-            case "BeeBread": _vm.MakeBeeBreadTimes(n); break;
             case "Repellent": _vm.CraftRepellentTimes(n); break;
-            case "Beeswax": _vm.CraftBeeswaxTimes(n); break;   // stage 10
             case "BeeBoost": _vm.CraftBeeBoostTimes(n); break;
             case "SagePropolis": _vm.CraftSagePropolisTimes(n); break;
         }
@@ -432,12 +410,13 @@ public partial class BeekeeperView : UserControl
         static bool Transient(string id) =>
             id is BeekeeperHiveRows.CombsFull or BeekeeperHiveRows.WaxFull
                 or BeekeeperHiveRows.BeeBoostBurning or BeekeeperHiveRows.SagePropolisBurning;
-        string sig = lang + "|" + string.Join(";", groups.Select(g =>
+        string sig = lang + "|" + vm.OpenCrafts + "|" + string.Join(";", groups.Select(g =>
             g.Id + ":" + string.Join(",", g.Rows.Where(r => r.Visible && !Transient(r.Id)).Select(r => r.Id))));
         if (sig != _hiveSignature)
         {
             _hiveSignature = sig;
             _hiveRows.Clear();
+            _craftLinks.Clear();
             HiveGroups.Children.Clear();
             foreach (var g in groups)
             {
@@ -463,11 +442,16 @@ public partial class BeekeeperView : UserControl
                         _hiveRows[r.Id] = (line, null);
                         continue;
                     }
-                    var grid = new Grid { ColumnDefinitions = new ColumnDefinitions("*,Auto") };
+                    // Bee, 2026-11-12: a row that makes something shows +1 / +10 / +100 links after its label,
+                    // once its story card has opened them.
+                    string? craft = BeekeeperViewModel.CraftOfRow(r.Id);
+                    bool links = craft is not null && vm.CraftLinksOpen(craft);
+                    var grid = new Grid { ColumnDefinitions = new ColumnDefinitions(links ? "Auto,Auto,*,Auto" : "*,Auto") };
                     var label = new TextBlock { Classes = { "bk-body" }, Opacity = 0.75 };
                     var value = new TextBlock { Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold };
-                    Grid.SetColumn(value, 1);
+                    Grid.SetColumn(value, links ? 3 : 1);
                     grid.Children.Add(label);
+                    if (links) { var linkPanel = BuildCraftLinks(craft!, r.Id); Grid.SetColumn(linkPanel, 1); grid.Children.Add(linkPanel); }
                     grid.Children.Add(value);
                     panel.Children.Add(grid);
                     _hiveRows[r.Id] = (label, value);
@@ -495,6 +479,69 @@ public partial class BeekeeperView : UserControl
                 }
                 else SetRateTip(tip, c.Label);
             }
+
+        // The craft links: their sizes (+1, +10, then +100 or +1000), dimmed while a size can't be paid for, and
+        // a hover with what that click costs (the recipe left The Workbench, so the price shows here).
+        foreach (var (craft, links) in _craftLinks.Values)
+        {
+            int[] steps = { 1, vm.Config.CraftLinkMedium, vm.CraftBigStep(craft) };
+            for (int i = 0; i < links.Length; i++)
+            {
+                bool can = vm.CanCraftTimes(craft, steps[i]);
+                links[i].Text = BeekeeperText.CraftLink(steps[i]);
+                links[i].Opacity = can ? 1.0 : 0.4;
+                ToolTip.SetTip(links[i], CraftLinkTip(vm, craft, steps[i], lang, can));
+            }
+        }
+    }
+
+    // The three craft links (+1, +10, +100/+1000) of each Hive row that has them, refreshed every tick.
+    private readonly Dictionary<string, (string Craft, TextBlock[] Links)> _craftLinks = new();
+
+    private StackPanel BuildCraftLinks(string craft, string rowId)
+    {
+        var panel = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 10, Margin = new Thickness(10, 0, 0, 0) };
+        var links = new TextBlock[3];
+        for (int i = 0; i < links.Length; i++)
+        {
+            int slot = i;
+            var link = new TextBlock
+            {
+                Classes = { "bk-body" }, Foreground = AccentFallback, TextDecorations = TextDecorations.Underline,
+                Cursor = new Cursor(StandardCursorType.Hand), Background = Brushes.Transparent,
+            };
+            link.PointerPressed += (_, e) =>
+            {
+                if (_vm == null || !e.GetCurrentPoint(link).Properties.IsLeftButtonPressed) return;
+                int n = slot == 0 ? 1 : slot == 1 ? _vm.Config.CraftLinkMedium : _vm.CraftBigStep(craft);
+                if (_vm.CanCraftTimes(craft, n)) _vm.CraftTimes(craft, n);
+            };
+            links[i] = link;
+            panel.Children.Add(link);
+        }
+        _craftLinks[rowId] = (craft, links);
+        return panel;
+    }
+
+    /// <summary>What one click of a craft link costs (and, for candles, how many it makes).</summary>
+    private static string CraftLinkTip(BeekeeperViewModel vm, string craft, int n, AppLanguage lang, bool can)
+    {
+        string N(decimal v) => NumberFormatter.Format(v, lang);
+        switch (craft)
+        {
+            case BeekeeperStories.PotHoney:
+                return BeekeeperText.Price(null, null, null, honey: N(vm.Config.PotHoneyHoney * n))
+                    + " · " + N(vm.Config.PotHoneyJars * n) + " " + BeekeeperText.HiveRowLabel(new BeekeeperHiveRow(BeekeeperHiveRows.ClayJars, true)).ToLowerInvariant();
+            case BeekeeperStories.Candle:
+            {
+                string tip = BeekeeperText.Price(null, N(vm.BeeswaxCandleWaxNow * n), null);
+                if (vm.CandlesPerCraft > 1) tip += " · " + BeekeeperText.Makes(vm.CandlesPerCraft * n);
+                if (!can && vm.CandleIsWall(vm.BeeswaxCandleWaxNow * n)) tip += "\n" + BeekeeperText.WaxWallTip;
+                return tip;
+            }
+            default:   // bee bread
+                return BeekeeperText.Price(null, null, null, pollen: N(vm.Config.BeeBreadPollen * n), honey: N(vm.Config.BeeBreadHoney * n));
+        }
     }
 
     // Cut in stage 8 (spec 017, FR-815): plants grow at once, so there are no bed rows.
@@ -1003,6 +1050,19 @@ public partial class BeekeeperView : UserControl
                 StoryText.Text = BeekeeperText.StorySmoker;
                 StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryRepair, () => _vm?.RepairSmoker()));
                 break;
+            // Bee, 2026-11-12: the crafts that left The Workbench; each button makes the first one and opens the row's links.
+            case BeekeeperStories.PotHoney:
+                StoryText.Text = BeekeeperText.StoryPotHoney;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryPotHoneyButton, () => _vm?.CraftFromStory()));
+                break;
+            case BeekeeperStories.Candle:
+                StoryText.Text = BeekeeperText.StoryCandle;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryCandleButton, () => _vm?.CraftFromStory()));
+                break;
+            case BeekeeperStories.BeeBread:
+                StoryText.Text = BeekeeperText.StoryBeeBread;
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryBeeBreadButton, () => _vm?.CraftFromStory()));
+                break;
             case BeekeeperStories.Seed:   // Bee, 2026-11-11: a seed of a kind never planted
                 StoryText.Text = BeekeeperText.StorySeed(vm.StorySeed ?? "");
                 StoryButtons.Children.Add(MakeButton(BeekeeperText.GardenPlant, () => _vm?.PlantFromStory()));
@@ -1015,12 +1075,9 @@ public partial class BeekeeperView : UserControl
     private void LightBeeBoost_Click(object? sender, RoutedEventArgs e) => _vm?.LightBeeBoostCommand.Execute(null);
     private void CraftSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.CraftSagePropolisCommand.Execute(null);
     private void LightSagePropolis_Click(object? sender, RoutedEventArgs e) => _vm?.LightSagePropolisCommand.Execute(null);
-    private void MakeBeeBread_Click(object? sender, RoutedEventArgs e) => _vm?.MakeBeeBreadCommand.Execute(null);
     private void MoveHive_Click(object? sender, RoutedEventArgs e) => _vm?.MoveToWoodenHiveCommand.Execute(null);
     private void BuyMeadow_Click(object? sender, RoutedEventArgs e) => _vm?.BuyMeadowCommand.Execute(null);
     private void Smoker_Click(object? sender, RoutedEventArgs e) => _vm?.UseSmokerCommand.Execute(null);
-    private void PotHoney_Click(object? sender, RoutedEventArgs e) => _vm?.PotHoneyCommand.Execute(null);        // stage 10
-    private void CraftBeeswax_Click(object? sender, RoutedEventArgs e) => _vm?.CraftBeeswaxCommand.Execute(null);
 
     // ------------------------------------------------------------------ catch popup
 

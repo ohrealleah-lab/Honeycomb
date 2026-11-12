@@ -175,8 +175,18 @@ public static class BeekeeperStories
     /// It goes on its button or, silently, at the first bee caught, so it never holds up "Ouch!".
     /// An older save never sees it (it is marked done on load).</summary>
     public const string Opening = "opening";
-    public static readonly string[] Order = { Opening, Ouch, Gloves, Smoker, Seed };
+    // Bee, 2026-11-12: the crafts that left The Workbench for the Hive card. Each is introduced by one card whose
+    // button makes the first one; once it is done (a done card is never shown again) the Hive row gets its
+    // +1 / +10 / +100 craft links. The ids double as the craft ids (see BeekeeperEngine.CraftTimes).
+    /// <summary>"Honey is dripping free": from 50 honey, pot some in the clay jars.</summary>
+    public const string PotHoney = "pot_honey";
+    /// <summary>"None of your beeswax, or all of it": from wax for 3 candles, make a beeswax candle.</summary>
+    public const string Candle = "beeswax_candle";
+    /// <summary>A bee fact about bee bread feeding the young; its button makes the first bee bread.</summary>
+    public const string BeeBread = "bee_bread";
+    public static readonly string[] Order = { Opening, Ouch, Gloves, Smoker, PotHoney, Candle, BeeBread, Seed };
     // Before stage 10: { Ouch, Gloves, Smoker, Seed }
+    // Before the craft cards (Bee, 2026-11-12): { Opening, Ouch, Gloves, Smoker, Seed }
 }
 
 /// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
@@ -322,6 +332,17 @@ public sealed class BeekeeperConfig
     // public decimal BetterBeebitsPerTrade { get; init; } = 6m;
     /// <summary>Beebits the bear pays for one potted honey (3× the plain rate for the same 10 honey).</summary>
     public decimal PottedHoneyBeebits { get; init; } = 20m;   // Bee, 2026-11-12: was 15
+
+    // --- Craft links on the Hive card (Bee, 2026-11-12; placeholders) ------
+    /// <summary>The pot-honey card shows once this much honey is stored.</summary>
+    public decimal PotHoneyStoryHoney { get; init; } = 50m;
+    /// <summary>The candle card shows once the wax would make this many beeswax candles.</summary>
+    public int CandleStoryCandles { get; init; } = 3;
+    /// <summary>The craft links: +1, then this many (+10), then a big step (+100) that becomes the huge step
+    /// (+1000) while a whole huge step can be paid for.</summary>
+    public int CraftLinkMedium { get; init; } = 10;
+    public int CraftLinkBig { get; init; } = 100;
+    public int CraftLinkHuge { get; init; } = 1000;
 
     // --- Clay jars and potted honey (stage 10, spec 019; placeholders) ------
     /// <summary>Clay jars a new game starts with (found in the garden). An older save gets them once.</summary>

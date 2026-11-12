@@ -147,6 +147,15 @@ internal static class BeekeeperText
     public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
     public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
     public static string StoryOpening => T(StringKey.BeekeeperStoryOpening);
+    // Craft links and their story cards (Bee, 2026-11-12)
+    public static string StoryPotHoney => T(StringKey.BeekeeperStoryPotHoney);
+    public static string StoryPotHoneyButton => T(StringKey.BeekeeperStoryPotHoneyButton);
+    public static string StoryCandle => T(StringKey.BeekeeperStoryCandle);
+    public static string StoryCandleButton => T(StringKey.BeekeeperStoryCandleButton);
+    public static string StoryBeeBread => T(StringKey.BeekeeperStoryBeeBread);
+    public static string StoryBeeBreadButton => T(StringKey.BeekeeperStoryBeeBreadButton);
+    /// <summary>A craft link's text: "+1", "+10", "+100".</summary>
+    public static string CraftLink(int n) => Fill(T(StringKey.BeekeeperCraftLinkFmt), n.ToString());
     public static string PinnedGloves => T(StringKey.BeekeeperPinnedGloves);
     public static string StoryLookAround => T(StringKey.BeekeeperStoryLookAround);
     /// <summary>The hover on a burning Good Deals candle: "+50% Beebits from the Bear."</summary>

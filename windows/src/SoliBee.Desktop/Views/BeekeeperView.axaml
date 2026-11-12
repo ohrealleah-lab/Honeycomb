@@ -140,10 +140,7 @@
                              Built in code from the view model's HiveGroups (spec 014, FR-505): a new
                              row is a new entry there, not a new line here. -->
                         <StackPanel x:Name="HiveGroups" Spacing="10" />
-                        <!-- Stage 10 (spec 019): from the first honey, honey + a clay jar make potted honey.
-                             One button only: a Make 10 comes later from an upgrade (make buttons are earned). -->
-                        <Button x:Name="PotHoneyButton" Classes="bk-button" MinWidth="90" IsVisible="False" Margin="0,4,0,0"
-                                HorizontalAlignment="Left" HorizontalContentAlignment="Center" Click="PotHoney_Click" />
+                        <!-- Bee, 2026-11-12: potting honey is the Honey row's +1 / +10 / +100 links, opened by a story card. -->
                         <!-- Offered once the first bee bread is made: move to a wooden hive -->
                         <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
@@ -248,35 +245,7 @@
                             <Button x:Name="BuyWaxTrayButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyWaxTray_Click" />
                         </Grid>
-                        <Grid x:Name="BeeBreadRow" ColumnDefinitions="*,Auto" IsVisible="False">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="BeeBreadNameText" Classes="bk-body" FontWeight="SemiBold" />
-                                <TextBlock x:Name="BeeBreadInfoText" Classes="bk-muted" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Button x:Name="BeeBread100Button" Classes="bk-button" MinWidth="56" Tag="BeeBread:100"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="BeeBread10Button" Classes="bk-button" MinWidth="56" Tag="BeeBread:10"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="MakeBeeBreadButton" Classes="bk-button" MinWidth="90"
-                                        HorizontalContentAlignment="Center" Click="MakeBeeBread_Click" />
-                            </StackPanel>
-                        </Grid>
-                        <!-- Stage 10 (spec 019): the beeswax candle is back (wax only), for the Hippies -->
-                        <Grid x:Name="BeeswaxRow" ColumnDefinitions="*,Auto" IsVisible="False">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="BeeswaxNameText" Classes="bk-body" FontWeight="SemiBold" />
-                                <TextBlock x:Name="BeeswaxInfoText" Classes="bk-muted" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                <Button x:Name="Beeswax100Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:100"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="Beeswax10Button" Classes="bk-button" MinWidth="56" Tag="Beeswax:10"
-                                        HorizontalContentAlignment="Center" IsVisible="False" Click="Batch_Click" />
-                                <Button x:Name="CraftBeeswaxButton" Classes="bk-button" MinWidth="90"
-                                        HorizontalContentAlignment="Center" Click="CraftBeeswax_Click" />
-                            </StackPanel>
-                        </Grid>
+                        <!-- Bee, 2026-11-12: bee bread and the beeswax candle moved to the Hive card (craft links on their rows). -->
                         <Grid x:Name="RepellentRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="RepellentNameText" Classes="bk-body" FontWeight="SemiBold" />

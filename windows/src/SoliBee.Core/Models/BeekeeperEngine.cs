@@ -312,6 +312,11 @@ public sealed class BeekeeperEngine
         // Story cards: only known moments, nothing negative, and a card already answered never shows.
         // The seed card is never done (it comes back for each new kind), so it is never kept as done.
         s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id) && id != BeekeeperStories.Seed).Distinct().ToList();
+        // Bee, 2026-11-12: a save that already made these never sees their intro card, and has the craft links.
+        void MarkDone(string id) { if (!s.StoriesDone.Contains(id)) s.StoriesDone.Add(id); }
+        if (s.PottedHoneyRevealed) MarkDone(BeekeeperStories.PotHoney);
+        if (s.BeeBreadRevealed) MarkDone(BeekeeperStories.BeeBread);
+        if (s.CandlesCrafted > 0 || s.BeeswaxCandles > 0m) MarkDone(BeekeeperStories.Candle);
         s.StoryReturnIn = s.StoryReturnIn.Where(kv => BeekeeperStories.Order.Contains(kv.Key) && kv.Value > 0m)
             .ToDictionary(kv => kv.Key, kv => Math.Min(kv.Value, Config.GlovesReturnSeconds));
         s.BeesCaught = Math.Max(0, s.BeesCaught);
@@ -1257,29 +1262,69 @@ public sealed class BeekeeperEngine
 
     // ------------------------------------------------------------------ potted honey (stage 10)
 
-    /// <summary>The Pot honey button shows from the first honey (the hive has started).</summary>
+    /// <summary>Potting honey is on offer from the first honey (the hive has started).</summary>
     public bool PotHoneyShown => State.HoneyRevealed;
 
-    /// <summary>Enough honey and a clay jar for one potted honey.</summary>
-    public bool CanPotHoney =>
-        PotHoneyShown && State.Honey >= Config.PotHoneyHoney && State.ClayJars >= Config.PotHoneyJars;
+    /// <summary>Enough honey and clay jars for this many potted honeys.</summary>
+    public bool CanPotHoneyTimes(int count) =>
+        count >= 1 && PotHoneyShown && State.Honey >= Config.PotHoneyHoney * count && State.ClayJars >= Config.PotHoneyJars * count;
 
-    /// <summary>Honey + a clay jar make one potted honey (FR-1005). The jar is used up. Potted honey
-    /// has no cap and doesn't count toward the honey cap, so potting frees honey room.</summary>
-    public ActionResult PotHoney()
+    public bool CanPotHoney => CanPotHoneyTimes(1);
+
+    /// <summary>Honey + a clay jar make one potted honey (FR-1005), or a batch. The jars are used up. Potted
+    /// honey has no cap and doesn't count toward the honey cap, so potting frees honey room.</summary>
+    public ActionResult PotHoney(int count = 1)
     {
-        if (!CanPotHoney) return ActionResult.Refused;
-        State.Honey -= Config.PotHoneyHoney;
-        State.ClayJars -= Config.PotHoneyJars;
-        State.PottedHoney += 1m;
+        if (!CanPotHoneyTimes(count)) return ActionResult.Refused;
+        State.Honey -= Config.PotHoneyHoney * count;
+        State.ClayJars -= Config.PotHoneyJars * count;
+        State.PottedHoney += count;
         RefreshStorageFlag();   // honey went down
         var events = new List<BeekeeperEvent>();
         if (!State.PottedHoneyRevealed)
         {
             State.PottedHoneyRevealed = true;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.HoneyPotted, 1m));
+            events.Add(new BeekeeperEvent(BeekeeperEvents.HoneyPotted, count));
         }
-        return new ActionResult(true, 1m, events);
+        return new ActionResult(true, count, events);
+    }
+
+    // ------------------------------------------------------------------ craft links (Bee, 2026-11-12)
+
+    /// <summary>The Hive row's +1 / +10 / +100 links are open once the craft's story card is done.</summary>
+    public bool CraftLinksOpen(string craft) => State.StoriesDone.Contains(craft);
+
+    /// <summary>Can this craft ("pot_honey", "beeswax_candle" or "bee_bread", the story ids) be done this many times?</summary>
+    public bool CanCraftTimes(string craft, int count) => craft switch
+    {
+        BeekeeperStories.PotHoney => CanPotHoneyTimes(count),
+        BeekeeperStories.Candle => CanCraftBeeswaxTimes(count),
+        BeekeeperStories.BeeBread => CanMakeBeeBreadTimes(count),
+        _ => false,
+    };
+
+    public ActionResult CraftTimes(string craft, int count) => craft switch
+    {
+        BeekeeperStories.PotHoney => PotHoney(count),
+        BeekeeperStories.Candle => CraftBeeswax(count),
+        BeekeeperStories.BeeBread => MakeBeeBread(count),
+        _ => ActionResult.Refused,
+    };
+
+    /// <summary>The third link's size: 100, or 1000 once a whole 1000 can be paid for.</summary>
+    public int CraftBigStep(string craft) =>
+        CanCraftTimes(craft, Config.CraftLinkHuge) ? Config.CraftLinkHuge : Config.CraftLinkBig;
+
+    /// <summary>The card's button: makes the first one, and the card is done for good (the links open).</summary>
+    public ActionResult CraftFromStory()
+    {
+        string? id = State.StoryHere;
+        if (id is not (BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread))
+            return ActionResult.Refused;
+        var result = CraftTimes(id, 1);
+        if (!result.Done) return result;
+        FinishStory(id);
+        return result;
     }
 
     // ------------------------------------------------------------------ the shop
@@ -1917,6 +1962,11 @@ public sealed class BeekeeperEngine
                                    && State.BeesCaught >= Config.GlovesOfferBees,
         BeekeeperStories.Smoker => !Owns(BeekeeperUpgrades.Smoker) && State.Bees >= Config.SmokerStoryBees,
         BeekeeperStories.Seed => State.SeedsInHand.Count > 0,   // a kind never planted (Bee, 2026-11-11)
+        // Bee, 2026-11-12: the crafts that left The Workbench. Each shows while the first one can be made
+        // (the candle: wax for several), and leaves by itself if that stops being true.
+        BeekeeperStories.PotHoney => State.Honey >= Config.PotHoneyStoryHoney && CanPotHoney,
+        BeekeeperStories.Candle => CanCraftBeeswaxTimes(Config.CandleStoryCandles),
+        BeekeeperStories.BeeBread => CanMakeBeeBread,
         _ => false,
     };
 
@@ -1950,6 +2000,9 @@ public sealed class BeekeeperEngine
         }
         // The seed card leaves by itself once there is nothing left to plant.
         if (State.StoryHere == BeekeeperStories.Seed && !StoryDue(BeekeeperStories.Seed)) State.StoryHere = null;
+        // The craft cards go the same way when the first one can't be made any more (they return when it can).
+        if (State.StoryHere is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread
+            && !StoryDue(State.StoryHere)) State.StoryHere = null;
         if (State.StoryHere is not null) return events;
         foreach (var id in BeekeeperStories.Order)
         {

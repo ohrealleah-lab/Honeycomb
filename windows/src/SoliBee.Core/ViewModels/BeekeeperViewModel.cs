@@ -942,6 +942,27 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public void PutOnGloves() => Apply(Engine.PutOnGloves());
     public void LeaveGloves() => Apply(Engine.LeaveGloves());
     public void RepairSmoker() => Apply(Engine.RepairSmoker());
+
+    // Craft links (Bee, 2026-11-12): the crafts that left The Workbench live on their Hive rows as
+    // +1 / +10 / +100 links, opened by their story card.
+    /// <summary>The story card's button: makes the first one and opens the row's links.</summary>
+    public void CraftFromStory() => Apply(Engine.CraftFromStory());
+    /// <summary>The craft ("pot_honey", "beeswax_candle", "bee_bread") a Hive row makes, or null.</summary>
+    public static string? CraftOfRow(string rowId) => rowId switch
+    {
+        BeekeeperHiveRows.Honey => BeekeeperStories.PotHoney,
+        BeekeeperHiveRows.BeeswaxCandles => BeekeeperStories.Candle,
+        BeekeeperHiveRows.BeeBread => BeekeeperStories.BeeBread,
+        _ => null,
+    };
+    public bool CraftLinksOpen(string craft) => Engine.CraftLinksOpen(craft);
+    /// <summary>The crafts whose links are open, as one string (a change redraws the Hive rows).</summary>
+    public string OpenCrafts => string.Join(",", new[] { BeekeeperStories.PotHoney, BeekeeperStories.Candle, BeekeeperStories.BeeBread }
+        .Where(Engine.CraftLinksOpen));
+    public bool CanCraftTimes(string craft, int n) => Engine.CanCraftTimes(craft, n);
+    /// <summary>The third link's size: 100, or 1000 while a whole 1000 can be paid for.</summary>
+    public int CraftBigStep(string craft) => Engine.CraftBigStep(craft);
+    public void CraftTimes(string craft, int n) => Apply(Engine.CraftTimes(craft, n));
     /// <summary>The seed the "Plant it?" story card is about (a kind never planted), or null.</summary>
     public string? StorySeed => Engine.StorySeed;
     /// <summary>The "Plant it?" card's button (Bee, 2026-11-11).</summary>
