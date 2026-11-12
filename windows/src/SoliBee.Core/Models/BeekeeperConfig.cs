@@ -514,10 +514,10 @@ public sealed class BeekeeperConfig
 
     /// <summary>Bees the queen raises a minute, per hive step: index 0 is the skep (no room
     /// for brood), 1 the wooden hive. Later hives (the meadow apiary) add entries here.</summary>
-    /// Bee, 2026-11-12: 1 bee a second in any hive (the queen no longer needs the wooden hive),
-    /// so the free bees visibly climb; a loaf of 100 bees lasts 100 seconds.
-    public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 60m, 60m };
-    // Before (Bee, 2026-11-12): new[] { 0m, 20m } (the skep raised none; the wooden hive 20 a minute).
+    /// Bee, 2026-11-12: 1 bee a second in the wooden hive, so the free bees visibly climb; a loaf of
+    /// 100 bees lasts 100 seconds. The skep has no queen (she comes with the wooden hive).
+    public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 0m, 60m };
+    // Before (Bee, 2026-11-12): new[] { 0m, 20m } (the wooden hive raised 20 a minute).
     /// <summary>Bees raised for every 1 bee bread the brood eats.</summary>
     public decimal BeesPerBeeBread { get; init; } = 100m;
     // Cut (may return): the slice of the hive was never more than this many times the tool's bees.

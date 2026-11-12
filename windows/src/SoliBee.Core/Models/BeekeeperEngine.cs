@@ -1159,9 +1159,9 @@ public sealed class BeekeeperEngine
 
     private void SettleQueenIfDue(List<BeekeeperEvent> events)
     {
-        // Bee, 2026-11-12: the queen settles with the first bee bread, not the wooden hive.
-        if (State.QueenSettled || !(State.BeeBreadRevealed || State.HasWoodenHive)) return;   // older saves: the wooden hive still brings her
-        // Before: if (State.QueenSettled || !State.HasWoodenHive) return;
+        // The wooden hive brings the queen: moving in is the introduction to her (Bee, 2026-11-12;
+        // briefly she came with the first bee bread, but then the skep ate the bread meant for the move).
+        if (State.QueenSettled || !State.HasWoodenHive) return;
         State.QueenSettled = true;
         events.Add(new BeekeeperEvent(BeekeeperEvents.QueenSettles));
         // Moving in with an empty pantry: no "pantry is empty" line, but fresh bee bread says so.
@@ -2660,7 +2660,8 @@ public sealed class BeekeeperEngine
             State.BeeBreadRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
-        SettleQueenIfDue(events);   // Bee, 2026-11-12: the first bee bread brings the queen
+        // Cut (Bee, 2026-11-12): the first bee bread brought the queen; now the wooden hive does.
+        // SettleQueenIfDue(events);
         NoteBeeBreadAdded(events);
         CheckWalls(events);   // the wooden hive is offered now, and may be a wall
         return new ActionResult(true, count, events);

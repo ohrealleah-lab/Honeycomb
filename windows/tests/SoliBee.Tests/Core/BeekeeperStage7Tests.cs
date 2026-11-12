@@ -182,10 +182,10 @@ public class BeekeeperStage7Tests : IDisposable
     // ============================================================ nursing, resin, clover
 
     [Fact]
-    public void Nursing_MakesTheQueenLayFiftyPercentFaster_InAnyHive()
+    public void Nursing_MakesTheQueenLayFiftyPercentFaster_AndOnlyInAWoodenHive()
     {
         // Stage 9: without the bloom calendar (crocus would double nursing's bonus).
-        // Bee, 2026-11-12: the queen lays 1 bee a second in any hive (was 20 a minute, wooden hive only).
+        // Bee, 2026-11-12: the queen lays 1 bee a second in the wooden hive (was 20 a minute).
         var noBlooms = BeekeeperTestHives.NoBlooms();
         var e = Make(Hive(BeekeeperPlants.Willow), noBlooms);
         Assert.Equal(90m, e.QueenRatePerMinute);
@@ -194,7 +194,7 @@ public class BeekeeperStage7Tests : IDisposable
 
         var skep = Hive(BeekeeperPlants.Willow);
         skep.HasWoodenHive = false;
-        Assert.Equal(90m, Make(skep, noBlooms).QueenRatePerMinute);
+        Assert.Equal(0m, Make(skep, noBlooms).QueenRatePerMinute);
     }
 
     [Fact]
