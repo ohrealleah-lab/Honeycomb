@@ -161,17 +161,6 @@
                              row is a new entry there, not a new line here. -->
                         <StackPanel x:Name="HiveGroups" Spacing="10" />
                         <!-- Bee, 2026-11-12: potting honey is the Honey row's +1 / +10 / +100 links, opened by a story card. -->
-                        <!-- Offered once the first bee bread is made: move to a wooden hive -->
-                        <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
-                            <StackPanel Spacing="2" VerticalAlignment="Center">
-                                <TextBlock x:Name="WoodenHiveNameText" Classes="bk-body" FontWeight="SemiBold" />
-                                <TextBlock x:Name="WoodenHiveInfoText" Classes="bk-muted" />
-                                <!-- Stage 7.5: "Needs more wax storage" when the price is above the cap -->
-                                <TextBlock x:Name="WoodenHiveWallText" Classes="bk-muted" IsVisible="False" />
-                            </StackPanel>
-                            <Button x:Name="MoveHiveButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
-                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MoveHive_Click" />
-                        </Grid>
                         <!-- Stage 8 (spec 017): offered once a wildflower and a clover are planted; bought with 50 of each (counted, not spent) -->
                         <Grid x:Name="MeadowRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
@@ -264,6 +253,17 @@
                             </StackPanel>
                             <Button x:Name="BuyWaxTrayButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
                                     HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="BuyWaxTray_Click" />
+                        </Grid>
+                        <!-- Offered once the first bee bread is made. Bee, 2026-11-14: a Workbench row ("Wooden Hive"; it was on the Hive card as "Move to a wooden hive"). -->
+                        <Grid x:Name="WoodenHiveRow" ColumnDefinitions="*,Auto" IsVisible="False">
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock x:Name="WoodenHiveNameText" Classes="bk-body" FontWeight="SemiBold" />
+                                <TextBlock x:Name="WoodenHiveInfoText" Classes="bk-muted" />
+                                <!-- Stage 7.5: "Needs more wax storage" when the price is above the cap -->
+                                <TextBlock x:Name="WoodenHiveWallText" Classes="bk-muted" IsVisible="False" />
+                            </StackPanel>
+                            <Button x:Name="MoveHiveButton" Grid.Column="1" Classes="bk-button" MinWidth="90"
+                                    HorizontalContentAlignment="Center" VerticalAlignment="Center" Click="MoveHive_Click" />
                         </Grid>
                         <!-- Bee, 2026-11-12: bee bread and the beeswax candle moved to the Hive card (craft links on their rows). -->
                         <Grid x:Name="RepellentRow" ColumnDefinitions="*,Auto" IsVisible="False">

@@ -174,7 +174,7 @@ public partial class BeekeeperView : UserControl
         WoodenHiveRow.IsVisible = vm.WoodenHiveOffered;
         WoodenHiveNameText.Text = BeekeeperText.WoodenHiveName;
         WoodenHiveInfoText.Text = BeekeeperText.Price(null, N(vm.Config.WoodenHiveWax), null, beeBread: N(vm.Config.WoodenHiveBeeBread))
-            + " · " + BeekeeperText.WoodenHiveBlurb(N(vm.WoodenHiveBonusPercent));
+            + "\n" + BeekeeperText.WoodenHiveBlurb(N(vm.WoodenHiveBonusPercent));   // Bee, 2026-11-14: a Workbench row, cost then gain
         MoveHiveButton.Content = BeekeeperText.Move;
         MoveHiveButton.IsEnabled = vm.CanMoveToWoodenHive;
         ShowWall(WoodenHiveWallText, MoveHiveButton, vm.WoodenHiveIsWall, N(vm.WaxStorage));
