@@ -317,8 +317,10 @@ public partial class BeekeeperView : UserControl
 
         // Wasps (never again once the emissary has come)
         bool burning = vm.RepellentSecondsLeft > 0m;
-        WaspCard.IsVisible = !vm.EmissaryCome && (vm.WaspApproaching || burning);
+        WaspCard.IsVisible = !vm.EmissaryCome && burning && !vm.WaspApproaching;   // Bee, 2026-11-14: a wasp shows in the story area
         WaspTitleText.Text = BeekeeperText.WaspsTitle;
+        WaspArea.IsVisible = vm.WaspApproaching;
+        WaspAreaTitleText.Text = BeekeeperText.WaspsTitle;
         WaspHerePanel.IsVisible = vm.WaspApproaching;
         WaspHereText.Text = BeekeeperText.WaspHere;
         WaspTimeText.Text = BeekeeperText.TimeLeft(BeekeeperText.Clock(vm.WaspSecondsLeft));
@@ -333,7 +335,7 @@ public partial class BeekeeperView : UserControl
         BribeButton.IsVisible = !vm.WaspFirstVisit;
         UpdateVisitors(vm.RepsPresent, vm.BearName, lang);
         UpdateStory(vm, lang);
-        ArtLayer.IsVisible = !StoryCard.IsVisible && !VisitorsCard.IsVisible;   // the bee art when there is no story
+        ArtLayer.IsVisible = !StoryCard.IsVisible && !VisitorsCard.IsVisible && !WaspArea.IsVisible;   // the bee art when there is no story
         // Cut: the wasp card's "Light a candle" button (sage candles are going away).
         // WaspLightButton.Content = BeekeeperText.LightCandle;
         // WaspLightButton.IsVisible = vm.RepellentShown;
@@ -1013,15 +1015,17 @@ public partial class BeekeeperView : UserControl
     {
         string? id = vm.StoryHere;
         StoryCard.IsVisible = id is not null;
-        string sig = lang + "|" + id + "|" + (id == BeekeeperStories.Seed ? vm.StorySeed : null);   // a new seed redraws the card
+        // A new seed redraws the card; so does a craft card's button becoming payable or not (Bee, 2026-11-14).
+        bool canCraft = id is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread && vm.CanCraftTimes(id, 1);
+        string sig = lang + "|" + id + "|" + (id == BeekeeperStories.Seed ? vm.StorySeed : null) + "|" + canCraft;
         if (sig == _storySignature) return;
         _storySignature = sig;
         StoryButtons.Children.Clear();
         if (id is null) return;
 
-        Button MakeButton(string text, Action onClick)
+        Button MakeButton(string text, Action onClick, bool enabled = true)
         {
-            var b = new Button { Classes = { "bk-button" }, Content = text,
+            var b = new Button { Classes = { "bk-button" }, Content = text, IsEnabled = enabled,
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             b.Click += (_, _) => onClick();
             return b;
@@ -1060,15 +1064,15 @@ public partial class BeekeeperView : UserControl
             // Bee, 2026-11-12: the crafts that left The Workbench; each button makes the first one and opens the row's links.
             case BeekeeperStories.PotHoney:
                 StoryText.Text = BeekeeperText.StoryPotHoney;
-                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryPotHoneyButton, () => _vm?.CraftFromStory()));
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryPotHoneyButton, () => _vm?.CraftFromStory(), canCraft));
                 break;
             case BeekeeperStories.Candle:
                 StoryText.Text = BeekeeperText.StoryCandle;
-                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryCandleButton, () => _vm?.CraftFromStory()));
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryCandleButton, () => _vm?.CraftFromStory(), canCraft));
                 break;
             case BeekeeperStories.BeeBread:
                 StoryText.Text = BeekeeperText.StoryBeeBread;
-                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryBeeBreadButton, () => _vm?.CraftFromStory()));
+                StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryBeeBreadButton, () => _vm?.CraftFromStory(), canCraft));
                 break;
             case BeekeeperStories.Seed:   // Bee, 2026-11-11: a seed of a kind never planted
                 StoryText.Text = BeekeeperText.StorySeed(vm.StorySeed ?? "");

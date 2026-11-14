@@ -119,6 +119,60 @@ public class BeekeeperStoryQueueTests
         Assert.Equal(new[] { "rep:bear", "rep:hippies" }, e.StoryQueue);
     }
 
+    [Fact]
+    public void AWasp_WaitsItsTurnLikeAVisitor_WithItsTimePausedAndItsCountdownStartingWhenShown()
+    {
+        // Bee, 2026-11-14: the wasp is part of the story area now (it used to appear at once, in its own card).
+        var e = Make(Hive(s => { s.WorkbenchRevealed = true; s.Bees = 1000m; s.Combs = 50; s.NextWaspInSeconds = 1m; }));
+        e.AdvanceStoryTime(0m);
+        Assert.Equal(BeekeeperStories.Smoker, e.StoryHere);   // a card is up
+
+        Assert.False(Has(e.AdvanceWaspTime(5m), BeekeeperEvents.WaspArrives));
+        Assert.False(e.WaspApproaching);
+        Assert.Contains("wasp", e.StoryQueue);
+        Assert.False(Has(e.AdvanceWaspTime(100_000m), BeekeeperEvents.WaspArrives));   // paused while it waits
+        Assert.False(e.WaspApproaching);
+        Assert.Equal(0m, e.State.WaspCountdown);                                       // its countdown has not started
+
+        Assert.True(e.RepairSmoker().Done);
+        var events = e.AdvanceStoryTime(1m);
+        Assert.True(Has(events, BeekeeperEvents.WaspArrives));
+        Assert.True(e.WaspApproaching);
+        Assert.Equal(Cfg.WaspCountdownSeconds, e.State.WaspCountdown);
+        Assert.True(e.StoryAreaBusy);                 // and it holds the door for what comes after
+        Assert.DoesNotContain("wasp", e.StoryQueue);
+    }
+
+    [Fact]
+    public void EngagingAWasp_AlwaysLetsItStealHoney_TheSameAmountAsIfLeftAlone()
+    {
+        BeekeeperEngine Wasp() => Make(Hive(s =>
+        {
+            s.StoriesDone = BeekeeperStories.Order.ToList();
+            s.WorkbenchRevealed = true; s.Bees = 1000m; s.Combs = 50; s.Honey = 10_000m;
+        }));
+
+        var left = Wasp();
+        left.DebugCallWasp();
+        decimal before = left.State.Honey;
+        var raid = left.AdvanceWaspCountdown(Cfg.WaspCountdownSeconds).Single();
+        decimal stolenWhenLeftAlone = before - left.State.Honey;
+        Assert.True(stolenWhenLeftAlone > 0m);
+
+        var e = Wasp();
+        e.DebugCallWasp();
+        Assert.True(e.CanEngageWasp);
+        var r = e.EngageWasp();
+        Assert.True(r.Done);
+        Assert.Equal(10_000m - stolenWhenLeftAlone, e.State.Honey);
+        var ev = Assert.Single(r.Events);
+        Assert.Equal(BeekeeperEvents.WaspEngaged, ev.Key);
+        Assert.Equal(stolenWhenLeftAlone, ev.Value);
+        Assert.False(e.WaspApproaching);
+        Assert.Equal(0, e.State.BribesTotal);   // it is not a bribe
+        Assert.Equal(BeekeeperEvents.WaspRaid, raid.Key);
+    }
+
     // ============================================================ the cards
 
     [Fact]

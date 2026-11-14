@@ -60,6 +60,8 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         // Stage 7.5: 50 combs make 10 honey a second (was 1,000 bees); the bees are free bees.
         Bees = 1000m, Honey = 50_000m, Combs = 50, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
         BearRevealed = true,
+        // Bee, 2026-11-14: a wasp waits behind any story card, so none is left to hold the door.
+        StoriesDone = BeekeeperStories.Order.ToList(),
     };
 
     // ============================================================ the Hive card in groups (User Story 9)
@@ -174,7 +176,9 @@ public class BeekeeperStage6ViewModelTests : IDisposable
     public void NoStressMode_DoesNotKeepWaspsAway()
     {
         var clock = new Clock();
-        var vm = Make(clock, Workshop(), noStress: true);
+        var s = Workshop();
+        s.BearRevealed = false;   // Bee, 2026-11-14: a visitor at the door would make the wasp wait its turn
+        var vm = Make(clock, s, noStress: true);
         vm.IsWatched = true;
         Play(vm, clock, 240);
         Assert.True(vm.WaspApproaching);

@@ -52,7 +52,7 @@ public static class BeekeeperEvents
     public const string RepArrives = "rep_arrives";          // Text = rep id ("bear", "hippies"); "A {} shows up"
     public const string RepEngaged = "rep_engaged";          // Text = rep id; their trades are open
     public const string RepLeft = "rep_left";                // Text = rep id; a shoe sent them away, they will return
-    public const string WaspEngaged = "wasp_engaged";        // first visit only: the wasp is spoken to and leaves
+    public const string WaspEngaged = "wasp_engaged";        // first visit only: the wasp wants nothing to do with you and steals honey (Value)
     public const string CandleLit = "candle_lit";
     public const string CandleOut = "candle_out";
 
@@ -336,8 +336,16 @@ public sealed class BeekeeperEngine
             s.RepReturnIn.Remove("hippies");
         }
         s.StoryQueue = (s.StoryQueue ?? new()).Where(e => e is not null
-            && (RepOfEntry(e) is { } rep ? !s.RepsPresent.Contains(rep) && !(rep == "hippies" && s.HippiesDismissedForGood)
+            && (e == WaspEntry ? s.WaspCountdown <= 0m && !s.EmissaryCome
+                : RepOfEntry(e) is { } rep ? !s.RepsPresent.Contains(rep) && !(rep == "hippies" && s.HippiesDismissedForGood)
                 : BeekeeperStories.Order.Contains(e) && e != s.StoryHere && !s.StoriesDone.Contains(e))).Distinct().ToList();
+        // A save made with a wasp at the door and a card or visitor up too: the wasp goes back to wait its turn.
+        if (s.WaspCountdown > 0m && (s.StoryHere is not null || s.RepsPresent.Count > 0) && !s.EmissaryCome)
+        {
+            s.WaspCountdown = 0m;
+            s.WaspVisits = Math.Max(0, s.WaspVisits - 1);
+            if (!s.StoryQueue.Contains(WaspEntry)) s.StoryQueue.Insert(0, WaspEntry);
+        }
         var extraReps = s.StoryHere is not null ? s.RepsPresent.ToList() : s.RepsPresent.Skip(1).ToList();
         foreach (var rep in extraReps) s.RepsPresent.Remove(rep);
         s.StoryQueue.InsertRange(0, extraReps.Select(RepEntry).Where(e => !s.StoryQueue.Contains(e)));
@@ -1897,7 +1905,9 @@ public sealed class BeekeeperEngine
     public IReadOnlyList<BeekeeperEvent> AdvanceWaspTime(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
-        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return events;
+        // Bee, 2026-11-14: a wasp that has come waits its turn in the story queue (one thing at a time), and
+        // wasp time is paused while it waits, as a visitor's return time is.
+        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome || State.StoryQueue.Contains(WaspEntry)) return events;
 
         if (State.RepellentSecondsLeft > 0m)
         {
@@ -1911,12 +1921,15 @@ public sealed class BeekeeperEngine
         if (State.NextWaspInSeconds <= 0m)
         {
             State.NextWaspInSeconds = 0m;
-            State.WaspCountdown = Config.WaspCountdownSeconds;
-            State.WaspVisits++;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
+            Enqueue(WaspEntry);   // shown (countdown started, "buzzing" line told) when its turn comes
+            FillStoryArea(events);
         }
         return events;
     }
+    // Before (2026-11-14): the wasp appeared at once here.
+    //     State.WaspCountdown = Config.WaspCountdownSeconds;
+    //     State.WaspVisits++;
+    //     events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
 
     /// <summary>True while the wasp at the door is on its first visit: the choices are Throw a shoe /
     /// Engage. Later visits are Throw a shoe / Bribe. (Older saves that already bribed count as later.)</summary>
@@ -1924,13 +1937,14 @@ public sealed class BeekeeperEngine
 
     public bool CanEngageWasp => WaspApproaching && WaspFirstVisit;
 
-    /// <summary>First visit only: the player speaks to the wasp, it hums, takes a look and leaves.
-    /// Nothing is lost and it does not count towards the emissary.</summary>
+    /// <summary>First visit only: the player speaks to the wasp, which wants nothing to do with them and steals
+    /// honey, the same amount as if it had been left alone (a raid). Bee, 2026-11-14: it used to hum and leave
+    /// with nothing lost. It does not count towards the emissary.</summary>
     public ActionResult EngageWasp()
     {
         if (!CanEngageWasp) return ActionResult.Refused;
-        EndWasp();
-        return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.WaspEngaged) });
+        var raid = Raid(BeekeeperEvents.WaspEngaged);   // Value = honey stolen
+        return new ActionResult(true, raid.Value, new[] { raid });
     }
 
     // ------------------------------------------------------------------ trade reps (bear, hippies)
@@ -2017,7 +2031,10 @@ public sealed class BeekeeperEngine
     private static string? RepOfEntry(string entry) => entry.StartsWith(RepPrefix, StringComparison.Ordinal) ? entry[RepPrefix.Length..] : null;
 
     /// <summary>A story card or a visitor is showing.</summary>
-    public bool StoryAreaBusy => State.StoryHere is not null || State.RepsPresent.Count > 0;
+    public bool StoryAreaBusy => State.StoryHere is not null || State.RepsPresent.Count > 0 || WaspApproaching;
+
+    /// <summary>The wasp's place in the story queue (Bee, 2026-11-14: wasps wait their turn like visitors).</summary>
+    private const string WaspEntry = "wasp";
 
     /// <summary>What waits its turn, in order (story ids, and "rep:bear" / "rep:hippies").</summary>
     public IReadOnlyList<string> StoryQueue => State.StoryQueue;
@@ -2040,7 +2057,9 @@ public sealed class BeekeeperEngine
 
     /// <summary>An entry still belongs in the queue: a rep still coming and not at the door, or a story
     /// moment still due, not answered, not waiting to come back and not showing.</summary>
-    private bool StillWaiting(string entry) => RepOfEntry(entry) is { } rep
+    private bool StillWaiting(string entry) => entry == WaspEntry
+        ? State.WorkbenchRevealed && !State.EmissaryCome && !WaspApproaching
+        : RepOfEntry(entry) is { } rep
         ? RepRevealed(rep) && !State.RepsPresent.Contains(rep) && !State.RepsEngaged.Contains(rep)
         : BeekeeperStories.Order.Contains(entry) && entry != State.StoryHere && !State.StoriesDone.Contains(entry)
           && !State.StoryReturnIn.ContainsKey(entry) && StoryDue(entry);
@@ -2057,6 +2076,13 @@ public sealed class BeekeeperEngine
 
         string next = State.StoryQueue[0];
         State.StoryQueue.RemoveAt(0);
+        if (next == WaspEntry)
+        {
+            State.WaspCountdown = Config.WaspCountdownSeconds;
+            State.WaspVisits++;
+            events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
+            return;
+        }
         if (RepOfEntry(next) is { } rep)
         {
             State.RepsPresent.Add(rep);
@@ -2125,9 +2151,10 @@ public sealed class BeekeeperEngine
         }
         // The seed card leaves by itself once there is nothing left to plant.
         if (State.StoryHere == BeekeeperStories.Seed && !StoryDue(BeekeeperStories.Seed)) State.StoryHere = null;
-        // The craft cards go the same way when the first one can't be made any more (they return when it can).
-        if (State.StoryHere is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread
-            && !StoryDue(State.StoryHere)) State.StoryHere = null;
+        // Bee, 2026-11-14: a craft card stays until its button is clicked (it left by itself when the first one
+        // couldn't be made any more, e.g. after a comb spent the wax); its button is dimmed meanwhile.
+        // if (State.StoryHere is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread
+        //     && !StoryDue(State.StoryHere)) State.StoryHere = null;
         // The gloves-fit card is done once its bees are caught (normally Catch finishes it at once).
         if (State.StoryHere == BeekeeperStories.GlovesFit && !StoryDue(BeekeeperStories.GlovesFit)) FinishStory(BeekeeperStories.GlovesFit);
         FillStoryArea(events);
@@ -2217,11 +2244,13 @@ public sealed class BeekeeperEngine
     /// <summary>Calls a wasp at once (debug builds only; the game never does this).</summary>
     public IReadOnlyList<BeekeeperEvent> DebugCallWasp()
     {
-        if (!State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return Array.Empty<BeekeeperEvent>();
+        if (!State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome || State.StoryQueue.Contains(WaspEntry))
+            return Array.Empty<BeekeeperEvent>();
         State.NextWaspInSeconds = 0m;
-        State.WaspCountdown = Config.WaspCountdownSeconds;
-        State.WaspVisits++;
-        return new[] { new BeekeeperEvent(BeekeeperEvents.WaspArrives) };
+        var events = new List<BeekeeperEvent>();
+        Enqueue(WaspEntry);   // it waits its turn behind whatever is showing
+        FillStoryArea(events);
+        return events;
     }
 
     /// <summary>Real seconds pass while the player watches an approaching wasp; at zero it raids.</summary>

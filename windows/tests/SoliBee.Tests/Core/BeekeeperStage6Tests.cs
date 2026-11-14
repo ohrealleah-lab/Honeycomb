@@ -291,6 +291,8 @@ public class BeekeeperStage6Tests : IDisposable
     {
         // Stage 7.5: 50 combs make 10 honey a second (the raid's 3 minutes); the bees are free bees.
         Bees = 1000m, Honey = honey, Combs = 50, WorkbenchRevealed = true, HoneyRevealed = true,
+        // Bee, 2026-11-14: a wasp waits behind any story card, so none is left to hold the door.
+        StoriesDone = BeekeeperStories.Order.ToList(),
     };
 
     [Fact]

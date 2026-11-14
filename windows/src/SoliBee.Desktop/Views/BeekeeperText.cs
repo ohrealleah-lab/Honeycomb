@@ -874,7 +874,7 @@ internal static class BeekeeperText
             // Bee, 2026-11-12: every shoe at the bear reads "The bear wanders off." (was "The bear leaves. They will be back later.").
             BeekeeperEvents.RepLeft => e.Text == "bear" ? L(StringKey.BeekeeperLogBearWandersOff)
                 : Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(StringKey.BeekeeperRepHippies, lang)),
-            BeekeeperEvents.WaspEngaged => L(StringKey.BeekeeperLogWaspEngaged),
+            BeekeeperEvents.WaspEngaged => Fill(L(StringKey.BeekeeperLogWaspEngagedFmt), N(e.Value)),   // Bee, 2026-11-14: it steals honey
             BeekeeperEvents.GlovesOn => L(StringKey.BeekeeperLogGloves),
             BeekeeperEvents.GlovesGone => L(StringKey.BeekeeperLogGlovesGone),
             BeekeeperEvents.SmokerRepaired => L(StringKey.BeekeeperLogSmokerRepaired),

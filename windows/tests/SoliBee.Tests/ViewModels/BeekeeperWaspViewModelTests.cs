@@ -39,6 +39,8 @@ public class BeekeeperWaspViewModelTests
             {
                 Bees = 1000m, Honey = 500m, Combs = 2, WorkbenchRevealed = true, BearName = "Bruno",
                 HoneyRevealed = true, RepellentCandles = 1m, RepellentUnlocked = true,
+                // Bee, 2026-11-14: a wasp waits behind any story card, so none is left to hold the door.
+                StoriesDone = BeekeeperStories.Order.ToList(),
             };
             Vm = new BeekeeperViewModel(isHeadless: true, config: new BeekeeperConfig { StartingHoneyCap = 1_000_000m },
                 rng: new SeqRandom(new[] { firstWaspDie }.Concat(more).ToArray()), clock: Clock.Func,

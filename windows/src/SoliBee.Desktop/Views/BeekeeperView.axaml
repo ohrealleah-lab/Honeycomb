@@ -108,6 +108,25 @@
                                 <TextBlock x:Name="VisitorsTitleText" Classes="bk-title" />
                                 <StackPanel x:Name="VisitorRows" Spacing="10" />
                             </StackPanel>
+                            <!-- A wasp at the door (Bee, 2026-11-14: it waits its turn in the same story area, and its
+                                 countdown starts when it is shown; it used to sit in the right-hand column). -->
+                            <StackPanel x:Name="WaspArea" Spacing="8" IsVisible="False">
+                                <TextBlock x:Name="WaspAreaTitleText" Classes="bk-title" />
+                                <StackPanel x:Name="WaspHerePanel" Spacing="8">
+                                    <TextBlock x:Name="WaspHereText" Classes="bk-body" FontWeight="SemiBold" />
+                                    <TextBlock x:Name="WaspTimeText" Classes="bk-muted" />
+                                    <Button x:Name="ThrowShoeButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" Click="ThrowShoe_Click" />
+                                    <Button x:Name="EngageWaspButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" Click="EngageWasp_Click" />
+                                    <Button x:Name="BribeButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" Click="Bribe_Click" />
+                                    <!-- Cut: the sage candles are going away (Leah). Kept in case it returns.
+                                    <Button x:Name="WaspLightButton" Classes="bk-button" HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
+                                    -->
+                                </StackPanel>
+                            </StackPanel>
                         </StackPanel>
                     </Grid>
                 </Border>
@@ -319,24 +338,10 @@
 
             <!-- ───────── RIGHT: wasps, story log ───────── -->
             <StackPanel Grid.Column="2" Spacing="12" VerticalAlignment="Top">
-                <!-- Shown while a wasp is here or a repellent candle burns -->
+                <!-- Shown while a repellent candle burns (the wasp at the door moved to the story area, 2026-11-14) -->
                 <Border x:Name="WaspCard" Classes="bk-card" IsVisible="False" BorderBrush="#66FFA38F">
                     <StackPanel Spacing="8">
                         <TextBlock x:Name="WaspTitleText" Classes="bk-title" />
-                        <StackPanel x:Name="WaspHerePanel" Spacing="8">
-                            <TextBlock x:Name="WaspHereText" Classes="bk-body" FontWeight="SemiBold" />
-                            <TextBlock x:Name="WaspTimeText" Classes="bk-muted" />
-                            <Button x:Name="ThrowShoeButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center" Click="ThrowShoe_Click" />
-                            <Button x:Name="EngageWaspButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center" Click="EngageWasp_Click" />
-                            <Button x:Name="BribeButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center" Click="Bribe_Click" />
-                            <!-- Cut: the sage candles are going away (Leah). Kept in case it returns.
-                            <Button x:Name="WaspLightButton" Classes="bk-button" HorizontalAlignment="Stretch"
-                                    HorizontalContentAlignment="Center" Click="LightRepellent_Click" />
-                            -->
-                        </StackPanel>
                         <TextBlock x:Name="CandleBurningText" Classes="bk-body" IsVisible="False" />
                     </StackPanel>
                 </Border>

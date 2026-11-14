@@ -1056,7 +1056,7 @@ public enum StringKey
     BeekeeperLogRepArrivesFmt,
     BeekeeperLogRepEngagedFmt,
     BeekeeperLogRepLeftFmt,
-    BeekeeperLogWaspEngaged,
+    BeekeeperLogWaspEngagedFmt,
     BeekeeperBeeHerbs,
     BeekeeperBeeHerbsBlurbFmt,
     BeekeeperLightBeeHerb,

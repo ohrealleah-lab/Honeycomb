@@ -90,16 +90,22 @@ public class BeekeeperCraftLinkTests
     }
 
     [Fact]
-    public void ACardLeavesByItself_WhenTheFirstOneCantBeMadeAnyMore()
+    public void ACardStaysUntilItsClicked_EvenWhenTheFirstOneCantBeMadeAnyMore()
     {
+        // Bee, 2026-11-14: it used to leave by itself (a comb spending the wax made the candle card vanish).
         var s = Base(); s.PollenRevealed = true; s.Pollen = 10m; s.Honey = 1m;
         var e = Make(s);
         e.AdvanceStoryTime(1m);
         Assert.Equal(BeekeeperStories.BeeBread, e.StoryHere);
         s.Pollen = 0m;
         e.AdvanceStoryTime(1m);
+        Assert.Equal(BeekeeperStories.BeeBread, e.StoryHere);
+        Assert.False(e.CraftFromStory().Done);                       // nothing to make it with yet
+        Assert.Equal(BeekeeperStories.BeeBread, e.StoryHere);
+        s.Pollen = 10m;
+        Assert.True(e.CraftFromStory().Done);
         Assert.Null(e.StoryHere);
-        Assert.False(e.CraftLinksOpen(BeekeeperStories.BeeBread));   // not done, so it can come back
+        Assert.True(e.CraftLinksOpen(BeekeeperStories.BeeBread));
     }
 
     [Fact]
