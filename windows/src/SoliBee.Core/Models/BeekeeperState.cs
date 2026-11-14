@@ -212,10 +212,23 @@ public sealed class BeekeeperState
     public long BeesCaught { get; set; }
     /// <summary>True once the first sting has happened (at 10 bees caught by hand): brings the "Ouch!" card.</summary>
     public bool FirstStingDone { get; set; }
-    /// <summary>Play seconds the "Ouch!" card has left before it goes by itself.</summary>
+    /// <summary>Play seconds the showing self-fading card ("Ouch!", the first shoe at a bear, the Hippies gone
+    /// for good) has left before it goes by itself. Saved under its first card's name.</summary>
     public decimal OuchSecondsLeft { get; set; }
-    /// <summary>Bees still to catch while the pinned "those gloves fit well" line stays at the top of the Story panel (Bee, 2026-11-12).</summary>
+    /// <summary>Bees still to catch while the "those gloves fit well" card shows (Bee, 2026-11-12: a story card;
+    /// it was a line pinned at the top of the log). Counts down only while the card is showing.</summary>
     public int GlovesLineBeesLeft { get; set; }
+    /// <summary>Bee, 2026-11-12: what waits its turn in the story area, in arrival order. Story cards and
+    /// visitors show one at a time: story ids, and "rep:bear" / "rep:hippies" for a visitor. A visitor
+    /// waiting here has its return time held at 0 in <see cref="RepReturnIn"/> until it is shown.</summary>
+    public List<string> StoryQueue { get; set; } = new();
+    /// <summary>True once a shoe has been thrown at a bear (brings the one-time "Not a friend of wildlife?" card).</summary>
+    public bool BearShoeThrown { get; set; }
+    /// <summary>Shoes thrown at the Hippies over all their visits; the 5th sends them away for good.</summary>
+    public int HippieShoes { get; set; }
+    /// <summary>True once the Hippies were sent away for good (5 shoes): kept for a future achievement
+    /// (finishing the game without the Hippies), like <see cref="GlovesRefusedForGood"/>.</summary>
+    public bool HippiesDismissedForGood { get; set; }
     public int GlovesDeclines { get; set; }
     /// <summary>True once the gloves were refused five times: kept for a future hard-mode achievement.</summary>
     public bool GlovesRefusedForGood { get; set; }

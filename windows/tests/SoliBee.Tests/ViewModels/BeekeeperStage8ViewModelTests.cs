@@ -99,11 +99,12 @@ public class BeekeeperStage8ViewModelTests : IDisposable
     {
         var s = Garden((BeekeeperPlants.Clover, 11));
         s.HasWaxCatcher = true;
+        s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher);   // Bee, 2026-11-12: only the Better one boosts the rate
         s.WaxRevealed = true;
         var wax = Row(Make(s), BeekeeperHiveRows.Wax);
-        Assert.Contains(wax.Boosts!, b => b.Id == "wax_catcher" && b.Percent == 100m);
+        Assert.Contains(wax.Boosts!, b => b.Id == "wax_catcher" && b.Percent == 50m);
         Assert.Contains(wax.Boosts!, b => b.Id == BeekeeperBeeTab.PlantBoost && b.Plant == BeekeeperPlants.Clover && b.Percent == 10m);
-        Assert.Equal(0.005m * 2m * 1.10m, wax.Rate);
+        Assert.Equal(0.005m * 1.5m * 1.10m, wax.Rate);
     }
 
     [Fact]

@@ -152,7 +152,9 @@ public class BeekeeperStage2Tests : IDisposable
     public void Upgrades_AppearWithTheWorkbench_AndOnlyWhenUnlocked()
     {
         // The Smoker needs nothing first (Bee, 2026-11-10), so it is left out of these lists.
-        static IEnumerable<string> Ids(BeekeeperEngine x) => x.ShopUpgrades.Select(u => u.Id).Where(id => id != BeekeeperUpgrades.Smoker);
+        // Bee, 2026-11-12: the Honey Dipper needs nothing first either, so it is left out too.
+        static IEnumerable<string> Ids(BeekeeperEngine x) => x.ShopUpgrades.Select(u => u.Id)
+            .Where(id => id != BeekeeperUpgrades.Smoker && id != BeekeeperUpgrades.HoneyDipper);
         Assert.Empty(Ids(Make(new BeekeeperState { Combs = 1, Beebits = 5000m })));
 
         // Bigger Combs I costs 60 wax: it stays out of the Shop until the wax cap can hold that (no wall line).
@@ -225,12 +227,13 @@ public class BeekeeperStage2Tests : IDisposable
     // }
 
     [Fact]
-    public void BetterWaxCatcher_TriplesTheWaxRate()
+    public void BetterWaxCatcher_GivesHalfAgainTheWaxRate()
     {
+        // Bee, 2026-11-12: the Wax-Catcher raises the cap, so the Better one's ×1.5 is the only rate boost (was ×3).
         var e = Make(Workshop(s => { s.Bees = 1000m; s.HoneyRevealed = true; s.HasWaxCatcher = true; s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher); }));
-        Assert.Equal(0.315m, e.WaxPerSecondNow);   // (0.005 + 1,000 × 0.0001) × 3
+        Assert.Equal(0.1575m, e.WaxPerSecondNow);   // (0.005 + 1,000 × 0.0001) × 1.5
         e.Advance(10m);
-        Assert.Equal(3.15m, e.State.Wax);
+        Assert.Equal(1.575m, e.State.Wax);
     }
 
     // ============================================================ wasps

@@ -215,8 +215,9 @@ public partial class BeekeeperView : UserControl
         WorkbenchTitleText.Text = BeekeeperText.WorkbenchTitle;
         CombNameText.Text = BeekeeperText.Comb;
         // Stage 7.5 (spec 016): a comb costs bees and wax, and gives honey and room for both.
+        // Bee, 2026-11-12: the cost on line 1, what you get on line 2 (the long line ran into the Build button).
         CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null, bees: N(vm.CombBeeCost))
-            + " · " + BeekeeperText.CombBlurb(N(vm.HoneyPerComb, 2), N(vm.StoragePerComb), N(vm.WaxStoragePerComb, 1));
+            + "\n" + BeekeeperText.CombBlurb(N(vm.HoneyPerComb, 2), N(vm.StoragePerComb), N(vm.WaxStoragePerComb, 1));
         // Cut in stage 7.5: CombsInfoText.Text = BeekeeperText.Price(null, N(vm.CombCost), null) + " · " + BeekeeperText.CombBlurb(N(vm.StoragePerComb));
         BuildCombButton.Content = BeekeeperText.Build;
         BuildCombButton.IsEnabled = vm.CanBuildComb;
@@ -229,24 +230,25 @@ public partial class BeekeeperView : UserControl
         HoneySuperRow.IsVisible = vm.HoneySuperShown;
         HoneySuperNameText.Text = BeekeeperText.HoneySuper;
         HoneySuperInfoText.Text = BeekeeperText.Price(null, null, null, wood: N(vm.HoneySuperCost))
-            + " · " + BeekeeperText.HoneySuperBlurb(N(vm.HoneySuperCapacity), N(vm.HoneySupers));
+            + "\n" + BeekeeperText.HoneySuperBlurb(N(vm.HoneySuperCapacity), N(vm.HoneySupers));
         BuyHoneySuperButton.Content = BeekeeperText.Add;
         BuyHoneySuperButton.IsEnabled = vm.CanBuyHoneySuper;
         WaxTrayRow.IsVisible = vm.CapacityUpgradesShown;
         WaxTrayNameText.Text = BeekeeperText.WaxTray;
         WaxTrayInfoText.Text = BeekeeperText.Price(N(vm.WaxTrayCost), null, null)
-            + " · " + BeekeeperText.WaxTrayBlurb(N(vm.WaxTrayCapacity, 1), N(vm.WaxTrays));
+            + "\n" + BeekeeperText.WaxTrayBlurb(N(vm.WaxTrayCapacity, 1), N(vm.WaxTrays));
         BuyWaxTrayButton.Content = BeekeeperText.Add;
         BuyWaxTrayButton.IsEnabled = vm.CanBuyWaxTray;
         // Bee, 2026-11-12: bee bread moved to the Hive card (its row's craft links). Before: a workbench row with Make / x10 / x100.
         // Stage 8: candle prices follow the Dipping Rack, and with the Candle Molds a craft "makes 2".
-        string makes = vm.CandlesPerCraft > 1 ? " · " + BeekeeperText.Makes(vm.CandlesPerCraft) : "";
+        // Bee, 2026-11-12: "makes 2" is what you get, so it starts line 2.
+        string makes = vm.CandlesPerCraft > 1 ? BeekeeperText.Makes(vm.CandlesPerCraft) + " · " : "";
         // Stage 10: the beeswax candle (wax only) is a craft link on the Beeswax candles Hive row now (Bee, 2026-11-12).
         // The herbal candle (was the sage repellent candle): opens with the first herbs (stage 10: from the bee hotel).
         RepellentRow.IsVisible = vm.RepellentShown;
         RepellentNameText.Text = BeekeeperText.RepellentCandle;
-        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.HerbalCandleWaxNow), N(vm.Config.HerbalCandleHerbs)) + makes
-            + " · " + BeekeeperText.RepellentBlurb(BeekeeperText.Roughly(vm.HerbalCandleBurnSeconds));
+        RepellentInfoText.Text = BeekeeperText.Price(null, N(vm.HerbalCandleWaxNow), N(vm.Config.HerbalCandleHerbs))
+            + "\n" + makes + BeekeeperText.RepellentBlurb(BeekeeperText.Roughly(vm.HerbalCandleBurnSeconds));
         // Cut in stage 8: BeekeeperText.Price(null, N(vm.Config.HerbalCandleWax), N(vm.Config.HerbalCandleHerbs))
         HerbBurningText.IsVisible = vm.HerbBuff is not null;
         if (vm.HerbBuff is { } buff)
@@ -269,8 +271,8 @@ public partial class BeekeeperView : UserControl
         // The propolis candles (stage 7): once the poplar has sprouted
         BeeBoostRow.IsVisible = vm.PropolisCandlesShown;
         BeeBoostNameText.Text = BeekeeperText.BeeBoostCandle;
-        BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.BeeBoostCandleWaxNow), null, propolis: N(vm.Config.BeeBoostCandlePropolis)) + makes
-            + " · " + BeekeeperText.BeeBoostBlurb(N(vm.BeeBoostBonusPercent), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
+        BeeBoostInfoText.Text = BeekeeperText.Price(null, N(vm.BeeBoostCandleWaxNow), null, propolis: N(vm.Config.BeeBoostCandlePropolis))
+            + "\n" + makes + BeekeeperText.BeeBoostBlurb(N(vm.BeeBoostBonusPercent), BeekeeperText.Roughly(vm.Config.BeeBoostBurnSeconds));
         CraftBeeBoostButton.Content = BeekeeperText.Make;
         CraftBeeBoostButton.IsEnabled = vm.CanCraftBeeBoost;
         ShowBatch(BeeBoost10Button, 10, vm.CanCraftBeeBoostTimes(10));
@@ -280,8 +282,8 @@ public partial class BeekeeperView : UserControl
         SagePropolisRow.IsVisible = vm.PropolisCandlesShown;
         SagePropolisNameText.Text = BeekeeperText.SagePropolisCandle;
         SagePropolisInfoText.Text = BeekeeperText.Price(null, N(vm.SagePropolisCandleWaxNow), N(vm.Config.SagePropolisCandleHerbs),
-                propolis: N(vm.Config.SagePropolisCandlePropolis)) + makes
-            + " · " + BeekeeperText.SagePropolisBlurb(N(vm.SagePropolisBonusPercent), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
+                propolis: N(vm.Config.SagePropolisCandlePropolis))
+            + "\n" + makes + BeekeeperText.SagePropolisBlurb(N(vm.SagePropolisBonusPercent), BeekeeperText.Roughly(vm.Config.SagePropolisBurnSeconds));
         CraftSagePropolisButton.Content = BeekeeperText.Make;
         CraftSagePropolisButton.IsEnabled = vm.CanCraftSagePropolis;
         ShowBatch(SagePropolis10Button, 10, vm.CanCraftSagePropolisTimes(10));
@@ -329,7 +331,7 @@ public partial class BeekeeperView : UserControl
         EngageWaspButton.IsVisible = vm.WaspFirstVisit;
         EngageWaspButton.IsEnabled = vm.CanEngageWasp;
         BribeButton.IsVisible = !vm.WaspFirstVisit;
-        UpdateVisitors(vm.RepsPresent, lang);
+        UpdateVisitors(vm.RepsPresent, vm.BearName, lang);
         UpdateStory(vm, lang);
         ArtLayer.IsVisible = !StoryCard.IsVisible && !VisitorsCard.IsVisible;   // the bee art when there is no story
         // Cut: the wasp card's "Light a candle" button (sage candles are going away).
@@ -339,7 +341,8 @@ public partial class BeekeeperView : UserControl
         CandleBurningText.IsVisible = burning && !vm.WaspApproaching;
         CandleBurningText.Text = BeekeeperText.CandleBurning(BeekeeperText.Clock(vm.RepellentSecondsLeft));
 
-        // Log
+        // Log (Bee, 2026-11-12: the HIVE LOG card waits for the first bee caught)
+        LogCard.IsVisible = vm.LogCardShown;
         LogTitleText.Text = BeekeeperText.LogTitle;
         UpdateLog(vm, lang);
 
@@ -717,7 +720,7 @@ public partial class BeekeeperView : UserControl
         string N(decimal v) => NumberFormatter.Format(v, lang);
         string? Part(decimal v) => v > 0m ? N(v) : null;
         var upgrades = vm.ShopUpgrades;
-        string sig = $"{vm.ToolLevel}|{vm.BeesPerClick}|{vm.HasWaxCatcher}|{lang}|{string.Join(",", upgrades.Select(u => u.Id))}";
+        string sig = $"{vm.ToolLevel}|{vm.BeesPerClick}|{vm.HasWaxCatcher}|{vm.WaxCatcherRoom}|{lang}|{string.Join(",", upgrades.Select(u => u.Id))}";
         if (sig != _shopSignature)
         {
             _shopSignature = sig;
@@ -743,7 +746,7 @@ public partial class BeekeeperView : UserControl
             }
             if (!vm.HasWaxCatcher || ShowBoughtItems)
                 ShopRows.Children.Add(MakeShopRow(
-                    BeekeeperText.WaxCatcherName, BeekeeperText.WaxCatcherBlurb,
+                    BeekeeperText.WaxCatcherName, BeekeeperText.WaxCatcherBlurb(N(vm.WaxCatcherRoom)),
                     vm.HasWaxCatcher, BeekeeperText.Price(N(vm.Config.WaxCatcherCost), null, null), "catcher", vm.BuyWaxCatcherCommand.Execute));
 
             // Upgrades: only unlocked, not-yet-bought ones are listed (bought ones leave the Shop).
@@ -936,7 +939,6 @@ public partial class BeekeeperView : UserControl
         // count and the newest) matters once the log is full at 50: then a new line identical
         // to the newest one (Sell 10 twice) leaves the count and the newest line unchanged.
         var sigBuilder = new System.Text.StringBuilder(lang.ToString());
-        sigBuilder.Append(vm.GlovesLineShown ? "|pin" : "|nopin");
         for (int i = 0; i < shown; i++)
             sigBuilder.Append('|').Append(log[i].Key).Append(':').Append(log[i].Value).Append(':').Append(log[i].Text);
         string sig = sigBuilder.ToString();
@@ -944,15 +946,7 @@ public partial class BeekeeperView : UserControl
         _logSignature = sig;
 
         LogLines.Children.Clear();
-        if (vm.GlovesLineShown)   // Bee, 2026-11-12: pinned for the first bees after the gloves go on
-            LogLines.Children.Add(new TextBlock
-            {
-                Text = BeekeeperText.PinnedGloves,
-                FontFamily = new FontFamily("Georgia"),
-                FontSize = 14,
-                Foreground = WhiteBrush,
-                TextWrapping = TextWrapping.Wrap,
-            });
+        // Cut (Bee, 2026-11-12): the pinned "those gloves fit well" line; it is a story card now.
         for (int i = 0; i < shown; i++)
         {
             string line = BeekeeperText.LogLine(log[i], lang);
@@ -983,11 +977,11 @@ public partial class BeekeeperView : UserControl
     // Reps at the door: rebuilt only when who is here (or the language) changes.
     private string _visitorSignature = "";
 
-    private void UpdateVisitors(IReadOnlyList<string> present, AppLanguage lang)
+    private void UpdateVisitors(IReadOnlyList<string> present, string bearName, AppLanguage lang)
     {
         VisitorsCard.IsVisible = present.Count > 0;
         VisitorsTitleText.Text = BeekeeperText.VisitorsTitle;
-        string sig = lang + "|" + string.Join(",", present);
+        string sig = lang + "|" + bearName + "|" + string.Join(",", present);
         if (sig == _visitorSignature) return;
         _visitorSignature = sig;
         VisitorRows.Children.Clear();
@@ -995,7 +989,7 @@ public partial class BeekeeperView : UserControl
         {
             var rep = id;
             var row = new StackPanel { Spacing = 6 };
-            row.Children.Add(new TextBlock { Text = BeekeeperText.RepHere(rep), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
+            row.Children.Add(new TextBlock { Text = BeekeeperText.RepHere(rep, bearName), Classes = { "bk-body" }, FontWeight = FontWeight.SemiBold });
             var shoe = new Button { Classes = { "bk-button" }, Content = BeekeeperText.ThrowShoe,
                 HorizontalAlignment = HorizontalAlignment.Stretch, HorizontalContentAlignment = HorizontalAlignment.Center };
             var engage = new Button { Classes = { "bk-button" }, Content = BeekeeperText.Engage,
@@ -1045,6 +1039,16 @@ public partial class BeekeeperView : UserControl
                 StoryText.Text = BeekeeperText.StoryGloves;
                 StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryYes, () => _vm?.PutOnGloves()));
                 StoryButtons.Children.Add(MakeButton(BeekeeperText.StoryNo, () => _vm?.LeaveGloves()));
+                break;
+            // Bee, 2026-11-12: three cards with no button; they go by themselves.
+            case BeekeeperStories.GlovesFit:   // after 6 bees caught while it shows
+                StoryText.Text = BeekeeperText.StoryGlovesFit;
+                break;
+            case BeekeeperStories.BearShoe:   // the first shoe at a bear, fades after a few seconds
+                StoryText.Text = BeekeeperText.StoryBearShoe;
+                break;
+            case BeekeeperStories.HippiesGone:   // the Hippies' 5th shoe, fades after a few seconds
+                StoryText.Text = BeekeeperText.StoryHippiesGone;
                 break;
             case BeekeeperStories.Smoker:
                 StoryText.Text = BeekeeperText.StorySmoker;

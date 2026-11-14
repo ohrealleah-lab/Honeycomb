@@ -175,24 +175,17 @@ public class BeekeeperStage10ViewModelTests
     // ============================================================ hovers (User Story 7)
 
     [Fact]
-    public void TheBeebitsHover_ListsPlainAndPottedHoney_TheAgreement_AndTheTradesHerb()
+    public void TheBeebitsHover_IsJustWords_NoRates()
     {
+        // Bee, 2026-11-12: "It's capitalism. Gotta have money!" (it listed the bear's rates).
         var vm = Make(Bear(s => s.BeebitsRevealed = true));
-        var row = Row(vm, BeekeeperHiveRows.Beebits);
-        var plain = Assert.Single(row.Sources!);
-        Assert.Equal(("plain_honey", 5m, 10m), (plain.Id, plain.PerSecond, plain.Count));
-        Assert.Empty(row.Boosts!);
-
         vm.State.PottedHoneyRevealed = true;
-        vm.State.HasTradeAgreement = true;
         vm.State.HerbBuff = BeekeeperHerbs.Trades;
         vm.State.HerbSecondsLeft = 60m;
-        row = Row(vm, BeekeeperHiveRows.Beebits);
-        Assert.Equal(new[] { "plain_honey_agreement", "potted_honey" }, row.Sources!.Select(x => x.Id));
-        Assert.Equal(8m, row.Sources![0].Count);
-        Assert.Equal(20m, row.Sources![1].PerSecond);
-        var boost = Assert.Single(row.Boosts!);
-        Assert.Equal((BeekeeperHerbs.Trades, 50m), (boost.Id, boost.Percent));
+        var row = Row(vm, BeekeeperHiveRows.Beebits);
+        Assert.Null(row.Sources);
+        Assert.Null(row.Boosts);
+        Assert.Null(row.Rate);
     }
 
     [Fact]
@@ -200,8 +193,7 @@ public class BeekeeperStage10ViewModelTests
     {
         var vm = Make();
         var row = Row(vm, BeekeeperHiveRows.ClayJars);
-        Assert.Equal(3m, row.Rate2);    // jars in the garden
-        Assert.Equal(10m, row.Value2);  // honey one jar pots
+        Assert.Equal(10m, row.Value2);  // honey one jar holds: "Holds 10 honey" (Bee, 2026-11-12)
     }
 
     // ============================================================ debug

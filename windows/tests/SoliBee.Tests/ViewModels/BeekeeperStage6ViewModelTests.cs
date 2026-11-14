@@ -319,6 +319,7 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         s.Bees = 250m;
         s.Combs = 3;
         s.HasWaxCatcher = true;
+        s.Upgrades.Add(BeekeeperUpgrades.BetterWaxCatcher);   // Bee, 2026-11-12: only the Better one boosts the rate
         var vm = Make(new Clock(), s);
 
         var wax = Row(vm, BeekeeperHiveRows.Wax)!;
@@ -328,8 +329,8 @@ public class BeekeeperStage6ViewModelTests : IDisposable
         Assert.Equal(250m, wax.Sources![1].Count);
         var catcher = Assert.Single(wax.Boosts!);
         Assert.Equal("wax_catcher", catcher.Id);
-        Assert.Equal(100m, catcher.Percent);
-        Assert.Equal(wax.Rate, (0.005m + 0.025m) * 2m);   // the rate is the sources times the boosts
+        Assert.Equal(50m, catcher.Percent);
+        Assert.Equal(wax.Rate, (0.005m + 0.025m) * 1.5m);   // the rate is the sources times the boosts
 
         var honey = Row(vm, BeekeeperHiveRows.Honey)!;
         var combs = Assert.Single(honey.Sources!);

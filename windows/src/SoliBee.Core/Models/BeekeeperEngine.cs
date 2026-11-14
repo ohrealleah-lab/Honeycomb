@@ -320,14 +320,38 @@ public sealed class BeekeeperEngine
         s.StoryReturnIn = s.StoryReturnIn.Where(kv => BeekeeperStories.Order.Contains(kv.Key) && kv.Value > 0m)
             .ToDictionary(kv => kv.Key, kv => Math.Min(kv.Value, Config.GlovesReturnSeconds));
         s.BeesCaught = Math.Max(0, s.BeesCaught);
-        s.OuchSecondsLeft = Math.Clamp(s.OuchSecondsLeft, 0m, Config.OuchSeconds);
+        s.OuchSecondsLeft = Math.Clamp(s.OuchSecondsLeft, 0m, MaxFadeSeconds);
         s.GlovesDeclines = Math.Clamp(s.GlovesDeclines, 0, Config.GlovesMaxDeclines);
+        s.GlovesLineBeesLeft = Math.Clamp(s.GlovesLineBeesLeft, 0, Math.Max(0, Config.GlovesLineBees));
         if (s.StoryHere is not null && (!BeekeeperStories.Order.Contains(s.StoryHere) || s.StoriesDone.Contains(s.StoryHere)))
             s.StoryHere = null;
+
+        // The story area (Bee, 2026-11-12): one thing at a time. Only known entries wait, each once, and an
+        // older save with a card and visitors (or two visitors) up at once keeps the first and queues the rest.
+        s.HippieShoes = Math.Max(0, s.HippieShoes);
+        s.RepsPresent = (s.RepsPresent ?? new()).Where(id => RepIds.Contains(id)).Distinct().ToList();
+        if (s.HippiesDismissedForGood)
+        {
+            s.RepsPresent.Remove("hippies");
+            s.RepReturnIn.Remove("hippies");
+        }
+        s.StoryQueue = (s.StoryQueue ?? new()).Where(e => e is not null
+            && (RepOfEntry(e) is { } rep ? !s.RepsPresent.Contains(rep) && !(rep == "hippies" && s.HippiesDismissedForGood)
+                : BeekeeperStories.Order.Contains(e) && e != s.StoryHere && !s.StoriesDone.Contains(e))).Distinct().ToList();
+        var extraReps = s.StoryHere is not null ? s.RepsPresent.ToList() : s.RepsPresent.Skip(1).ToList();
+        foreach (var rep in extraReps) s.RepsPresent.Remove(rep);
+        s.StoryQueue.InsertRange(0, extraReps.Select(RepEntry).Where(e => !s.StoryQueue.Contains(e)));
+        // A visitor whose return time is used up waits its turn (its time stays at 0 until it is shown).
+        foreach (var rep in s.RepReturnIn.Where(kv => kv.Value <= 0m).Select(kv => kv.Key).ToList())
+        {
+            if (!RepIds.Contains(rep)) { s.RepReturnIn.Remove(rep); continue; }
+            s.RepReturnIn[rep] = 0m;
+            if (!s.RepsPresent.Contains(rep) && !s.StoryQueue.Contains(RepEntry(rep))) s.StoryQueue.Add(RepEntry(rep));
+        }
     }
 
-    // Bee, 2026-11-11: a new game starts with 75 Beebits and the Shop open (one Wax-Catcher is a free choice).
-    // Before: new() { BearName = PickBearName() }
+    // Bee, 2026-11-12: a new game starts with 0 Beebits, and the Beebits row waits for the first trade.
+    // (2026-11-11: 75 Beebits, one Wax-Catcher as a free choice.) Before: new() { BearName = PickBearName() }
     private BeekeeperState NewState() => new()
     {
         BearName = PickBearName(), Beebits = Config.StartingBeebits,
@@ -376,10 +400,15 @@ public sealed class BeekeeperEngine
 
     /// <summary>The wax cap, small on purpose (spec 016): the starting room, plus a little for each
     /// comb bought and each Wax Tray (and the meadow's, stage 8), grown by the same Technologies.</summary>
+    /// <remarks>Bee, 2026-11-12: the Wax-Catcher adds its room here (it doubled the wax rate before).</remarks>
     public decimal WaxStorage =>
         (Config.StartingWaxCap + CombsBought * Config.WaxCapPerComb + State.WaxTrays * Config.WaxTrayCapacity
+         + (State.HasWaxCatcher ? Config.WaxCatcherWaxCap : 0m)
          + (State.HasMeadow ? Config.MeadowWaxCap : 0m))
         * StorageMultiplier;
+
+    /// <summary>Wax room the Wax-Catcher adds right now (the Technologies counted), for its Shop blurb.</summary>
+    public decimal WaxCatcherRoom => Config.WaxCatcherWaxCap * StorageMultiplier;
 
     /// <summary>The one rule for "time to full" on any capped resource (the Hive card's rate hovers):
     /// seconds until <paramref name="amount"/> reaches <paramref name="cap"/> at <paramref name="rate"/>
@@ -471,8 +500,13 @@ public sealed class BeekeeperEngine
     /// first of each) multiplies in here with the other lasting boosts.</remarks>
     /// <remarks>Stage 9 (spec 018, FR-906): winter slows it (<see cref="WinterMultiplier"/>); being
     /// here, it slows the meadow's honey too.</remarks>
+    /// <remarks>Bee, 2026-11-12: the Honey Dipper (+50%) is one of the lasting boosts.</remarks>
     public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier
-        * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier;
+        * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier * HoneyDipperMultiplier;
+    // Before the Honey Dipper: … * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier;
+
+    /// <summary>The Honey Dipper's honey multiplier: 1.5 once bought, else 1.</summary>
+    public decimal HoneyDipperMultiplier => Owns(BeekeeperUpgrades.HoneyDipper) ? Config.HoneyDipperHoneyMultiplier : 1m;
     // Before stage 9: … * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey);
     // Cut in stage 8: public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier * FreeBeeHoneyFactor;
 
@@ -505,11 +539,14 @@ public sealed class BeekeeperEngine
     /// <remarks>Stage 8 (spec 017, FR-805): times the wax plants' bonus (clover past the first).</remarks>
     public decimal WaxMultiplier => WaxCatcherFactor * PlantBonus(BeekeeperBonusTargets.Wax);
 
-    /// <summary>The Wax-Catchers alone: 1, 2 or 3 (the wax hover lists it apart from the clover).</summary>
+    /// <summary>The Wax-Catchers alone on the wax rate (the wax hover lists it apart from the clover). Bee,
+    /// 2026-11-12: the Wax-Catcher raises the wax cap instead, so only the Better Wax-Catcher boosts the rate
+    /// (×1.5). A later Wax-Catcher upgrade will add a wax production boost here (not built yet).</summary>
     public decimal WaxCatcherFactor =>
-        !State.HasWaxCatcher ? 1m
-        : Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.WaxCatcherMultiplier * Config.BetterWaxCatcherBonus
-        : Config.WaxCatcherMultiplier;
+        State.HasWaxCatcher && Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.BetterWaxCatcherBonus : 1m;
+    // Before (2026-11-12): !State.HasWaxCatcher ? 1m
+    //     : Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.WaxCatcherMultiplier * Config.BetterWaxCatcherBonus
+    //     : Config.WaxCatcherMultiplier;
 
     public bool Owns(string upgradeId) => State.Upgrades.Contains(upgradeId);
 
@@ -698,7 +735,12 @@ public sealed class BeekeeperEngine
         decimal gained = BeesPerCatch;
         State.Bees = Math.Min(Config.MaxBees, State.Bees + gained);
         State.BeesCaught += (long)gained;
-        if (State.GlovesLineBeesLeft > 0) State.GlovesLineBeesLeft = Math.Max(0, State.GlovesLineBeesLeft - (int)gained);
+        // Bee, 2026-11-12: the "gloves fit well" card goes once enough bees are caught while it shows.
+        if (State.StoryHere == BeekeeperStories.GlovesFit)
+        {
+            State.GlovesLineBeesLeft = Math.Max(0, State.GlovesLineBeesLeft - (int)gained);
+            if (State.GlovesLineBeesLeft == 0) FinishStory(BeekeeperStories.GlovesFit);
+        }
         FinishOpeningIfDue();   // stage 10: the first bee caught ends the opening card
         if (!State.HoneyRevealed)
         {
@@ -1801,6 +1843,7 @@ public sealed class BeekeeperEngine
             BeekeeperUpgrades.WoodenFrames => (1m - Config.FramesWaxMultiplier) * 100m,
             BeekeeperUpgrades.DippingRack => (1m - Config.RackWaxMultiplier) * 100m,
             BeekeeperUpgrades.CandleMolds => Config.CandlesPerCraftWithMolds,   // candles a craft
+            BeekeeperUpgrades.HoneyDipper => Pct(Config.HoneyDipperHoneyMultiplier),   // Bee, 2026-11-12
             _ => null,
         };
     }
@@ -1897,18 +1940,20 @@ public sealed class BeekeeperEngine
     private bool RepRevealed(string id) => id switch
     {
         "bear" => State.BearRevealed,
-        "hippies" => State.HippiesRevealed,
+        "hippies" => State.HippiesRevealed && !State.HippiesDismissedForGood,   // 5 shoes: gone for good
         _ => false,
     };
 
     public bool RepPresent(string id) => State.RepsPresent.Contains(id);
     public bool RepEngaged(string id) => State.RepsEngaged.Contains(id);
 
-    /// <summary>Reps at the door right now, in arrival order.</summary>
+    /// <summary>The rep at the door right now (Bee, 2026-11-12: one at a time, so 0 or 1 of them).</summary>
     public IReadOnlyList<string> RepsPresent => State.RepsPresent;
 
-    /// <summary>Rep time passes (the view model feeds it every non-away tick). A revealed rep shows up
-    /// the first time; one sent away by a shoe comes back when its delay is used up. No emissary rule.</summary>
+    /// <summary>Rep time passes (the view model feeds it every non-away tick). A revealed rep arrives
+    /// the first time; one sent away by a shoe arrives again when its delay is used up. No emissary rule.
+    /// Bee, 2026-11-12: an arriving rep joins the story queue and is shown when its turn comes (its return
+    /// time held at 0 until then); the "shows up again" line is told when it is shown.</summary>
     public IReadOnlyList<BeekeeperEvent> AdvanceRepTime(decimal seconds)
     {
         var events = new List<BeekeeperEvent>();
@@ -1918,18 +1963,17 @@ public sealed class BeekeeperEngine
             if (!State.RepsMet.Contains(id))
             {
                 State.RepsMet.Add(id);
-                State.RepsPresent.Add(id);
+                Enqueue(RepEntry(id));
                 // No log line the first time: the reveal line (BearArrives / HippiesArrive) already says so.
             }
-            else if (State.RepReturnIn.TryGetValue(id, out var left))
+            else if (State.RepReturnIn.TryGetValue(id, out var left) && left > 0m)
             {
                 left -= Math.Max(0m, seconds);
-                if (left > 0m) { State.RepReturnIn[id] = left; continue; }
-                State.RepReturnIn.Remove(id);
-                State.RepsPresent.Add(id);
-                events.Add(new BeekeeperEvent(BeekeeperEvents.RepArrives, 0m, id));
+                State.RepReturnIn[id] = Math.Max(0m, left);   // at 0 it waits its turn, paused
+                if (left <= 0m) Enqueue(RepEntry(id));
             }
         }
+        FillStoryArea(events);
         return events;
     }
 
@@ -1941,12 +1985,88 @@ public sealed class BeekeeperEngine
         return new ActionResult(true, 0m, new[] { new BeekeeperEvent(BeekeeperEvents.RepEngaged, 0m, id) });
     }
 
-    /// <summary>The rep leaves and comes back later (RepReturnSeconds). No miss, no emissary.</summary>
+    /// <summary>The rep leaves and comes back later (RepReturnSeconds). No miss, no emissary.
+    /// Bee, 2026-11-12: the first shoe ever at a bear brings a one-time card; the Hippies' 5th shoe (over all
+    /// their visits) sends them away for good, with a card instead of the "back later" line.</summary>
     public ActionResult ThrowShoeAtRep(string id)
     {
         if (!State.RepsPresent.Remove(id)) return ActionResult.Refused;
+        if (id == "bear") State.BearShoeThrown = true;
+        if (id == "hippies")
+        {
+            State.HippieShoes++;
+            if (State.HippieShoes >= Config.HippiesShoesForGood)
+            {
+                State.HippiesDismissedForGood = true;
+                State.RepReturnIn.Remove(id);
+                State.StoryQueue.Remove(RepEntry(id));
+                return new ActionResult(true, 1m, Array.Empty<BeekeeperEvent>());   // the card speaks
+            }
+        }
         State.RepReturnIn[id] = Config.RepReturnSeconds;
         return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.RepLeft, 0m, id) });
+    }
+
+    // ------------------------------------------------------------------ the story area (Bee, 2026-11-12)
+    // Story cards and visitors (the bear, the Hippies) show one at a time, in the order they arrive. What
+    // arrives while something is showing waits in State.StoryQueue; a card that fades by itself holds the
+    // queue while it fades. Before, the visitors stacked under the card in one panel.
+
+    private const string RepPrefix = "rep:";
+    private static string RepEntry(string id) => RepPrefix + id;
+    private static string? RepOfEntry(string entry) => entry.StartsWith(RepPrefix, StringComparison.Ordinal) ? entry[RepPrefix.Length..] : null;
+
+    /// <summary>A story card or a visitor is showing.</summary>
+    public bool StoryAreaBusy => State.StoryHere is not null || State.RepsPresent.Count > 0;
+
+    /// <summary>What waits its turn, in order (story ids, and "rep:bear" / "rep:hippies").</summary>
+    public IReadOnlyList<string> StoryQueue => State.StoryQueue;
+
+    /// <summary>Play seconds a card that goes by itself stays up, or null for a card that waits for an answer.</summary>
+    private decimal? FadeSeconds(string id) => id switch
+    {
+        BeekeeperStories.Ouch => Config.OuchSeconds,
+        BeekeeperStories.BearShoe => Config.BearShoeCardSeconds,
+        BeekeeperStories.HippiesGone => Config.HippiesGoneCardSeconds,
+        _ => null,
+    };
+
+    private decimal MaxFadeSeconds => Math.Max(Config.OuchSeconds, Math.Max(Config.BearShoeCardSeconds, Config.HippiesGoneCardSeconds));
+
+    private void Enqueue(string entry)
+    {
+        if (!State.StoryQueue.Contains(entry)) State.StoryQueue.Add(entry);
+    }
+
+    /// <summary>An entry still belongs in the queue: a rep still coming and not at the door, or a story
+    /// moment still due, not answered, not waiting to come back and not showing.</summary>
+    private bool StillWaiting(string entry) => RepOfEntry(entry) is { } rep
+        ? RepRevealed(rep) && !State.RepsPresent.Contains(rep) && !State.RepsEngaged.Contains(rep)
+        : BeekeeperStories.Order.Contains(entry) && entry != State.StoryHere && !State.StoriesDone.Contains(entry)
+          && !State.StoryReturnIn.ContainsKey(entry) && StoryDue(entry);
+
+    /// <summary>Newly due moments join the back of the queue (in story order), what no longer belongs leaves
+    /// it, and when nothing is showing the front comes forward: a card (its fade timer starts) or a visitor
+    /// (a returning one is told in the log).</summary>
+    private void FillStoryArea(List<BeekeeperEvent> events)
+    {
+        State.StoryQueue.RemoveAll(e => !StillWaiting(e));
+        foreach (var id in BeekeeperStories.Order)
+            if (!State.StoryQueue.Contains(id) && StillWaiting(id)) State.StoryQueue.Add(id);
+        if (StoryAreaBusy || State.StoryQueue.Count == 0) return;
+
+        string next = State.StoryQueue[0];
+        State.StoryQueue.RemoveAt(0);
+        if (RepOfEntry(next) is { } rep)
+        {
+            State.RepsPresent.Add(rep);
+            // A rep back from a shoe is told now; the first time, its reveal line already said it.
+            if (State.RepReturnIn.Remove(rep)) events.Add(new BeekeeperEvent(BeekeeperEvents.RepArrives, 0m, rep));
+            return;
+        }
+        State.StoryHere = next;
+        if (FadeSeconds(next) is { } fade) State.OuchSecondsLeft = fade;
+        events.Add(new BeekeeperEvent(BeekeeperEvents.StoryArrives, 0m, next));
     }
 
     // ------------------------------------------------------------------ story cards
@@ -1967,6 +2087,10 @@ public sealed class BeekeeperEngine
         BeekeeperStories.PotHoney => State.Honey >= Config.PotHoneyStoryHoney && CanPotHoney,
         BeekeeperStories.Candle => CanCraftBeeswaxTimes(Config.CandleStoryCandles),
         BeekeeperStories.BeeBread => CanMakeBeeBread,
+        // Bee, 2026-11-12
+        BeekeeperStories.GlovesFit => State.GlovesLineBeesLeft > 0,
+        BeekeeperStories.BearShoe => State.BearShoeThrown,
+        BeekeeperStories.HippiesGone => State.HippiesDismissedForGood,
         _ => false,
     };
 
@@ -1980,8 +2104,9 @@ public sealed class BeekeeperEngine
         return PlantSeed(id);   // clears the card; the next new kind, if any, brings it back
     }
 
-    /// <summary>Story time passes (play time only, like rep time). Counts down declined moments, then,
-    /// if no card is showing, shows the first moment in order that is due and not done or waiting.
+    /// <summary>Story time passes (play time only, like rep time). Counts down declined moments and the
+    /// fading card, then fills the story area (Bee, 2026-11-12: one card or visitor at a time, in the order
+    /// they arrive; due moments queue behind a visitor at the door).
     /// Raises <see cref="BeekeeperEvents.StoryArrives"/> (no log line: the card speaks).</summary>
     public IReadOnlyList<BeekeeperEvent> AdvanceStoryTime(decimal seconds)
     {
@@ -1992,26 +2117,20 @@ public sealed class BeekeeperEngine
             if (left > 0m) State.StoryReturnIn[id] = left;
             else State.StoryReturnIn.Remove(id);
         }
-        if (State.StoryHere == BeekeeperStories.Ouch)
+        if (State.StoryHere is { } fading && FadeSeconds(fading) is not null)
         {
-            // "Ouch!" has no button: it fades by itself after a few seconds of play.
+            // "Ouch!" and the other cards with no button fade by themselves after a few seconds of play.
             State.OuchSecondsLeft -= Math.Max(0m, seconds);
-            if (State.OuchSecondsLeft <= 0m) { State.OuchSecondsLeft = 0m; FinishStory(BeekeeperStories.Ouch); }
+            if (State.OuchSecondsLeft <= 0m) { State.OuchSecondsLeft = 0m; FinishStory(fading); }
         }
         // The seed card leaves by itself once there is nothing left to plant.
         if (State.StoryHere == BeekeeperStories.Seed && !StoryDue(BeekeeperStories.Seed)) State.StoryHere = null;
         // The craft cards go the same way when the first one can't be made any more (they return when it can).
         if (State.StoryHere is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread
             && !StoryDue(State.StoryHere)) State.StoryHere = null;
-        if (State.StoryHere is not null) return events;
-        foreach (var id in BeekeeperStories.Order)
-        {
-            if (State.StoriesDone.Contains(id) || State.StoryReturnIn.ContainsKey(id) || !StoryDue(id)) continue;
-            State.StoryHere = id;
-            if (id == BeekeeperStories.Ouch) State.OuchSecondsLeft = Config.OuchSeconds;
-            events.Add(new BeekeeperEvent(BeekeeperEvents.StoryArrives, 0m, id));
-            break;
-        }
+        // The gloves-fit card is done once its bees are caught (normally Catch finishes it at once).
+        if (State.StoryHere == BeekeeperStories.GlovesFit && !StoryDue(BeekeeperStories.GlovesFit)) FinishStory(BeekeeperStories.GlovesFit);
+        FillStoryArea(events);
         return events;
     }
 
@@ -2080,10 +2199,12 @@ public sealed class BeekeeperEngine
     /// <summary>Shows a story card now (debug builds only; the game never does this).</summary>
     public IReadOnlyList<BeekeeperEvent> DebugShowStory(string id)
     {
-        if (!BeekeeperStories.Order.Contains(id) || State.StoryHere is not null || State.StoriesDone.Contains(id))
+        if (!BeekeeperStories.Order.Contains(id) || StoryAreaBusy || State.StoriesDone.Contains(id))
             return Array.Empty<BeekeeperEvent>();
         State.StoryReturnIn.Remove(id);
+        State.StoryQueue.Remove(id);
         State.StoryHere = id;
+        if (FadeSeconds(id) is { } fade) State.OuchSecondsLeft = fade;
         return new[] { new BeekeeperEvent(BeekeeperEvents.StoryArrives, 0m, id) };
     }
 

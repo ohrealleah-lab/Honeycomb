@@ -63,10 +63,11 @@ public class BeekeeperStage3Tests : IDisposable
     [Fact]
     public void PracticeComesWithTheVacuum_WithoutTheWorkbench_AndTheSmokerIsNeverSold()
     {
-        Assert.Empty(Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades);   // the Smoker is repaired in a story card, not sold
+        // The Smoker is repaired in a story card, not sold; only the Honey Dipper needs nothing first (Bee, 2026-11-12).
+        Assert.Equal(new[] { BeekeeperUpgrades.HoneyDipper }, Make(new BeekeeperState { ToolLevel = 2 }).ShopUpgrades.Select(u => u.Id));
 
         var e = Make(new BeekeeperState { ToolLevel = 3, Beebits = 5_000m, Wax = 500m, Herbs = 5m, Bees = 5_000m, WaxTrays = 100 });   // trays: room for every wax price
-        Assert.Equal(new[] { BeekeeperUpgrades.Practice }, e.ShopUpgrades.Select(u => u.Id));
+        Assert.Equal(new[] { BeekeeperUpgrades.HoneyDipper, BeekeeperUpgrades.Practice }, e.ShopUpgrades.Select(u => u.Id));
         Assert.True(e.BuyUpgrade(BeekeeperUpgrades.Practice).Done);
         Assert.Contains(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.MorePractice);
         Assert.DoesNotContain(e.ShopUpgrades, u => u.Id == BeekeeperUpgrades.Practice);

@@ -144,6 +144,8 @@ public static class BeekeeperUpgrades
     public const string CandleMolds = "candle_molds";
     public const string DippingRack = "dipping_rack";
     public const string BeeHotel = "bee_hotel";
+    /// <summary>Bee, 2026-11-12: +50% honey, a first Shop buy (80 Beebits) beside the Mesh Net.</summary>
+    public const string HoneyDipper = "honey_dipper";
     public const string NeedsWood = "wood_revealed";
 
     public const string NeedsPaper = "paper_revealed";
@@ -167,6 +169,13 @@ public static class BeekeeperStories
     /// <summary>"Ouch!": the first sting, which comes once 10 bees have been caught by hand.</summary>
     public const string Ouch = "ouch";
     public const string Gloves = "gloves";
+    /// <summary>Bee, 2026-11-12: "Honey, those gloves fit well." No button; it goes once
+    /// <see cref="BeekeeperConfig.GlovesLineBees"/> bees are caught while it shows (it was pinned in the log).</summary>
+    public const string GlovesFit = "gloves_fit";
+    /// <summary>Bee, 2026-11-12: the first shoe ever thrown at a bear. No button; it fades after a few seconds.</summary>
+    public const string BearShoe = "bear_shoe";
+    /// <summary>Bee, 2026-11-12: the Hippies' 5th shoe sends them away for good. No button; it fades.</summary>
+    public const string HippiesGone = "hippies_gone";
     public const string Smoker = "smoker";
     /// <summary>A seed of a kind never planted is in hand: "Plant it?" (Bee, 2026-11-11). Unlike the
     /// others it comes back for every new kind, so it is never marked done.</summary>
@@ -184,7 +193,8 @@ public static class BeekeeperStories
     public const string Candle = "beeswax_candle";
     /// <summary>A bee fact about bee bread feeding the young; its button makes the first bee bread.</summary>
     public const string BeeBread = "bee_bread";
-    public static readonly string[] Order = { Opening, Ouch, Gloves, Smoker, PotHoney, Candle, BeeBread, Seed };
+    public static readonly string[] Order = { Opening, Ouch, Gloves, GlovesFit, Smoker, PotHoney, Candle, BeeBread, BearShoe, HippiesGone, Seed };
+    // Before the story queue (Bee, 2026-11-12): { Opening, Ouch, Gloves, Smoker, PotHoney, Candle, BeeBread, Seed }
     // Before stage 10: { Ouch, Gloves, Smoker, Seed }
     // Before the craft cards (Bee, 2026-11-12): { Opening, Ouch, Gloves, Smoker, Seed }
 }
@@ -214,9 +224,12 @@ public sealed class BeekeeperConfig
     // Cut in stage 7.5 (spec 016): bees made the honey and wax followed it.
     // public decimal HoneyPerBeePerSecond { get; init; } = 0.01m;
     // public decimal HoneyPerWax { get; init; } = 50m;
-    /// <summary>Stage 7.5 (spec 016): the Wax-Catcher multiplies the wax rate by this (×2);
-    /// the Better Wax-Catcher by <see cref="BetterWaxCatcherBonus"/> on top (×3).</summary>
-    public int WaxCatcherMultiplier { get; init; } = 2;
+    // Cut (Bee, 2026-11-12): the Wax-Catcher doubled the wax rate (the Better Wax-Catcher took it to ×3). It
+    // raises the wax cap now (WaxCatcherWaxCap). A later Wax-Catcher upgrade will add a wax production
+    // boost; this number may come back with it.
+    // /// <summary>Stage 7.5 (spec 016): the Wax-Catcher multiplies the wax rate by this (×2);
+    // /// the Better Wax-Catcher by <see cref="BetterWaxCatcherBonus"/> on top (×3).</summary>
+    // public int WaxCatcherMultiplier { get; init; } = 2;
 
     // ===== Stage 7.5 (spec 016): combs make the honey, free bees make the wax. All placeholders (Bee).
     /// <summary>Honey a second from each comb, however many bees live in it.</summary>
@@ -279,11 +292,16 @@ public sealed class BeekeeperConfig
     public long StingsStartAtBees { get; init; } = 10;
     /// <summary>Stage 10 (Bee, 2026-11-12): the opening card stays up for this many Catch Bee clicks (placeholder).</summary>
     public long OpeningCardClicks { get; init; } = 5;
-    /// <summary>Bee, 2026-11-12: bees caught after the gloves go on while their pinned line stays up (placeholder).</summary>
-    public int GlovesLineBees { get; init; } = 10;
-    /// <summary>After a sting the Catch Bee button is red and disabled for this long (live seconds).</summary>
+    /// <summary>Bees caught while the "Honey, those gloves fit well." card shows before it goes by itself
+    /// (Bee, 2026-11-12: 6, three clicks at 2 bees a click; was 10 for the pinned log line). Placeholder.</summary>
+    public int GlovesLineBees { get; init; } = 6;
     /// <summary>The "Ouch!" card goes away by itself after this many play seconds (no button).</summary>
     public decimal OuchSeconds { get; init; } = 5m;
+    /// <summary>Bee, 2026-11-12: the first-shoe-at-a-bear card fades after this many play seconds (placeholder).</summary>
+    public decimal BearShoeCardSeconds { get; init; } = 6m;
+    /// <summary>Bee, 2026-11-12: the "missed opportunity" card fades after this many play seconds (placeholder).</summary>
+    public decimal HippiesGoneCardSeconds { get; init; } = 6m;
+    /// <summary>After a sting the Catch Bee button is red and disabled for this long (live seconds).</summary>
     public decimal StingLockoutSeconds { get; init; } = 1m;
     public double StingChance { get; init; } = 0.20;
     public int BareHandsBees { get; init; } = 1;
@@ -294,7 +312,7 @@ public sealed class BeekeeperConfig
         // Bee, 2026-11-11: gloves are found (a story card), not bought.
         // new BeekeeperTool("gloves", 15m, 2),
         new BeekeeperTool("gloves", 0m, 2),
-        new BeekeeperTool("net", 75m, 5),
+        new BeekeeperTool("net", 80m, 5),   // Bee, 2026-11-12: was 75. A first buy, like the Honey Dipper (80).
         new BeekeeperTool("vacuum", 400m, 10),
         // Stage 3 (spec 011): names Leah's, numbers placeholders.
         // Pacing review 2026-11-10: was 250, 1,000, 4,000, 15,000 (Vacuum to Whistle).
@@ -310,9 +328,14 @@ public sealed class BeekeeperConfig
     /// hold, so time away can never overflow; a save above it is refused as damaged.</summary>
     public decimal MaxBees { get; init; } = 1e20m;
 
-    public decimal WaxCatcherCost { get; init; } = 75m;   // Bee, 2026-11-11: was 150
-    /// <summary>Beebits a new game starts with (Bee, 2026-11-11): enough for one Wax-Catcher at once, a choice.</summary>
-    public decimal StartingBeebits { get; init; } = 75m;
+    public decimal WaxCatcherCost { get; init; } = 120m;   // Bee, 2026-11-12: was 75 (2026-11-11: was 150)
+    /// <summary>Wax room the Wax-Catcher adds (Bee, 2026-11-12: it raises the wax cap; placeholder). Grown by
+    /// the Technologies like the Wax Trays. NOTE: a later upgrade to the Wax-Catcher will add a wax production
+    /// boost (not built yet).</summary>
+    public decimal WaxCatcherWaxCap { get; init; } = 20m;
+    /// <summary>Beebits a new game starts with (Bee, 2026-11-12: 0; the Beebits row waits for the first trade).
+    /// Was 75 (2026-11-11), enough for one Wax-Catcher at once.</summary>
+    public decimal StartingBeebits { get; init; } = 0m;
 
     // --- Trading -------------------------------------------------------------
     // Stage 10 (spec 019, Bee, 2026-11-12; placeholders): the bear buys honey for Beebits again and is
@@ -417,6 +440,8 @@ public sealed class BeekeeperConfig
     public double ShoeHitChance { get; init; } = 0.60;
     /// <summary>Placeholder: seconds before the Bear or the Hippies come back after a shoe (2 minutes).</summary>
     public decimal RepReturnSeconds { get; init; } = 2m * 60m;
+    /// <summary>Bee, 2026-11-12: the Nth shoe thrown at the Hippies (over all their visits) sends them away for good.</summary>
+    public int HippiesShoesForGood { get; init; } = 5;
     /// <summary>A raid takes this many seconds' worth of honey production (Leah: 3 minutes).</summary>
     public decimal RaidHoneySeconds { get; init; } = 3m * 60m;
     // Cut in stage 6 (spec 014): raids take only honey, never bees.
@@ -431,7 +456,11 @@ public sealed class BeekeeperConfig
     // Stage 7.5 (spec 016): Bigger Combs and the Propolis Seal grow both caps, honey and wax.
     public decimal BiggerCombs1Multiplier { get; init; } = 1.5m;   // Leah: +50%
     public decimal BiggerCombs2Multiplier { get; init; } = 2m;     // Leah: +100%
-    public decimal BetterWaxCatcherBonus { get; init; } = 1.5m;    // Leah: 50% more effective
+    /// <summary>The Better Wax-Catcher: the wax rate × this (Leah: 50% more effective). Since the Wax-Catcher
+    /// raises the cap instead (Bee, 2026-11-12), this is the Wax-Catchers' only wax-rate boost.</summary>
+    public decimal BetterWaxCatcherBonus { get; init; } = 1.5m;
+    /// <summary>The Honey Dipper (Bee, 2026-11-12): honey × this (+50%), live and away. Placeholder.</summary>
+    public decimal HoneyDipperHoneyMultiplier { get; init; } = 1.5m;
     public decimal StrongerCandlesBonus { get; init; } = 1.5m;
 
     /// <summary>In the order the Shop lists them.</summary>
@@ -442,6 +471,8 @@ public sealed class BeekeeperConfig
         // More Practice 2,500 + 200 wax + 3 sage; Smoker 500; Notebook 100; Propolis Seal 1,000.
         // Stage 10 (spec 019, Bee, 2026-11-12): herbs left the Shop's prices (they are for buff candles).
         // The herb parts were: Bigger Combs II 20, Better Wax-Catcher 5, Stronger Candles 1, More Practice 15.
+        // Bee, 2026-11-12: a first buy beside the Mesh Net (80 each, about 3 potted honey and some plain honey).
+        new BeekeeperUpgrade(BeekeeperUpgrades.HoneyDipper, 80m, 0m, 0m, BeekeeperUpgrades.NeedsNothing),
         new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs1, 800m, 60m, 0m, BeekeeperUpgrades.NeedsWorkbench, Bees: 200m),
         new BeekeeperUpgrade(BeekeeperUpgrades.BiggerCombs2, 20_000m, 320m, 0m, BeekeeperUpgrades.BiggerCombs1, Bees: 5_000m),   // was 20 herbs
         new BeekeeperUpgrade(BeekeeperUpgrades.BetterWaxCatcher, 3_000m, 0m, 0m, BeekeeperUpgrades.NeedsWaxCatcher, Bees: 1_000m),   // was 5 herbs

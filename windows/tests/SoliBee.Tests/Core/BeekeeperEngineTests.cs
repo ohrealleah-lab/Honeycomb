@@ -217,16 +217,16 @@ public class BeekeeperEngineTests
     }
 
     [Fact]
-    public void WaxCatcher_DoublesTheWholeRate_AndTheBetterOneTriplesIt()
+    public void WaxCatcher_LeavesTheRate_AndTheBetterOneGivesHalfAgain()
     {
         var e = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true, HoneyRevealed = true });
         e.Advance(10m);
-        Assert.Equal(2.1m, e.State.Wax);
+        Assert.Equal(1.05m, e.State.Wax);
 
         var better = Make(state: new BeekeeperState { Bees = 1000m, HasWaxCatcher = true, HoneyRevealed = true,
             Upgrades = { BeekeeperUpgrades.BetterWaxCatcher } });
         better.Advance(10m);
-        Assert.Equal(3.15m, better.State.Wax);
+        Assert.Equal(1.575m, better.State.Wax);
     }
 
     // Cut in stage 7.5 (spec 016): the Wax-Catcher doubled wax per 50 honey.
@@ -273,14 +273,18 @@ public class BeekeeperEngineTests
     // }
 
     [Fact]
-    public void BuyingTheWaxCatcherMidGame_OnlyChangesLaterWax()
+    public void BuyingTheWaxCatcherMidGame_RaisesTheWaxCap_NotTheRate()
     {
+        // Bee, 2026-11-12: the Wax-Catcher adds wax room (it doubled the wax rate before).
         var e = Make(state: new BeekeeperState { Bees = 1000m, Beebits = 150m, ShopRevealed = true, HoneyRevealed = true });
         e.Advance(10m);                      // 1.05 wax at the normal rate
         Assert.Equal(1.05m, e.State.Wax);
+        Assert.Equal(20m, e.WaxStorage);
         Assert.True(e.BuyWaxCatcher().Done);
-        e.Advance(10m);                      // 2.1 more (doubled)
-        Assert.Equal(3.15m, e.State.Wax);
+        Assert.Equal(30m, e.State.Beebits);  // it costs 120
+        Assert.Equal(40m, e.WaxStorage);     // +20 wax room
+        e.Advance(10m);                      // 1.05 more, the same rate
+        Assert.Equal(2.1m, e.State.Wax);
     }
 
     [Fact]
@@ -446,9 +450,9 @@ public class BeekeeperEngineTests
     public void Tools_AreBoughtInOrder_NetVacuum_AfterTheGlovesAreFound()
     {
         // Bee, 2026-11-11: the gloves are found in a story card, so buying starts at level 1.
-        var e = Make(state: new BeekeeperState { Beebits = 80m, ShopRevealed = true, ToolLevel = 1 });
+        var e = Make(state: new BeekeeperState { Beebits = 85m, ShopRevealed = true, ToolLevel = 1 });
         Assert.Equal("net", e.NextTool!.Id);
-        Assert.True(e.BuyNextTool().Done);     // Net 75 -> 5 left
+        Assert.True(e.BuyNextTool().Done);     // Net 80 (Bee, 2026-11-12) -> 5 left
         Assert.Equal(2, e.State.ToolLevel);
         Assert.Equal(5m, e.State.Beebits);
         Assert.False(e.BuyNextTool().Done);    // Vacuum costs 400
@@ -486,9 +490,9 @@ public class BeekeeperEngineTests
         Assert.True(e.BuyWaxCatcher().Done);   // before any tool
         Assert.True(e.State.HasWaxCatcher);
         Assert.Equal(0, e.State.ToolLevel);
-        Assert.Equal(325m, e.State.Beebits);   // the Wax-Catcher costs 75
+        Assert.Equal(280m, e.State.Beebits);   // the Wax-Catcher costs 120 (Bee, 2026-11-12)
         Assert.False(e.BuyWaxCatcher().Done);
-        Assert.Equal(325m, e.State.Beebits);
+        Assert.Equal(280m, e.State.Beebits);
     }
 
     // ============================================================ combs
@@ -751,26 +755,25 @@ public class BeekeeperEngineTests
         Assert.Equal(0m, e.State.Bees);
         Assert.Equal(1, e.State.Combs);           // the starter comb (stage 7.5)
         Assert.Equal(0, e.State.ToolLevel);
-        Assert.Equal(75m, e.State.Beebits);       // a new game starts with 75 Beebits...
+        Assert.Equal(0m, e.State.Beebits);        // a new game starts with no Beebits (Bee, 2026-11-12; was 75)...
         Assert.False(e.State.ShopRevealed);       // ...and no Shop until the first comb (Bee, 2026-11-11; was open at once)
-        Assert.True(e.State.BeebitsRevealed);
+        Assert.False(e.State.BeebitsRevealed);    // the Beebits row waits for the first trade
         Assert.Equal("Buster", e.State.BearName);
     }
 
     [Fact]
-    public void ANewGame_CanBuyTheWaxCatcherOnceTheShopOpens_ForItsWholeStartingPurse()
+    public void ANewGame_StartsWithNoBeebits_AndTheFirstTradeShowsTheRow()
     {
+        // Bee, 2026-11-12: a new game starts with 0 Beebits (was 75, one Wax-Catcher at once).
         var e = Make();
-        Assert.Equal(75m, e.Config.WaxCatcherCost);
-        Assert.Equal(75m, e.State.Beebits);
-        // Bee, 2026-11-11: no Shop until the first comb is built (it used to be open at once).
-        Assert.False(e.State.ShopRevealed);
-        Assert.False(e.CanBuyWaxCatcher);
-        e.DebugAddCombs(1);
-        Assert.True(e.State.ShopRevealed);
-        Assert.True(e.CanBuyWaxCatcher);
-        Assert.True(e.BuyWaxCatcher().Done);
         Assert.Equal(0m, e.State.Beebits);
-        Assert.False(e.CanBuyNextTool);   // no tool without the gloves
+        Assert.False(e.State.BeebitsRevealed);
+        e.DebugAddCombs(1);
+        Assert.True(e.State.ShopRevealed);    // the Shop still opens with the first comb
+        Assert.False(e.CanBuyWaxCatcher);     // nothing to pay with yet
+        e.State.Honey = 100m;
+        Assert.True(e.SellAll().Done);        // the first trade
+        Assert.True(e.State.BeebitsRevealed);
+        Assert.Equal(50m, e.State.Beebits);
     }
 }

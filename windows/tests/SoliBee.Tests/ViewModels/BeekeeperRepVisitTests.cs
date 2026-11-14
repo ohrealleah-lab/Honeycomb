@@ -30,22 +30,28 @@ public class BeekeeperRepVisitTests
     {
         Bees = 1000m, Honey = 500m, Combs = 2, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
         BearRevealed = true, HippiesRevealed = true, RepellentCandles = 1m,
+        // No story card holds the door (one thing at a time since 2026-11-12): the pot-honey card is done, the Smoker owned.
+        PottedHoneyRevealed = true, Upgrades = { BeekeeperUpgrades.Smoker }, CandlesCrafted = 1,   // + the candle card done
     };
 
     [Fact]
-    public void ARepShowsUp_ThenEngageOpensItsTrades()
+    public void ARepShowsUp_OneAtATime_ThenEngageOpensItsTrades()
     {
         var (vm, tick) = Make(Hive());
         Assert.Empty(vm.TradeOffers);
         tick(1);
-        Assert.Equal(new[] { "bear", "hippies" }, vm.RepsPresent);
+        // Bee, 2026-11-12: one visitor at a time, in arrival order; the Hippies wait their turn.
+        Assert.Equal(new[] { "bear" }, vm.RepsPresent);
+        Assert.Contains("rep:hippies", vm.Engine.StoryQueue);
         Assert.DoesNotContain(vm.Log, e => e.Key == BeekeeperEvents.RepArrives);   // first time: the reveal line says it
         Assert.Empty(vm.TradeOffers);            // not until engaged
 
         vm.EngageRep("bear");
-        Assert.Equal(new[] { "hippies" }, vm.RepsPresent);
+        Assert.Empty(vm.RepsPresent);
         Assert.Equal(new[] { "bear" }, vm.TradeOffers.Select(o => o.Id));
         Assert.Contains(vm.Log, e => e.Key == BeekeeperEvents.RepEngaged && e.Text == "bear");
+        tick(1);
+        Assert.Equal(new[] { "hippies" }, vm.RepsPresent);
         tick(5);
         Assert.DoesNotContain(vm.Log, e => e.Key == BeekeeperEvents.RepArrives && e.Text == "bear");
     }
@@ -53,7 +59,9 @@ public class BeekeeperRepVisitTests
     [Fact]
     public void AShoeSendsARepAway_AndItReturnsLater_WithNoEmissaryRule()
     {
-        var (vm, tick) = Make(Hive(), 30m);
+        var s = Hive();
+        s.HippiesRevealed = false;   // the bear alone, so no one else holds the door
+        var (vm, tick) = Make(s, 30m);
         tick(1);
         for (int i = 0; i < 8; i++)
         {
@@ -73,6 +81,8 @@ public class BeekeeperRepVisitTests
     public void ARepSentAwayCanStillBeEngagedOnReturn()
     {
         var (vm, tick) = Make(Hive(), 5m);
+        tick(1);
+        vm.EngageRep("bear");   // the bear first: visitors come one at a time
         tick(1);
         vm.ThrowShoeAtRep("hippies");
         tick(6);

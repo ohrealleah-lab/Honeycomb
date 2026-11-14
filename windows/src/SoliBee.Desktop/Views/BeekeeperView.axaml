@@ -99,10 +99,11 @@
                         <StackPanel Spacing="14" Margin="16">
                             <!-- Story card: one moment at a time (ouch, gloves found, Smoker repaired, ...) -->
                             <StackPanel x:Name="StoryCard" Spacing="8" IsVisible="False">
-                                <TextBlock x:Name="StoryText" Classes="bk-body" TextWrapping="Wrap" />
+                                <TextBlock x:Name="StoryText" Classes="bk-body" FontSize="20" TextWrapping="Wrap" />
                                 <StackPanel x:Name="StoryButtons" Spacing="6" />
                             </StackPanel>
-                            <!-- Reps at the door (Bear, Hippies): each has Throw a shoe / Engage -->
+                            <!-- The rep at the door (Bear or Hippies): Throw a shoe / Engage. Bee, 2026-11-12: cards and
+                                 visitors show one at a time, in the order they arrive (the engine's story queue). -->
                             <StackPanel x:Name="VisitorsCard" Spacing="8" IsVisible="False">
                                 <TextBlock x:Name="VisitorsTitleText" Classes="bk-title" />
                                 <StackPanel x:Name="VisitorRows" Spacing="10" />
@@ -340,7 +341,8 @@
                     </StackPanel>
                 </Border>
 
-                <Border Classes="bk-card">
+                <!-- HIVE LOG (Bee, 2026-11-12: was THE STORY): hidden until the first bee is caught -->
+                <Border x:Name="LogCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="LogTitleText" Classes="bk-title" />
                         <StackPanel x:Name="LogLines" Spacing="8" />

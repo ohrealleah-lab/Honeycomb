@@ -212,10 +212,10 @@ public class BeekeeperViewModelTests : IDisposable
     public void Selling_BuyingAndBuilding_GoThroughTheEngineAndTheLog()
     {
         var clock = new Clock();
-        var vm = Make(clock, new BeekeeperState { Honey = 150m, Wax = 100m, Bees = 255m, BearName = "Bruno" });
+        var vm = Make(clock, new BeekeeperState { Honey = 160m, Wax = 100m, Bees = 255m, BearName = "Bruno" });
 
         vm.SellAllCommand.Execute(null);
-        Assert.Equal(75m, vm.Beebits);                   // stage 10: 15 bundles of 10 honey for 5 Beebits (was 1 herb)
+        Assert.Equal(80m, vm.Beebits);                   // stage 10: 16 bundles of 10 honey for 5 Beebits (was 1 herb)
         Assert.Equal(0m, vm.Herbs);
         Assert.False(vm.ShopRevealed);                   // Bee, 2026-11-11: the first comb opens the Shop
         vm.State.HippiesRevealed = true;
@@ -223,7 +223,7 @@ public class BeekeeperViewModelTests : IDisposable
         decimal jars = vm.State.ClayJars;
         vm.TradeAllCandlesCommand.Execute(null);
         Assert.Equal(jars + 2m, vm.State.ClayJars);      // 8 beeswax candles: 2 jars, 2 candles left
-        Assert.Equal(75m, vm.Beebits);                   // the Hippies pay no Beebits
+        Assert.Equal(80m, vm.Beebits);                   // the Hippies pay no Beebits
         Assert.False(vm.ShopRevealed);
 
         vm.BuildCombCommand.Execute(null);
@@ -236,8 +236,9 @@ public class BeekeeperViewModelTests : IDisposable
         Assert.True(Logged(vm, BeekeeperEvents.ShopOpened));
 
         vm.State.ToolLevel = 1;                          // the gloves are found, not bought (story card)
-        vm.BuyNextToolCommand.Execute(null);             // the Net
+        vm.BuyNextToolCommand.Execute(null);             // the Net (80 Beebits since Bee, 2026-11-12)
         Assert.Equal(2, vm.ToolLevel);
+        Assert.Equal(0m, vm.Beebits);
         Assert.Equal(5, vm.BeesPerClick);
     }
 

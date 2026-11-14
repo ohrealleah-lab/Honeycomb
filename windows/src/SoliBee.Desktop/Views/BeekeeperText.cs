@@ -40,7 +40,9 @@ internal static class BeekeeperText
     public static string Comb => T(StringKey.BeekeeperComb);
     public static string Build => T(StringKey.BeekeeperBuild);
     public static string ShopTitle => T(StringKey.BeekeeperShopTitle);
-    public static string LogTitle => T(StringKey.BeekeeperLogTitle);
+    // Bee, 2026-11-12: the log card is "HIVE LOG" now. The old "The Story" key stays for a later story-card text file.
+    // public static string LogTitle => T(StringKey.BeekeeperLogTitle);
+    public static string LogTitle => T(StringKey.BeekeeperHiveLogTitle);
     public static string Owned => T(StringKey.BeekeeperOwned);
     public static string StartOver => T(StringKey.BeekeeperStartOverTitle);
     public static string StartOverBody => T(StringKey.BeekeeperStartOverBody);
@@ -66,7 +68,8 @@ internal static class BeekeeperText
     public static string HoneyPerSecond(string n) => Fill(T(StringKey.BeekeeperHoneyPerSecFmt), n);
     public static string WaxPerSecond(string n) => Fill(T(StringKey.BeekeeperWaxPerSecFmt), n);
     public static string WaxCatcherName => T(StringKey.BeekeeperWaxCatcher);
-    public static string WaxCatcherBlurb => T(StringKey.BeekeeperWaxCatcherBlurb);
+    /// <summary>"+20 wax storage" (Bee, 2026-11-12: the Wax-Catcher raises the wax cap; it doubled the wax before).</summary>
+    public static string WaxCatcherBlurb(string waxRoom) => Fill(T(StringKey.BeekeeperWaxCatcherBlurbFmt), waxRoom);
     /// <summary>What a comb gives (stage 7.5): "+0.2 honey a second, room for 300 honey and 2 wax".</summary>
     public static string CombBlurb(string honeyPerSecond, string honeyRoom, string waxRoom) =>
         Fill(T(StringKey.BeekeeperCombBlurbFmt), honeyPerSecond, honeyRoom, waxRoom);
@@ -156,7 +159,10 @@ internal static class BeekeeperText
     public static string StoryBeeBreadButton => T(StringKey.BeekeeperStoryBeeBreadButton);
     /// <summary>A craft link's text: "+1", "+10", "+100".</summary>
     public static string CraftLink(int n) => Fill(T(StringKey.BeekeeperCraftLinkFmt), n.ToString());
-    public static string PinnedGloves => T(StringKey.BeekeeperPinnedGloves);
+    /// <summary>"Honey, those gloves fit well." A story card since Bee, 2026-11-12 (was pinned at the top of the log).</summary>
+    public static string StoryGlovesFit => T(StringKey.BeekeeperPinnedGloves);
+    public static string StoryBearShoe => T(StringKey.BeekeeperStoryBearShoe);
+    public static string StoryHippiesGone => T(StringKey.BeekeeperStoryHippiesGone);
     public static string StoryLookAround => T(StringKey.BeekeeperStoryLookAround);
     /// <summary>The hover on a burning Good Deals candle: "+50% Beebits from the Bear."</summary>
     public static string HerbTradesTip(decimal percent) => Fill(T(StringKey.BeekeeperHerbTradesTipFmt), NumberFormatter.Format(percent, Lang));
@@ -178,7 +184,9 @@ internal static class BeekeeperText
     public static string Engage => T(StringKey.BeekeeperEngage);
     public static string VisitorsTitle => T(StringKey.BeekeeperVisitorsTitle);
     public static string RepNoun(string? id) => T(id == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies);
-    public static string RepHere(string id) => Fill(T(StringKey.BeekeeperLogRepArrivesFmt), RepNoun(id));
+    /// <summary>The Visitors card line. The bear says his name (Bee, 2026-11-12); the Hippies keep "A hippie shows up."</summary>
+    public static string RepHere(string id, string bearName) =>
+        id == "bear" ? Fill(T(StringKey.BeekeeperLogBearArrivesFmt), bearName) : Fill(T(StringKey.BeekeeperLogRepArrivesFmt), RepNoun(id));
     public static string LightCandle => T(StringKey.BeekeeperLightCandle);
     public static string CandleBurning(string time) => Fill(T(StringKey.BeekeeperCandleBurningFmt), time);
 
@@ -232,6 +240,7 @@ internal static class BeekeeperText
             BeekeeperUpgrades.WoodenFrames => Fill(T(StringKey.BeekeeperUpgradeWoodenFramesBlurb), P()),
             BeekeeperUpgrades.CandleMolds => Fill(T(StringKey.BeekeeperUpgradeCandleMoldsBlurb), P()),
             BeekeeperUpgrades.DippingRack => Fill(T(StringKey.BeekeeperUpgradeDippingRackBlurb), P()),
+            BeekeeperUpgrades.HoneyDipper => Fill(T(StringKey.BeekeeperUpgradeHoneyDipperBlurb), P()),
             _ => "",
         };
     }
@@ -513,6 +522,7 @@ internal static class BeekeeperText
                 "free_bees" => Fill(T(StringKey.BeekeeperHoneyFreeBeeBonusFmt), pct),
                 "wax_catcher" => Fill(T(StringKey.BeekeeperBoostWaxCatcherFmt), pct),
                 "wooden_hive" => Fill(T(StringKey.BeekeeperBoostWoodenHiveFmt), pct),
+                BeekeeperUpgrades.HoneyDipper => Fill(T(StringKey.BeekeeperBoostHoneyDipperFmt), pct),
                 "guarding" => Fill(T(StringKey.BeekeeperBoostGuardingFmt), pct),
                 "nursing" => Fill(T(StringKey.BeekeeperBoostNursingFmt), pct),
                 "bee_boost" => Fill(T(StringKey.BeekeeperBoostBeeBoostFmt), pct),
@@ -579,8 +589,10 @@ internal static class BeekeeperText
         switch (r.Id)
         {
             case BeekeeperHiveRows.Beebits: return BeebitsTip(r);
+            // Bee, 2026-11-12: "Holds 10 honey" (the honey one jar pots).
             case BeekeeperHiveRows.ClayJars:
-                return Fill(T(StringKey.BeekeeperClayJarsTipFmt), NumberFormatter.Format(r.Rate2, Lang), NumberFormatter.Format(r.Value2, Lang));
+                return Fill(T(StringKey.BeekeeperClayJarsTipFmt), NumberFormatter.Format(r.Value2, Lang));
+            case BeekeeperHiveRows.Combs: return CombsTip(r);
             case BeekeeperHiveRows.Herbs: return T(StringKey.BeekeeperHerbsTip);
             case BeekeeperHiveRows.Honeybees when r.Rate is null:   // no queen yet: the hover still says what the bees give
                 return GivesLines(r).TrimStart('\n') is { Length: > 0 } g ? g : null;
@@ -606,24 +618,20 @@ internal static class BeekeeperText
         return tip;
     }
 
-    /// <summary>The Beebits hover (stage 10): only the bear pays them; a line for plain honey (or the
-    /// agreement's rate), one for potted honey once it has been made, then the Trades herb if it burns.</summary>
-    private static string BeebitsTip(BeekeeperHiveRow r)
+    /// <summary>The Beebits hover (Bee, 2026-11-12): just "It's capitalism. Gotta have money!" (Beebits
+    /// don't grow by themselves, so no rates; the bear's rates were listed here before).</summary>
+    private static string BeebitsTip(BeekeeperHiveRow r) => T(StringKey.BeekeeperBeebitsTip);
+
+    /// <summary>The Combs hover (Bee, 2026-11-12): the storage each comb adds now (Technologies counted) and
+    /// what the combs built so far add in all. Sources "honey_room" and "wax_room": PerSecond = room one comb
+    /// adds, Count = combs built (the starter comb's room is in the starting caps).</summary>
+    private static string? CombsTip(BeekeeperHiveRow r)
     {
-        string N(decimal v) => NumberFormatter.Format(v, Lang);
-        var sb = new System.Text.StringBuilder(T(StringKey.BeekeeperBeebitsTip));
-        foreach (var s in r.Sources ?? System.Array.Empty<BeekeeperSource>())
-        {
-            string? line = s.Id switch
-            {
-                "plain_honey" => Fill(T(StringKey.BeekeeperBeebitsSourcePlainFmt), N(s.Count), N(s.PerSecond)),
-                "plain_honey_agreement" => Fill(T(StringKey.BeekeeperBeebitsSourceAgreementFmt), N(s.Count), N(s.PerSecond)),
-                "potted_honey" => Fill(T(StringKey.BeekeeperBeebitsSourcePottedFmt), N(s.PerSecond)),
-                _ => null,
-            };
-            if (line is not null) sb.Append('\n').Append(line);
-        }
-        return sb + BoostLines(r.Boosts);
+        if (r.Sources is not { } src || src.FirstOrDefault(x => x.Id == "honey_room") is not { } honey
+            || src.FirstOrDefault(x => x.Id == "wax_room") is not { } wax) return null;
+        string N(decimal v) => NumberFormatter.Format(v, Lang, 2);
+        return Fill(T(StringKey.BeekeeperCombsTipFmt), N(honey.PerSecond), N(wax.PerSecond),
+            NumberFormatter.Format(honey.Count, Lang), N(honey.PerSecond * honey.Count), N(wax.PerSecond * wax.Count));
     }
 
     /// <summary>"Full" at the cap, else "Full in 3 h 20 min".</summary>
@@ -797,6 +805,7 @@ internal static class BeekeeperText
         BeekeeperUpgrades.CandleMolds => Strings.Get(StringKey.BeekeeperUpgradeCandleMolds, lang),
         BeekeeperUpgrades.DippingRack => Strings.Get(StringKey.BeekeeperUpgradeDippingRack, lang),
         BeekeeperUpgrades.BeeHotel => Strings.Get(StringKey.BeekeeperUpgradeBeeHotel, lang),
+        BeekeeperUpgrades.HoneyDipper => Strings.Get(StringKey.BeekeeperUpgradeHoneyDipper, lang),
         _ => id,
     };
 
@@ -810,7 +819,8 @@ internal static class BeekeeperText
             BeekeeperEvents.FirstBee => L(StringKey.BeekeeperLogFirstBee),
             BeekeeperEvents.Sting => L(StringKey.BeekeeperLogSting),
             BeekeeperEvents.StorageFull => L(StringKey.BeekeeperLogStorageFull),
-            BeekeeperEvents.BearArrives => Fill(L(StringKey.BeekeeperLogBearArrivesFmt), e.Text ?? ""),
+            // Bee, 2026-11-12: "A bear wanders over." (his name is on the Visitors card). Was BeekeeperLogBearArrivesFmt with the name.
+            BeekeeperEvents.BearArrives => L(StringKey.BeekeeperLogBearWandersOver),
             // Lines saved before the amounts were kept (Value2 = 0) show the old short wording.
             // Stage 10: Value = Beebits got, Value2 = honey given ("Bruno pays 5 Beebits for 10 honey.").
             BeekeeperEvents.Sale => e.Value2 <= 0m ? Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? "")
@@ -854,12 +864,16 @@ internal static class BeekeeperText
                 BeekeeperUpgrades.CandleMolds => L(StringKey.BeekeeperLogCandleMoldsBought),
                 BeekeeperUpgrades.DippingRack => L(StringKey.BeekeeperLogDippingRackBought),
                 BeekeeperUpgrades.BeeHotel => L(StringKey.BeekeeperLogBeeHotelBought),
+                BeekeeperUpgrades.HoneyDipper => L(StringKey.BeekeeperLogHoneyDipperBought),
                 _ => Fill(L(StringKey.BeekeeperLogUpgradeBoughtFmt), UpgradeNameIn(e.Text ?? "", lang)),
             },
             BeekeeperEvents.WaspArrives => L(StringKey.BeekeeperLogWaspArrives),
-            BeekeeperEvents.RepArrives => Fill(L(StringKey.BeekeeperLogRepArrivesFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
+            BeekeeperEvents.RepArrives => e.Text == "bear" ? L(StringKey.BeekeeperLogBearWandersOver)
+                : Fill(L(StringKey.BeekeeperLogRepArrivesFmt), Strings.Get(StringKey.BeekeeperRepHippies, lang)),
             BeekeeperEvents.RepEngaged => Fill(L(StringKey.BeekeeperLogRepEngagedFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
-            BeekeeperEvents.RepLeft => Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(e.Text == "bear" ? StringKey.BeekeeperRepBear : StringKey.BeekeeperRepHippies, lang)),
+            // Bee, 2026-11-12: every shoe at the bear reads "The bear wanders off." (was "The bear leaves. They will be back later.").
+            BeekeeperEvents.RepLeft => e.Text == "bear" ? L(StringKey.BeekeeperLogBearWandersOff)
+                : Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(StringKey.BeekeeperRepHippies, lang)),
             BeekeeperEvents.WaspEngaged => L(StringKey.BeekeeperLogWaspEngaged),
             BeekeeperEvents.GlovesOn => L(StringKey.BeekeeperLogGloves),
             BeekeeperEvents.GlovesGone => L(StringKey.BeekeeperLogGlovesGone),
