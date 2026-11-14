@@ -493,6 +493,9 @@ public partial class BeekeeperView : UserControl
                 bool can = vm.CanCraftTimes(craft, steps[i]);
                 links[i].Text = BeekeeperText.CraftLink(steps[i]);
                 links[i].Opacity = can ? 1.0 : 0.4;
+                // Bee, 2026-11-14: +10 and +100 (or +1000) only show while the materials for that size exist;
+                // +1 always shows (dimmed when it can't be paid for).
+                links[i].IsVisible = i == 0 || can;
                 ToolTip.SetTip(links[i], CraftLinkTip(vm, craft, steps[i], lang, can));
             }
         }
