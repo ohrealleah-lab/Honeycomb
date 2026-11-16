@@ -247,21 +247,30 @@ public class BeekeeperHerbTests
     }
 
     [Fact]
-    public void GoodDeals_PaysTheBearsBeebitsHalfAgain_PlainAndPotted_InWholeAmounts()
+    public void GoodDeals_PaysTheBearsBeebitsHalfAgain_PlainAndPotted_InWholeTrades()
     {
         var e = Make(RollFor(BeekeeperHerbs.Trades), candles: 1m);
         Assert.True(e.LightRepellent().Done);
-        Assert.Equal(8m, e.BeebitsPerTradeNow);      // 5 × 1.5, rounded up
+        // Bee, 2026-11-15: a trade is 2 bundles, 20 honey for 15 (was 10 honey for 8, rounded up).
+        Assert.Equal(20m, e.HoneyPerTradeNow);
+        Assert.Equal(15m, e.BeebitsPerTradeNow);
         Assert.Equal(30m, e.PottedHoneyBeebitsNow);  // 20 × 1.5
 
         e.State.Honey = 10m;
+        Assert.False(e.SellTen().Done);              // not enough for a whole trade
+        e.State.Honey = 20m;
         Assert.True(e.SellTen().Done);
-        Assert.Equal(8m, e.State.Beebits);
+        Assert.Equal(15m, e.State.Beebits);
         Assert.Equal(0m, e.State.Herbs);
+
+        e.State.Honey = 110m;
+        Assert.True(e.SellAll().Done);
+        Assert.Equal(15m + 75m, e.State.Beebits);    // ten bundles pay exactly 75 (was 80)
+        Assert.Equal(10m, e.State.Honey);            // the odd bundle stays
 
         e.State.PottedHoney = 2m;
         Assert.True(e.SellAllPotted().Done);
-        Assert.Equal(8m + 60m, e.State.Beebits);     // two pots, 30 each
+        Assert.Equal(90m + 60m, e.State.Beebits);    // two pots, 30 each
 
         // The Hippies' jars are never touched: still 1 jar for 3 candles.
         e.State.HippiesRevealed = true;

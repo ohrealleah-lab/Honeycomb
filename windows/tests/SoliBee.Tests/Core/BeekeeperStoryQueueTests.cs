@@ -170,7 +170,7 @@ public class BeekeeperStoryQueueTests
         Assert.Equal("wasp", e.StoryQueue[0]);
 
         Assert.True(Has(e.AdvanceWaspTime(1m), BeekeeperEvents.WaspArrives));   // watched again: it comes
-        Assert.Equal(1, e.State.WaspVisits);
+        Assert.Equal(0, e.State.WaspVisits);               // a visit counts once the wasp is met (review fix, 2026-11-15)
         Assert.True(e.CanEngageWasp);                      // the first visit's choice is still there
     }
 

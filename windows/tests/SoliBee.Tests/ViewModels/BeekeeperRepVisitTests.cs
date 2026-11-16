@@ -31,7 +31,8 @@ public class BeekeeperRepVisitTests
         Bees = 1000m, Honey = 500m, Combs = 2, WorkbenchRevealed = true, HoneyRevealed = true, BearName = "Bruno",
         BearRevealed = true, HippiesRevealed = true, RepellentCandles = 1m,
         // No story card holds the door (one thing at a time since 2026-11-12): the pot-honey card is done, the Smoker owned.
-        PottedHoneyRevealed = true, Upgrades = { BeekeeperUpgrades.Smoker }, CandlesCrafted = 1,   // + the candle card done
+        PottedHoneyRevealed = true, Upgrades = { BeekeeperUpgrades.Smoker }, CandlesCrafted = 1,
+        BeeswaxCrafted = true,   // + the candle card done (review fix, 2026-11-15: CandlesCrafted alone counts herbal ones too)
     };
 
     [Fact]

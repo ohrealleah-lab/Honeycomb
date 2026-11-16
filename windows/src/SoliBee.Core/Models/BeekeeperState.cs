@@ -78,7 +78,7 @@ public sealed class BeekeeperState
     public bool StorageFullAnnounced { get; set; }
 
     // ----- Stage 2: The Workbench, candles, Hippies, wasps (version 2)
-    /// <summary>Herbal candles (10 wax + 1 herb). Saved under the old name: they were repellent candles.</summary>
+    /// <summary>Herbal candles (2 wax + 1 herb). Saved under the old name: they were repellent candles.</summary>
     public decimal RepellentCandles { get; set; }
     /// <summary>Every candle ever crafted, of any kind (brings the Hippies).</summary>
     public long CandlesCrafted { get; set; }
@@ -238,7 +238,9 @@ public sealed class BeekeeperState
     /// <summary>True once the gloves were refused five times: kept for a future hard-mode achievement.</summary>
     public bool GlovesRefusedForGood { get; set; }
 
-    /// <summary>Wasps that have shown up in all; the first visit offers Engage, later ones Bribe.</summary>
+    /// <summary>Wasps met in all (answered, or watched until they raided); the first visit offers Engage, later
+    /// ones Bribe. Review fix (2026-11-15): a wasp that drifted off unanswered, or was at the door when the app
+    /// closed, isn't counted (it used to count on arrival, which could spend the Engage choice unseen).</summary>
     public long WaspVisits { get; set; }
 
     // ----- Herbs (Bee, 2026-11-11; older saves load with their sage as herbs)
@@ -287,6 +289,9 @@ public sealed class BeekeeperState
     public bool PottedHoneyRevealed { get; set; }
     /// <summary>Beeswax candles (wax only), for the Hippies. They can't be lit.</summary>
     public decimal BeeswaxCandles { get; set; }
+    /// <summary>True once a beeswax candle has been made (sticky; review fix, 2026-11-15): a loaded save that has
+    /// made one never sees the candle card. Older saves read false and go by the beeswax candles held.</summary>
+    public bool BeeswaxCrafted { get; set; }
 
     /// <summary>Seconds left to respond to an approaching wasp; 0 = no wasp. Never saved:
     /// a wasp still around when the game closes simply leaves.</summary>

@@ -127,7 +127,7 @@ internal static class BeekeeperText
         return id switch
         {
             "bear" => get == 1m ? Fill(T(StringKey.BeekeeperSellHintOneFmt), g)   // "10 honey = 1 Beebit"
-                : Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),   // "10 honey = 5 Beebits"
+                : Fill(T(StringKey.BeekeeperSellHint), g, NumberFormatter.Format(get, Lang)),   // "10 honey = 5 Beebits" ("20 honey = 15 Beebits" under the Trades herb)
             // Stage 10: "3 beeswax candles = 1 clay jar" (was "1 herbal candle = N Beebits").
             "hippies" => Fill(T(StringKey.BeekeeperHippiesRate), g),
             "wasps" => Fill(T(StringKey.BeekeeperWaspsRateFmt), g),
@@ -888,6 +888,9 @@ internal static class BeekeeperText
             BeekeeperEvents.ShoeHit => L(StringKey.BeekeeperLogShoeHit),
             // Raids take only honey since stage 6 (spec 014). Lines saved before then keep their
             // old wording (bees flown off, or the guards keeping them safe), so the story stays true.
+            // Review fix (2026-11-15): nothing taken (no whole honey stored) is told with no amount.
+            BeekeeperEvents.ShoeMissRaid when e.Text is null && e.Value <= 0m && e.Value2 <= 0m => L(StringKey.BeekeeperLogShoeMissNothing),
+            BeekeeperEvents.WaspRaid when e.Text is null && e.Value <= 0m && e.Value2 <= 0m => L(StringKey.BeekeeperLogWaspRaidNothing),
             BeekeeperEvents.ShoeMissRaid => e.Text == "guards"
                 ? Fill(L(StringKey.BeekeeperLogShoeMissGuardsFmt), N(e.Value))
                 : e.Value2 > 0m ? Fill(L(StringKey.BeekeeperLogShoeMissFmt), N(e.Value), N(e.Value2))

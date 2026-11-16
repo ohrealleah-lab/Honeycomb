@@ -288,7 +288,8 @@ public class BeekeeperStoryTests : IDisposable
     public void ADamagedStoryField_IsRefusedAsInsane()
     {
         var path = Path.Combine(_dir, "bad.json");
-        var state = new BeekeeperState { Version = BeekeeperSaveService.CurrentVersion, GlovesDeclines = 99 };
+        // Review fix (2026-11-15): too many declines (99) is now trimmed on load; a negative count is still damage.
+        var state = new BeekeeperState { Version = BeekeeperSaveService.CurrentVersion, GlovesDeclines = -1 };
         Assert.True(BeekeeperSaveService.Save(state, path, new DateTime(2026, 11, 11, 12, 0, 0, DateTimeKind.Utc)));
         Assert.Null(BeekeeperSaveService.Load(path));
     }

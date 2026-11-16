@@ -140,7 +140,6 @@ public static class BeekeeperEvents
     public static bool IsWelcomeBack(string key) =>
         key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackPantry
             or WelcomeBackPropolis or WelcomeBackSageOut or WelcomeBackWood or WelcomeBackHotel or WelcomeBackBlooms;
-    // Before stage 9: … or WelcomeBackWood or WelcomeBackHotel;
     // Cut in stage 7.5 (spec 016): WelcomeBackBear.
     //     key is WelcomeBack or WelcomeBackNothing or WelcomeBackQueen or WelcomeBackBear or WelcomeBackPantry
     //         or WelcomeBackPropolis or WelcomeBackSageOut;
@@ -231,6 +230,11 @@ public sealed class BeekeeperEngine
     {
         bool Known(string id) => id is not null && Config.Plants.Any(p => p.Id == id);
         s.Upgrades = s.Upgrades.Where(id => id is not null).Distinct().ToList();
+        // Review fix (2026-11-15): limits from the config are kept here, not by refusing the file (the save
+        // service used to compare them with the default config): a tool past the list (it would throw), more
+        // bees than MaxBees, and (below) unknown story ids and too many glove declines.
+        s.ToolLevel = Math.Clamp(s.ToolLevel, 0, Config.Tools.Count);
+        s.Bees = Math.Clamp(s.Bees, 0m, Config.MaxBees);
         s.SeedsGivenIds = s.SeedsGivenIds.Where(Known).Distinct().ToList();
         // Stage 8: every bed sprouts on load and the beds are gone.
         s.Plants = s.Plants.Where(Known).ToList();
@@ -311,12 +315,13 @@ public sealed class BeekeeperEngine
 
         // Story cards: only known moments, nothing negative, and a card already answered never shows.
         // The seed card is never done (it comes back for each new kind), so it is never kept as done.
-        s.StoriesDone = s.StoriesDone.Where(id => BeekeeperStories.Order.Contains(id) && id != BeekeeperStories.Seed).Distinct().ToList();
+        s.StoriesDone = s.StoriesDone.Where(id => id is not null && BeekeeperStories.Order.Contains(id) && id != BeekeeperStories.Seed).Distinct().ToList();
         // Bee, 2026-11-12: a save that already made these never sees their intro card, and has the craft links.
         void MarkDone(string id) { if (!s.StoriesDone.Contains(id)) s.StoriesDone.Add(id); }
         if (s.PottedHoneyRevealed) MarkDone(BeekeeperStories.PotHoney);
         if (s.BeeBreadRevealed) MarkDone(BeekeeperStories.BeeBread);
-        if (s.CandlesCrafted > 0 || s.BeeswaxCandles > 0m) MarkDone(BeekeeperStories.Candle);
+        // Review fix (2026-11-15): beeswax candles only (CandlesCrafted counts the herbal and propolis ones too).
+        if (s.BeeswaxCrafted || s.BeeswaxCandles > 0m) MarkDone(BeekeeperStories.Candle);
         s.StoryReturnIn = s.StoryReturnIn.Where(kv => BeekeeperStories.Order.Contains(kv.Key) && kv.Value > 0m)
             .ToDictionary(kv => kv.Key, kv => Math.Min(kv.Value, Config.GlovesReturnSeconds));
         s.BeesCaught = Math.Max(0, s.BeesCaught);
@@ -330,8 +335,10 @@ public sealed class BeekeeperEngine
         // older save with a card and visitors (or two visitors) up at once keeps the first and queues the rest.
         s.HippieShoes = Math.Max(0, s.HippieShoes);
         s.RepsPresent = (s.RepsPresent ?? new()).Where(id => RepIds.Contains(id)).Distinct().ToList();
+        s.RepsEngaged = (s.RepsEngaged ?? new()).Where(id => RepIds.Contains(id)).Distinct().ToList();
         if (s.HippiesDismissedForGood)
         {
+            s.RepsEngaged.Remove("hippies");   // review fix (2026-11-15): their trades go with them
             s.RepsPresent.Remove("hippies");
             s.RepReturnIn.Remove("hippies");
         }
@@ -342,8 +349,7 @@ public sealed class BeekeeperEngine
         // A save made with a wasp at the door and a card or visitor up too: the wasp goes back to wait its turn.
         if (s.WaspCountdown > 0m && (s.StoryHere is not null || s.RepsPresent.Count > 0) && !s.EmissaryCome)
         {
-            s.WaspCountdown = 0m;
-            s.WaspVisits = Math.Max(0, s.WaspVisits - 1);
+            s.WaspCountdown = 0m;   // (a visit is only counted once the wasp is met, so none to give back)
             if (!s.StoryQueue.Contains(WaspEntry)) s.StoryQueue.Insert(0, WaspEntry);
         }
         var extraReps = s.StoryHere is not null ? s.RepsPresent.ToList() : s.RepsPresent.Skip(1).ToList();
@@ -454,8 +460,7 @@ public sealed class BeekeeperEngine
     /// <summary>Free bees' small honey bonus: +0.02% per 100 free bees, capped at +25%; it multiplies
     /// the comb honey, so with no combs it adds nothing. Part of <see cref="HiveMultiplier"/>, the one
     /// place the honey rate is worked out, so live, away, hovers and time-to-full agree.</summary>
-    public decimal FreeBeeHoneyFactor =>
-        1m + Math.Min(Config.FreeBeeHoneyBonusCap, State.Bees / 100m * Config.FreeBeeHoneyBonusPer100);
+    public decimal FreeBeeHoneyFactor => 1m + FreeBeeHoneyBonus(State.Bees);
 
     /// <summary>The Technologies' multiplier on both caps (honey and wax since stage 7.5).</summary>
     public decimal StorageMultiplier =>
@@ -516,13 +521,55 @@ public sealed class BeekeeperEngine
     /// <remarks>Stage 9 (spec 018, FR-906): winter slows it (<see cref="WinterMultiplier"/>); being
     /// here, it slows the meadow's honey too.</remarks>
     /// <remarks>Bee, 2026-11-12: the Honey Dipper (+50%) is one of the lasting boosts.</remarks>
-    public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier
-        * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier * HoneyDipperMultiplier;
-    // Before the Honey Dipper: … * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier;
+    public decimal HiveMultiplier => HiveMultiplierBeforeFreeBees * FreeBeeHoneyFactor;
+
+    /// <summary><see cref="HiveMultiplier"/> without the free bees' bonus: the lasting boosts that stay the same
+    /// all through a stretch of <see cref="Work"/> (the free bees can grow inside one).</summary>
+    private decimal HiveMultiplierBeforeFreeBees => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m)
+        * GuardingMultiplier * PlantBonus(BeekeeperBonusTargets.Honey) * WinterMultiplier * HoneyDipperMultiplier;
+
+    /// <summary>The free bees' honey bonus (the part of <see cref="FreeBeeHoneyFactor"/> above 1) for a hive of
+    /// <paramref name="bees"/>; the one formula, so the rate shown and the honey made agree.</summary>
+    private decimal FreeBeeHoneyBonus(decimal bees) =>
+        Math.Min(Config.FreeBeeHoneyBonusCap, bees / 100m * Config.FreeBeeHoneyBonusPer100);
+
+    /// <summary>
+    /// <see cref="FreeBeeHoneyFactor"/> summed over a stretch of <paramref name="seconds"/> while the free bees
+    /// grow (review fix, 2026-11-15): from <paramref name="startBees"/> they rise in a straight line for
+    /// <paramref name="layingSeconds"/>, then stay at <paramref name="startBees"/> + <paramref name="raised"/>.
+    /// The bonus follows them up to its cap. Before, a stretch used its end-of-stretch bees for every second, so
+    /// one long stretch (time away) paid more than many short ones (live play); this exact area makes them agree,
+    /// the way the wax's bee-seconds already did.
+    /// </summary>
+    private decimal FreeBeeFactorSeconds(decimal startBees, decimal raised, decimal layingSeconds, decimal seconds)
+    {
+        // Bees never pass MaxBees, so neither does their bonus.
+        decimal cap = Math.Min(Config.FreeBeeHoneyBonusCap, FreeBeeHoneyBonus(Config.MaxBees));
+        decimal Bonus(decimal bees) => Math.Min(cap, FreeBeeHoneyBonus(bees));
+
+        decimal area;
+        decimal start = Bonus(startBees);
+        if (layingSeconds <= 0m || raised <= 0m)
+            area = start * layingSeconds;
+        else
+        {
+            // The bonus a second gains while she lays, before the cap (a straight line in the bees).
+            decimal slope = raised / 100m * Config.FreeBeeHoneyBonusPer100 / layingSeconds;
+            if (start >= cap || slope <= 0m) area = start * layingSeconds;
+            else
+            {
+                decimal toCap = (cap - start) / slope;   // seconds until the bonus reaches its cap
+                area = toCap >= layingSeconds
+                    ? start * layingSeconds + slope * layingSeconds * layingSeconds / 2m
+                    : start * toCap + slope * toCap * toCap / 2m + cap * (layingSeconds - toCap);
+            }
+        }
+        area += Bonus(startBees + raised) * (seconds - layingSeconds);
+        return seconds + area;
+    }
 
     /// <summary>The Honey Dipper's honey multiplier: 1.5 once bought, else 1.</summary>
     public decimal HoneyDipperMultiplier => Owns(BeekeeperUpgrades.HoneyDipper) ? Config.HoneyDipperHoneyMultiplier : 1m;
-    // Before stage 9: … * FreeBeeHoneyFactor * PlantBonus(BeekeeperBonusTargets.Honey);
     // Cut in stage 8: public decimal HiveMultiplier => (State.HasWoodenHive ? Config.WoodenHiveHoneyMultiplier : 1m) * GuardingMultiplier * FreeBeeHoneyFactor;
 
     /// <summary>What the hive makes right now: the base rate with whichever boosts are on (calm
@@ -545,7 +592,6 @@ public sealed class BeekeeperEngine
     // Stage 8 (spec 017, FR-805): the clover past the first adds its bonus here (WaxMultiplier).
     public decimal WaxPerSecondNow => !HiveStarted ? 0m :
         (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * HerbWaxNow;
-    // Before: (Config.WaxBasePerSecond + State.Bees * Config.WaxPerFreeBeePerSecond) * WaxMultiplier * HerbWaxNow;
     // Cut in stage 7.5 (spec 016): wax followed all the honey made, calm counted.
     // public decimal WaxPerSecondNow => HoneyPerSecondNow / Config.HoneyPerWax * WaxPerBatch;
 
@@ -559,7 +605,8 @@ public sealed class BeekeeperEngine
     /// (×1.5). A later Wax-Catcher upgrade will add a wax production boost here (not built yet).</summary>
     public decimal WaxCatcherFactor =>
         State.HasWaxCatcher && Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.BetterWaxCatcherBonus : 1m;
-    // Before (2026-11-12): !State.HasWaxCatcher ? 1m
+    // Cut (Bee, 2026-11-12; may return): the Wax-Catcher itself doubled the wax rate.
+    // !State.HasWaxCatcher ? 1m
     //     : Owns(BeekeeperUpgrades.BetterWaxCatcher) ? Config.WaxCatcherMultiplier * Config.BetterWaxCatcherBonus
     //     : Config.WaxCatcherMultiplier;
 
@@ -611,13 +658,29 @@ public sealed class BeekeeperEngine
 
     /// <summary>Honey in one bear trade: 10, or 8 under the trade agreement. Everything about
     /// selling reads this and <see cref="BeebitsPerTradeNow"/>.</summary>
-    public decimal HoneyPerTradeNow => State.HasTradeAgreement ? Config.BetterHoneyPerTrade : Config.HoneyPerTrade;
+    /// <remarks>Bee, 2026-11-15: under the Trades herb a trade is as many bundles as it takes for whole Beebits
+    /// (2 bundles: 20 honey for 15), so the pay is exact and no decimals show.</remarks>
+    public decimal HoneyPerTradeNow =>
+        (State.HasTradeAgreement ? Config.BetterHoneyPerTrade : Config.HoneyPerTrade) * BundlesPerTrade;
 
     /// <summary>Beebits one bundle of plain honey pays right now: 5, more under the Trades herb
     /// (stage 10, spec 019; the bear paid herbs 2026-11-11 to 11-12).</summary>
-    public decimal BeebitsPerTradeNow => WithTradeHerb(Config.BeebitsPerTrade);
+    public decimal BeebitsPerTradeNow => WithTradeHerb(Config.BeebitsPerTrade) * BundlesPerTrade;
 
-    /// <summary>Beebits one potted honey pays right now: 15, more under the Trades herb.</summary>
+    /// <summary>Bundles in one trade: the fewest that pay whole Beebits at the rate of the moment (1, or 2 under
+    /// the Trades herb's ×1.5). Capped at 100 for an odd config.</summary>
+    private decimal BundlesPerTrade
+    {
+        get
+        {
+            decimal each = WithTradeHerb(Config.BeebitsPerTrade);
+            int n = 1;
+            while (n < 100 && n * each != Math.Floor(n * each)) n++;
+            return n;
+        }
+    }
+
+    /// <summary>Beebits one potted honey pays right now: 20, more under the Trades herb.</summary>
     public decimal PottedHoneyBeebitsNow => WithTradeHerb(Config.PottedHoneyBeebits);
 
     // Cut (Bee, 2026-11-12): the bear paid herbs, and the Hippies paid Beebits for herbal candles.
@@ -626,9 +689,14 @@ public sealed class BeekeeperEngine
     // /// <summary>Beebits the Hippies pay for one herbal candle right now, more under Good Deals.</summary>
     // public decimal BeebitsPerCandleNow => WithTradeHerb(Config.HippieBeebitsPerCandle);
 
-    /// <summary>A trade's pay under the Trades herb, rounded up to a whole amount (Beebits stay
-    /// whole); unchanged otherwise.</summary>
-    private decimal WithTradeHerb(decimal pay) => HerbTradeNow == 1m ? pay : Math.Ceiling(pay * HerbTradeNow);
+    /// <summary>A trade's pay under the Trades herb, exact; unchanged otherwise. Bee, 2026-11-15: it rounded up
+    /// per bundle (Sell All of 10 bundles paid 80, not 75); now a plain-honey trade holds enough bundles for
+    /// whole Beebits (<see cref="BundlesPerTrade"/>).</summary>
+    private decimal WithTradeHerb(decimal pay) => pay * HerbTradeNow;
+
+    /// <summary>Beebits a sale of <paramref name="count"/> trades pays at <paramref name="each"/>. Whole already;
+    /// the floor only guards an odd config (Beebits stay whole).</summary>
+    private static decimal SalePay(decimal count, decimal each) => Math.Floor(count * each);
 
     public bool CanSell => State.Honey >= HoneyPerTradeNow;
 
@@ -671,11 +739,11 @@ public sealed class BeekeeperEngine
     /// <summary>The comb row is on screen (the Combs panel, at The Workbench).</summary>
     public bool CombRowShown => State.CombsRevealed || State.WorkbenchRevealed;
 
-    /// <summary>Any price the player can see is a wall: the comb, the wooden hive, a Shop upgrade.</summary>
+    /// <summary>Any price the player can see is a wall: the comb or the wooden hive. (A Shop upgrade whose price
+    /// is a wall is hidden from the Shop, so it is never seen; review fix, 2026-11-15, dropped that always-false part.)</summary>
     public bool AnyWallShown =>
         (CombRowShown && CombIsWall)
-        || (WoodenHiveOffered && WoodenHiveIsWall)
-        || (ShopShown && ShopUpgrades.Any(u => IsWaxWall(u.Wax)));
+        || (WoodenHiveOffered && WoodenHiveIsWall);
 
     /// <summary>The first wall the player sees is told once in the log. Only a flag and an event.</summary>
     private void CheckWalls(List<BeekeeperEvent> events)
@@ -1095,6 +1163,8 @@ public sealed class BeekeeperEngine
         decimal beeSeconds = State.Bees * seconds
                              + perMinute * layingSeconds * layingSeconds / 120m
                              + raised * (seconds - layingSeconds);
+        // The free bees' honey bonus over the same stretch (review fix, 2026-11-15), worked out before they grow.
+        decimal factorSeconds = FreeBeeFactorSeconds(State.Bees, raised, layingSeconds, seconds);
 
         State.Bees = Math.Min(Config.MaxBees, Snap(State.Bees + raised));
         if (perMinute > 0m)
@@ -1112,7 +1182,8 @@ public sealed class BeekeeperEngine
         // Honey: flat per comb (spec 016, FR-703), boosted by calm and candles (boost, the
         // sage-propolis candle) and the hive (wooden hive, guarding). None before the first bee.
         // Stage 8 (spec 017): the meadow's honey joins the combs' before the boosts (BaseHoneyPerSecond).
-        decimal made = BaseHoneyPerSecond * seconds * boost * SagePropolisBoostNow * HiveMultiplier;
+        // Review fix (2026-11-15): the free bees' bonus is summed over the stretch (factorSeconds), as they grow.
+        decimal made = BaseHoneyPerSecond * factorSeconds * boost * SagePropolisBoostNow * HiveMultiplierBeforeFreeBees;
         // Cut in stage 8: decimal made = HiveStarted
         //     ? State.Combs * Config.HoneyPerCombPerSecond * seconds * boost * SagePropolisBoostNow * HiveMultiplier
         //     : 0m;
@@ -1274,7 +1345,7 @@ public sealed class BeekeeperEngine
         decimal bundle = HoneyPerTradeNow;
         decimal bundles = all ? Math.Floor(State.Honey / bundle) : 1m;
         // Stage 10 (spec 019, FR-1002): the bear pays Beebits again.
-        decimal paid = bundles * BeebitsPerTradeNow;
+        decimal paid = SalePay(bundles, BeebitsPerTradeNow);
         State.Honey -= bundles * bundle;
         State.Beebits += paid;
         State.BeebitsRevealed = true;
@@ -1310,7 +1381,7 @@ public sealed class BeekeeperEngine
     {
         if (!CanSellPotted) return ActionResult.Refused;
         decimal pots = all ? Math.Floor(State.PottedHoney) : 1m;
-        decimal paid = pots * PottedHoneyBeebitsNow;
+        decimal paid = SalePay(pots, PottedHoneyBeebitsNow);
         State.PottedHoney -= pots;
         State.Beebits += paid;
         State.BeebitsRevealed = true;
@@ -1347,6 +1418,7 @@ public sealed class BeekeeperEngine
             State.PottedHoneyRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.HoneyPotted, count));
         }
+        CraftCardDone(BeekeeperStories.PotHoney);
         return new ActionResult(true, count, events);
     }
 
@@ -1375,6 +1447,20 @@ public sealed class BeekeeperEngine
     /// <summary>The third link's size: 100, or 1000 once a whole 1000 can be paid for.</summary>
     public int CraftBigStep(string craft) =>
         CanCraftTimes(craft, Config.CraftLinkHuge) ? Config.CraftLinkHuge : Config.CraftLinkBig;
+
+    /// <summary>Review fix (2026-11-15): the first of a craft made any way (its card's button, or a direct call)
+    /// makes its story card done at once, as loading a save that has made one does (Tidy). The screen only
+    /// crafts from the card and the links today, so this keeps the engine's rule in one place.</summary>
+    private void CraftCardDone(string id)
+    {
+        if (State.StoryHere == id) FinishStory(id);
+        else if (!State.StoriesDone.Contains(id))
+        {
+            State.StoriesDone.Add(id);
+            State.StoryReturnIn.Remove(id);
+            State.StoryQueue.Remove(id);
+        }
+    }
 
     /// <summary>The card's button: makes the first one, and the card is done for good (the links open).</summary>
     public ActionResult CraftFromStory()
@@ -1431,7 +1517,6 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.CombBuilt, bees) };
         OpenWorkbenchIfDue(events);
         CheckReveals(events);   // the first comb opens the Shop (Bee, 2026-11-11); also checks the walls
-        // Before: CheckWalls(events);
         return new ActionResult(true, wax, events);
         // Cut in stage 7.5 (spec 016): wax only, and the event carried the honey storage added.
         // decimal cost = CombCost;
@@ -1497,7 +1582,7 @@ public sealed class BeekeeperEngine
     // Herbal candles never retire: they are a buff and a trade good, not a wasp defence.
     // public bool RepellentRetired => State.EmissaryCome;
 
-    /// <summary>The herbal candle (10 wax + 1 herb; the old repellent candle's recipe and names).
+    /// <summary>The herbal candle (2 wax + 1 herb; the old repellent candle's recipe and names).
     /// Whether a batch of <paramref name="count"/> can be paid for in full.</summary>
     public bool CanCraftRepellentTimes(int count) =>
         count >= 1 && State.WorkbenchRevealed && State.RepellentUnlocked
@@ -1525,7 +1610,7 @@ public sealed class BeekeeperEngine
     public ActionResult CraftRepellent(int count = 1)
     {
         if (!CanCraftRepellentTimes(count)) return ActionResult.Refused;
-        int made = count * CandlesPerCraft;
+        decimal made = (decimal)count * CandlesPerCraft;   // review fix (2026-11-15): int overflowed past ~1 billion
         State.Wax -= HerbalCandleWaxNow * count;
         State.Herbs -= Config.HerbalCandleHerbs * count;
         State.RepellentCandles += made;
@@ -1562,9 +1647,11 @@ public sealed class BeekeeperEngine
     public ActionResult CraftBeeswax(int count = 1)
     {
         if (!CanCraftBeeswaxTimes(count)) return ActionResult.Refused;
-        int made = count * CandlesPerCraft;
+        decimal made = (decimal)count * CandlesPerCraft;   // review fix (2026-11-15): int overflowed past ~1 billion
         State.Wax -= BeeswaxCandleWaxNow * count;
         State.BeeswaxCandles += made;
+        State.BeeswaxCrafted = true;
+        CraftCardDone(BeekeeperStories.Candle);
         var events = new List<BeekeeperEvent>();
         if (count > 1) events.Add(new BeekeeperEvent(BeekeeperEvents.BeeswaxCrafted, made));
         CountCandleCrafted(events, made);
@@ -1594,7 +1681,7 @@ public sealed class BeekeeperEngine
     public ActionResult CraftBeeBoost(int count = 1)
     {
         if (!CanCraftBeeBoostTimes(count)) return ActionResult.Refused;
-        int made = count * CandlesPerCraft;
+        decimal made = (decimal)count * CandlesPerCraft;   // review fix (2026-11-15): int overflowed past ~1 billion
         State.Wax -= BeeBoostCandleWaxNow * count;
         State.Propolis -= Config.BeeBoostCandlePropolis * count;
         State.BeeBoostCandles += made;
@@ -1607,7 +1694,7 @@ public sealed class BeekeeperEngine
     public ActionResult CraftSagePropolis(int count = 1)
     {
         if (!CanCraftSagePropolisTimes(count)) return ActionResult.Refused;
-        int made = count * CandlesPerCraft;
+        decimal made = (decimal)count * CandlesPerCraft;   // review fix (2026-11-15): int overflowed past ~1 billion
         State.Wax -= SagePropolisCandleWaxNow * count;
         State.Herbs -= Config.SagePropolisCandleHerbs * count;
         State.Propolis -= Config.SagePropolisCandlePropolis * count;
@@ -1645,9 +1732,12 @@ public sealed class BeekeeperEngine
         return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.SagePropolisLit) });
     }
 
-    private void CountCandleCrafted(List<BeekeeperEvent> events, int count = 1)
+    private void CountCandleCrafted(List<BeekeeperEvent> events, decimal count = 1m)
     {
-        State.CandlesCrafted += count;
+        // Review fix (2026-11-15): stops at the most a save can count instead of wrapping negative (which made
+        // the next autosave look damaged and moved the whole hive aside).
+        decimal room = long.MaxValue - (decimal)Math.Max(0L, State.CandlesCrafted);
+        State.CandlesCrafted = count >= room ? long.MaxValue : Math.Max(0L, State.CandlesCrafted) + (long)Math.Max(0m, count);
         if (!State.HippiesRevealed && State.CandlesCrafted >= Config.HippiesRevealCandles)
         {
             State.HippiesRevealed = true;
@@ -1660,7 +1750,7 @@ public sealed class BeekeeperEngine
     /// <summary>The Hippies trade clay jars for beeswax candles (stage 10, spec 019: "candles for pots
     /// only"). They take no other candle, and pay no Beebits and no herbs. (2026-11-11 to 11-12 they
     /// bought herbal candles for Beebits; before that, beeswax candles for sage.)</summary>
-    public bool CanTradeCandles => State.HippiesRevealed && State.BeeswaxCandles >= Config.CandlesPerJar;
+    public bool CanTradeCandles => State.HippiesRevealed && !State.HippiesDismissedForGood && State.BeeswaxCandles >= Config.CandlesPerJar;
     // Cut (Bee, 2026-11-12): public bool CanTradeCandles => State.HippiesRevealed && State.RepellentCandles >= 1m;
 
     /// <summary>One clay jar for 3 beeswax candles. (Name kept from when a trade was 10 beeswax candles.)</summary>
@@ -1682,7 +1772,7 @@ public sealed class BeekeeperEngine
         // decimal paid = candles * BeebitsPerCandleNow;
         // State.Beebits += paid;
         // State.BeebitsRevealed = true;
-        // Before (Bee, 2026-11-11): 10 beeswax candles for 1 sage, and the first sage opened the
+        // Cut (Bee, 2026-11-11): 10 beeswax candles for 1 sage, and the first sage opened the
         // repellent candle.
         // decimal bundles = all ? Math.Floor(State.BeeswaxCandles / Config.CandlesPerSage) : 1m;
         // State.BeeswaxCandles -= bundles * Config.CandlesPerSage;
@@ -1693,13 +1783,18 @@ public sealed class BeekeeperEngine
         // Stage 8 (spec 017, FR-802): each trade rolls on its own (stage 10: a trade is one jar, was one
         // candle). A seed joins the roll from its trade on (that trade rolls with it). One log line for
         // the seeds of a batch.
+        // Review fix (2026-11-15): the first jars of a batch roll one by one; the rest are worked out in a few
+        // steps (GiveSeedsForManyTrades), so a huge stack can't freeze the game.
         var given = new List<string>();
-        for (long i = 0; i < (long)jars; i++)
+        int exact = (int)Math.Min(jars, Math.Max(0, Config.HippieTradeExactRolls));
+        for (int i = 0; i < exact; i++)
         {
-            State.HippieTrades++;
+            AddHippieTrades(1m);
             UnlockSeedsIfDue(events);
-            if (RollSeed(BeekeeperGivers.Hippies, Config.HippieSeedChance) is { } seed) given.Add(seed);
+            if (given.Count < Config.HippieTradeSeedsMax
+                && RollSeed(BeekeeperGivers.Hippies, Config.HippieSeedChance) is { } seed) given.Add(seed);
         }
+        GiveSeedsForManyTrades(jars - Math.Min(jars, exact), events, given);
         if (given.Count == 1)
             events.Add(new BeekeeperEvent(BeekeeperEvents.SeedGiven, State.SeedsInHand.Count, given[0]));
         else if (given.Count > 1)
@@ -1707,6 +1802,58 @@ public sealed class BeekeeperEngine
         // Cut in stage 8 (spec 017): GiveSeedsIfDue(events);   // each seed once, on a set trade
         CheckReveals(events);
         return new ActionResult(true, jars, events);
+    }
+
+    /// <summary>Adds Hippie trades, stopping at the most a save can count.</summary>
+    private void AddHippieTrades(decimal trades)
+    {
+        decimal room = long.MaxValue - (decimal)Math.Max(0L, State.HippieTrades);
+        State.HippieTrades = trades >= room ? long.MaxValue : Math.Max(0L, State.HippieTrades) + (long)trades;
+    }
+
+    /// <summary>
+    /// The jars of a batch past <see cref="BeekeeperConfig.HippieTradeExactRolls"/> (review fix, 2026-11-15).
+    /// They count as trades as before, and a new seed still joins the roll at its trade, but each run of trades
+    /// between two such moments gives its seeds at once: the average (trades × chance, the leftover fraction a
+    /// roll of its own), each kind in the roll equally likely, never past <see cref="BeekeeperConfig.HippieTradeSeedsMax"/>
+    /// for the whole batch. It uses the game's own random rolls, so a seeded game still plays the same.
+    /// </summary>
+    private void GiveSeedsForManyTrades(decimal trades, List<BeekeeperEvent> events, List<string> given)
+    {
+        decimal chance = (decimal)Math.Clamp(Config.HippieSeedChance, 0.0, 1.0);
+        while (trades >= 1m)
+        {
+            // A run ends just before the trade where the next seed joins the roll; that trade starts the next run
+            // (a seed joining on this run's first trade is in this run's roll, as it is for a single trade).
+            decimal step = trades;
+            foreach (var plant in Config.Plants)
+            {
+                if (plant.Giver != BeekeeperGivers.Hippies || IsSeedUnlocked(plant)) continue;
+                decimal until = (decimal)plant.SeedAtTrade - State.HippieTrades - 1m;
+                if (until >= 1m) step = Math.Min(step, until);
+            }
+            AddHippieTrades(step);
+            UnlockSeedsIfDue(events);
+            trades -= step;
+
+            var pool = Config.Plants.Where(p => p.Giver == BeekeeperGivers.Hippies && IsSeedUnlocked(p)).ToList();
+            int room = Config.HippieTradeSeedsMax - given.Count;
+            if (pool.Count == 0 || room <= 0 || chance <= 0m) continue;
+            decimal average = step * chance;
+            decimal whole = Math.Floor(average);
+            if (whole < room && (decimal)_rng.NextDouble() < average - whole) whole++;
+            int seeds = (int)Math.Min(whole, room);
+            // Each kind equally likely: an even share each, and the leftover ones picked at random.
+            var counts = new int[pool.Count];
+            for (int k = 0; k < pool.Count; k++) counts[k] = seeds / pool.Count;
+            for (int r = 0; r < seeds % pool.Count; r++) counts[pool.Count == 1 ? 0 : _rng.Next(pool.Count)]++;
+            for (int k = 0; k < pool.Count; k++)
+            {
+                if (counts[k] == 0) continue;
+                AddSeedsInHand(pool[k].Id, counts[k]);
+                given.AddRange(Enumerable.Repeat(pool[k].Id, counts[k]));
+            }
+        }
     }
 
     // ------------------------------------------------------------------ herbal candles (lit)
@@ -1788,7 +1935,6 @@ public sealed class BeekeeperEngine
     /// its price, so there is never a "needs more storage" line for it.</summary>
     public IReadOnlyList<BeekeeperUpgrade> ShopUpgrades =>
         Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u) && !IsWaxWall(u.Wax)).ToList();
-    // Before: Config.Upgrades.Where(u => !Owns(u.Id) && IsUnlocked(u)).ToList();
 
     // Stage 2's upgrades come with The Workbench; stage 3's catching upgrades only need the Vacuum.
     private bool IsUnlocked(BeekeeperUpgrade u) => u.Needs switch
@@ -1829,8 +1975,6 @@ public sealed class BeekeeperEngine
     /// <summary>The Paper row: the first paper (a wasp trade, or any paper held).</summary>
     public bool PaperShown => PaperSeen;
 
-    /// <summary>The repellent candle (recipe, light button, Hive row) is shown: unlocked, and
-    /// not yet retired by the emissary.</summary>
     /// <summary>The herbal candle's recipe and light button (at The Workbench): unlocked by the first
     /// herb. It never retires now (was: && !RepellentRetired).</summary>
     public bool RepellentShown => State.RepellentUnlocked && State.WorkbenchRevealed;
@@ -1905,16 +2049,17 @@ public sealed class BeekeeperEngine
     /// <summary>True once the wasp nest has sent its emissary: no wasp ever comes again.</summary>
     public bool EmissaryCome => State.EmissaryCome;
 
-    /// <summary>Wasp time that one repellent candle buys (longer with Stronger Candles).</summary>
-    // Cut (Bee, 2026-11-11), with the repellent candle:
+    // Cut (Bee, 2026-11-11), with the repellent candle: wasp time that one repellent candle buys (longer with
+    // Stronger Candles).
     // public decimal RepellentBurnSeconds =>
     //     Config.RepellentBurnSeconds * (Owns(BeekeeperUpgrades.StrongerCandles) ? Config.StrongerCandlesBonus : 1m);
 
     /// <summary>
     /// "Wasp time" passed: only while Beekeeper is on screen and the player is active (the view
-    /// model decides; No Stress Mode no longer applies to Beekeeper, spec 014). A burning candle
-    /// uses it up; otherwise it counts down to the next wasp. Away time never comes here, and
-    /// after the emissary nothing happens at all.
+    /// model decides; No Stress Mode no longer applies to Beekeeper, spec 014). An older save's burning
+    /// repellent candle (<see cref="BeekeeperState.RepellentSecondsLeft"/>; none can be lit now) uses it up, and
+    /// no wasp comes, not even one already waiting its turn; otherwise it counts down to the next wasp. Away
+    /// time never comes here, and after the emissary nothing happens at all.
     /// </summary>
     public IReadOnlyList<BeekeeperEvent> AdvanceWaspTime(decimal seconds)
     {
@@ -1924,14 +2069,15 @@ public sealed class BeekeeperEngine
         if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return events;
         // Review fix (2026-11-15): only wasp time brings a queued wasp to the door, so it never comes (and
         // drifts off unseen, spending a visit) while nobody is watching.
-        if (State.StoryQueue.Contains(WaspEntry)) { FillStoryArea(events, waspMayCome: true); return events; }
-
+        // Review fix (2026-11-15): an old save's candle burns first, so it burns down (and keeps the wasp away)
+        // even with a wasp waiting its turn; it used to stay lit forever while the wasp came anyway.
         if (State.RepellentSecondsLeft > 0m)
         {
             State.RepellentSecondsLeft = Math.Max(0m, State.RepellentSecondsLeft - seconds);
             if (State.RepellentSecondsLeft == 0m) events.Add(new BeekeeperEvent(BeekeeperEvents.CandleOut));
             return events;   // a candle's time is never also wasp time
         }
+        if (State.StoryQueue.Contains(WaspEntry)) { FillStoryArea(events, waspMayCome: true); return events; }
 
         if (State.NextWaspInSeconds <= 0m) RollNextWasp();
         State.NextWaspInSeconds -= seconds;
@@ -1943,14 +2089,12 @@ public sealed class BeekeeperEngine
         }
         return events;
     }
-    // Before (2026-11-14): the wasp appeared at once here.
-    //     State.WaspCountdown = Config.WaspCountdownSeconds;
-    //     State.WaspVisits++;
-    //     events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
 
     /// <summary>True while the wasp at the door is on its first visit: the choices are Throw a shoe /
-    /// Engage. Later visits are Throw a shoe / Bribe. (Older saves that already bribed count as later.)</summary>
-    public bool WaspFirstVisit => State.WaspVisits <= 1 && State.BribesTotal == 0;
+    /// Engage. Later visits are Throw a shoe / Bribe. (Older saves that already bribed count as later.)
+    /// Review fix (2026-11-15): a visit counts once the wasp has been met (<see cref="WaspMet"/>), so this is
+    /// "no wasp met yet" (was: WaspVisits &lt;= 1, counted on arrival).</summary>
+    public bool WaspFirstVisit => State.WaspVisits == 0 && State.BribesTotal == 0;
 
     public bool CanEngageWasp => WaspApproaching && WaspFirstVisit;
 
@@ -2025,10 +2169,11 @@ public sealed class BeekeeperEngine
         if (id == "bear") State.BearShoeThrown = true;
         if (id == "hippies")
         {
-            State.HippieShoes++;
+            if (State.HippieShoes < int.MaxValue) State.HippieShoes++;   // never wraps negative (a hand-edited save)
             if (State.HippieShoes >= Config.HippiesShoesForGood)
             {
                 State.HippiesDismissedForGood = true;
+                State.RepsEngaged.Remove(id);
                 State.RepReturnIn.Remove(id);
                 State.StoryQueue.Remove(RepEntry(id));
                 return new ActionResult(true, 1m, Array.Empty<BeekeeperEvent>());   // the card speaks
@@ -2098,7 +2243,8 @@ public sealed class BeekeeperEngine
         if (next == WaspEntry)
         {
             State.WaspCountdown = Config.WaspCountdownSeconds;
-            State.WaspVisits++;
+            // Review fix (2026-11-15): the visit counts once the wasp is met (WaspMet), not when it arrives, so a
+            // wasp that drifts off unanswered (or is at the door when the app closes) never uses up the first visit.
             events.Add(new BeekeeperEvent(BeekeeperEvents.WaspArrives));
             return;
         }
@@ -2153,7 +2299,9 @@ public sealed class BeekeeperEngine
     /// fading card, then fills the story area (Bee, 2026-11-12: one card or visitor at a time, in the order
     /// they arrive; due moments queue behind a visitor at the door).
     /// Raises <see cref="BeekeeperEvents.StoryArrives"/> (no log line: the card speaks).</summary>
-    public IReadOnlyList<BeekeeperEvent> AdvanceStoryTime(decimal seconds)
+    /// <remarks>Review fix (2026-11-15): a card that fades by itself counts down only while
+    /// <paramref name="watched"/> (Beekeeper on screen), so it is never marked done unseen.</remarks>
+    public IReadOnlyList<BeekeeperEvent> AdvanceStoryTime(decimal seconds, bool watched = true)
     {
         var events = new List<BeekeeperEvent>();
         foreach (var id in State.StoryReturnIn.Keys.ToList())
@@ -2162,7 +2310,7 @@ public sealed class BeekeeperEngine
             if (left > 0m) State.StoryReturnIn[id] = left;
             else State.StoryReturnIn.Remove(id);
         }
-        if (State.StoryHere is { } fading && FadeSeconds(fading) is not null)
+        if (watched && State.StoryHere is { } fading && FadeSeconds(fading) is not null)
         {
             // "Ouch!" and the other cards with no button fade by themselves after a few seconds of play.
             State.OuchSecondsLeft -= Math.Max(0m, seconds);
@@ -2170,12 +2318,17 @@ public sealed class BeekeeperEngine
         }
         // The seed card leaves by itself once there is nothing left to plant.
         if (State.StoryHere == BeekeeperStories.Seed && !StoryDue(BeekeeperStories.Seed)) State.StoryHere = null;
-        // Bee, 2026-11-14: a craft card stays until its button is clicked (it left by itself when the first one
+        // Cut (Bee, 2026-11-14; may return): a craft card stays until its button is clicked (it left by itself when the first one
         // couldn't be made any more, e.g. after a comb spent the wax); its button is dimmed meanwhile.
         // if (State.StoryHere is BeekeeperStories.PotHoney or BeekeeperStories.Candle or BeekeeperStories.BeeBread
         //     && !StoryDue(State.StoryHere)) State.StoryHere = null;
         // The gloves-fit card is done once its bees are caught (normally Catch finishes it at once).
         if (State.StoryHere == BeekeeperStories.GlovesFit && !StoryDue(BeekeeperStories.GlovesFit)) FinishStory(BeekeeperStories.GlovesFit);
+        // Review fix (2026-11-15): the pot-honey card with no clay jars could wait forever, since the jars come
+        // from the Hippies, who wait behind it. When something else waits, it steps aside (not done); it comes
+        // back once it can be made again.
+        if (State.StoryHere == BeekeeperStories.PotHoney && State.ClayJars < Config.PotHoneyJars && State.StoryQueue.Count > 0)
+            State.StoryHere = null;
         FillStoryArea(events);
         return events;
     }
@@ -2294,7 +2447,7 @@ public sealed class BeekeeperEngine
         if (!WaspApproaching) return ActionResult.Refused;
         if (_rng.NextDouble() < Config.ShoeHitChance)
         {
-            EndWasp();
+            WaspMet();
             return new ActionResult(true, 1m, new[] { new BeekeeperEvent(BeekeeperEvents.ShoeHit) });
         }
         return new ActionResult(true, 0m, new[] { Raid(BeekeeperEvents.ShoeMissRaid) });
@@ -2314,7 +2467,7 @@ public sealed class BeekeeperEngine
         State.Honey -= paid;
         State.BribesTotal++;
         RefreshStorageFlag();
-        EndWasp();
+        WaspMet();
         var events = new List<BeekeeperEvent> { new(BeekeeperEvents.Bribe, paid) };
         if (State.BribesTotal == Config.BribesForHint && State.BribesTotal < Config.BribesForEmissary)
             events.Add(new BeekeeperEvent(BeekeeperEvents.BribeHint));
@@ -2346,18 +2499,29 @@ public sealed class BeekeeperEngine
     // }
 
     /// <summary>A raid takes 3 minutes' worth of honey and nothing else (spec 014: never bees).</summary>
+    /// <remarks>Review fix (2026-11-15): always a whole amount (an odd 0.4 honey stored is left alone), so the
+    /// log's rounded-down number is what was taken; 0 taken is told with no amount.</remarks>
     private BeekeeperEvent Raid(string key)
     {
-        decimal honey = Math.Min(State.Honey, Math.Floor(HoneyPerSecond * Config.RaidHoneySeconds));
+        decimal honey = Math.Floor(Math.Max(0m, Math.Min(State.Honey, Math.Floor(HoneyPerSecond * Config.RaidHoneySeconds))));
         // Cut in stage 6 (spec 014): some bees flew off, unless a guard bee kept them safe.
         // bool guarded = HasGuards;   // one guard bee and no raid ever costs a bee
         // decimal bees = guarded ? 0m : Math.Floor(State.Bees * Config.RaidBeeShare);
         // State.Bees -= bees;
         State.Honey -= honey;
         RefreshStorageFlag();
-        EndWasp();
+        WaspMet();   // engaged, missed with a shoe, or left to its countdown while watched
         return new BeekeeperEvent(key, honey);
         // return new BeekeeperEvent(key, honey, guarded ? "guards" : null, bees);
+    }
+
+    /// <summary>The player met the wasp at the door (answered it, or watched its countdown run out): the visit
+    /// counts, and the wasp goes. A wasp that drifts off unseen (<see cref="WaspLeaves"/>) or is sent home by the
+    /// emissary doesn't count.</summary>
+    private void WaspMet()
+    {
+        State.WaspVisits++;
+        EndWasp();
     }
 
     private void EndWasp()
@@ -2464,7 +2628,6 @@ public sealed class BeekeeperEngine
 
     /// <summary>The bee hotel can bring propolis (a rare bee whose gift it is): the Propolis hover says so.</summary>
     public bool HotelBringsPropolis => HasBeeHotel && Config.RareBees.Any(b => b.Gift == BeekeeperGifts.Propolis);
-    // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
 
     /// <summary>Propolis a minute, with the propolis plants' bonus (stage 8, FR-805).</summary>
     public decimal PropolisPerMinute => ResinPropolisPerMinute * PlantBonus(BeekeeperBonusTargets.Propolis);
@@ -2479,7 +2642,6 @@ public sealed class BeekeeperEngine
     /// <summary>Pollen a minute from foraging without the clover (for the hovers, which list the bloom as a boost).</summary>
     public decimal ForagingPollenPerMinuteAlone =>
         PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
-    // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
 
     public decimal PollenPerSecondNow => ForagingPollenPerMinute / 60m;
 
@@ -2673,7 +2835,6 @@ public sealed class BeekeeperEngine
         var target = State.Plants.Contains(plantId) ? State.Plants : State.SeedsInHand;
         for (int i = 0; i < count; i++) target.Add(plantId);
         State.GardenRevealed = true;
-        // Before (stage 8): for (int i = 0; i < count; i++) State.SeedsInHand.Add(plantId);
     }
 
     // ---- planting (stage 8: at once)
@@ -2889,6 +3050,7 @@ public sealed class BeekeeperEngine
             State.BeeBreadRevealed = true;
             events.Add(new BeekeeperEvent(BeekeeperEvents.BeeBreadMade));
         }
+        CraftCardDone(BeekeeperStories.BeeBread);
         // Cut (Bee, 2026-11-12): the first bee bread brought the queen; now the wooden hive does.
         // SettleQueenIfDue(events);
         NoteBeeBreadAdded(events);
@@ -3198,7 +3360,6 @@ public sealed class BeekeeperEngine
 
     private void CheckReveals(List<BeekeeperEvent> events)
     {
-        // Before: State.Honey >= Config.BearRevealHoney (10 honey).
         if (!State.BearRevealed && State.BeesCaught >= Config.BearRevealBees)
         {
             State.BearRevealed = true;

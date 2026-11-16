@@ -1292,7 +1292,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
 
         AdvanceWasps(gap, away, now);
         if (!away) LogEvents(Engine.AdvanceRepTime(gap));
-        if (!away) LogEvents(Engine.AdvanceStoryTime(gap));   // play time only: the 2 minutes don't pass while away
+        if (!away) LogEvents(Engine.AdvanceStoryTime(gap, IsWatched));   // play time only: the 2 minutes don't pass while away
 
         _secondsSinceSave += gap;
         if (_secondsSinceSave >= AutosaveEverySeconds) SaveNow();

@@ -1058,6 +1058,8 @@ public enum StringKey
     BeekeeperLogRepLeftFmt,
     BeekeeperLogWaspEngagedFmt,
     BeekeeperLogWaspEngagedNothing,
+    BeekeeperLogWaspRaidNothing,
+    BeekeeperLogShoeMissNothing,
     BeekeeperLogHippiesTradeOld,
     BeekeeperBeeHerbs,
     BeekeeperBeeHerbsBlurbFmt,

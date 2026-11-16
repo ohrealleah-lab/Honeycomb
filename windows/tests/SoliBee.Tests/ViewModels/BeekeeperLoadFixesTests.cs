@@ -88,8 +88,11 @@ public class BeekeeperLoadFixesTests : IDisposable
         var path = Path.Combine(_dir, "huge.json");
         BeekeeperSaveService.Save(new BeekeeperState { Bees = max }, path, DateTime.UtcNow);
         Assert.NotNull(BeekeeperSaveService.Load(path));
+        // Review fix (2026-11-15): more bees than MaxBees load, and the engine trims them (was: the file was refused).
         BeekeeperSaveService.Save(new BeekeeperState { Bees = max * 10m }, path, DateTime.UtcNow);
-        Assert.Null(BeekeeperSaveService.Load(path));
+        var loaded = BeekeeperSaveService.Load(path);
+        Assert.NotNull(loaded);
+        Assert.Equal(max, new BeekeeperEngine(state: loaded).State.Bees);
     }
 
     [Fact]

@@ -134,7 +134,7 @@ public class BeekeeperCraftLinkTests
     [Fact]
     public void ASaveThatAlreadyMadeThem_HasTheLinks_AndNeverSeesTheCards()
     {
-        var s = Base(); s.PottedHoneyRevealed = true; s.BeeBreadRevealed = true; s.CandlesCrafted = 4; s.Honey = 50m;
+        var s = Base(); s.PottedHoneyRevealed = true; s.BeeBreadRevealed = true; s.BeeswaxCrafted = true; s.Honey = 50m;
         var e = Make(s);
         Assert.True(e.CraftLinksOpen(BeekeeperStories.PotHoney));
         Assert.True(e.CraftLinksOpen(BeekeeperStories.BeeBread));

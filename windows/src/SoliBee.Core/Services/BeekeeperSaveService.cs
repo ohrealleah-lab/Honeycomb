@@ -122,7 +122,6 @@ public static class BeekeeperSaveService
     // Guards against a hand-edited or damaged file that parses but makes no sense.
     private static bool LooksSane(BeekeeperState s)
     {
-        int maxTool = BeekeeperConfig.Default.Tools.Count;
         // Cut in stage 7.5 (spec 016): WaxProgress, GrowSecondsLeft, ForagerBees, GuardBees and
         // AgreementHoneyProgress (no longer saved).
         decimal[] amounts =
@@ -133,14 +132,19 @@ public static class BeekeeperSaveService
             s.Propolis, s.BeeBoostCandles, s.SagePropolisCandles, s.HerbSecondsLeft,
             s.Wood, s.HotelSecondsToNext,   // stage 8
             s.ClayJars, s.PottedHoney, s.BeeswaxCandles,   // stage 10 (negatives are set to 0 by the engine)
+            s.Bees,   // review fix (2026-11-15): the engine trims bees to its MaxBees; this only keeps the maths room
         };
         return amounts.All(v => v <= MaxAmount) && s.Combs <= MaxCombs
-            && s.Bees >= 0m && s.Bees <= BeekeeperConfig.Default.MaxBees && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m
+            // Review fix (2026-11-15): limits that come from the game's config (most bees, the tool list, the
+            // gloves' declines) and the story ids are trimmed by the engine's Tidy instead of refusing the file,
+            // so retuning the config or retiring a card never moves a whole hive aside. Damage (a negative
+            // amount, a missing list) is still refused.
+            && s.Bees >= 0m && s.Honey >= 0m && s.Wax >= 0m && s.Beebits >= 0m
             // Stage 7.5: the starter comb is always there; capacity levels are never negative.
             && s.Combs >= 1 && s.HoneySupers >= 0 && s.WaxTrays >= 0
             && s.HoneySupers <= MaxCombs && s.WaxTrays <= MaxCombs
             && s.Trades >= 0
-            && s.ToolLevel >= 0 && s.ToolLevel <= maxTool
+            && s.ToolLevel >= 0
             && s.Log is not null
             && s.RepellentCandles >= 0m && s.CandlesCrafted >= 0
             && s.Sage >= 0m && s.HippieTrades >= 0
@@ -156,16 +160,16 @@ public static class BeekeeperSaveService
             && s.Propolis >= 0m && s.BeeBoostCandles >= 0m && s.SagePropolisCandles >= 0m
             && s.BeeBoostSecondsLeft >= 0m && s.SagePropolisSecondsLeft >= 0m
             && s.Herbs >= 0m && s.HerbSecondsLeft >= 0m
-            // Story cards: known ids, nothing negative, declines within the limit.
+            // Story cards: nothing negative. Unknown ids (a renamed or retired card) are dropped by the engine.
             && s.StoriesDone is not null && s.StoryReturnIn is not null
-            && s.StoriesDone.All(id => id is not null && BeekeeperStories.Order.Contains(id))
-            && s.StoryReturnIn.All(kv => kv.Key is not null && BeekeeperStories.Order.Contains(kv.Key) && kv.Value >= 0m)
-            && (s.StoryHere is null || BeekeeperStories.Order.Contains(s.StoryHere))
+            && s.StoryReturnIn.All(kv => kv.Value >= 0m)
             && s.BeesCaught >= 0 && s.OuchSecondsLeft >= 0m
-            && s.GlovesDeclines >= 0 && s.GlovesDeclines <= BeekeeperConfig.Default.GlovesMaxDeclines
+            && s.GlovesDeclines >= 0
             // Stage 8 (spec 017, FR-814): new fields load as empty or zero; never negative.
             // (An older file has none of them, so no version bump.)
-            && s.Wood >= 0m && s.HotelSecondsToNext >= 0m && s.RareBeesMet is not null;
+            && s.Wood >= 0m && s.HotelSecondsToNext >= 0m && s.RareBeesMet is not null
+            // Review fix (2026-11-15): the visitors' lists the engine's Tidy reads without a null check.
+            && s.RepsMet is not null && s.RepReturnIn is not null;
     }
 
     // Every damaged file keeps its own backup: .unreadable, then .unreadable2, .unreadable3…

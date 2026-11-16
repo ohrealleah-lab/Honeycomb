@@ -194,9 +194,6 @@ public static class BeekeeperStories
     /// <summary>A bee fact about bee bread feeding the young; its button makes the first bee bread.</summary>
     public const string BeeBread = "bee_bread";
     public static readonly string[] Order = { Opening, Ouch, Gloves, GlovesFit, Smoker, PotHoney, Candle, BeeBread, BearShoe, HippiesGone, Seed };
-    // Before the story queue (Bee, 2026-11-12): { Opening, Ouch, Gloves, Smoker, PotHoney, Candle, BeeBread, Seed }
-    // Before stage 10: { Ouch, Gloves, Smoker, Seed }
-    // Before the craft cards (Bee, 2026-11-12): { Opening, Ouch, Gloves, Smoker, Seed }
 }
 
 /// <summary>The buffs a lit herbal candle can roll (one per candle).</summary>
@@ -569,7 +566,6 @@ public sealed class BeekeeperConfig
     /// Bee, 2026-11-12: 1 bee a second in the wooden hive, so the free bees visibly climb; a loaf of
     /// 100 bees lasts 100 seconds. The skep has no queen (she comes with the wooden hive).
     public IReadOnlyList<decimal> QueenBeesPerMinute { get; init; } = new[] { 0m, 60m };
-    // Before (Bee, 2026-11-12): new[] { 0m, 20m } (the wooden hive raised 20 a minute).
     /// <summary>Bees raised for every 1 bee bread the brood eats.</summary>
     public decimal BeesPerBeeBread { get; init; } = 100m;
     // Cut (may return): the slice of the hive was never more than this many times the tool's bees.
@@ -657,6 +653,12 @@ public sealed class BeekeeperConfig
     // --- The seed rolls (FR-802)
     /// <summary>Chance each Hippie trade (stage 10: one clay jar; was one herbal candle) also gives a seed (20%).</summary>
     public double HippieSeedChance { get; init; } = 0.2;
+    /// <summary>Review fix (2026-11-15), placeholder: one Trade-all click rolls this many jars one by one;
+    /// the jars past it give the seeds they would give on average, so a huge stack of candles can't freeze the game.</summary>
+    public int HippieTradeExactRolls { get; init; } = 1000;
+    /// <summary>Review fix (2026-11-15), placeholder: the most seeds one Trade-all click can give (every seed is a
+    /// plant in the garden list, so millions would slow every tick and swell the save).</summary>
+    public int HippieTradeSeedsMax { get; init; } = 1000;
     /// <summary>Chance each wasp trade (a batch counts as one) also gives a seed (20%).</summary>
     public double WaspSeedChance { get; init; } = 0.2;
 

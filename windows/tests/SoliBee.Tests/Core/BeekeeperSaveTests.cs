@@ -136,8 +136,10 @@ public class BeekeeperSaveTests : IDisposable
     [InlineData("{\"Version\": 8, \"HoneySupers\": -1}")]
     [InlineData("{\"Version\": 8, \"WaxTrays\": -1}")]
     [InlineData("{\"Version\": 8, \"Wax\": -0.5}")]
-    [InlineData("{\"Version\": 8, \"ToolLevel\": 9}")]
+    [InlineData("{\"Version\": 8, \"ToolLevel\": -1}")]   // review fix (2026-11-15): past the list (9) is trimmed by the engine now
     [InlineData("{\"Version\": 8, \"ToolLevel\": -1}")]
+    [InlineData("{\"Version\": 8, \"RepReturnIn\": null}")]   // review fix (2026-11-15): Tidy crashed on load
+    [InlineData("{\"Version\": 8, \"RepsMet\": null}")]
     public void NonsenseNumbers_AreRefused(string json)
     {
         var path = PathFor();
