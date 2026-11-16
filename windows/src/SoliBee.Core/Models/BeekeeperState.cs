@@ -13,6 +13,11 @@ public sealed class BeekeeperLogEntry
     /// <summary>A second number when a line needs two (a raid: honey taken, bees flown off).</summary>
     public decimal Value2 { get; set; }
     public string? Text { get; set; }
+    /// <summary>Review fix (2026-11-15): which units a trade line's numbers are in. 0 = written before this field
+    /// (a bear sale may be herbs or Beebits, a Hippie trade Beebits or clay jars: the log can't tell, so it shows
+    /// wording true of both); <see cref="CurrentEra"/> = Beebits from the bear, clay jars from the Hippies.</summary>
+    public int Era { get; set; }
+    public const int CurrentEra = 1;
 }
 
 /// <summary>One garden bed that is growing a seed (spec 015).</summary>

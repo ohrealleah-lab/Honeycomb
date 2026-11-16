@@ -105,9 +105,13 @@ public class BeekeeperStage9ViewModelTests
     {
         var vm = Make(EveryKind());
 
-        // Crocus: the bees' hover names it beside nursing (+100%).
+        // Crocus: the bees' hover names it (x2) beside nursing's own +50%. Review fix (2026-11-15): the nursing
+        // line no longer has the crocus folded in as well (it read +100% and x2), and the queen's source is her
+        // rate before nursing.
         var bees = Row(vm, BeekeeperHiveRows.Honeybees);
-        Assert.Contains(bees.Boosts!, b => b.Id == "nursing" && b.Percent == 100m);
+        Assert.Contains(bees.Boosts!, b => b.Id == "nursing" && b.Percent == 50m);
+        var queen = Assert.Single(bees.Sources!, s => s.Id == "queen");
+        Assert.Equal(bees.Rate!.Value, queen.PerSecond * 2m);   // her base, then x(1 + 50% x 2)
         var crocus = Assert.Single(Blooms(bees));
         Assert.Equal(BeekeeperBlooms.Crocus, crocus.Plant);
         Assert.Equal(BeekeeperSpecialties.Nursing, crocus.Specialty);
@@ -119,11 +123,12 @@ public class BeekeeperStage9ViewModelTests
         var pollen = Row(vm, BeekeeperHiveRows.Pollen);
         Assert.Equal(BeekeeperBlooms.Clover, Assert.Single(Blooms(pollen)).Plant);
         Assert.Equal(12m / 60m, pollen.Rate);
+        Assert.Equal(6m / 60m, Assert.Single(pollen.Sources!).PerSecond);   // foraging before the clover's x2
         Assert.Empty(Blooms(Row(vm, BeekeeperHiveRows.Honeybees)));
 
         vm.DebugNextBloom();   // linden: the honey hover says guarding +50% and names the linden
         var honey = Row(vm, BeekeeperHiveRows.Honey);
-        Assert.Contains(honey.Boosts!, b => b.Id == "guarding" && b.Percent == 50m);
+        Assert.Contains(honey.Boosts!, b => b.Id == "guarding" && b.Percent == 25m);   // the linden's x2 is its own line
         Assert.Equal(BeekeeperBlooms.Linden, Assert.Single(Blooms(honey)).Plant);
 
         vm.DebugNextBloom();   // goldenrod: the propolis hover names it

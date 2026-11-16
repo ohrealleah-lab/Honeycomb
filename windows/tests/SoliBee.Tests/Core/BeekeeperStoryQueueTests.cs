@@ -135,12 +135,57 @@ public class BeekeeperStoryQueueTests
         Assert.Equal(0m, e.State.WaspCountdown);                                       // its countdown has not started
 
         Assert.True(e.RepairSmoker().Done);
-        var events = e.AdvanceStoryTime(1m);
+        // Review fix (2026-11-15): story time alone (which also runs while nobody watches) doesn't bring it; wasp time does.
+        Assert.False(Has(e.AdvanceStoryTime(1m), BeekeeperEvents.WaspArrives));
+        var events = e.AdvanceWaspTime(1m);
         Assert.True(Has(events, BeekeeperEvents.WaspArrives));
         Assert.True(e.WaspApproaching);
         Assert.Equal(Cfg.WaspCountdownSeconds, e.State.WaspCountdown);
         Assert.True(e.StoryAreaBusy);                 // and it holds the door for what comes after
         Assert.DoesNotContain("wasp", e.StoryQueue);
+    }
+
+    [Fact]
+    public void AQueuedWasp_NeverComesWhileNobodyWatches_AndTheQueueWaitsBehindIt()
+    {
+        // Review fix (2026-11-15): rep and story time run every tick, watched or not; they used to bring a queued
+        // wasp to the door, and the next unwatched tick sent it off unseen, spending a visit (and the Engage choice).
+        var e = Make(Hive(s =>
+        {
+            s.StoriesDone = BeekeeperStories.Order.ToList();
+            s.WorkbenchRevealed = true; s.BearRevealed = true; s.RepsMet.Add("bear");
+            s.StoryQueue.Add("wasp");
+            s.StoryQueue.Add("rep:bear");
+            s.RepReturnIn["bear"] = 0m;
+        }));
+
+        for (int i = 0; i < 600; i++)
+        {
+            Assert.False(Has(e.AdvanceRepTime(1m), BeekeeperEvents.WaspArrives));
+            Assert.False(Has(e.AdvanceStoryTime(1m), BeekeeperEvents.WaspArrives));
+        }
+        Assert.False(e.WaspApproaching);
+        Assert.Equal(0, e.State.WaspVisits);
+        Assert.Empty(e.RepsPresent);                       // the bear waits behind the wasp
+        Assert.Equal("wasp", e.StoryQueue[0]);
+
+        Assert.True(Has(e.AdvanceWaspTime(1m), BeekeeperEvents.WaspArrives));   // watched again: it comes
+        Assert.Equal(1, e.State.WaspVisits);
+        Assert.True(e.CanEngageWasp);                      // the first visit's choice is still there
+    }
+
+    [Fact]
+    public void EngagingAWasp_WithNoHoney_StealsNothing_AndSaysNoAmount()
+    {
+        var e = Make(Hive(s =>
+        {
+            s.StoriesDone = BeekeeperStories.Order.ToList();
+            s.WorkbenchRevealed = true; s.Honey = 0m;
+        }));
+        e.DebugCallWasp();
+        var ev = Assert.Single(e.EngageWasp().Events);
+        Assert.Equal(0m, ev.Value);
+        Assert.Equal(0m, e.State.Honey);
     }
 
     [Fact]

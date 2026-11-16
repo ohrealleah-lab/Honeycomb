@@ -152,7 +152,7 @@
                         </TextBlock.RenderTransform>
                     </TextBlock>
                 </Grid>
-                <!-- THE HIVE (appears with the first bee, or since stage 7.5 the first whole wax) -->
+                <!-- THE HIVE (appears with the first bee caught, or the drip's first whole wax) -->
                 <Border x:Name="HiveCard" Classes="bk-card" IsVisible="False">
                     <StackPanel Spacing="6">
                         <TextBlock x:Name="HiveTitleText" Classes="bk-title" />
@@ -160,7 +160,7 @@
                              Built in code from the view model's HiveGroups (spec 014, FR-505): a new
                              row is a new entry there, not a new line here. -->
                         <StackPanel x:Name="HiveGroups" Spacing="10" />
-                        <!-- Bee, 2026-11-12: potting honey is the Honey row's +1 / +10 / +100 links, opened by a story card. -->
+                        <!-- Bee, 2026-11-12: potting honey is the Potted honey row's +1 / +10 / +100 links, opened by a story card. -->
                         <!-- Stage 8 (spec 017): offered once a wildflower and a clover are planted; bought with 50 of each (counted, not spent) -->
                         <Grid x:Name="MeadowRow" ColumnDefinitions="*,Auto" IsVisible="False" Margin="0,6,0,0">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
@@ -204,8 +204,8 @@
                     <StackPanel Spacing="10">
                         <TextBlock x:Name="ShopTitleText" Classes="bk-title" />
                         <StackPanel x:Name="ShopRows" Spacing="8" />
-                        <!-- Cut (Bee, 2026-11-11): the Bee Herbs row. Herbs come from the bear now, and the
-                             herbal candle at The Workbench is what gets lit.
+                        <!-- Cut (Bee, 2026-11-11): the Bee Herbs row. Herbs come from the leafcutter bee at the
+                             bee hotel now, and the herbal candle at The Workbench is what gets lit.
                         <Grid x:Name="BeeHerbRow" ColumnDefinitions="*,Auto" IsVisible="False">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock x:Name="BeeHerbNameText" Classes="bk-body" FontWeight="SemiBold" />

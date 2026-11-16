@@ -54,6 +54,10 @@ public sealed record BeekeeperHiveRow(string Id, bool Visible, decimal Value = 0
 /// room one comb adds, <see cref="Count"/> = combs built). (Stage 10's Beebits-row sources are cut.)</summary>
 public sealed record BeekeeperSource(string Id, decimal PerSecond, decimal Count = 0m);
 
+/// <summary>What <c>n</c> crafts from a Hive row's craft link cost (0 = not part of the price), and the
+/// candles they make (0 for a craft that isn't a candle).</summary>
+public sealed record BeekeeperCraftCost(decimal Honey, decimal ClayJars, decimal Wax, decimal Pollen, int Candles);
+
 /// <summary>A boost that is on right now, for a hover: <see cref="Id"/> is "smoker", "bee_boost",
 /// "sage_propolis", "free_bees", "wax_catcher", "wooden_hive", "guarding", "nursing", "plant"
 /// (stage 8: <see cref="Plant"/>'s bonus from <see cref="Count"/> plants after the first) or a
@@ -284,6 +288,17 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     public decimal WoodenHiveBonusPercent => (Config.WoodenHiveHoneyMultiplier - 1m) * 100m;
     public decimal BeeBoostBonusPercent => (Config.BeeBoostHoneyMultiplier - 1m) * 100m;
     public decimal SagePropolisBonusPercent => (Config.SagePropolisHoneyMultiplier - 1m) * 100m;
+    /// <summary>What Good Deals adds to the bear's Beebits, in percent.</summary>
+    public decimal HerbTradeBonusPercent => (Config.HerbTradeMultiplier - 1m) * 100m;
+
+    /// <summary>The price of <paramref name="n"/> crafts from a craft link (review fix, 2026-11-15: the view
+    /// worked it out from the config).</summary>
+    public BeekeeperCraftCost CraftCost(string craft, int n) => craft switch
+    {
+        BeekeeperStories.PotHoney => new(Config.PotHoneyHoney * n, Config.PotHoneyJars * n, 0m, 0m, 0),
+        BeekeeperStories.Candle => new(0m, 0m, BeeswaxCandleWaxNow * n, 0m, CandlesPerCraft * n),
+        _ => new(Config.BeeBreadHoney * n, 0m, 0m, Config.BeeBreadPollen * n, 0),   // bee bread
+    };
     /// <summary>Live seconds one herbal candle burns right now (Stronger Candles counted).</summary>
     public decimal HerbalCandleBurnSeconds => Engine.HerbalCandleBurnSeconds;
     /// <summary>Bees a click would catch with <paramref name="tool"/>, Practice counted.</summary>
@@ -293,19 +308,15 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     // public int BedRowCount => Math.Max(BedCount, State.Beds.Count);
 
     public bool HoneyRevealed => State.HoneyRevealed;
-    /// <summary>The Hive card: the first bee, or the first whole wax from the drip (stage 7.5: wax
-    /// can come before any bee is caught).</summary>
     /// <summary>The Hive Log card (Bee, 2026-11-12): hidden until the first bee is caught, then it shows with
     /// the opening line and the catch line.</summary>
     public bool LogCardShown => Engine.HiveStarted;
     // Cut (Bee, 2026-11-12): the gloves line pinned at the top of the log is a story card now (BeekeeperStories.GlovesFit).
     // public bool GlovesLineShown => State.GlovesLineBeesLeft > 0;
-    public bool HiveCardShown => State.BeesCaught > 0 || State.HoneyRevealed || State.WaxRevealed;   // Bee, 2026-11-12: hidden until a bee is caught
-    // Before stage 10: State.HoneyRevealed || State.WaxRevealed
+    public bool HiveCardShown => Engine.HiveCardShown;
 
     // Stage 10 (spec 019): clay jars, potted honey and the beeswax candle
-    /// <summary>The Clay jars row: from a new game (the jars found in the garden), so the Hive card shows it at once.</summary>
-    public bool ClayJarsShown => State.StartingJarsGiven || State.ClayJars > 0m;
+    public bool ClayJarsShown => Engine.ClayJarsShown;
     public decimal ClayJars => State.ClayJars;
     public decimal PottedHoney => State.PottedHoney;
     public bool PottedHoneyRevealed => State.PottedHoneyRevealed;
@@ -444,7 +455,6 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
     /// <summary>The Queen row shows once she has settled into the wooden hive.</summary>
     public bool HasQueen => Engine.HasQueen;
     public bool IsQueenLaying => Engine.IsQueenLaying;
-    /// <summary>Bees a second the queen raises right now (0 while she rests).</summary>
     /// <summary>A Hive row that has both a rate and a cap: the shared place "time to full" is worked
     /// out (<see cref="BeekeeperEngine.SecondsToFull"/>). <paramref name="shown"/> is the number the row
     /// displays; <paramref name="exact"/> is the true amount the time is worked from.</summary>
@@ -501,27 +511,41 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Where propolis comes from: resin (before the goldenrod, which is a boost line) and, now and
+    /// then, the bee hotel's gifts (review fix, 2026-11-15).</summary>
+    public IReadOnlyList<BeekeeperSource>? PropolisSourcesNow
+    {
+        get
+        {
+            var sources = new List<BeekeeperSource>();
+            if (Engine.ResinPropolisPerMinute > 0m) sources.Add(new("resin", Engine.ResinPropolisPerMinuteAlone / 60m));
+            if (Engine.HotelBringsPropolis) sources.Add(new("bee_hotel", 0m));
+            return sources.Count > 0 ? sources : null;
+        }
+    }
+
     /// <summary>Where new bees come from on their own: the queen (while she lays) and Wanderers.</summary>
     public IReadOnlyList<BeekeeperSource> BeeSourcesNow
     {
         get
         {
             var sources = new List<BeekeeperSource>();
-            if (Engine.IsQueenLaying) sources.Add(new("queen", Engine.QueenBeesPerSecondNow));
+            // Review fix (2026-11-15): her rate before nursing, which is listed as a boost (it was counted twice).
+            if (Engine.IsQueenLaying) sources.Add(new("queen", Engine.QueenBaseBeesPerSecondNow));
             if (Engine.IsHerb(BeekeeperHerbs.Wanderers))
                 sources.Add(new(BeekeeperHerbs.Wanderers, Config.HerbWanderersBeesPerMinute / 60m));
             return sources;
         }
     }
 
-    /// <summary>Boosts on the bees: nursing speeds the queen (already in her rate); stage 9: the crocus
-    /// makes nursing work harder.</summary>
+    /// <summary>Boosts on the bees: nursing speeds the queen; stage 9: the crocus makes nursing work harder
+    /// (its own line, so the nursing line is without it).</summary>
     public IReadOnlyList<BeekeeperBoost> BeeBoostsNow
     {
         get
         {
             if (!Engine.IsQueenLaying || Engine.NursingMultiplier <= 1m) return Array.Empty<BeekeeperBoost>();
-            var boosts = new List<BeekeeperBoost> { new("nursing", (Engine.NursingMultiplier - 1m) * 100m) };
+            var boosts = new List<BeekeeperBoost> { new("nursing", (Engine.NursingMultiplierAlone - 1m) * 100m) };
             boosts.AddRange(BloomBoosts(BeekeeperSpecialties.Nursing));
             return boosts;
         }
@@ -564,13 +588,17 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             if (State.HasWoodenHive) boosts.Add(new("wooden_hive", WoodenHiveBonusPercent));
             if (Engine.HoneyDipperMultiplier > 1m)   // Bee, 2026-11-12
                 boosts.Add(new(BeekeeperUpgrades.HoneyDipper, (Engine.HoneyDipperMultiplier - 1m) * 100m));
-            if (Engine.GuardingMultiplier > 1m) boosts.Add(new("guarding", (Engine.GuardingMultiplier - 1m) * 100m));
+            // Review fix (2026-11-15): guarding without the linden, which has its own line below (as nursing and the crocus).
+            if (Engine.GuardingMultiplier > 1m) boosts.Add(new("guarding", (Engine.GuardingMultiplierAlone - 1m) * 100m));
             boosts.AddRange(BloomBoosts(BeekeeperSpecialties.Guarding));   // stage 9: the linden
             if (Engine.IsWinter) boosts.Add(new("winter", WinterHoneyPercent, BeekeeperBlooms.Winter, Config.WinterHoneyMultiplier));
             // hidden until the bonus reaches 0.01% (below that it would read "+0%")
             if (FreeBeeHoneyBonusPercent >= 0.01m) boosts.Add(new("free_bees", FreeBeeHoneyBonusPercent));
             boosts.AddRange(PlantBoosts(BeekeeperBonusTargets.Honey));   // stage 8: wildflowers and bramble past the first
-            if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercentNow));
+            // Review fix (2026-11-15): Quick Fingers' x3 on the Smoker is its own line (it was folded into the Smoker's).
+            if (Engine.IsSmokerBoosted) boosts.Add(new("smoker", Engine.SmokerBoostPercent));
+            if (Engine.IsSmokerBoosted && Engine.HerbClickNow > 1m)
+                boosts.Add(new("quick_fingers_smoker", 0m, Count: Engine.HerbClickNow));
             if (Engine.IsHerb(BeekeeperHerbs.BusyBees)) boosts.Add(new(BeekeeperHerbs.BusyBees, (Config.HerbHoneyMultiplier - 1m) * 100m));
             if (Engine.IsBeeBoosted) boosts.Add(new("bee_boost", BeeBoostBonusPercent));
             if (Engine.IsSagePropolisBurning) boosts.Add(new("sage_propolis", SagePropolisBonusPercent));
@@ -593,6 +621,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>Bees a second the queen raises right now (0 while she rests).</summary>
     public decimal QueenBeesPerSecond => Engine.QueenBeesPerSecondNow;
     /// <summary>Bee bread a second the brood eats right now (0 while she rests).</summary>
     public decimal BeeBreadPerSecond => Engine.BeeBreadPerSecondNow;
@@ -728,7 +757,9 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             {
                 // Stage 7.5: free bees (they can be 0 in a running game).
                 new(BeekeeperHiveRows.Honeybees, true, State.Bees,
-                    Rate: Engine.HasQueen || BeeSourcesNow.Count > 0 ? BeeSourcesNow.Sum(x => x.PerSecond) : null,
+                    // The queen's source is before nursing (a boost line), so her full rate is added here, not her source.
+                    Rate: Engine.HasQueen || BeeSourcesNow.Count > 0
+                        ? Engine.QueenBeesPerSecondNow + BeeSourcesNow.Where(x => x.Id != "queen").Sum(x => x.PerSecond) : null,
                     Sources: BeeSourcesNow, Boosts: BeeBoostsNow, Gives: FreeBeesGiveNow),
                 new(BeekeeperHiveRows.Queen, Engine.HasQueen, Engine.IsQueenLaying ? 1m : 0m),
             };
@@ -773,17 +804,18 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupGarden, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),
+                    new(BeekeeperHiveRows.Seeds, State.GardenRevealed, State.SeedsInHand.Count),   // hover: where seeds come from
                     new(BeekeeperHiveRows.Pollen, Engine.PollenShown, Math.Floor(State.Pollen),
                         Rate: Engine.ForagingPollenPerMinute > 0m ? Engine.PollenPerSecondNow : null,
-                        Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.PollenPerSecondNow) } : null,
+                        // Review fix (2026-11-15): foraging before the clover, which is its own line.
+                        Sources: Engine.ForagingPollenPerMinute > 0m ? new[] { new BeekeeperSource("foraging", Engine.ForagingPollenPerMinuteAlone / 60m) } : null,
                         Boosts: BloomBoosts(BeekeeperSpecialties.Foraging)),   // stage 9: the clover
                     new(BeekeeperHiveRows.BeeBread, State.BeeBreadRevealed, State.BeeBread,
                         Rate: Engine.HasQueen ? Engine.BeeBreadPerSecondNow : null, Rate2: Engine.PantrySecondsLeft),
                     // Stage 8: the resin's own rate as the source, the poplars past the first as a boost.
                     new(BeekeeperHiveRows.Propolis, Engine.PropolisShown,
-                        Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m ? Engine.PropolisPerSecondNow : null,
-                        Sources: Engine.ResinPropolisPerMinute > 0m ? new[] { new BeekeeperSource("resin", Engine.ResinPropolisPerMinute / 60m) } : null,
+                        Math.Floor(State.Propolis), Rate: Engine.ResinPropolisPerMinute > 0m || Engine.HotelBringsPropolis ? Engine.PropolisPerSecondNow : null,
+                        Sources: PropolisSourcesNow,
                         Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis).Concat(BloomBoosts(BeekeeperSpecialties.Resin)).ToList()),   // stage 9: the goldenrod
                     // Before stage 9: Boosts: PlantBoosts(BeekeeperBonusTargets.Propolis)),
                     // Cut in stage 8: Sources: ... new BeekeeperSource("resin", Engine.PropolisPerSecondNow) ...
@@ -795,7 +827,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
                 }),
                 new BeekeeperHiveGroup(BeekeeperHiveRows.GroupCrafts, new BeekeeperHiveRow[]
                 {
-                    new(BeekeeperHiveRows.BeeswaxCandles, Engine.BeeswaxShown || State.BeeswaxCandles > 0m, State.BeeswaxCandles),   // stage 10
+                    new(BeekeeperHiveRows.BeeswaxCandles, Engine.BeeswaxCandlesRowShown, State.BeeswaxCandles),   // stage 10
                     new(BeekeeperHiveRows.RepellentCandles, Engine.RepellentCandlesRowShown, State.RepellentCandles),
                     new(BeekeeperHiveRows.BeeBoostCandles, Engine.BeeBoostCandlesShown, State.BeeBoostCandles),
                     new(BeekeeperHiveRows.SagePropolisCandles, Engine.SagePropolisCandlesShown, State.SagePropolisCandles),
@@ -1324,7 +1356,7 @@ public partial class BeekeeperViewModel : ObservableObject, IDisposable
             // A story card speaks for itself: no log line when it arrives.
             if (e.Key == BeekeeperEvents.StoryArrives) continue;
 
-            State.Log.Insert(0, new BeekeeperLogEntry { Key = e.Key, Value = e.Value, Value2 = e.Value2, Text = e.Text });
+            State.Log.Insert(0, new BeekeeperLogEntry { Key = e.Key, Value = e.Value, Value2 = e.Value2, Text = e.Text, Era = BeekeeperLogEntry.CurrentEra });
         }
         while (State.Log.Count > BeekeeperSaveService.MaxLogEntries)
             State.Log.RemoveAt(State.Log.Count - 1);

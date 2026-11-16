@@ -138,17 +138,12 @@ internal static class BeekeeperText
     public static string TradeOne => T(StringKey.BeekeeperTradeOne);
 
     // ---- stage 10 (spec 019): potted honey, clay jars, the beeswax candle, the opening card
-    public static string PotHoney => T(StringKey.BeekeeperPotHoney);
-    /// <summary>"10 honey + 1 clay jar → 1 potted honey. The Bear pays more for it."</summary>
-    public static string PotHoneyTip(string honey) => Fill(T(StringKey.BeekeeperPotHoneyTipFmt), honey);
     public static string SellPotted => T(StringKey.BeekeeperSellPotted);
     public static string SellAllPotted => T(StringKey.BeekeeperSellAllPotted);
     /// <summary>"1 potted honey = 15 Beebits".</summary>
     public static string PottedRate(decimal beebits) => Fill(T(StringKey.BeekeeperPottedRateFmt), NumberFormatter.Format(beebits, Lang));
     /// <summary>The Hippies' one-trade button: "Trade 3 candles for a clay jar".</summary>
     public static string TradeJar(decimal candles) => Fill(T(StringKey.BeekeeperTradeJarFmt), NumberFormatter.Format(candles, Lang));
-    public static string BeeswaxCandle => T(StringKey.BeekeeperBeeswaxCandle);
-    public static string BeeswaxBlurb => T(StringKey.BeekeeperBeeswaxBlurb);
     public static string StoryOpening => T(StringKey.BeekeeperStoryOpening);
     // Craft links and their story cards (Bee, 2026-11-12)
     public static string StoryPotHoney => T(StringKey.BeekeeperStoryPotHoney);
@@ -198,7 +193,7 @@ internal static class BeekeeperText
     {
         var parts = new System.Collections.Generic.List<string>();
         if (bees != null) parts.Add(Fill(T(StringKey.BeekeeperCostBeesFmt), bees));
-        if (beebits != null) parts.Add(beebits + " " + BeebitsLabel.ToLowerInvariant());
+        if (beebits != null) parts.Add(beebits + " " + BeebitsLabel);   // review fix (2026-11-15): always "Beebits", never lowercased
         if (wax != null) parts.Add(Fill(T(StringKey.BeekeeperCostWaxFmt), wax));
         if (herbs != null) parts.Add(herbs == "1" ? T(StringKey.BeekeeperCostHerbOne) : Fill(T(StringKey.BeekeeperCostSageFmt), herbs));
         if (pollen != null) parts.Add(Fill(T(StringKey.BeekeeperCostPollenFmt), pollen));
@@ -209,6 +204,10 @@ internal static class BeekeeperText
         if (wood != null) parts.Add(Fill(T(StringKey.BeekeeperCostWoodFmt), wood));   // stage 8
         return string.Join(" · ", parts);
     }
+
+    /// <summary>Clay jars in a price: "1 clay jar", "10 clay jars".</summary>
+    public static string ClayJarsCost(decimal n) =>
+        n == 1m ? T(StringKey.BeekeeperCostClayJarOne) : Fill(T(StringKey.BeekeeperCostClayJarsFmt), NumberFormatter.Format(n, Lang));
 
     /// <summary>Minutes and seconds, e.g. "0:42" or "14:30" (rounded up, so it never shows 0:00 early).</summary>
     public static string Clock(decimal seconds)
@@ -416,8 +415,6 @@ internal static class BeekeeperText
         BeekeeperSpecialties.Resin => T(StringKey.BeekeeperNoteResin),
         _ => "",
     };
-    public static string BeeBread => T(StringKey.BeekeeperBeeBread);
-    public static string BeeBreadBlurb => T(StringKey.BeekeeperBeeBreadBlurb);
 
     // ---- stage 5: the queen, the pantry, the trade agreement
     public static string QueenStatus(bool laying) =>
@@ -519,6 +516,8 @@ internal static class BeekeeperText
             sb.Append('\n').Append(b.Id switch
             {
                 "smoker" => Fill(T(StringKey.BeekeeperBoostSmokerFmt), pct),
+                "quick_fingers_smoker" => Fill(T(StringKey.BeekeeperBoostQuickFingersSmokerFmt),
+                    HerbName(BeekeeperHerbs.QuickFingers), NumberFormatter.Format(b.Count, Lang, 2)),
                 "free_bees" => Fill(T(StringKey.BeekeeperHoneyFreeBeeBonusFmt), pct),
                 "wax_catcher" => Fill(T(StringKey.BeekeeperBoostWaxCatcherFmt), pct),
                 "wooden_hive" => Fill(T(StringKey.BeekeeperBoostWoodenHiveFmt), pct),
@@ -561,6 +560,7 @@ internal static class BeekeeperText
                 "resin" => Fill(T(StringKey.BeekeeperSourceResinFmt), rate),
                 "carpenter_bee" => Fill(T(StringKey.BeekeeperSourceCarpenterBeeFmt), rate),   // stage 8
                 "meadow" => Fill(T(StringKey.BeekeeperSourceMeadowFmt), rate),
+                "bee_hotel" => T(StringKey.BeekeeperSourceBeeHotelGifts),   // now and then, so no rate
                 _ => Fill(T(StringKey.BeekeeperSourceHerbFmt), rate, HerbName(s.Id)),
             });
         }
@@ -594,6 +594,7 @@ internal static class BeekeeperText
                 return Fill(T(StringKey.BeekeeperClayJarsTipFmt), NumberFormatter.Format(r.Value2, Lang));
             case BeekeeperHiveRows.Combs: return CombsTip(r);
             case BeekeeperHiveRows.Herbs: return T(StringKey.BeekeeperHerbsTip);
+            case BeekeeperHiveRows.Seeds: return T(StringKey.BeekeeperSeedsTip);   // review fix (2026-11-15): no hover before
             case BeekeeperHiveRows.Honeybees when r.Rate is null:   // no queen yet: the hover still says what the bees give
                 return GivesLines(r).TrimStart('\n') is { Length: > 0 } g ? g : null;
         }
@@ -823,11 +824,14 @@ internal static class BeekeeperText
             BeekeeperEvents.BearArrives => L(StringKey.BeekeeperLogBearWandersOver),
             // Lines saved before the amounts were kept (Value2 = 0) show the old short wording.
             // Stage 10: Value = Beebits got, Value2 = honey given ("Bruno pays 5 Beebits for 10 honey.").
-            BeekeeperEvents.Sale => e.Value2 <= 0m ? Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? "")
+            // Review fix (2026-11-15): a line from before Era can't say whether it was herbs or Beebits, so it
+            // shows the short wording, which is true of both.
+            BeekeeperEvents.Sale => e.Value2 <= 0m || e.Era < BeekeeperLogEntry.CurrentEra ? Fill(L(StringKey.BeekeeperLogSaleFmt), e.Text ?? "")
                 : e.Value == 1m ? Fill(L(StringKey.BeekeeperLogTradeBearOneFmt), e.Text ?? "", N(e.Value2))
                 : Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value), N(e.Value2)),
             // Before stage 10 (herbs): Fill(L(StringKey.BeekeeperLogTradeBearFmt), e.Text ?? "", N(e.Value2), N(e.Value)),
-            BeekeeperEvents.PottedSale => Fill(L(StringKey.BeekeeperLogPottedSaleFmt), e.Text ?? "", N(e.Value), N(e.Value2)),
+            BeekeeperEvents.PottedSale => e.Value2 == 1m ? Fill(L(StringKey.BeekeeperLogPottedSaleOneFmt), e.Text ?? "", N(e.Value))
+                : Fill(L(StringKey.BeekeeperLogPottedSaleFmt), e.Text ?? "", N(e.Value), N(e.Value2)),
             BeekeeperEvents.HoneyPotted => L(StringKey.BeekeeperLogHoneyPotted),
             BeekeeperEvents.FirstWax => L(StringKey.BeekeeperLogFirstWax),
             BeekeeperEvents.ShopOpened => L(StringKey.BeekeeperLogShopOpened),
@@ -851,6 +855,7 @@ internal static class BeekeeperText
             // Stage 10: Value = clay jars got, Value2 = beeswax candles given.
             BeekeeperEvents.CandlesTraded => e.Value2 <= 0m
                 ? Fill(L(StringKey.BeekeeperLogCandlesTradedFmt), N(e.Value))
+                : e.Era < BeekeeperLogEntry.CurrentEra ? L(StringKey.BeekeeperLogHippiesTradeOld)   // Beebits or clay jars: unknown
                 : e.Value == 1m ? Fill(L(StringKey.BeekeeperLogTradeHippiesOneFmt), N(e.Value2))   // "1 clay jar for 3 candles"
                 : Fill(L(StringKey.BeekeeperLogTradeHippiesFmt), N(e.Value), N(e.Value2)),
             BeekeeperEvents.BeeswaxCrafted => Fill(L(StringKey.BeekeeperLogCraftedBeeswaxFmt), N(e.Value)),
@@ -874,7 +879,9 @@ internal static class BeekeeperText
             // Bee, 2026-11-12: every shoe at the bear reads "The bear wanders off." (was "The bear leaves. They will be back later.").
             BeekeeperEvents.RepLeft => e.Text == "bear" ? L(StringKey.BeekeeperLogBearWandersOff)
                 : Fill(L(StringKey.BeekeeperLogRepLeftFmt), Strings.Get(StringKey.BeekeeperRepHippies, lang)),
-            BeekeeperEvents.WaspEngaged => Fill(L(StringKey.BeekeeperLogWaspEngagedFmt), N(e.Value)),   // Bee, 2026-11-14: it steals honey
+            // Bee, 2026-11-14: it steals honey. Nothing stolen (an empty pantry, or a line from when it just left): no amount.
+            BeekeeperEvents.WaspEngaged => e.Value <= 0m ? L(StringKey.BeekeeperLogWaspEngagedNothing)
+                : Fill(L(StringKey.BeekeeperLogWaspEngagedFmt), N(e.Value)),
             BeekeeperEvents.GlovesOn => L(StringKey.BeekeeperLogGloves),
             BeekeeperEvents.GlovesGone => L(StringKey.BeekeeperLogGlovesGone),
             BeekeeperEvents.SmokerRepaired => L(StringKey.BeekeeperLogSmokerRepaired),

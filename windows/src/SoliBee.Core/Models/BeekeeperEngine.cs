@@ -395,6 +395,13 @@ public sealed class BeekeeperEngine
     /// free bees to 0.</summary>
     public bool HiveStarted => State.HoneyRevealed;
 
+    /// <summary>The Hive card: hidden until a bee is caught (Bee, 2026-11-12), or the drip's first whole wax
+    /// (stage 7.5: wax can come before any bee).</summary>
+    public bool HiveCardShown => State.BeesCaught > 0 || State.HoneyRevealed || State.WaxRevealed;
+
+    /// <summary>The Clay jars row: from a new game (the jars found in the garden). It shows once the Hive card does.</summary>
+    public bool ClayJarsShown => State.StartingJarsGiven || State.ClayJars > 0m;
+
     /// <summary>Combs bought: the starter comb doesn't count. Prices and the caps' comb room use this.</summary>
     public int CombsBought => Math.Max(0, State.Combs - 1);
 
@@ -1197,6 +1204,10 @@ public sealed class BeekeeperEngine
         }
     }
 
+    /// <summary>Bees a second the queen raises right now before nursing (and its crocus): the hover's source
+    /// line, with nursing listed as a boost (review fix, 2026-11-15).</summary>
+    public decimal QueenBaseBeesPerSecondNow => NursingMultiplier > 0m ? QueenBeesPerSecondNow / NursingMultiplier : 0m;
+
     public bool HasQueen => State.QueenSettled;
 
     /// <summary>The queen lays while there is bee bread; otherwise she rests.</summary>
@@ -1510,8 +1521,7 @@ public sealed class BeekeeperEngine
     public decimal SagePropolisCandleWaxNow => CandleWax(Config.SagePropolisCandleWax);
 
     /// <summary>Crafting is instant (Leah). Makes <paramref name="count"/> crafts at once: exactly
-    /// count times the cost, or nothing. Each craft makes <see cref="CandlesPerCraft"/> candles.
-    /// (The beeswax candle, which the herbal candle replaced, is gone: Bee, 2026-11-11.)</summary>
+    /// count times the cost, or nothing. Each craft makes <see cref="CandlesPerCraft"/> candles.</summary>
     public ActionResult CraftRepellent(int count = 1)
     {
         if (!CanCraftRepellentTimes(count)) return ActionResult.Refused;
@@ -1536,6 +1546,10 @@ public sealed class BeekeeperEngine
 
     /// <summary>The beeswax candle's recipe (and its Hive row) shows with The Workbench, before any herb.</summary>
     public bool BeeswaxShown => State.WorkbenchRevealed;
+
+    /// <summary>The Beeswax candles Hive row: like Potted honey and Bee bread, from its story card's first craft
+    /// (review fix, 2026-11-15: it showed at 0 with The Workbench, before the candle card).</summary>
+    public bool BeeswaxCandlesRowShown => State.StoriesDone.Contains(BeekeeperStories.Candle) || State.BeeswaxCandles > 0m;
 
     /// <summary>Wax only (FR-1007): the Dipping Rack halves it, rounded down.</summary>
     public bool CanCraftBeeswaxTimes(int count) =>
@@ -1907,7 +1921,10 @@ public sealed class BeekeeperEngine
         var events = new List<BeekeeperEvent>();
         // Bee, 2026-11-14: a wasp that has come waits its turn in the story queue (one thing at a time), and
         // wasp time is paused while it waits, as a visitor's return time is.
-        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome || State.StoryQueue.Contains(WaspEntry)) return events;
+        if (seconds <= 0m || !State.WorkbenchRevealed || WaspApproaching || State.EmissaryCome) return events;
+        // Review fix (2026-11-15): only wasp time brings a queued wasp to the door, so it never comes (and
+        // drifts off unseen, spending a visit) while nobody is watching.
+        if (State.StoryQueue.Contains(WaspEntry)) { FillStoryArea(events, waspMayCome: true); return events; }
 
         if (State.RepellentSecondsLeft > 0m)
         {
@@ -1922,7 +1939,7 @@ public sealed class BeekeeperEngine
         {
             State.NextWaspInSeconds = 0m;
             Enqueue(WaspEntry);   // shown (countdown started, "buzzing" line told) when its turn comes
-            FillStoryArea(events);
+            FillStoryArea(events, waspMayCome: true);
         }
         return events;
     }
@@ -2066,13 +2083,15 @@ public sealed class BeekeeperEngine
 
     /// <summary>Newly due moments join the back of the queue (in story order), what no longer belongs leaves
     /// it, and when nothing is showing the front comes forward: a card (its fade timer starts) or a visitor
-    /// (a returning one is told in the log).</summary>
-    private void FillStoryArea(List<BeekeeperEvent> events)
+    /// (a returning one is told in the log). A wasp at the front comes only on wasp time
+    /// (<paramref name="waspMayCome"/>: Beekeeper watched); until then it holds its place and the rest wait behind it.</summary>
+    private void FillStoryArea(List<BeekeeperEvent> events, bool waspMayCome = false)
     {
         State.StoryQueue.RemoveAll(e => !StillWaiting(e));
         foreach (var id in BeekeeperStories.Order)
             if (!State.StoryQueue.Contains(id) && StillWaiting(id)) State.StoryQueue.Add(id);
         if (StoryAreaBusy || State.StoryQueue.Count == 0) return;
+        if (State.StoryQueue[0] == WaspEntry && !waspMayCome) return;
 
         string next = State.StoryQueue[0];
         State.StoryQueue.RemoveAt(0);
@@ -2249,7 +2268,7 @@ public sealed class BeekeeperEngine
         State.NextWaspInSeconds = 0m;
         var events = new List<BeekeeperEvent>();
         Enqueue(WaspEntry);   // it waits its turn behind whatever is showing
-        FillStoryArea(events);
+        FillStoryArea(events, waspMayCome: true);
         return events;
     }
 
@@ -2437,9 +2456,14 @@ public sealed class BeekeeperEngine
 
     /// <summary>Propolis a minute from resin: each resin plant kind's strength once, added up
     /// (before the poplars' bonus; see <see cref="PropolisPerMinute"/>). Stage 9: doubled in goldenrod.</summary>
-    public decimal ResinPropolisPerMinute =>
-        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength)
-        * BloomFavour(BeekeeperSpecialties.Resin);
+    public decimal ResinPropolisPerMinute => ResinPropolisPerMinuteAlone * BloomFavour(BeekeeperSpecialties.Resin);
+
+    /// <summary>Propolis a minute from resin without the goldenrod (for the hovers, which list the bloom as a boost).</summary>
+    public decimal ResinPropolisPerMinuteAlone =>
+        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
+
+    /// <summary>The bee hotel can bring propolis (a rare bee whose gift it is): the Propolis hover says so.</summary>
+    public bool HotelBringsPropolis => HasBeeHotel && Config.RareBees.Any(b => b.Gift == BeekeeperGifts.Propolis);
     // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Resin).Sum(p => p.Strength);
 
     /// <summary>Propolis a minute, with the propolis plants' bonus (stage 8, FR-805).</summary>
@@ -2450,9 +2474,11 @@ public sealed class BeekeeperEngine
     /// <summary>Pollen a minute from foraging: each foraging plant kind's strength once, added up
     /// (wildflowers and clover: 3 + 3).</summary>
     /// <remarks>Stage 9: doubled in clover (6 → 12).</remarks>
-    public decimal ForagingPollenPerMinute =>
-        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength)
-        * BloomFavour(BeekeeperSpecialties.Foraging);
+    public decimal ForagingPollenPerMinute => ForagingPollenPerMinuteAlone * BloomFavour(BeekeeperSpecialties.Foraging);
+
+    /// <summary>Pollen a minute from foraging without the clover (for the hovers, which list the bloom as a boost).</summary>
+    public decimal ForagingPollenPerMinuteAlone =>
+        PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
     // Before stage 9: PlantKinds.Where(p => p.Specialty == BeekeeperSpecialties.Foraging).Sum(p => p.Strength);
 
     public decimal PollenPerSecondNow => ForagingPollenPerMinute / 60m;
